@@ -339,15 +339,39 @@ function copyKitTree(kitSubtree, projectSubtree) {
   fs5.cpSync(kitSubtree, projectSubtree, { recursive: true, force: true });
   return countFiles(kitSubtree);
 }
+function resolveSubstrateVersion(kitDir) {
+  try {
+    const pkg = JSON.parse(fs5.readFileSync(path5.join(kitDir, "package.json"), "utf8"));
+    const pin = pkg.dependencies?.["@databricks-solutions/lakebase-scm-utils"] ?? "";
+    const hash = pin.indexOf("#");
+    if (hash < 0) return null;
+    return pin.slice(hash + 1).replace(/^v/, "") || null;
+  } catch {
+    return null;
+  }
+}
+function substituteWorkflowVersion(workflowsDir, version) {
+  if (!fs5.existsSync(workflowsDir)) return;
+  for (const entry of fs5.readdirSync(workflowsDir)) {
+    if (!entry.endsWith(".yml") && !entry.endsWith(".yaml")) continue;
+    const f = path5.join(workflowsDir, entry);
+    try {
+      const before = fs5.readFileSync(f, "utf8");
+      const after = before.replace(/\{\{LAKEBASE_SCM_UTILS_VERSION\}\}/g, version);
+      if (after !== before) fs5.writeFileSync(f, after);
+    } catch {
+    }
+  }
+}
 function refreshSurface(projectDir, kitDir, targetVersion) {
   const a = updateAgents({ projectDir, kitDir, force: true });
   const c = updateCommands({ projectDir, kitDir, force: true });
   const commonDir = path5.join(kitDir, "templates", "project", "common");
   const scripts = copyKitTree(path5.join(commonDir, "scripts"), path5.join(projectDir, "scripts"));
-  const workflows = copyKitTree(
-    path5.join(commonDir, ".github", "workflows"),
-    path5.join(projectDir, ".github", "workflows")
-  );
+  const workflowsDir = path5.join(projectDir, ".github", "workflows");
+  const workflows = copyKitTree(path5.join(commonDir, ".github", "workflows"), workflowsDir);
+  const substrate = resolveSubstrateVersion(kitDir);
+  if (substrate) substituteWorkflowVersion(workflowsDir, substrate);
   let e2e = false;
   try {
     const cfg = loadConsortConfig(projectDir);

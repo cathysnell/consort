@@ -49,4 +49,32 @@ describe("refreshSurface re-wires the E2E block for a UI project (upgrade must n
     expect(r.e2e).toBe(false);
     expect(runTests()).not.toMatch(/playwright test/);
   });
+
+  it("substitutes {{LAKEBASE_SCM_UTILS_VERSION}} in the refreshed CI workflows (no literal placeholder ships)", () => {
+    const cfg = defaultConsortConfig();
+    cfg.project!.uiTrack = false;
+    cfg.project!.clientFramework = "none";
+    writeConsortConfig(dir, cfg);
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "api", scripts: {}, devDependencies: {} }));
+
+    refreshSurface(dir, KIT_ROOT, "v0.3.58-test");
+
+    // The scaffold placeholder must be GONE from every refreshed workflow. Shipping it verbatim
+    // (the raw-copy bug) breaks `${SCM_UTILS_REF:-v{{...}}}`: bash closes at the first `}` of the
+    // unsubstituted `}}}` and leaks `}}` into the ref, so `npx github:...#<ref>}}` cannot resolve.
+    const prYml = readFileSync(join(dir, ".github", "workflows", "pr.yml"), "utf8");
+    const mergeYml = readFileSync(join(dir, ".github", "workflows", "merge.yml"), "utf8");
+    expect(prYml).not.toContain("{{LAKEBASE_SCM_UTILS_VERSION}}");
+    expect(mergeYml).not.toContain("{{LAKEBASE_SCM_UTILS_VERSION}}");
+
+    // ...replaced with the scm-utils version THIS kit pins (from consort's own dep pin), yielding a
+    // clean `${SCM_UTILS_REF:-v<version>}` fallback , exactly what a fresh scaffold produces.
+    const pin = (JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8")).dependencies as Record<string, string>)[
+      "@databricks-solutions/lakebase-scm-utils"
+    ];
+    const ver = pin.slice(pin.indexOf("#") + 1).replace(/^v/, "");
+    expect(ver).toMatch(/^\d+\.\d+\.\d+$/); // sanity: the pin is a version tag
+    expect(prYml).toContain(`SCM_UTILS_REF:-v${ver}}`);
+    expect(mergeYml).toContain(`SCM_UTILS_REF:-v${ver}}`);
+  });
 });

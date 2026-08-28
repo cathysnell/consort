@@ -162,6 +162,50 @@ function copyKitTree(kitSubtree: string, projectSubtree: string): number {
   return countFiles(kitSubtree);
 }
 
+/** The scm-utils version THIS kit ships, parsed from consort's own dependency pin
+ *  (`@databricks-solutions/lakebase-scm-utils: github:...#v<version>`). This is the value the
+ *  workflow templates' scaffold-time `{{LAKEBASE_SCM_UTILS_VERSION}}` placeholder must resolve
+ *  to , NOT the kit's own version (walking up from the templates would wrongly yield consort's
+ *  version). Bare (leading `v` stripped) to match the template's literal `v{{...}}`. Null when
+ *  the pin carries no `#ref` (unpinned dev checkout). */
+function resolveSubstrateVersion(kitDir: string): string | null {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(kitDir, "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+    };
+    const pin = pkg.dependencies?.["@databricks-solutions/lakebase-scm-utils"] ?? "";
+    const hash = pin.indexOf("#");
+    if (hash < 0) return null;
+    return pin.slice(hash + 1).replace(/^v/, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Substitute the `{{LAKEBASE_SCM_UTILS_VERSION}}` scaffold placeholder in the COPIED CI
+ *  workflows. The initial scaffold (scm-utils `substituteWorkflowPlaceholders`) does this;
+ *  refreshSurface previously raw-copied the templates, so `consort-upgrade` SHIPPED THE LITERAL
+ *  placeholder. The template's `${SCM_UTILS_REF:-v{{LAKEBASE_SCM_UTILS_VERSION}}}` then closes the
+ *  bash expansion at the FIRST `}` of the unsubstituted `}}}`, leaking `}}` into the value
+ *  (`SCM_UTILS_REF=v<ver>}}`), so the `npx github:...#<ref>}}` ref is unresolvable and the "Detect
+ *  project language" step exits 1 (build-and-test fails, wait-ci exits 3). Substitute after the
+ *  copy so an upgraded project's workflows are as valid as a freshly-scaffolded one. Best-effort
+ *  per file (an unreadable workflow must never abort the upgrade). */
+function substituteWorkflowVersion(workflowsDir: string, version: string): void {
+  if (!fs.existsSync(workflowsDir)) return;
+  for (const entry of fs.readdirSync(workflowsDir)) {
+    if (!entry.endsWith(".yml") && !entry.endsWith(".yaml")) continue;
+    const f = path.join(workflowsDir, entry);
+    try {
+      const before = fs.readFileSync(f, "utf8");
+      const after = before.replace(/\{\{LAKEBASE_SCM_UTILS_VERSION\}\}/g, version);
+      if (after !== before) fs.writeFileSync(f, after);
+    } catch {
+      /* best-effort: keep going so one bad file does not abort the surface refresh */
+    }
+  }
+}
+
 /** Refresh the FULL kit-owned scaffolded surface from the target kit dir: agents +
  *  commands (.claude/), the scripts/ helper tree, and the CI workflows (.github/workflows/).
  *  Resets the agent-sync marker to the target so the next drive sees the surface current
@@ -173,10 +217,14 @@ export function refreshSurface(projectDir: string, kitDir: string, targetVersion
   const c = updateCommands({ projectDir, kitDir, force: true });
   const commonDir = path.join(kitDir, "templates", "project", "common");
   const scripts = copyKitTree(path.join(commonDir, "scripts"), path.join(projectDir, "scripts"));
-  const workflows = copyKitTree(
-    path.join(commonDir, ".github", "workflows"),
-    path.join(projectDir, ".github", "workflows"),
-  );
+  const workflowsDir = path.join(projectDir, ".github", "workflows");
+  const workflows = copyKitTree(path.join(commonDir, ".github", "workflows"), workflowsDir);
+  // Substitute the scaffold-time {{LAKEBASE_SCM_UTILS_VERSION}} placeholder the raw copy above
+  // just shipped verbatim , leaving the literal breaks the CI ref's bash expansion (see
+  // substituteWorkflowVersion). Resolve the scm-utils version from THIS kit's dep pin so an
+  // upgraded project's workflows match a freshly-scaffolded one.
+  const substrate = resolveSubstrateVersion(kitDir);
+  if (substrate) substituteWorkflowVersion(workflowsDir, substrate);
   // Re-append the Playwright E2E block to run-tests.sh for a UI project. The scripts copy above
   // just reset run-tests.sh to the kit TEMPLATE, which carries NO E2E block , the block is appended
   // PER-PROJECT by enableE2eForProject, never shipped in the template. So without this, every

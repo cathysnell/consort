@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.58] - 2026-08-28
+
+### Fixed
+
+- **`consort-upgrade` no longer ships the literal `{{LAKEBASE_SCM_UTILS_VERSION}}` placeholder into a project's CI workflows.** `refreshSurface` copies `.github/workflows` with a raw recursive `cpSync` and , unlike the initial scaffold (scm-utils `substituteWorkflowPlaceholders`) , never substituted the `{{LAKEBASE_SCM_UTILS_VERSION}}` placeholder. So every upgrade re-shipped the literal into `pr.yml`/`merge.yml`, and the CI ref fallback `${SCM_UTILS_REF:-v{{LAKEBASE_SCM_UTILS_VERSION}}}` then broke: bash closes the parameter expansion at the FIRST `}` of the unsubstituted `}}}`, leaking `}}` into the emitted value (`SCM_UTILS_REF=v<ver>}}`), so the next step's `npx github:databricks-solutions/lakebase-scm-utils#<ref>}}` could not resolve the ref , the "Detect project language" step exited 1, build-and-test failed, and `wait-ci` exited 3 (this had bitten CI before this was traced). `refreshSurface` now resolves the scm-utils version from consort's OWN dependency pin (`#v<version>` , not the kit's own version, which walking up the template tree would wrongly yield) and substitutes the placeholder in the copied workflows, so an upgraded project's workflows are as valid as a freshly-scaffolded one. Test: `upgrade-e2e-rewire.test.ts` (+1, asserts no literal placeholder survives and the value is a clean `${SCM_UTILS_REF:-v<version>}`).
+
 ## [0.3.57] - 2026-08-28
 
 ### Fixed
