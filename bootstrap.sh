@@ -84,46 +84,152 @@ offer_brew_install() {
   fi
 }
 
+# Locate a keg-only formula's install prefix. Two of the three formulas this
+# script offers (node@20, openjdk@17, python@3.11 - all but plain `node`) are
+# KEG-ONLY: brew installs them without linking them onto PATH, so a successful
+# `brew install` does not make the tool usable. Derive the prefix from
+# `brew --prefix` so linuxbrew and a custom HOMEBREW_PREFIX work too, and fall
+# back to the well-known prefixes only if brew cannot answer.
+brew_keg() {
+  local formula="$1" prefix
+  if [ "$BREW" = true ]; then
+    prefix="$( { brew --prefix 2>/dev/null; } || true )"
+    if [ -n "$prefix" ] && [ -d "$prefix/opt/$formula" ]; then
+      printf '%s' "$prefix/opt/$formula"; return 0
+    fi
+  fi
+  for prefix in /opt/homebrew /usr/local /home/linuxbrew/.linuxbrew; do
+    if [ -d "$prefix/opt/$formula" ]; then printf '%s' "$prefix/opt/$formula"; return 0; fi
+  done
+  return 1
+}
+
+# version_at_least MIN ACTUAL -> 0 when ACTUAL >= MIN. One comparison for every
+# floor in this script, so a new floor is a one-line addition rather than a
+# fourth hand-rolled idiom.
+version_at_least() {
+  local min="$1" actual="$2"
+  [ -n "$actual" ] && [ "$(printf '%s\n%s\n' "$min" "$actual" | sort -V | head -1)" = "$min" ]
+}
+
+# The rc file for the user's ACTUAL shell. linuxbrew users are commonly on bash,
+# so a hardcoded ~/.zshrc remediation would edit a file their shell never reads.
+shell_rc() {
+  case "$(basename "${SHELL:-}")" in
+    zsh)  printf '%s' "$HOME/.zshrc" ;;
+    bash) printf '%s' "$HOME/.bashrc" ;;
+    *)    printf '' ;;
+  esac
+}
+
+# Print the keg-only remediation for <label>/<formula>. Returns non-zero when no
+# keg is present (i.e. the tool is genuinely absent, not merely unlinked).
+keg_hint() {
+  local label="$1" formula="$2" keg rc
+  keg="$( brew_keg "$formula" || true )"
+  [ -z "$keg" ] && return 1
+  [ -d "$keg/bin" ] || return 1
+  rc="$(shell_rc)"
+  echo -e "  ${YELLOW}!${NC} $label is at $keg but is keg-only, so it is not on PATH."
+  if [ -n "$rc" ]; then
+    echo -e "     Add it, then re-run this script:"
+    echo -e "       echo 'export PATH=\"$keg/bin:\$PATH\"' >> $rc"
+  else
+    echo -e "     Add its bin directory to PATH, then re-run this script:"
+    echo -e "       export PATH=\"$keg/bin:\$PATH\""
+  fi
+  return 0
+}
+
+# `java` probes read the FULL output, never `head -1`: a JVM may print a
+# "Picked up JAVA_TOOL_OPTIONS: ..." preamble first, which would make a
+# first-line probe report a perfectly good JDK as missing.
+java_raw()     { { java -version 2>&1; } || true; }
+java_works()   { printf '%s' "$1" | grep -qiE 'version|openjdk'; }
+java_version() { printf '%s' "$1" | sed -nE 's/.*"([0-9][^"]*)".*/\1/p' | head -1; }
+
 echo -e "${BLUE}consort bootstrap: checking prerequisites${NC}"
 echo
 
 MISSING=0
 AUTH_REMINDERS=()
+# Advisories are NOT failures. Per consort/lakebase/create-doctor-gate.ts, the
+# JDK blocks creation only for java/kotlin projects: "a Python (alembic) or Node
+# project does not need a JDK and must not be gated on it". bootstrap.sh has no
+# --language, so it must report a JDK problem without failing the run.
+ADVISORIES=()
 
-# node + npm (npm ships with node)
-if have node; then
-  NODE_MAJOR="$(node -v 2>/dev/null | sed -E 's/^v?([0-9]+).*/\1/')"
-  if [ "${NODE_MAJOR:-0}" -ge 20 ]; then
-    echo -e "  ${GREEN}✓${NC} Node.js $(node -v)"
-  else
-    echo -e "  ${YELLOW}!${NC} Node.js $(node -v) - Consort needs 20+"
-    offer_brew_install "Node.js 20" "node@20" "https://nodejs.org" || MISSING=$((MISSING+1))
-  fi
+# node + npm (npm ships with node). `node@20` is keg-only, so judge the END
+# STATE after any install rather than the installer's exit status.
+NODE_MIN=20
+node_major() { { node -v 2>/dev/null | sed -E 's/^v?([0-9]+).*/\1/'; } || true; }
+NODE_MAJOR="$(node_major)"
+if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -ge "$NODE_MIN" ] 2>/dev/null; then
+  echo -e "  ${GREEN}✓${NC} Node.js $(node -v)"
 else
-  echo -e "  ${RED}✗${NC} Node.js not found"
-  offer_brew_install "Node.js" "node" "https://nodejs.org" || MISSING=$((MISSING+1))
+  if [ -n "$NODE_MAJOR" ]; then
+    echo -e "  ${YELLOW}!${NC} Node.js $(node -v) - Consort needs ${NODE_MIN}+"
+    offer_brew_install "Node.js $NODE_MIN" "node@$NODE_MIN" "https://nodejs.org" || true
+    NODE_FORMULA="node@$NODE_MIN"
+  else
+    echo -e "  ${RED}✗${NC} Node.js not found"
+    offer_brew_install "Node.js" "node" "https://nodejs.org" || true
+    NODE_FORMULA="node"
+  fi
+  NODE_MAJOR="$(node_major)"
+  if [ -z "$NODE_MAJOR" ] || ! [ "$NODE_MAJOR" -ge "$NODE_MIN" ] 2>/dev/null; then
+    keg_hint "Node.js $NODE_MIN" "$NODE_FORMULA" || true
+    MISSING=$((MISSING+1))
+  fi
 fi
 have npm && echo -e "  ${GREEN}✓${NC} npm $(npm -v)" || { echo -e "  ${RED}✗${NC} npm not found (ships with Node.js)"; MISSING=$((MISSING+1)); }
 
-# python 3.10+
-if have python3; then
-  echo -e "  ${GREEN}✓${NC} $(python3 --version 2>&1)"
+# python 3.10+ (CONTRIBUTING). `have python3` alone is not enough: macOS ships
+# /usr/bin/python3 (3.9 on current releases), which satisfies a presence check
+# but sits below the floor, so an unusable interpreter reported green. And
+# `python@3.11` is keg-only - it installs python3.11 without taking over
+# `python3` - so re-test the END STATE instead of trusting the install.
+PY_MIN="3.10"
+py_ver() { { python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null; } || true; }
+PY_VER="$(py_ver)"
+if version_at_least "$PY_MIN" "$PY_VER"; then
+  echo -e "  ${GREEN}✓${NC} Python $PY_VER"
 else
-  echo -e "  ${RED}✗${NC} Python 3 not found"
-  offer_brew_install "Python 3.11" "python@3.11" "https://www.python.org/downloads" || MISSING=$((MISSING+1))
+  if [ -n "$PY_VER" ]; then
+    echo -e "  ${YELLOW}!${NC} Python $PY_VER found, but ${PY_MIN}+ is required"
+  else
+    echo -e "  ${RED}✗${NC} Python 3 not found"
+  fi
+  offer_brew_install "Python 3.11" "python@3.11" "https://www.python.org/downloads" || true
+  PY_VER="$(py_ver)"
+  if ! version_at_least "$PY_MIN" "$PY_VER"; then
+    keg_hint "Python 3.11" "python@3.11" || true
+    MISSING=$((MISSING+1))
+  fi
 fi
 
-# jdk 17+. `have java` is not enough: macOS ships a /usr/bin/java stub that
-# exists on PATH but errors ("Unable to locate a Java Runtime") when no JDK is
-# installed. Require `java -version` to actually succeed.
-# `|| true`: java exits non-zero when no runtime is installed, and with
-# `set -e`/pipefail that would abort the script mid-check.
-JAVA_VER="$( { java -version 2>&1 | head -1; } || true )"
-if have java && printf '%s' "$JAVA_VER" | grep -qiE 'version|openjdk'; then
-  echo -e "  ${GREEN}✓${NC} $JAVA_VER"
+# jdk 17+ (CONTRIBUTING), for the Flyway live path. This is an ADVISORY, not a
+# blocker: create-doctor-gate.ts gates the JDK only for java/kotlin projects, and
+# bootstrap has no --language, so failing the run here would block a Python or
+# Node author who needs no JDK at all. Report it accurately, do not gate on it.
+JDK_MIN="17"
+JAVA_RAW="$(java_raw)"
+JAVA_VER="$(java_version "$JAVA_RAW")"
+if java_works "$JAVA_RAW" && version_at_least "$JDK_MIN" "$JAVA_VER"; then
+  echo -e "  ${GREEN}✓${NC} JDK $JAVA_VER"
 else
-  echo -e "  ${YELLOW}!${NC} JDK not found (needed for the Flyway live path)"
-  offer_brew_install "JDK 17" "openjdk@17" "https://adoptium.net" || MISSING=$((MISSING+1))
+  if java_works "$JAVA_RAW"; then
+    echo -e "  ${YELLOW}!${NC} JDK $JAVA_VER found, but ${JDK_MIN}+ is needed for the Flyway live path"
+  else
+    echo -e "  ${YELLOW}!${NC} JDK not found on PATH (needed for the Flyway live path)"
+  fi
+  offer_brew_install "JDK $JDK_MIN" "openjdk@$JDK_MIN" "https://adoptium.net" || true
+  JAVA_RAW="$(java_raw)"
+  JAVA_VER="$(java_version "$JAVA_RAW")"
+  if ! java_works "$JAVA_RAW" || ! version_at_least "$JDK_MIN" "$JAVA_VER"; then
+    keg_hint "JDK $JDK_MIN" "openjdk@$JDK_MIN" || true
+    ADVISORIES+=("JDK ${JDK_MIN}+ is not on PATH. Only java/kotlin projects need it; the Flyway live path will fail without it.")
+  fi
 fi
 
 # gh: presence is the tool requirement; authentication is a reminder, not a
@@ -156,10 +262,21 @@ fi
 echo
 if [ "$MISSING" -gt 0 ]; then
   echo -e "${YELLOW}$MISSING required tool(s) still missing. Install them (see above), then re-run.${NC}"
+  if [ "${#ADVISORIES[@]}" -gt 0 ]; then
+    for a in "${ADVISORIES[@]}"; do echo -e "  ${YELLOW}-${NC} $a"; done
+  fi
   exit 1
 fi
 
 echo -e "${GREEN}All required tools are present.${NC}"
+
+# Advisories print on the success path too: a green "all present" that hides a
+# broken JDK is the false-green this script exists to avoid.
+if [ "${#ADVISORIES[@]}" -gt 0 ]; then
+  echo
+  echo -e "${YELLOW}Advisories (not blocking):${NC}"
+  for a in "${ADVISORIES[@]}"; do echo "  - $a"; done
+fi
 
 # Auth reminders are NOT failures: the tools are installed, and these one-liners
 # are quick to run whenever you are ready.

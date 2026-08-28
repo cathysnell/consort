@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`bootstrap.sh` no longer reports a green environment it cannot actually run on.** Three prerequisite checks could pass while the tool was present-but-unusable. The Python check only tested that `python3` existed, never its version, so macOS's system 3.9 satisfied a floor CONTRIBUTING documents as 3.10+. The JDK and Node checks offered `brew install openjdk@17` / `node@20`, both **keg-only** formulas: brew installs them without linking them onto PATH, so `java` / `node` still failed immediately afterwards, and because a successful install made `offer_brew_install` return 0, `MISSING` stayed at zero and the script exited 0 ("All required tools are present") with no working toolchain. Every check now judges the **end state** rather than the installer's exit status: after any remediation it re-probes the tool and only counts it present if it actually resolves. Keg paths resolve via `brew --prefix` (falling back to the well-known prefixes, linuxbrew included) instead of two hardcoded macOS locations, and a detected keg-only install prints the exact `export PATH=...` line for the user's real shell rather than dead-ending. Also folded three hand-rolled version idioms into one `version_at_least` helper and added the JDK 17 floor that CONTRIBUTING promises but nothing enforced (a JDK 8 previously passed green). The JDK is reported as an **advisory, not a blocker**, matching `consort/lakebase/create-doctor-gate.ts`: it gates creation only for java/kotlin, and `bootstrap.sh` has no `--language`, so failing the run would block Python and Node authors who need no JDK at all. Advisories print on both the success and failure paths so a broken JDK is never a silent green. Test: `tests/bdd/bootstrap-prereqs.test.ts` (+8).
+
 ## [0.3.56] - 2026-08-28
 
 ### Added
