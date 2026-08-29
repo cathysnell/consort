@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.60] - 2026-08-29
+
+### Fixed
+
+- **Repoint `@databricks-solutions/lakebase-scm-utils` `#v0.2.16 -> #v0.2.17` , two connection/e2e-harness fixes.** (1) The `application_name` connection label now reaches the PRIMARY pooled path: `createLakebasePool` (used by schema-diff / reconcile-tier) silently dropped a passed `application_name`, so those connections were unlabeled; scm-utils now sets `PGAPPNAME` (which node-postgres honors) so the pooled connections land in `pg_stat_activity` as `consort/<version>` / `scm-utils/<version>` (live-verified). (2) The scaffolded Playwright `client/playwright.config.ts` backend now runs `alembic upgrade head && uvicorn …` with `reuseExistingServer: false` , previously it reused a uvicorn started before a later story's migration, serving a STALE schema (GET ok; a write to the new table 500'd) and reuse skipped any migration; every e2e run now gets a fresh, migrated backend. The frontend keeps reuse (no schema). NOTE: `consort-upgrade` won't clobber an existing project's `playwright.config.ts` (idempotent), so this benefits future scaffolds; an existing project applies it by re-scaffolding the client config or hand-editing.
+
 ## [0.3.59] - 2026-08-29
 
 ### Added
