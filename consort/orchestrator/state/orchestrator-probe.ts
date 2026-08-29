@@ -22,6 +22,7 @@ import {
 } from "../../pipeline/cycle-record.js";
 import { needsGreenAssess, hasPendingRegressionFix, hasPendingSupersession } from "../../smells/supersession.js";
 import { driverPhaseForTdd, type StoryArtifactProbe, type DriveContext } from "./orchestrator-derive.js";
+import { storyDesignFingerprint } from "../../pipeline/design-fingerprint.js";
 import type { DriveEscalation } from "../workflow/workflow-vocabulary.js";
 import { readGates } from "../../gates/gates.js";
 import { PHASE_OWNER_KEY } from "../../gates/workflow-phase.js";
@@ -296,6 +297,10 @@ export function diskArtifactProbe(
       } catch {
         return false;
       }
+    },
+
+    designFingerprint(story) {
+      return storyDesignFingerprint(consortDir, featureId, story);
     },
 
     reflectionPassed(story) {

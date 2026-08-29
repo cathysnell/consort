@@ -6968,7 +6968,8 @@ function cutStoryExperiment(pipeline, storyId, args) {
     ...args.parent_sha !== void 0 ? { parent_sha: args.parent_sha } : {},
     n: args.n ?? 1,
     status: "active",
-    ...args.at !== void 0 ? { cut_at: args.at } : {}
+    ...args.at !== void 0 ? { cut_at: args.at } : {},
+    ...args.design_fingerprint !== void 0 ? { design_fingerprint: args.design_fingerprint } : {}
   };
   return pipeline;
 }
@@ -7362,6 +7363,20 @@ async function mergeAndAcceptStory(args, ops = realExperimentOps) {
   writePipeline(args.consortDir, p);
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_esm_shims();
+import { createHash } from "crypto";
+import { readFileSync as readFileSync17 } from "fs";
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = readFileSync17(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
+}
+
 // consort/experiment/experiment-args.ts
 init_esm_shims();
 function parseExperimentArgs(argv) {
@@ -7456,7 +7471,13 @@ async function main() {
         slug,
         branch: rec.branch_id,
         parent: args.parent,
-        at
+        at,
+        // Stamp the design this experiment is cut to build (stale-experiment guardrail):
+        // a later redesign under this same experiment then reads as stale and re-cuts.
+        ...(() => {
+          const fp = storyDesignFingerprint(consortDir, feature, story);
+          return fp !== void 0 ? { design_fingerprint: fp } : {};
+        })()
       });
       writePipeline(consortDir, p);
       process.stdout.write(`cut experiment ${slug} on ${rec.branch_id} (parent ${args.parent})

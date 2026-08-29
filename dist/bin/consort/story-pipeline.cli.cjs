@@ -7334,7 +7334,8 @@ function cutStoryExperiment(pipeline, storyId, args) {
     ...args.parent_sha !== void 0 ? { parent_sha: args.parent_sha } : {},
     n: args.n ?? 1,
     status: "active",
-    ...args.at !== void 0 ? { cut_at: args.at } : {}
+    ...args.at !== void 0 ? { cut_at: args.at } : {},
+    ...args.design_fingerprint !== void 0 ? { design_fingerprint: args.design_fingerprint } : {}
   };
   return pipeline;
 }
@@ -7386,6 +7387,20 @@ function reviseStory(pipeline, storyId, opts) {
   setStoryStatus(pipeline, storyId, "designing");
   freeLaneIfActive(pipeline, storyId);
   return pipeline;
+}
+
+// consort/pipeline/design-fingerprint.ts
+init_cjs_shims();
+var import_node_crypto = require("crypto");
+var import_node_fs2 = require("fs");
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = (0, import_node_fs2.readFileSync)(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return (0, import_node_crypto.createHash)("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
 }
 
 // consort/intake/spec-sync.ts
@@ -7479,7 +7494,7 @@ function healAndReportStoryNarrative(consortDir, featureId) {
 
 // consort/orchestrator/status/revise.ts
 init_cjs_shims();
-var import_node_fs7 = require("fs");
+var import_node_fs8 = require("fs");
 var import_node_path9 = require("path");
 
 // consort/logging/agent-log.ts
@@ -7924,8 +7939,8 @@ var import_path9 = require("path");
 // consort/deploy/deploy.ts
 init_cjs_shims();
 var import_node_child_process2 = require("child_process");
-var import_node_crypto = require("crypto");
-var import_node_fs3 = require("fs");
+var import_node_crypto2 = require("crypto");
+var import_node_fs4 = require("fs");
 var import_node_path4 = require("path");
 var import_lakebase6 = require("@databricks-solutions/lakebase-scm-utils/lakebase");
 var import_util2 = require("@databricks-solutions/lakebase-scm-utils/util");
@@ -7972,7 +7987,7 @@ var path = __toESM(require("path"), 1);
 
 // consort/architecture/e2e-regex-clean.ts
 init_cjs_shims();
-var import_node_fs2 = require("fs");
+var import_node_fs3 = require("fs");
 var import_node_path3 = require("path");
 
 // consort/smells/ephemeral-verify.ts
@@ -7984,7 +7999,7 @@ var import_lakebase5 = require("@databricks-solutions/lakebase-scm-utils/lakebas
 
 // consort/architecture/design-adherence.ts
 init_cjs_shims();
-var import_node_fs4 = require("fs");
+var import_node_fs5 = require("fs");
 var import_node_path5 = require("path");
 
 // consort/smells/supersession.ts
@@ -7994,7 +8009,7 @@ var import_node_path6 = require("path");
 
 // consort/architecture/contract-clean.ts
 init_cjs_shims();
-var import_node_fs5 = require("fs");
+var import_node_fs6 = require("fs");
 var import_node_path7 = require("path");
 var ARTIFACT_ROOTS_RE = artifactRootsRegexAlternation();
 var EXCLUDE_DIR = new RegExp(
@@ -8011,7 +8026,7 @@ var path2 = __toESM(require("path"), 1);
 
 // consort/architecture/migration-app-clean.ts
 init_cjs_shims();
-var import_node_fs6 = require("fs");
+var import_node_fs7 = require("fs");
 var import_node_path8 = require("path");
 
 // consort/pipeline/cycle-record.ts
@@ -8048,23 +8063,23 @@ function staleStoryArtifactsForRevise(consortDir, featureId, story, gate) {
   clearReflectVerdict(consortDir, featureId, story);
   const acIds = new Set(storyAcIds(consortDir, featureId, story));
   const master = featureTestListJson(consortDir, featureId);
-  if ((0, import_node_fs7.existsSync)(master)) {
+  if ((0, import_node_fs8.existsSync)(master)) {
     try {
-      const data = JSON.parse((0, import_node_fs7.readFileSync)(master, "utf8"));
+      const data = JSON.parse((0, import_node_fs8.readFileSync)(master, "utf8"));
       if (Array.isArray(data.items)) {
         data.items = data.items.filter((it) => !it.ac_id || !acIds.has(it.ac_id));
-        (0, import_node_fs7.writeFileSync)(master, JSON.stringify(data, null, 2) + "\n");
+        (0, import_node_fs8.writeFileSync)(master, JSON.stringify(data, null, 2) + "\n");
       }
     } catch {
     }
   }
   const perStory = storyTestListJson(consortDir, featureId, story);
-  if ((0, import_node_fs7.existsSync)(perStory)) (0, import_node_fs7.rmSync)(perStory, { force: true });
+  if ((0, import_node_fs8.existsSync)(perStory)) (0, import_node_fs8.rmSync)(perStory, { force: true });
   if (gate === "spec") {
     const dir = acsDir(consortDir, featureId, story);
-    if ((0, import_node_fs7.existsSync)(dir)) {
-      for (const f of (0, import_node_fs7.readdirSync)(dir)) {
-        if (f.endsWith(".json") || f.endsWith(".md")) (0, import_node_fs7.rmSync)((0, import_node_path9.join)(dir, f), { force: true });
+    if ((0, import_node_fs8.existsSync)(dir)) {
+      for (const f of (0, import_node_fs8.readdirSync)(dir)) {
+        if (f.endsWith(".json") || f.endsWith(".md")) (0, import_node_fs8.rmSync)((0, import_node_path9.join)(dir, f), { force: true });
       }
     }
   } else if (gate === "architecture") {
@@ -8073,15 +8088,15 @@ function staleStoryArtifactsForRevise(consortDir, featureId, story, gate) {
 }
 function clearArchitecturalNotes(consortDir, featureId, story) {
   const dir = acsDir(consortDir, featureId, story);
-  if (!(0, import_node_fs7.existsSync)(dir)) return;
-  for (const f of (0, import_node_fs7.readdirSync)(dir)) {
+  if (!(0, import_node_fs8.existsSync)(dir)) return;
+  for (const f of (0, import_node_fs8.readdirSync)(dir)) {
     if (!f.endsWith(".json")) continue;
     const p = (0, import_node_path9.join)(dir, f);
     try {
-      const ac = JSON.parse((0, import_node_fs7.readFileSync)(p, "utf8"));
+      const ac = JSON.parse((0, import_node_fs8.readFileSync)(p, "utf8"));
       if ("architectural_notes" in ac) {
         delete ac.architectural_notes;
-        (0, import_node_fs7.writeFileSync)(p, JSON.stringify(ac, null, 2) + "\n");
+        (0, import_node_fs8.writeFileSync)(p, JSON.stringify(ac, null, 2) + "\n");
       }
     } catch {
     }
@@ -8120,8 +8135,8 @@ function applyReviseSelfHeal(args) {
   staleStoryArtifactsForRevise(consortDir, args.featureId, args.story, args.gate);
   try {
     const hb = handbackFile(consortDir, args.featureId, args.routedTo, args.story);
-    (0, import_node_fs7.mkdirSync)((0, import_node_path9.dirname)(hb), { recursive: true });
-    (0, import_node_fs7.writeFileSync)(hb, composeReviseBrief({ smell: args.smell, gate: args.gate, reason: args.reason }));
+    (0, import_node_fs8.mkdirSync)((0, import_node_path9.dirname)(hb), { recursive: true });
+    (0, import_node_fs8.writeFileSync)(hb, composeReviseBrief({ smell: args.smell, gate: args.gate, reason: args.reason }));
   } catch {
   }
   const reflect = isReflectSmell(args.smell);
@@ -8131,9 +8146,9 @@ function applyReviseSelfHeal(args) {
       if (role === args.routedTo) continue;
       try {
         const hb = handbackFile(consortDir, args.featureId, role, args.story);
-        (0, import_node_fs7.mkdirSync)((0, import_node_path9.dirname)(hb), { recursive: true });
+        (0, import_node_fs8.mkdirSync)((0, import_node_path9.dirname)(hb), { recursive: true });
         const gate = role === "architect-reviewer" ? "architecture" : "test_list";
-        (0, import_node_fs7.writeFileSync)(hb, composeReviseBrief({ smell: args.smell, gate, reason: args.reason }));
+        (0, import_node_fs8.writeFileSync)(hb, composeReviseBrief({ smell: args.smell, gate, reason: args.reason }));
       } catch {
       }
     }
@@ -8550,7 +8565,12 @@ async function main() {
         lakebase_branch_uid: args.lakebaseUid,
         parent_sha: args.parentSha,
         n: args.n !== void 0 ? Number(args.n) : void 0,
-        at: args.at ?? (/* @__PURE__ */ new Date()).toISOString()
+        at: args.at ?? (/* @__PURE__ */ new Date()).toISOString(),
+        // Stamp the design this experiment is cut to build (stale-experiment guardrail).
+        ...(() => {
+          const fp = storyDesignFingerprint(consortDir, feature, args.story);
+          return fp !== void 0 ? { design_fingerprint: fp } : {};
+        })()
       });
       writePipeline(consortDir, pipeline);
       process.stdout.write(`cut experiment ${args.slug} for ${args.story} on ${args.branch} (parent ${args.parent})

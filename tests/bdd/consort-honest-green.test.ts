@@ -143,6 +143,47 @@ describe("honest GREEN: greenOpenCycle runs a real verify before stamping green"
     expect(escs[0].reason).toMatch(/self-heal round/);
   });
 
+  it("at escalation, DROPS a diagnosis recorded for a DIFFERENT failure mode (stale-summary guard)", async () => {
+    beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
+    await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail }); // 1st -> assess
+    // The last assess recorded a diagnosis for an OLD failure mode (a summary the CURRENT verify
+    // no longer hits). The observed bug: a sandbox-blocked driver re-raised reusing a stale round-1
+    // diagnosis (e2e 500) that no longer matched what was failing (a "client Vitest failed").
+    writeGreenFailure(tdd, F, S, "AC1", {
+      assessed: true,
+      summary: "an OLD failure mode: the reconcile POST 500s (cycle_counts table absent)",
+      diagnosis: "stale root-cause: a stale uvicorn served a schema missing cycle_counts",
+      fixAttempts: MAX_REGRESSION_FIX_ATTEMPTS - 1,
+    });
+    // The current verify fails with a DIFFERENT summary than the recorded one.
+    const r = await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail, repair: true });
+    expect(r.escalated).toBe(true);
+    const esc = readEscalations(tdd).filter((e) => !e.resolved_at)[0];
+    // The stale diagnosis is NOT glued to the fresh summary; the escalation flags the mode change.
+    expect(esc.reason).not.toContain("stale root-cause");
+    expect(esc.reason).toMatch(/failure MODE changed/i);
+    // The CURRENT verify summary stands as the truth.
+    expect(esc.reason).toContain("T2 returns 201");
+  });
+
+  it("at escalation, KEEPS a diagnosis recorded for the SAME failure the verify still hits", async () => {
+    beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
+    await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail }); // 1st -> assess
+    writeGreenFailure(tdd, F, S, "AC1", {
+      assessed: true,
+      // The SAME summary the `fail` verifier returns , the diagnosis still explains it.
+      summary: "T2 returns 201, sibling test T1 expects 303 (contradiction)",
+      diagnosis: "T2's 201 contradicts T1's 303; reconcile the intended status",
+      fixAttempts: MAX_REGRESSION_FIX_ATTEMPTS - 1,
+    });
+    const r = await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail, repair: true });
+    expect(r.escalated).toBe(true);
+    const esc = readEscalations(tdd).filter((e) => !e.resolved_at)[0];
+    // The relevant diagnosis is carried; no stale-mode note.
+    expect(esc.reason).toContain("T2's 201 contradicts T1's 303");
+    expect(esc.reason).not.toMatch(/failure MODE changed/i);
+  });
+
   it("after a supersession flag, a PASSING permissive verify marks green + clears the marker", async () => {
     beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
     await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail }); // 1st -> assess

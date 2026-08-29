@@ -6649,7 +6649,7 @@ var require_ajv = __commonJS({
 // tests/optimization/optimize-role.cli.ts
 init_esm_shims();
 import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
-import { mkdirSync as mkdirSync38, writeFileSync as writeFileSync34, readFileSync as readFileSync55, existsSync as existsSync60, readdirSync as readdirSync36, mkdtempSync as mkdtempSync3, rmSync as rmSync19 } from "fs";
+import { mkdirSync as mkdirSync38, writeFileSync as writeFileSync34, readFileSync as readFileSync56, existsSync as existsSync60, readdirSync as readdirSync36, mkdtempSync as mkdtempSync3, rmSync as rmSync19 } from "fs";
 import { tmpdir as tmpdir3 } from "os";
 import { join as join62, dirname as dirname29, relative as relative9 } from "path";
 
@@ -6659,13 +6659,13 @@ import { join as join43 } from "path";
 
 // consort/orchestrator/scenarios/integration-chain.ts
 init_esm_shims();
-import { mkdtempSync, mkdirSync as mkdirSync29, rmSync as rmSync10, existsSync as existsSync43, readFileSync as readFileSync40, readdirSync as readdirSync26 } from "fs";
+import { mkdtempSync, mkdirSync as mkdirSync29, rmSync as rmSync10, existsSync as existsSync43, readFileSync as readFileSync41, readdirSync as readdirSync26 } from "fs";
 import { tmpdir } from "os";
 import { join as join42, relative as relative5 } from "path";
 
 // consort/orchestrator/runners/manifest-runner.ts
 init_esm_shims();
-import { readFileSync as readFileSync39, existsSync as existsSync41 } from "fs";
+import { readFileSync as readFileSync40, existsSync as existsSync41 } from "fs";
 import { join as join40 } from "path";
 
 // consort/orchestrator/steps/manifest.ts
@@ -11419,6 +11419,11 @@ function effectiveLoopForStory(runLoop, storyId) {
 function storyView(id, e, probe, loop) {
   const gateApproved = e.gate?.status === "approved";
   const accepted = e.acceptance?.decision === "accepted" || e.status === "done";
+  const exp = e.experiment;
+  const experimentStale = exp != null && exp.status === "active" && exp.design_fingerprint !== void 0 && (() => {
+    const cur = probe.designFingerprint(id);
+    return cur !== void 0 && cur !== exp.design_fingerprint;
+  })();
   return {
     gateApproved,
     // The gate record exists once the story has been surfaced for review;
@@ -11438,6 +11443,7 @@ function storyView(id, e, probe, loop) {
       // on revise); merged/active both count as cut.
       experimentCut: e.experiment != null && e.experiment.status !== "discarded",
       experimentDiscarded: e.experiment != null && e.experiment.status === "discarded",
+      experimentStale,
       testsWritten: probe.testsWritten(id),
       codeWritten: probe.codeWritten(id),
       loop,
@@ -11494,9 +11500,23 @@ function driverPhaseForTdd(tddPhase) {
   }
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_esm_shims();
+import { createHash as createHash2 } from "crypto";
+import { readFileSync as readFileSync34 } from "fs";
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = readFileSync34(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return createHash2("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
+}
+
 // consort/gates/gates.ts
 init_esm_shims();
-import { existsSync as existsSync35, readFileSync as readFileSync34, renameSync, unlinkSync, writeFileSync as writeFileSync22 } from "fs";
+import { existsSync as existsSync35, readFileSync as readFileSync35, renameSync, unlinkSync, writeFileSync as writeFileSync22 } from "fs";
 import { join as join36 } from "path";
 var GATES_SCHEMA_VERSION = 1;
 var GATE_STATUSES = ["open", "approved", "superseded", "withdrawn"];
@@ -11519,7 +11539,7 @@ function readGates(featureId, opts = {}) {
   if (!existsSync35(file)) {
     return defaultGatesState(featureId);
   }
-  const raw = readFileSync34(file, "utf8");
+  const raw = readFileSync35(file, "utf8");
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -11593,7 +11613,7 @@ import { readWorkflowState as readWorkflowState2, SCM_STATES } from "@databricks
 
 // consort/smells/reflection.ts
 init_esm_shims();
-import { existsSync as existsSync36, readFileSync as readFileSync35, writeFileSync as writeFileSync23, mkdirSync as mkdirSync25, rmSync as rmSync9 } from "fs";
+import { existsSync as existsSync36, readFileSync as readFileSync36, writeFileSync as writeFileSync23, mkdirSync as mkdirSync25, rmSync as rmSync9 } from "fs";
 var SMELL_FOR_OWNER = {
   "spec-author": "reflect-spec-defect",
   "test-strategist": "reflect-testlist-defect"
@@ -11602,7 +11622,7 @@ function readReflectVerdict(consortDir, feature, story) {
   const p = reflectVerdictJson(consortDir, feature, story);
   if (!existsSync36(p)) return void 0;
   try {
-    return JSON.parse(readFileSync35(p, "utf8"));
+    return JSON.parse(readFileSync36(p, "utf8"));
   } catch {
     return void 0;
   }
@@ -11617,7 +11637,7 @@ var REFLECT_SMELLS = Object.values(SMELL_FOR_OWNER);
 
 // consort/architecture/architecture-canon.ts
 init_esm_shims();
-import { existsSync as existsSync37, readFileSync as readFileSync36, writeFileSync as writeFileSync24, mkdirSync as mkdirSync26, readdirSync as readdirSync24 } from "fs";
+import { existsSync as existsSync37, readFileSync as readFileSync37, writeFileSync as writeFileSync24, mkdirSync as mkdirSync26, readdirSync as readdirSync24 } from "fs";
 function uniq(xs) {
   return [...new Set(xs.filter((x) => typeof x === "string" && x.length > 0))];
 }
@@ -11625,7 +11645,7 @@ function readCanon(consortDir) {
   const f = architectureCanonJson(consortDir);
   if (!existsSync37(f)) return void 0;
   try {
-    return JSON.parse(readFileSync36(f, "utf8"));
+    return JSON.parse(readFileSync37(f, "utf8"));
   } catch {
     return void 0;
   }
@@ -11794,6 +11814,9 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
       } catch {
         return false;
       }
+    },
+    designFingerprint(story) {
+      return storyDesignFingerprint(consortDir, featureId, story);
     },
     reflectionPassed(story) {
       return reflectionPassed(consortDir, featureId, story);
@@ -12077,7 +12100,7 @@ async function execute(step, ctx, deps) {
 
 // consort/orchestrator/turns/agent-report-formatter.ts
 init_esm_shims();
-import { readFileSync as readFileSync38, writeFileSync as writeFileSync25, existsSync as existsSync40, appendFileSync as appendFileSync2, mkdirSync as mkdirSync27 } from "fs";
+import { readFileSync as readFileSync39, writeFileSync as writeFileSync25, existsSync as existsSync40, appendFileSync as appendFileSync2, mkdirSync as mkdirSync27 } from "fs";
 import { join as join39, dirname as dirname21 } from "path";
 function extractReportBlock(text) {
   const labeled = text.match(/```agent-report\s*\n([\s\S]*?)```/);
@@ -12102,7 +12125,7 @@ function formatAgentReport(args) {
     if (!existsSync40(reportPath)) {
       return { ok: false, entries: 0, error: `agent report absent at ${reportPath} , the agent surfaced nothing about what it did.` };
     }
-    reportJson = readFileSync38(reportPath, "utf8");
+    reportJson = readFileSync39(reportPath, "utf8");
   }
   let raw;
   try {
@@ -12157,7 +12180,7 @@ function resolveInputsFromWorkspace(manifest, workspaceDir, featureId, action) {
       if (input.optional) continue;
       return { missing: input.id };
     }
-    out[input.id] = readFileSync39(p, "utf8");
+    out[input.id] = readFileSync40(p, "utf8");
   }
   return out;
 }
@@ -12394,7 +12417,7 @@ function snapshotTree(root, relTo) {
     for (const entry of readdirSync26(dir, { withFileTypes: true })) {
       const abs = join42(dir, entry.name);
       if (entry.isDirectory()) walk2(abs);
-      else if (entry.isFile()) out[relative5(relTo, abs)] = readFileSync40(abs, "utf8");
+      else if (entry.isFile()) out[relative5(relTo, abs)] = readFileSync41(abs, "utf8");
     }
   };
   walk2(root);
@@ -12704,7 +12727,7 @@ function driverGreenCandidates() {
 
 // tests/optimization/driver-green-enforcement.ts
 init_esm_shims();
-import { mkdirSync as mkdirSync30, readFileSync as readFileSync41, writeFileSync as writeFileSync26, existsSync as existsSync44, chmodSync } from "fs";
+import { mkdirSync as mkdirSync30, readFileSync as readFileSync42, writeFileSync as writeFileSync26, existsSync as existsSync44, chmodSync } from "fs";
 import { dirname as dirname23, join as join45 } from "path";
 
 // node_modules/js-yaml/dist/js-yaml.mjs
@@ -15301,7 +15324,7 @@ function deployPortForIndex(index) {
 }
 function assignWorktreePort(projectDir, port) {
   const file = join45(projectDir, "deploy-targets.yaml");
-  const doc = load(readFileSync41(file, "utf8")) ?? {};
+  const doc = load(readFileSync42(file, "utf8")) ?? {};
   const local = doc.targets?.local;
   if (!local) throw new Error(`assignWorktreePort: no 'local' target in ${file}`);
   const baseUrl = `http://localhost:${port}`;
@@ -15365,7 +15388,7 @@ var GUARD_HOOK_REL = ".claude/hooks/driver-guard.py";
 function readSettings(file) {
   if (!existsSync44(file)) return {};
   try {
-    return JSON.parse(readFileSync41(file, "utf8"));
+    return JSON.parse(readFileSync42(file, "utf8"));
   } catch {
     return {};
   }
@@ -15702,7 +15725,7 @@ function formatRoleSweepReport(r) {
 
 // tests/integration/live/driver-build-support.ts
 init_esm_shims();
-import { readFileSync as readFileSync52, writeFileSync as writeFileSync33, existsSync as existsSync58, statSync as statSync21, readdirSync as readdirSync34, mkdtempSync as mkdtempSync2, mkdirSync as mkdirSync37, chmodSync as chmodSync2, rmSync as rmSync18, cpSync as cpSync10 } from "fs";
+import { readFileSync as readFileSync53, writeFileSync as writeFileSync33, existsSync as existsSync58, statSync as statSync21, readdirSync as readdirSync34, mkdtempSync as mkdtempSync2, mkdirSync as mkdirSync37, chmodSync as chmodSync2, rmSync as rmSync18, cpSync as cpSync10 } from "fs";
 import { execFileSync as execFileSync5 } from "child_process";
 import { tmpdir as tmpdir2 } from "os";
 import { join as join60, relative as relative8 } from "path";
@@ -15733,7 +15756,7 @@ function classifyBuildTrial(sig2) {
 
 // consort/orchestrator/runners/run-config-loader.ts
 init_esm_shims();
-import { readFileSync as readFileSync42 } from "fs";
+import { readFileSync as readFileSync43 } from "fs";
 function resolveEnvTemplate(value) {
   const withDefault = value.match(/^\$\{([A-Z0-9_]+):-(.*)\}$/s);
   if (withDefault) {
@@ -15776,7 +15799,7 @@ function resolveDeep(node) {
   return node;
 }
 function loadRunConfig(path12) {
-  const raw = JSON.parse(readFileSync42(path12, "utf8"));
+  const raw = JSON.parse(readFileSync43(path12, "utf8"));
   return resolveDeep(raw);
 }
 
@@ -16080,7 +16103,7 @@ async function cutWorktree(args) {
 
 // consort/setup/orphan-project-sweep.ts
 init_esm_shims();
-import { existsSync as existsSync47, readdirSync as readdirSync27, readFileSync as readFileSync43, rmSync as rmSync14, statSync as statSync16 } from "fs";
+import { existsSync as existsSync47, readdirSync as readdirSync27, readFileSync as readFileSync44, rmSync as rmSync14, statSync as statSync16 } from "fs";
 import { join as join50 } from "path";
 var DEFAULT_TEST_PROJECT_PREFIXES = ["de-live-", "dg-live-"];
 function readEnvValue(envText, key) {
@@ -16094,14 +16117,14 @@ function readScaffoldProjectMeta(dir) {
   const envPath = join50(dir, ".env");
   const lakebaseDir = join50(dir, ".lakebase");
   if (!existsSync47(envPath) || !existsSync47(lakebaseDir)) return null;
-  const envText = readFileSync43(envPath, "utf8");
+  const envText = readFileSync44(envPath, "utf8");
   const projectId = readEnvValue(envText, "LAKEBASE_PROJECT_ID");
   const host = readEnvValue(envText, "DATABRICKS_HOST");
   if (!projectId || !host) return null;
   const wsPath = join50(lakebaseDir, "workflow-state.json");
   if (existsSync47(wsPath)) {
     try {
-      const ws = JSON.parse(readFileSync43(wsPath, "utf8"));
+      const ws = JSON.parse(readFileSync44(wsPath, "utf8"));
       if (typeof ws.project_id === "string" && ws.project_id && ws.project_id !== projectId) return null;
     } catch {
     }
@@ -16187,8 +16210,8 @@ function nextDesignAction(state) {
   return { kind: "design-complete" };
 }
 function nextBuildAction(story, b) {
-  if (!b.experimentCut) {
-    return b.experimentDiscarded ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
+  if (!b.experimentCut || b.experimentStale) {
+    return b.experimentDiscarded || b.experimentStale ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
   }
   if (b.refactorVerifyAssessEligible) return { kind: "invoke-role", role: "navigator", story, buildMode: "assess-refactor" };
   if (b.refactorVerifyRefactorPending) return { kind: "invoke-role", role: "driver", story, buildMode: "refactor-superseded" };
@@ -16591,13 +16614,13 @@ init_esm_shims();
 
 // consort/logging/turn-recorder.ts
 init_esm_shims();
-import { createHash as createHash2 } from "crypto";
+import { createHash as createHash3 } from "crypto";
 import {
   appendFileSync as appendFileSync3,
   cpSync as cpSync8,
   existsSync as existsSync48,
   mkdirSync as mkdirSync32,
-  readFileSync as readFileSync44,
+  readFileSync as readFileSync45,
   readdirSync as readdirSync28,
   rmSync as rmSync15,
   statSync as statSync17,
@@ -16683,7 +16706,7 @@ function labelForAction(action) {
   return kind;
 }
 function sha1(abs) {
-  return createHash2("sha1").update(readFileSync44(abs)).digest("hex");
+  return createHash3("sha1").update(readFileSync45(abs)).digest("hex");
 }
 function renderTranscriptMd(t, label) {
   const lines = [];
@@ -16752,7 +16775,7 @@ function readState(recordDir) {
   const f = join51(recordDir, ".recorder-state.json");
   if (!existsSync48(f)) return { files: {} };
   try {
-    return JSON.parse(readFileSync44(f, "utf8"));
+    return JSON.parse(readFileSync45(f, "utf8"));
   } catch {
     return { files: {} };
   }
@@ -16761,7 +16784,7 @@ function readIndex(recordDir) {
   const f = join51(recordDir, "turns", "index.json");
   if (!existsSync48(f)) return [];
   try {
-    const data = JSON.parse(readFileSync44(f, "utf8"));
+    const data = JSON.parse(readFileSync45(f, "utf8"));
     return Array.isArray(data.turns) ? data.turns : [];
   } catch {
     return [];
@@ -17296,12 +17319,12 @@ function assertRouteSatisfiable(action, step, ctx, exists = existsSync51) {
 
 // consort/pipeline/story-pipeline.ts
 init_esm_shims();
-import { existsSync as existsSync53, readFileSync as readFileSync47, writeFileSync as writeFileSync30, mkdirSync as mkdirSync34, readdirSync as readdirSync31, statSync as statSync20, rmSync as rmSync16 } from "fs";
+import { existsSync as existsSync53, readFileSync as readFileSync48, writeFileSync as writeFileSync30, mkdirSync as mkdirSync34, readdirSync as readdirSync31, statSync as statSync20, rmSync as rmSync16 } from "fs";
 import { dirname as dirname27, join as join56 } from "path";
 
 // consort/gates/gate-conformance-guard.ts
 init_esm_shims();
-import { existsSync as existsSync52, readFileSync as readFileSync46, readdirSync as readdirSync30, statSync as statSync19 } from "fs";
+import { existsSync as existsSync52, readFileSync as readFileSync47, readdirSync as readdirSync30, statSync as statSync19 } from "fs";
 import { join as join55, dirname as dirname26 } from "path";
 
 // consort/pipeline/story-pipeline.ts
@@ -17314,7 +17337,7 @@ function pipelinePath(consortDir, featureId) {
 function readPipeline(consortDir, featureId) {
   const p = pipelinePath(consortDir, featureId);
   if (!existsSync53(p)) return initPipeline(featureId);
-  return JSON.parse(readFileSync47(p, "utf8"));
+  return JSON.parse(readFileSync48(p, "utf8"));
 }
 function writePipeline(consortDir, pipeline) {
   const p = pipelinePath(consortDir, pipeline.feature_id);
@@ -17324,7 +17347,7 @@ function writePipeline(consortDir, pipeline) {
 
 // consort/session/response-formatter.ts
 init_esm_shims();
-import { existsSync as existsSync54, readFileSync as readFileSync48, readdirSync as readdirSync32 } from "fs";
+import { existsSync as existsSync54, readFileSync as readFileSync49, readdirSync as readdirSync32 } from "fs";
 function designGuideConformance(consortDir) {
   const file = designGuideJson(consortDir);
   if (!existsSync54(file)) {
@@ -17332,7 +17355,7 @@ function designGuideConformance(consortDir) {
   }
   let content;
   try {
-    content = readFileSync48(file, "utf8");
+    content = readFileSync49(file, "utf8");
   } catch (e) {
     return { ok: false, problem: `unreadable: ${e instanceof Error ? e.message : String(e)}` };
   }
@@ -18155,14 +18178,14 @@ function buildDriveEffects(cfg) {
 
 // consort/session/run-config.ts
 init_esm_shims();
-import { existsSync as existsSync56, mkdirSync as mkdirSync36, readFileSync as readFileSync50, writeFileSync as writeFileSync32 } from "fs";
+import { existsSync as existsSync56, mkdirSync as mkdirSync36, readFileSync as readFileSync51, writeFileSync as writeFileSync32 } from "fs";
 import { join as join58 } from "path";
 var RUN_CONFIG_REL = join58(ARTIFACT_ROOT, "run-config.json");
 function readRunConfig(consortDir) {
   const f = join58(consortDir, "run-config.json");
   if (!existsSync56(f)) return void 0;
   try {
-    return JSON.parse(readFileSync50(f, "utf8"));
+    return JSON.parse(readFileSync51(f, "utf8"));
   } catch {
     return void 0;
   }
@@ -18170,7 +18193,7 @@ function readRunConfig(consortDir) {
 
 // tests/optimization/replay-turn.ts
 init_esm_shims();
-import { readFileSync as readFileSync51, existsSync as existsSync57, readdirSync as readdirSync33 } from "fs";
+import { readFileSync as readFileSync52, existsSync as existsSync57, readdirSync as readdirSync33 } from "fs";
 import { join as join59 } from "path";
 function rehydrate(text, projectDir) {
   const root = projectDir.replace(/\/+$/, "");
@@ -18181,14 +18204,14 @@ function readReplaySet(turnDir) {
   const setDir = join59(turnDir, "replay-set");
   const promptPath = join59(setDir, "prompt.txt");
   if (!existsSync57(promptPath)) throw new Error(`replay-set incomplete: no prompt.txt under ${setDir}`);
-  const turn = JSON.parse(readFileSync51(join59(turnDir, "turn.json"), "utf8"));
+  const turn = JSON.parse(readFileSync52(join59(turnDir, "turn.json"), "utf8"));
   const leversPath = join59(setDir, "levers.json");
-  const levers = existsSync57(leversPath) ? JSON.parse(readFileSync51(leversPath, "utf8")) : {};
+  const levers = existsSync57(leversPath) ? JSON.parse(readFileSync52(leversPath, "utf8")) : {};
   const inDir = join59(setDir, "inputs");
   const inputs = {};
   if (existsSync57(inDir)) {
     for (const e of readdirSync33(inDir, { withFileTypes: true })) {
-      if (e.isFile()) inputs[e.name] = readFileSync51(join59(inDir, e.name), "utf8");
+      if (e.isFile()) inputs[e.name] = readFileSync52(join59(inDir, e.name), "utf8");
     }
   }
   return {
@@ -18197,7 +18220,7 @@ function readReplaySet(turnDir) {
     role: turn.role ?? levers.role ?? "",
     story: turn.story,
     action: turn.action ?? {},
-    promptRaw: readFileSync51(promptPath, "utf8"),
+    promptRaw: readFileSync52(promptPath, "utf8"),
     levers,
     inputs,
     preProjectDir: join59(setDir, "pre-project")
@@ -18327,7 +18350,7 @@ function generateLeanReplayManifest(chainManifestDir, feature, story, ac) {
   const files = readdirSync34(chainManifestDir).filter((f) => f.endsWith(".json"));
   let liveRaw;
   for (const f of files) {
-    const raw = readFileSync52(join60(chainManifestDir, f), "utf8");
+    const raw = readFileSync53(join60(chainManifestDir, f), "utf8");
     const m = JSON.parse(raw);
     if (m.agent?.kind === "claude") {
       let out = raw;
@@ -18381,13 +18404,13 @@ async function runLeanReplayTurn(bundle, agentFor, manifestDir) {
       if (existsSync58(gf)) {
         const dstDir = join60(ws, ARTIFACT_ROOT, "cycles", bundle.feature, bundle.story, bundle.ac);
         mkdirSync37(dstDir, { recursive: true });
-        writeFileSync33(join60(dstDir, "green-failure.json"), readFileSync52(gf, "utf8"));
+        writeFileSync33(join60(dstDir, "green-failure.json"), readFileSync53(gf, "utf8"));
       }
       const lkSrc = join60(KIT, "examples/replay/lk");
       if (existsSync58(lkSrc)) {
         const lkDst = join60(ws, "scripts", "lk");
         mkdirSync37(join60(ws, "scripts"), { recursive: true });
-        writeFileSync33(lkDst, readFileSync52(lkSrc, "utf8"));
+        writeFileSync33(lkDst, readFileSync53(lkSrc, "utf8"));
         chmodSync2(lkDst, 493);
       }
     },
@@ -18437,7 +18460,7 @@ function layBundle(projectDir, consortDir, driverTurn = "green", bundle = DRIVER
       { from: b.conventionsJson, to: join60(artifactRel, "architecture", "conventions.json") }
     ]
   });
-  const master = JSON.parse(readFileSync52(join60(b.recordedArtifactsFeatureDir, "test-list.json"), "utf8"));
+  const master = JSON.parse(readFileSync53(join60(b.recordedArtifactsFeatureDir, "test-list.json"), "utf8"));
   const items = master.items.filter((i) => i.ac_id === b.ac);
   assertGt(items.length, 0, "bundle: S3 has test-list items");
   writeFileSync33(join60(projectDir, storyRel, "test-list-per-story.json"), JSON.stringify({ feature_id: b.feature, story_id: b.story, items }, null, 2) + "\n");
@@ -18563,7 +18586,7 @@ async function runDriverGreenOnScaffold(project, opts = {}) {
       resetStaleBranch: true
     });
     if (driverTurn !== "green") {
-      const cutBranchId = readFileSync52(join60(consortDir, "experiments", b.feature, b.story, experimentSlug, "branch.txt"), "utf8").trim();
+      const cutBranchId = readFileSync53(join60(consortDir, "experiments", b.feature, b.story, experimentSlug, "branch.txt"), "utf8").trim();
       const storyCyclesDir = join60(consortDir, "cycles", b.feature, b.story);
       for (const acDir of readdirSync34(storyCyclesDir)) {
         const acPath = join60(storyCyclesDir, acDir);
@@ -18571,7 +18594,7 @@ async function runDriverGreenOnScaffold(project, opts = {}) {
         for (const f of readdirSync34(acPath)) {
           if (!/^cycle-.*\.json$/.test(f)) continue;
           const p = join60(acPath, f);
-          const c = JSON.parse(readFileSync52(p, "utf8"));
+          const c = JSON.parse(readFileSync53(p, "utf8"));
           if (c.experiment_slug !== void 0) c.experiment_slug = experimentSlug;
           if (c.branch_id !== void 0) c.branch_id = cutBranchId;
           writeFileSync33(p, JSON.stringify(c, null, 2) + "\n");
@@ -18735,7 +18758,7 @@ async function runDriverGreenOnScaffold(project, opts = {}) {
     const nextStepMarker = snapshotTree(markerDirAbs, markerDirAbs);
     const storyCycleDir = join60(consortDir, "cycles", b.feature, b.story);
     const rv = join60(storyCycleDir, "review-verdict.json");
-    if (existsSync58(rv)) nextStepMarker["review-verdict.json"] = readFileSync52(rv, "utf8");
+    if (existsSync58(rv)) nextStepMarker["review-verdict.json"] = readFileSync53(rv, "utf8");
     const evalTx = peekLastAgentTranscript(projectDir);
     if (driverTx) {
       producedArtifacts["transcripts/driver-prompt.txt"] = driverTx.prompt;
@@ -18781,7 +18804,7 @@ async function runDriverGreenOnScaffold(project, opts = {}) {
 
 // tests/optimization/experiment-config.ts
 init_esm_shims();
-import { readFileSync as readFileSync53 } from "fs";
+import { readFileSync as readFileSync54 } from "fs";
 var KNOWN_ROLES = [
   "architect-reviewer",
   "test-strategist",
@@ -18836,7 +18859,7 @@ function toLeverPatch(spec, candidateId) {
   return patch;
 }
 function loadExperimentConfig(path12) {
-  const raw = JSON.parse(readFileSync53(path12, "utf8"));
+  const raw = JSON.parse(readFileSync54(path12, "utf8"));
   if (!raw.name || typeof raw.name !== "string") throw new Error(`experiment config ${path12}: missing "name"`);
   if (!raw.turn || typeof raw.turn !== "string") throw new Error(`experiment config ${path12}: missing "turn" (the corpus turn label)`);
   const discriminator = raw.discriminator ?? discriminatorFromLabel(raw.turn);
@@ -18869,7 +18892,7 @@ function loadExperimentConfig(path12) {
 // consort/evaluation/semantic-gate.ts
 init_esm_shims();
 import { execFile } from "child_process";
-import { existsSync as existsSync59, readFileSync as readFileSync54, readdirSync as readdirSync35, statSync as statSync22 } from "fs";
+import { existsSync as existsSync59, readFileSync as readFileSync55, readdirSync as readdirSync35, statSync as statSync22 } from "fs";
 import { join as join61 } from "path";
 var SEMANTIC_THRESHOLD = 0.85;
 var FUNCTIONAL_THRESHOLD = 0.75;
@@ -18878,7 +18901,7 @@ function parseNavigatorAssessMarker(markerDir) {
   const reg = join61(markerDir, "regression-assessment.json");
   if (sup) {
     try {
-      const j = JSON.parse(readFileSync54(sup, "utf8"));
+      const j = JSON.parse(readFileSync55(sup, "utf8"));
       const raw = Array.isArray(j.tests) ? j.tests : Array.isArray(j.supersededTests) ? j.supersededTests : [];
       const tests = raw.map(String);
       return { score: 1, classification: "superseded-shift", nextStep: "permissive-refactor-superseded", supersededTests: tests };
@@ -18887,7 +18910,7 @@ function parseNavigatorAssessMarker(markerDir) {
   }
   if (existsSync59(reg)) {
     try {
-      const j = JSON.parse(readFileSync54(reg, "utf8"));
+      const j = JSON.parse(readFileSync55(reg, "utf8"));
       const diagnosis = typeof j.diagnosis === "string" ? j.diagnosis : void 0;
       const fixDirective = (typeof j.fixDirective === "string" && j.fixDirective ? j.fixDirective : void 0) ?? (typeof j.fix === "string" && j.fix ? j.fix : void 0);
       return fixDirective ? { score: 1, classification: "regression", nextStep: "driver-repair-with-directive", ...diagnosis ? { diagnosis } : {}, fixDirective } : { score: 1, classification: "insufficient", nextStep: "escalate", ...diagnosis ? { diagnosis } : {} };
@@ -18897,7 +18920,7 @@ function parseNavigatorAssessMarker(markerDir) {
   const gf = join61(markerDir, "green-failure.json");
   if (existsSync59(gf)) {
     try {
-      const g = JSON.parse(readFileSync54(gf, "utf8"));
+      const g = JSON.parse(readFileSync55(gf, "utf8"));
       const summary = typeof g.summary === "string" ? g.summary : "";
       if (g.assessed === true || /fail/i.test(summary)) {
         return { score: 0, classification: "insufficient", nextStep: "escalate" };
@@ -19415,7 +19438,7 @@ function buildReplayTurnJudge(turnLabel, feature, story, ac, discriminator) {
     const p = join62(recSrc, "green-failure.json");
     if (!existsSync60(p)) return void 0;
     try {
-      const g = JSON.parse(readFileSync55(p, "utf8"));
+      const g = JSON.parse(readFileSync56(p, "utf8"));
       return typeof g.summary === "string" ? g.summary : void 0;
     } catch {
       return void 0;
@@ -19428,7 +19451,7 @@ function buildReplayTurnJudge(turnLabel, feature, story, ac, discriminator) {
       try {
         for (const f of MARKER_FILES) {
           const p = join62(recSrc, f);
-          if (existsSync60(p)) writeFileSync34(join62(recDir, f), readFileSync55(p, "utf8"));
+          if (existsSync60(p)) writeFileSync34(join62(recDir, f), readFileSync56(p, "utf8"));
         }
         const cyclePrefix = join62(ARTIFACT_ROOT, "cycles", feature, story, ac) + "/";
         for (const [k, v] of Object.entries(producedArtifacts)) {
@@ -19460,12 +19483,12 @@ function readRecordedNextReview(turnLabel, feature, story) {
   if (!next) throw new Error(`readRecordedNextReview: no turn after ${turnLabel} (ordinal ${ord + 1}) in ${CORPUS_TURNS}`);
   const rv = join62(CORPUS_TURNS, next, "files", ARTIFACT_ROOT, "cycles", feature, story, "review-verdict.json");
   if (!existsSync60(rv)) throw new Error(`readRecordedNextReview: turn-after ${next} has no story-level review-verdict at ${rv} (the repair's recorded next step is not a review)`);
-  return parseVerdictFile(readFileSync55(rv, "utf8"));
+  return parseVerdictFile(readFileSync56(rv, "utf8"));
 }
 function readRecordedRefactorDirective(feature, story) {
   const rv = join62(CORPUS_RA, "cycles", feature, story, "review-verdict.json");
   if (!existsSync60(rv)) throw new Error(`readRecordedRefactorDirective: no story-level review-verdict at ${rv} (the refactor's recorded directive)`);
-  return parseVerdictFile(readFileSync55(rv, "utf8"));
+  return parseVerdictFile(readFileSync56(rv, "utf8"));
 }
 function buildReviewResolutionJudge(recordedReviewDirective) {
   const cwd = process.cwd();
@@ -19573,7 +19596,7 @@ function readCampReference(relFromCorpusRoot, what) {
   if (!existsSync60(p)) {
     throw new Error(`optimize-role: MISSING recorded reference for ${what} at ${p} , the LLM judge is mandatory and cannot run without it. Extract it from the corpus into the camp first.`);
   }
-  return readFileSync55(p, "utf8");
+  return readFileSync56(p, "utf8");
 }
 var DRIVER_GREEN_CODE_PIN_REL = "recorded-build/features/F6-split-tracking-code/stories/S1-split-columns-migration/turns/003-driver/code/app";
 var NEXT_STEP_MARKER_PREFIX = "navigator-eval/";
@@ -19676,7 +19699,7 @@ function buildDriverNextStepJudge(handle) {
     const p = join62(recordedRefDir, "green-failure.json");
     if (!existsSync60(p)) return void 0;
     try {
-      const g = JSON.parse(readFileSync55(p, "utf8"));
+      const g = JSON.parse(readFileSync56(p, "utf8"));
       return typeof g.summary === "string" ? g.summary : void 0;
     } catch {
       return void 0;
@@ -19801,7 +19824,7 @@ function readPriorSummary(baselineDir, handle) {
   const p = join62(baselineDir, handle, "summary.json");
   if (!existsSync60(p)) return void 0;
   try {
-    return JSON.parse(readFileSync55(p, "utf8"));
+    return JSON.parse(readFileSync56(p, "utf8"));
   } catch {
     return void 0;
   }
@@ -19876,10 +19899,10 @@ function latestRunDir(runsDir) {
 function readReference(chain, _role) {
   if (chain.referenceFile) {
     const camp = join62(process.cwd(), BUILD_CORPUS_REL, chain.referenceFile);
-    if (existsSync60(camp)) return readFileSync55(camp, "utf8");
+    if (existsSync60(camp)) return readFileSync56(camp, "utf8");
   }
   const p = join62(process.cwd(), INTAKE_REL, chain.referenceFile ?? chain.outputFile);
-  return existsSync60(p) ? readFileSync55(p, "utf8") : void 0;
+  return existsSync60(p) ? readFileSync56(p, "utf8") : void 0;
 }
 function persistTrial(runDir, chain, baseModel, trial) {
   const dir = join62(runDir, trial.candidateId);
@@ -19913,7 +19936,7 @@ function loadPreservedArtifacts(candidateDir) {
     for (const e of readdirSync36(dir, { withFileTypes: true })) {
       const abs = join62(dir, e.name);
       if (e.isDirectory()) walk2(abs);
-      else if (e.isFile()) out[relative9(root, abs)] = readFileSync55(abs, "utf8");
+      else if (e.isFile()) out[relative9(root, abs)] = readFileSync56(abs, "utf8");
     }
   };
   walk2(root);
@@ -19968,7 +19991,7 @@ async function runRejudge(runRoot, experimentPath) {
         writeFileSync34(join62(candDir, "rejudge.json"), JSON.stringify({ handle, candidateId, rejudgeable: false, reason: "no preserved artifacts" }, null, 2) + "\n");
         continue;
       }
-      const stored = existsSync60(join62(candDir, "telemetry.json")) ? JSON.parse(readFileSync55(join62(candDir, "telemetry.json"), "utf8")) : void 0;
+      const stored = existsSync60(join62(candDir, "telemetry.json")) ? JSON.parse(readFileSync56(join62(candDir, "telemetry.json"), "utf8")) : void 0;
       const primary = producedArtifacts[outputFile];
       let verdict;
       try {

@@ -55,6 +55,7 @@ import {
   type StoryStatus,
   type StoryPipeline,
 } from "../../consort/pipeline/story-pipeline";
+import { storyDesignFingerprint } from "../../consort/pipeline/design-fingerprint.js";
 import { healAndReportStoryNarrative } from "../../consort/intake/spec-sync";
 import { join } from "path";
 import { resolveConsortDir, ARTIFACT_ROOT } from "../../consort/config/consort-paths.js";
@@ -310,6 +311,11 @@ async function main(): Promise<number> {
         parent_sha: args.parentSha,
         n: args.n !== undefined ? Number(args.n) : undefined,
         at: args.at ?? new Date().toISOString(),
+        // Stamp the design this experiment is cut to build (stale-experiment guardrail).
+        ...(() => {
+          const fp = storyDesignFingerprint(consortDir, feature, args.story as string);
+          return fp !== undefined ? { design_fingerprint: fp } : {};
+        })(),
       });
       writePipeline(consortDir, pipeline);
       process.stdout.write(`cut experiment ${args.slug} for ${args.story} on ${args.branch} (parent ${args.parent})\n`);

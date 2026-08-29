@@ -108,9 +108,13 @@ export function nextDesignAction(state: DesignDriveState): DriveAction {
 
 /** The next build-lane action for the story the lane is on. */
 function nextBuildAction(story: string, b: StoryBuild): WorkflowAction {
-  if (!b.experimentCut) {
-    // A re-cut after a discarded experiment re-forks the polluted paired branch.
-    return b.experimentDiscarded
+  if (!b.experimentCut || b.experimentStale) {
+    // A re-cut after a discarded experiment re-forks the polluted paired branch. A STALE
+    // experiment (still active, but its design was re-authored under it , the withdraw-gate
+    // + set-status hazard) is treated the same: re-fork clean off the feature branch so the
+    // superseded design's code/tests cannot ride into the merge. Both re-cuts reset the
+    // stale paired branch; a fresh first cut does not.
+    return b.experimentDiscarded || b.experimentStale
       ? { kind: "cut-experiment", story, resetStaleBranch: true }
       : { kind: "cut-experiment", story };
   }

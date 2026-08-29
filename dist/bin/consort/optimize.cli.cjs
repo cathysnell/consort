@@ -9739,8 +9739,8 @@ function nextDesignAction(state) {
   return { kind: "design-complete" };
 }
 function nextBuildAction(story, b) {
-  if (!b.experimentCut) {
-    return b.experimentDiscarded ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
+  if (!b.experimentCut || b.experimentStale) {
+    return b.experimentDiscarded || b.experimentStale ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
   }
   if (b.refactorVerifyAssessEligible) return { kind: "invoke-role", role: "navigator", story, buildMode: "assess-refactor" };
   if (b.refactorVerifyRefactorPending) return { kind: "invoke-role", role: "driver", story, buildMode: "refactor-superseded" };
@@ -12074,6 +12074,11 @@ function effectiveLoopForStory(runLoop, storyId) {
 function storyView(id, e, probe, loop) {
   const gateApproved = e.gate?.status === "approved";
   const accepted = e.acceptance?.decision === "accepted" || e.status === "done";
+  const exp = e.experiment;
+  const experimentStale = exp != null && exp.status === "active" && exp.design_fingerprint !== void 0 && (() => {
+    const cur = probe.designFingerprint(id);
+    return cur !== void 0 && cur !== exp.design_fingerprint;
+  })();
   return {
     gateApproved,
     // The gate record exists once the story has been surfaced for review;
@@ -12093,6 +12098,7 @@ function storyView(id, e, probe, loop) {
       // on revise); merged/active both count as cut.
       experimentCut: e.experiment != null && e.experiment.status !== "discarded",
       experimentDiscarded: e.experiment != null && e.experiment.status === "discarded",
+      experimentStale,
       testsWritten: probe.testsWritten(id),
       codeWritten: probe.codeWritten(id),
       loop,
@@ -12961,6 +12967,20 @@ function refactorPending(consortDir, featureId, story) {
   return hasOpenBuildRefactorRoutableSmell(consortDir, story);
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_cjs_shims();
+var import_node_crypto5 = require("crypto");
+var import_node_fs16 = require("fs");
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = (0, import_node_fs16.readFileSync)(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return (0, import_node_crypto5.createHash)("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
+}
+
 // consort/gates/gates.ts
 init_cjs_shims();
 var import_fs13 = require("fs");
@@ -13262,6 +13282,9 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
         return false;
       }
     },
+    designFingerprint(story) {
+      return storyDesignFingerprint(consortDir, featureId, story);
+    },
     reflectionPassed(story) {
       return reflectionPassed(consortDir, featureId, story);
     },
@@ -13397,7 +13420,7 @@ var import_fs17 = require("fs");
 
 // consort/gates/gate-conformance-guard.ts
 init_cjs_shims();
-var import_node_fs16 = require("fs");
+var import_node_fs17 = require("fs");
 var import_node_path19 = require("path");
 
 // consort/architecture/architecture-conventions.ts
@@ -13464,15 +13487,15 @@ function conformanceReason(inputs) {
 }
 function storyAcProblems(fdir, story) {
   const acsDir2 = (0, import_node_path19.join)(fdir, "stories", story, "acs");
-  if (!(0, import_node_fs16.existsSync)(acsDir2)) return [];
+  if (!(0, import_node_fs17.existsSync)(acsDir2)) return [];
   const problems = [];
   const acs = [];
-  for (const f of (0, import_node_fs16.readdirSync)(acsDir2)) {
+  for (const f of (0, import_node_fs17.readdirSync)(acsDir2)) {
     if (!f.endsWith(".json")) continue;
     const p = (0, import_node_path19.join)(acsDir2, f);
     let content;
     try {
-      content = (0, import_node_fs16.readFileSync)(p, "utf8");
+      content = (0, import_node_fs17.readFileSync)(p, "utf8");
     } catch {
       continue;
     }
@@ -13486,19 +13509,19 @@ function storyAcProblems(fdir, story) {
 }
 function acsConformanceReason(fdir) {
   const stories = (0, import_node_path19.join)(fdir, "stories");
-  if (!(0, import_node_fs16.existsSync)(stories)) return null;
-  const problems = (0, import_node_fs16.readdirSync)(stories).flatMap((s) => storyAcProblems(fdir, s));
+  if (!(0, import_node_fs17.existsSync)(stories)) return null;
+  const problems = (0, import_node_fs17.readdirSync)(stories).flatMap((s) => storyAcProblems(fdir, s));
   return problems.length === 0 ? null : `AC conformance failed: ${problems.join("; ")}`;
 }
 function collectStoryJsons(fdir) {
   const stories = (0, import_node_path19.join)(fdir, "stories");
-  if (!(0, import_node_fs16.existsSync)(stories)) return [];
+  if (!(0, import_node_fs17.existsSync)(stories)) return [];
   const out = [];
-  for (const s of (0, import_node_fs16.readdirSync)(stories)) {
+  for (const s of (0, import_node_fs17.readdirSync)(stories)) {
     const p = (0, import_node_path19.join)(stories, s, "story.json");
-    if (!(0, import_node_fs16.existsSync)(p)) continue;
+    if (!(0, import_node_fs17.existsSync)(p)) continue;
     try {
-      out.push({ name: s, content: (0, import_node_fs16.readFileSync)(p, "utf8") });
+      out.push({ name: s, content: (0, import_node_fs17.readFileSync)(p, "utf8") });
     } catch {
       continue;
     }
@@ -13511,18 +13534,18 @@ function storyIndependenceReason(fdir) {
 }
 function storyRequiresE2eReason(fdir, story) {
   const sj = (0, import_node_path19.join)(fdir, "stories", story, "story.json");
-  if (!(0, import_node_fs16.existsSync)(sj)) return null;
+  if (!(0, import_node_fs17.existsSync)(sj)) return null;
   try {
-    if (JSON.parse((0, import_node_fs16.readFileSync)(sj, "utf8")).requires_e2e !== true) return null;
+    if (JSON.parse((0, import_node_fs17.readFileSync)(sj, "utf8")).requires_e2e !== true) return null;
   } catch {
     return null;
   }
   const ad = (0, import_node_path19.join)(fdir, "stories", story, "acs");
-  if ((0, import_node_fs16.existsSync)(ad)) {
-    for (const f of (0, import_node_fs16.readdirSync)(ad)) {
+  if ((0, import_node_fs17.existsSync)(ad)) {
+    for (const f of (0, import_node_fs17.readdirSync)(ad)) {
       if (!f.endsWith(".json")) continue;
       try {
-        if (JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer === "E2E") return null;
+        if (JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer === "E2E") return null;
       } catch {
       }
     }
@@ -13532,9 +13555,9 @@ function storyRequiresE2eReason(fdir, story) {
 function requiresE2eReason(consortDir, featureId) {
   const fdir = featureDir2(consortDir, featureId);
   const storiesDir2 = (0, import_node_path19.join)(fdir, "stories");
-  if (!(0, import_node_fs16.existsSync)(storiesDir2)) return null;
-  for (const s of (0, import_node_fs16.readdirSync)(storiesDir2)) {
-    if (!(0, import_node_fs16.existsSync)((0, import_node_path19.join)(storiesDir2, s, "acs"))) continue;
+  if (!(0, import_node_fs17.existsSync)(storiesDir2)) return null;
+  for (const s of (0, import_node_fs17.readdirSync)(storiesDir2)) {
+    if (!(0, import_node_fs17.existsSync)((0, import_node_path19.join)(storiesDir2, s, "acs"))) continue;
     const r = storyRequiresE2eReason(fdir, s);
     if (r !== null) return r;
   }
@@ -13544,10 +13567,10 @@ function architectureConventionsReason(consortDir, featureId) {
   const conventions = readConventions(consortDir);
   if (!conventions) return null;
   const archFile = architectureJson(consortDir, featureId);
-  if (!(0, import_node_fs16.existsSync)(archFile)) return null;
+  if (!(0, import_node_fs17.existsSync)(archFile)) return null;
   let content;
   try {
-    content = (0, import_node_fs16.readFileSync)(archFile, "utf8");
+    content = (0, import_node_fs17.readFileSync)(archFile, "utf8");
   } catch {
     return null;
   }
@@ -13556,9 +13579,9 @@ function architectureConventionsReason(consortDir, featureId) {
 }
 function readArchitecture(consortDir, featureId) {
   const f = architectureJson(consortDir, featureId);
-  if (!(0, import_node_fs16.existsSync)(f)) return void 0;
+  if (!(0, import_node_fs17.existsSync)(f)) return void 0;
   try {
-    return (0, import_node_fs16.readFileSync)(f, "utf8");
+    return (0, import_node_fs17.readFileSync)(f, "utf8");
   } catch {
     return void 0;
   }
@@ -13573,9 +13596,9 @@ function dbDesignReason(consortDir, featureId) {
   const arch = readArchitecture(consortDir, featureId);
   if (arch === void 0) return null;
   const dbFile = dbDesignJson(consortDir, featureId);
-  const db = (0, import_node_fs16.existsSync)(dbFile) ? (() => {
+  const db = (0, import_node_fs17.existsSync)(dbFile) ? (() => {
     try {
-      return (0, import_node_fs16.readFileSync)(dbFile, "utf8");
+      return (0, import_node_fs17.readFileSync)(dbFile, "utf8");
     } catch {
       return void 0;
     }
@@ -13588,11 +13611,11 @@ function nfrCoverageReason(consortDir, featureId) {
   if (arch === void 0) return null;
   const featureNfrs = featureNfrsMd(consortDir, featureId);
   const projectNfrs = nfrsMd(consortDir);
-  const nfrsFile = (0, import_node_fs16.existsSync)(featureNfrs) ? featureNfrs : (0, import_node_fs16.existsSync)(projectNfrs) ? projectNfrs : void 0;
+  const nfrsFile = (0, import_node_fs17.existsSync)(featureNfrs) ? featureNfrs : (0, import_node_fs17.existsSync)(projectNfrs) ? projectNfrs : void 0;
   if (nfrsFile === void 0) return null;
   let nfrsContent;
   try {
-    nfrsContent = (0, import_node_fs16.readFileSync)(nfrsFile, "utf8");
+    nfrsContent = (0, import_node_fs17.readFileSync)(nfrsFile, "utf8");
   } catch {
     return null;
   }
@@ -13609,15 +13632,15 @@ function fitnessCoverageReason(consortDir, featureId, testListJson) {
 }
 function e2eCoverageReason(consortDir, featureId, testListJson) {
   const storiesDir2 = (0, import_node_path19.join)(featureDir2(consortDir, featureId), "stories");
-  if (!(0, import_node_fs16.existsSync)(storiesDir2)) return null;
+  if (!(0, import_node_fs17.existsSync)(storiesDir2)) return null;
   const e2eAcIds = [];
-  for (const s of (0, import_node_fs16.readdirSync)(storiesDir2)) {
+  for (const s of (0, import_node_fs17.readdirSync)(storiesDir2)) {
     const ad = (0, import_node_path19.join)(storiesDir2, s, "acs");
-    if (!(0, import_node_fs16.existsSync)(ad)) continue;
-    for (const f of (0, import_node_fs16.readdirSync)(ad)) {
+    if (!(0, import_node_fs17.existsSync)(ad)) continue;
+    for (const f of (0, import_node_fs17.readdirSync)(ad)) {
       if (!f.endsWith(".json")) continue;
       try {
-        const ac = JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(ad, f), "utf8"));
+        const ac = JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(ad, f), "utf8"));
         if (ac.layer === "E2E") e2eAcIds.push(ac.id ?? f.replace(/\.json$/, ""));
       } catch {
       }
@@ -13641,10 +13664,10 @@ function invariantCoverageDistinctReason(consortDir, featureId, testListJson) {
   }
   const items = master.items ?? [];
   const storiesDir2 = (0, import_node_path19.join)(featureDir2(consortDir, featureId), "stories");
-  if (!(0, import_node_fs16.existsSync)(storiesDir2)) return null;
-  const perStory = (0, import_node_fs16.readdirSync)(storiesDir2).filter((s) => {
+  if (!(0, import_node_fs17.existsSync)(storiesDir2)) return null;
+  const perStory = (0, import_node_fs17.readdirSync)(storiesDir2).filter((s) => {
     try {
-      return (0, import_node_fs16.statSync)((0, import_node_path19.join)(storiesDir2, s)).isDirectory();
+      return (0, import_node_fs17.statSync)((0, import_node_path19.join)(storiesDir2, s)).isDirectory();
     } catch {
       return false;
     }
@@ -13656,8 +13679,8 @@ function invariantCoverageDistinctReason(consortDir, featureId, testListJson) {
   const archFile = architectureJson(consortDir, featureId);
   const dbFile = dbDesignJson(consortDir, featureId);
   const owner = invariantRealizingStory(
-    (0, import_node_fs16.existsSync)(archFile) ? (0, import_node_fs16.readFileSync)(archFile, "utf8") : void 0,
-    (0, import_node_fs16.existsSync)(dbFile) ? (0, import_node_fs16.readFileSync)(dbFile, "utf8") : void 0
+    (0, import_node_fs17.existsSync)(archFile) ? (0, import_node_fs17.readFileSync)(archFile, "utf8") : void 0,
+    (0, import_node_fs17.existsSync)(dbFile) ? (0, import_node_fs17.readFileSync)(dbFile, "utf8") : void 0
   );
   const r = checkInvariantCoverageDistinct(perStory, owner);
   return r.ok ? null : `invariant coverage not distinct across stories: ${r.violations.join("; ")}`;
@@ -13668,14 +13691,14 @@ function serviceBackedReason(consortDir, featureId) {
   const acLayers = [];
   const fdir = featureDir2(consortDir, featureId);
   const stories = (0, import_node_path19.join)(fdir, "stories");
-  if ((0, import_node_fs16.existsSync)(stories)) {
-    for (const s of (0, import_node_fs16.readdirSync)(stories)) {
+  if ((0, import_node_fs17.existsSync)(stories)) {
+    for (const s of (0, import_node_fs17.readdirSync)(stories)) {
       const ad = (0, import_node_path19.join)(stories, s, "acs");
-      if (!(0, import_node_fs16.existsSync)(ad)) continue;
-      for (const f of (0, import_node_fs16.readdirSync)(ad)) {
+      if (!(0, import_node_fs17.existsSync)(ad)) continue;
+      for (const f of (0, import_node_fs17.readdirSync)(ad)) {
         if (!f.endsWith(".json")) continue;
         try {
-          const layer = JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
+          const layer = JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
           if (typeof layer === "string") acLayers.push(layer);
         } catch {
         }
@@ -13697,21 +13720,21 @@ function e2eLayerPresentReason(consortDir, featureId) {
   const fdir = featureDir2(consortDir, featureId);
   let declared;
   try {
-    declared = JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(fdir, "feature-spec.json"), "utf8")).stories ?? [];
+    declared = JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(fdir, "feature-spec.json"), "utf8")).stories ?? [];
   } catch {
     return null;
   }
   if (declared.length === 0) return null;
   const storiesDir2 = (0, import_node_path19.join)(fdir, "stories");
-  const hasAcs = (story) => (0, import_node_fs16.existsSync)((0, import_node_path19.join)(storiesDir2, story, "acs"));
+  const hasAcs = (story) => (0, import_node_fs17.existsSync)((0, import_node_path19.join)(storiesDir2, story, "acs"));
   if (!declared.every(hasAcs)) return null;
   const acLayers = [];
   for (const s of declared) {
     const ad = (0, import_node_path19.join)(storiesDir2, s, "acs");
-    for (const f of (0, import_node_fs16.readdirSync)(ad)) {
+    for (const f of (0, import_node_fs17.readdirSync)(ad)) {
       if (!f.endsWith(".json")) continue;
       try {
-        const layer = JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
+        const layer = JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
         if (typeof layer === "string") acLayers.push(layer);
       } catch {
       }
@@ -13728,26 +13751,26 @@ function e2eLayerPresentReason(consortDir, featureId) {
 }
 function schemaChangeStoryRealizesReason(consortDir, featureId) {
   const dbFile = dbDesignJson(consortDir, featureId);
-  if (!(0, import_node_fs16.existsSync)(dbFile)) return null;
+  if (!(0, import_node_fs17.existsSync)(dbFile)) return null;
   let db;
   try {
-    db = JSON.parse((0, import_node_fs16.readFileSync)(dbFile, "utf8"));
+    db = JSON.parse((0, import_node_fs17.readFileSync)(dbFile, "utf8"));
   } catch {
     return null;
   }
   const changes = db.schema_changes ?? [];
   if (changes.length === 0) return null;
   const storiesDir2 = (0, import_node_path19.join)(featureDir2(consortDir, featureId), "stories");
-  if (!(0, import_node_fs16.existsSync)(storiesDir2)) return null;
+  if (!(0, import_node_fs17.existsSync)(storiesDir2)) return null;
   const storyLayers = /* @__PURE__ */ new Map();
-  for (const s of (0, import_node_fs16.readdirSync)(storiesDir2)) {
+  for (const s of (0, import_node_fs17.readdirSync)(storiesDir2)) {
     const ad = (0, import_node_path19.join)(storiesDir2, s, "acs");
-    if (!(0, import_node_fs16.existsSync)(ad)) continue;
+    if (!(0, import_node_fs17.existsSync)(ad)) continue;
     const layers = [];
-    for (const f of (0, import_node_fs16.readdirSync)(ad)) {
+    for (const f of (0, import_node_fs17.readdirSync)(ad)) {
       if (!f.endsWith(".json")) continue;
       try {
-        const layer = JSON.parse((0, import_node_fs16.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
+        const layer = JSON.parse((0, import_node_fs17.readFileSync)((0, import_node_path19.join)(ad, f), "utf8")).layer;
         if (typeof layer === "string") layers.push(layer);
       } catch {
       }
@@ -13761,7 +13784,7 @@ function resolveArtifactInputs(gate, fdir, promoteRef, consortDir, featureId) {
   const readIfPresent = (name) => {
     const p = (0, import_node_path19.join)(fdir, name);
     try {
-      return (0, import_node_fs16.existsSync)(p) ? (0, import_node_fs16.readFileSync)(p, "utf8") : void 0;
+      return (0, import_node_fs17.existsSync)(p) ? (0, import_node_fs17.readFileSync)(p, "utf8") : void 0;
     } catch {
       return void 0;
     }
@@ -13880,7 +13903,7 @@ function readPipeline(consortDir, featureId) {
 
 // consort/session/response-formatter.ts
 init_cjs_shims();
-var import_node_fs17 = require("fs");
+var import_node_fs18 = require("fs");
 function needStory(role, story, violations) {
   if (!story) {
     violations.push({ artifact: role, problem: `--story is required to validate ${role} output` });
@@ -13890,12 +13913,12 @@ function needStory(role, story, violations) {
 }
 function checkSpecAuthorBreakdown(consortDir, featureId, v) {
   const specPath = featureSpecJson(consortDir, featureId);
-  if (!(0, import_node_fs17.existsSync)(specPath)) {
+  if (!(0, import_node_fs18.existsSync)(specPath)) {
     v.push({ artifact: "feature-spec.json", problem: "breakdown deliverable missing (write feature-spec.json with a non-empty stories[] array of the story ids)" });
     return;
   }
   try {
-    const spec = JSON.parse((0, import_node_fs17.readFileSync)(specPath, "utf8"));
+    const spec = JSON.parse((0, import_node_fs18.readFileSync)(specPath, "utf8"));
     if (!Array.isArray(spec.stories) || spec.stories.length === 0) {
       v.push({ artifact: "feature-spec.json", problem: "stories[] is missing or empty (the breakdown must enumerate >=1 story id)" });
     }
@@ -13904,13 +13927,13 @@ function checkSpecAuthorBreakdown(consortDir, featureId, v) {
     return;
   }
   const sdir = storiesDir(consortDir, featureId);
-  if (!(0, import_node_fs17.existsSync)(sdir)) return;
+  if (!(0, import_node_fs18.existsSync)(sdir)) return;
   const storyJsons = [];
-  for (const s of (0, import_node_fs17.readdirSync)(sdir)) {
+  for (const s of (0, import_node_fs18.readdirSync)(sdir)) {
     const p = `${sdir}/${s}/story.json`;
-    if (!(0, import_node_fs17.existsSync)(p)) continue;
+    if (!(0, import_node_fs18.existsSync)(p)) continue;
     try {
-      storyJsons.push({ name: s, content: (0, import_node_fs17.readFileSync)(p, "utf8") });
+      storyJsons.push({ name: s, content: (0, import_node_fs18.readFileSync)(p, "utf8") });
     } catch {
       continue;
     }
@@ -13932,13 +13955,13 @@ function checkSpecAuthor(args, v) {
     v.push({ artifact: `stories/${story}/acs`, problem: "no acceptance criteria written (expected >=1 AC<n>.json)" });
     return;
   }
-  if (!(0, import_node_fs17.existsSync)(dir)) return;
+  if (!(0, import_node_fs18.existsSync)(dir)) return;
   const thenById = /* @__PURE__ */ new Map();
-  for (const f of (0, import_node_fs17.readdirSync)(dir)) {
+  for (const f of (0, import_node_fs18.readdirSync)(dir)) {
     if (!f.endsWith(".json")) continue;
     let content;
     try {
-      content = (0, import_node_fs17.readFileSync)(`${dir}/${f}`, "utf8");
+      content = (0, import_node_fs18.readFileSync)(`${dir}/${f}`, "utf8");
     } catch {
       continue;
     }
@@ -13987,10 +14010,10 @@ function checkArchitect(args, v) {
 }
 function checkNfrFitnessFunctions(consortDir, featureId, v) {
   const archFile = architectureJson(consortDir, featureId);
-  if (!(0, import_node_fs17.existsSync)(archFile)) return;
+  if (!(0, import_node_fs18.existsSync)(archFile)) return;
   let nfrs;
   try {
-    nfrs = JSON.parse((0, import_node_fs17.readFileSync)(archFile, "utf8")).nfrs ?? [];
+    nfrs = JSON.parse((0, import_node_fs18.readFileSync)(archFile, "utf8")).nfrs ?? [];
   } catch {
     return;
   }
@@ -14006,13 +14029,13 @@ function checkNfrFitnessFunctions(consortDir, featureId, v) {
 function checkDba(args, v) {
   const { consortDir, featureId } = args;
   const archFile = architectureJson(consortDir, featureId);
-  if (!(0, import_node_fs17.existsSync)(archFile)) {
+  if (!(0, import_node_fs18.existsSync)(archFile)) {
     v.push({ artifact: "architecture.json", problem: "architecture.json missing (the architect owns the contract the DBA realizes)" });
     return;
   }
-  const archContent = (0, import_node_fs17.readFileSync)(archFile, "utf8");
+  const archContent = (0, import_node_fs18.readFileSync)(archFile, "utf8");
   const dbFile = dbDesignJson(consortDir, featureId);
-  const dbContent = (0, import_node_fs17.existsSync)(dbFile) ? (0, import_node_fs17.readFileSync)(dbFile, "utf8") : void 0;
+  const dbContent = (0, import_node_fs18.existsSync)(dbFile) ? (0, import_node_fs18.readFileSync)(dbFile, "utf8") : void 0;
   if (dbContent !== void 0) {
     const conf = checkArtifactConformance("db-design.json", dbContent);
     if (!conf.ok) v.push({ artifact: "db-design.json", problem: conf.violations.join("; ") });
@@ -14024,13 +14047,13 @@ function checkTestStrategist(args, v) {
   const { consortDir, featureId, story } = args;
   if (!needStory("test-strategist", story, v)) return;
   const file = storyTestListJson(consortDir, featureId, story);
-  if (!(0, import_node_fs17.existsSync)(file)) {
+  if (!(0, import_node_fs18.existsSync)(file)) {
     v.push({ artifact: `stories/${story}/test-list-per-story.json`, problem: "per-story test list not written" });
     return;
   }
   let parsed;
   try {
-    parsed = JSON.parse((0, import_node_fs17.readFileSync)(file, "utf8"));
+    parsed = JSON.parse((0, import_node_fs18.readFileSync)(file, "utf8"));
   } catch (e) {
     v.push({ artifact: `stories/${story}/test-list-per-story.json`, problem: `invalid JSON: ${e instanceof Error ? e.message : String(e)}` });
     return;
@@ -14071,12 +14094,12 @@ function checkTestStrategist(args, v) {
 }
 function designGuideConformance(consortDir) {
   const file = designGuideJson(consortDir);
-  if (!(0, import_node_fs17.existsSync)(file)) {
+  if (!(0, import_node_fs18.existsSync)(file)) {
     return { ok: false, problem: "design-guide.json not written (the machine-checkable token source of truth)" };
   }
   let content;
   try {
-    content = (0, import_node_fs17.readFileSync)(file, "utf8");
+    content = (0, import_node_fs18.readFileSync)(file, "utf8");
   } catch (e) {
     return { ok: false, problem: `unreadable: ${e instanceof Error ? e.message : String(e)}` };
   }
@@ -14085,9 +14108,9 @@ function designGuideConformance(consortDir) {
 }
 function designGuideHasComponents(consortDir) {
   const file = designGuideJson(consortDir);
-  if (!(0, import_node_fs17.existsSync)(file)) return { ok: true };
+  if (!(0, import_node_fs18.existsSync)(file)) return { ok: true };
   try {
-    const parsed = JSON.parse((0, import_node_fs17.readFileSync)(file, "utf8"));
+    const parsed = JSON.parse((0, import_node_fs18.readFileSync)(file, "utf8"));
     const comps = parsed.components;
     if (!comps || typeof comps !== "object" || Object.keys(comps).length === 0) {
       return {
@@ -14102,18 +14125,18 @@ function designGuideHasComponents(consortDir) {
 }
 function brandAssetDeclared(consortDir) {
   const assetsDir = designAssetsDir(consortDir);
-  if (!(0, import_node_fs17.existsSync)(assetsDir)) return { ok: true };
+  if (!(0, import_node_fs18.existsSync)(assetsDir)) return { ok: true };
   let staged;
   try {
-    staged = (0, import_node_fs17.readdirSync)(assetsDir).filter((f) => /\.(png|jpe?g|svg|webp|ico|gif|avif)$/i.test(f));
+    staged = (0, import_node_fs18.readdirSync)(assetsDir).filter((f) => /\.(png|jpe?g|svg|webp|ico|gif|avif)$/i.test(f));
   } catch {
     return { ok: true };
   }
   if (staged.length === 0) return { ok: true };
   const file = designGuideJson(consortDir);
-  if ((0, import_node_fs17.existsSync)(file)) {
+  if ((0, import_node_fs18.existsSync)(file)) {
     try {
-      const guide = JSON.parse((0, import_node_fs17.readFileSync)(file, "utf8"));
+      const guide = JSON.parse((0, import_node_fs18.readFileSync)(file, "utf8"));
       if (guide.app_icon?.source && guide.app_icon?.install_to) return { ok: true };
     } catch {
       return { ok: true };
@@ -15210,7 +15233,7 @@ function buildDriveEffects(cfg) {
 // consort/evaluation/semantic-gate.ts
 init_cjs_shims();
 var import_node_child_process7 = require("child_process");
-var import_node_fs18 = require("fs");
+var import_node_fs19 = require("fs");
 var import_node_path22 = require("path");
 function stepArtifactPath(base, step, featureId) {
   switch (step) {
@@ -15260,34 +15283,34 @@ function resolveStepReference(args) {
   if (!hasDesignReference(step)) return null;
   const corpus = CANONICAL;
   const root = (0, import_node_path22.join)(referenceCorpusRoot(kitRoot2), "recorded-artifacts");
-  if (!(0, import_node_fs18.existsSync)(root)) return null;
+  if (!(0, import_node_fs19.existsSync)(root)) return null;
   if (step === "acs") {
     const sdir = storiesDir(root, featureId);
-    if (!(0, import_node_fs18.existsSync)(sdir)) return null;
+    if (!(0, import_node_fs19.existsSync)(sdir)) return null;
     const paths = [];
-    const stories = storyId ? [storyId] : (0, import_node_fs18.readdirSync)(sdir);
+    const stories = storyId ? [storyId] : (0, import_node_fs19.readdirSync)(sdir);
     for (const story of stories) {
       const adir = acsDir(root, featureId, story);
-      if (!(0, import_node_fs18.existsSync)(adir)) continue;
-      for (const ac of (0, import_node_fs18.readdirSync)(adir)) if (ac.endsWith(".json")) paths.push((0, import_node_path22.join)(adir, ac));
+      if (!(0, import_node_fs19.existsSync)(adir)) continue;
+      for (const ac of (0, import_node_fs19.readdirSync)(adir)) if (ac.endsWith(".json")) paths.push((0, import_node_path22.join)(adir, ac));
     }
     return paths.length ? { corpus, paths, label: storyId ? `stories/${storyId}/acs/*.json` : "stories/*/acs/*.json (feature-aggregate)" } : null;
   }
   const p = stepArtifactPath(root, step, featureId);
-  if (!p || !(0, import_node_fs18.existsSync)(p)) return null;
+  if (!p || !(0, import_node_fs19.existsSync)(p)) return null;
   return { corpus, paths: [p], label: p.slice(root.length + 1) };
 }
 function readCandidateArtifact(args) {
   const { consortDir, step, featureId } = args;
-  const readIf = (p2) => (0, import_node_fs18.existsSync)(p2) ? (0, import_node_fs18.readFileSync)(p2, "utf8") : null;
+  const readIf = (p2) => (0, import_node_fs19.existsSync)(p2) ? (0, import_node_fs19.readFileSync)(p2, "utf8") : null;
   if (step === "acs") {
     const sdir = storiesDir(consortDir, featureId);
-    if (!(0, import_node_fs18.existsSync)(sdir)) return null;
+    if (!(0, import_node_fs19.existsSync)(sdir)) return null;
     const parts = [];
-    for (const story of (0, import_node_fs18.readdirSync)(sdir)) {
+    for (const story of (0, import_node_fs19.readdirSync)(sdir)) {
       const adir = acsDir(consortDir, featureId, story);
-      if (!(0, import_node_fs18.existsSync)(adir)) continue;
-      for (const ac of (0, import_node_fs18.readdirSync)(adir)) if (ac.endsWith(".json")) parts.push((0, import_node_fs18.readFileSync)((0, import_node_path22.join)(adir, ac), "utf8"));
+      if (!(0, import_node_fs19.existsSync)(adir)) continue;
+      for (const ac of (0, import_node_fs19.readdirSync)(adir)) if (ac.endsWith(".json")) parts.push((0, import_node_fs19.readFileSync)((0, import_node_path22.join)(adir, ac), "utf8"));
     }
     return parts.length ? parts.join("\n---\n") : null;
   }
@@ -15297,13 +15320,13 @@ function readCandidateArtifact(args) {
 async function evaluateSemanticGate(args) {
   const { kitRoot: kitRoot2, consortDir, featureId, step, judge, storyId, referencePaths } = args;
   const threshold = args.threshold ?? SEMANTIC_THRESHOLD;
-  const ref = referencePaths?.length ? { corpus: CANONICAL, paths: referencePaths.filter((p) => (0, import_node_fs18.existsSync)(p)), label: "(reference override)" } : resolveStepReference({ kitRoot: kitRoot2, step, featureId, ...storyId ? { storyId } : {} });
+  const ref = referencePaths?.length ? { corpus: CANONICAL, paths: referencePaths.filter((p) => (0, import_node_fs19.existsSync)(p)), label: "(reference override)" } : resolveStepReference({ kitRoot: kitRoot2, step, featureId, ...storyId ? { storyId } : {} });
   if (!ref || ref.paths.length === 0) return { passed: true, skipped: true };
   const candidate = readCandidateArtifact({ consortDir, step, featureId });
   if (candidate === null) {
     return { passed: false, reason: `semantic: candidate produced no artifact for step '${step}' to compare against ${ref.label}` };
   }
-  const reference = ref.paths.map((p) => (0, import_node_fs18.readFileSync)(p, "utf8")).join("\n---\n");
+  const reference = ref.paths.map((p) => (0, import_node_fs19.readFileSync)(p, "utf8")).join("\n---\n");
   const verdict = await judge({ step, reference, candidate });
   if (verdict.score >= threshold) return { passed: true, score: verdict.score };
   const missing = verdict.missing?.length ? ` missing: ${verdict.missing.join("; ")}` : "";
@@ -15393,27 +15416,27 @@ function makeOpusJudge(opts) {
 
 // consort/optimize/optimize-live.ts
 init_cjs_shims();
-var import_node_fs21 = require("fs");
+var import_node_fs22 = require("fs");
 var import_node_child_process8 = require("child_process");
 var import_node_path25 = require("path");
 
 // consort/optimize/optimize-agent-overlay.ts
 init_cjs_shims();
-var import_node_fs19 = require("fs");
+var import_node_fs20 = require("fs");
 var import_node_path23 = require("path");
 function overlayAgent(args) {
   const { projectDir, role, markdown } = args;
   const agentPath = (0, import_node_path23.join)(projectDir, ".claude", "agents", `${role}.md`);
-  const hadBaseline = (0, import_node_fs19.existsSync)(agentPath);
-  const baseline = hadBaseline ? (0, import_node_fs19.readFileSync)(agentPath, "utf8") : void 0;
-  (0, import_node_fs19.mkdirSync)((0, import_node_path23.dirname)(agentPath), { recursive: true });
-  (0, import_node_fs19.writeFileSync)(agentPath, markdown);
+  const hadBaseline = (0, import_node_fs20.existsSync)(agentPath);
+  const baseline = hadBaseline ? (0, import_node_fs20.readFileSync)(agentPath, "utf8") : void 0;
+  (0, import_node_fs20.mkdirSync)((0, import_node_path23.dirname)(agentPath), { recursive: true });
+  (0, import_node_fs20.writeFileSync)(agentPath, markdown);
   return {
     restore() {
       if (hadBaseline) {
-        (0, import_node_fs19.writeFileSync)(agentPath, baseline);
-      } else if ((0, import_node_fs19.existsSync)(agentPath)) {
-        (0, import_node_fs19.rmSync)(agentPath, { force: true });
+        (0, import_node_fs20.writeFileSync)(agentPath, baseline);
+      } else if ((0, import_node_fs20.existsSync)(agentPath)) {
+        (0, import_node_fs20.rmSync)(agentPath, { force: true });
       }
     }
   };
@@ -15461,32 +15484,32 @@ function evaluateDesignGate(args) {
 
 // consort/optimize/optimize-snapshot.ts
 init_cjs_shims();
-var import_node_fs20 = require("fs");
+var import_node_fs21 = require("fs");
 var import_node_os = require("os");
 var import_node_path24 = require("path");
 function captureDesignArtifacts(args) {
   const { consortDir, destDir } = args;
-  (0, import_node_fs20.rmSync)(destDir, { recursive: true, force: true });
-  (0, import_node_fs20.cpSync)(consortDir, destDir, { recursive: true });
+  (0, import_node_fs21.rmSync)(destDir, { recursive: true, force: true });
+  (0, import_node_fs21.cpSync)(consortDir, destDir, { recursive: true });
   return { path: destDir };
 }
 function restoreDesignArtifacts(args) {
   const { consortDir, ref } = args;
-  (0, import_node_fs20.rmSync)(consortDir, { recursive: true, force: true });
-  (0, import_node_fs20.cpSync)(ref.path, consortDir, { recursive: true });
+  (0, import_node_fs21.rmSync)(consortDir, { recursive: true, force: true });
+  (0, import_node_fs21.cpSync)(ref.path, consortDir, { recursive: true });
 }
 function snapshotDesign(args) {
   const { consortDir } = args;
-  const backup = (0, import_node_fs20.mkdtempSync)((0, import_node_path24.join)((0, import_node_os.tmpdir)(), "optimize-design-snap-"));
+  const backup = (0, import_node_fs21.mkdtempSync)((0, import_node_path24.join)((0, import_node_os.tmpdir)(), "optimize-design-snap-"));
   const backupTree = (0, import_node_path24.join)(backup, (0, import_node_path24.basename)(consortDir));
-  (0, import_node_fs20.cpSync)(consortDir, backupTree, { recursive: true });
+  (0, import_node_fs21.cpSync)(consortDir, backupTree, { recursive: true });
   return {
     restore() {
-      (0, import_node_fs20.rmSync)(consortDir, { recursive: true, force: true });
-      (0, import_node_fs20.cpSync)(backupTree, consortDir, { recursive: true });
+      (0, import_node_fs21.rmSync)(consortDir, { recursive: true, force: true });
+      (0, import_node_fs21.cpSync)(backupTree, consortDir, { recursive: true });
     },
     dispose() {
-      (0, import_node_fs20.rmSync)(backup, { recursive: true, force: true });
+      (0, import_node_fs21.rmSync)(backup, { recursive: true, force: true });
     }
   };
 }
@@ -15551,9 +15574,9 @@ function applyCandidate(ctx, candidate) {
 }
 function writeTrialRecord(ctx, handoff, candidate, trial, result) {
   const dir = (0, import_node_path25.join)(ctx.experimentsDir, handoff.id, candidate.id, `trial-${trial}`);
-  (0, import_node_fs21.mkdirSync)(dir, { recursive: true });
-  (0, import_node_fs21.writeFileSync)((0, import_node_path25.join)(dir, "candidate.json"), JSON.stringify(candidate, null, 2) + "\n");
-  (0, import_node_fs21.writeFileSync)((0, import_node_path25.join)(dir, "result.json"), JSON.stringify(result, null, 2) + "\n");
+  (0, import_node_fs22.mkdirSync)(dir, { recursive: true });
+  (0, import_node_fs22.writeFileSync)((0, import_node_path25.join)(dir, "candidate.json"), JSON.stringify(candidate, null, 2) + "\n");
+  (0, import_node_fs22.writeFileSync)((0, import_node_path25.join)(dir, "result.json"), JSON.stringify(result, null, 2) + "\n");
 }
 function makeChampionWalkDeps(ctx) {
   return {
@@ -15629,10 +15652,10 @@ function makeChampionWalkDeps(ctx) {
         }
       }
       const champ = (0, import_node_path25.join)(ctx.experimentsDir, "champion-walk.json");
-      const prior = (0, import_node_fs21.existsSync)(champ) ? JSON.parse((0, import_node_fs21.readFileSync)(champ, "utf8")) : { winners: [] };
+      const prior = (0, import_node_fs22.existsSync)(champ) ? JSON.parse((0, import_node_fs22.readFileSync)(champ, "utf8")) : { winners: [] };
       prior.winners.push({ handoffId: handoff.id, candidateId: candidate.id });
-      (0, import_node_fs21.mkdirSync)(ctx.experimentsDir, { recursive: true });
-      (0, import_node_fs21.writeFileSync)(champ, JSON.stringify(prior, null, 2) + "\n");
+      (0, import_node_fs22.mkdirSync)(ctx.experimentsDir, { recursive: true });
+      (0, import_node_fs22.writeFileSync)(champ, JSON.stringify(prior, null, 2) + "\n");
     }
   };
 }

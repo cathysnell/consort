@@ -6990,6 +6990,11 @@ function driverPhaseForTdd(tddPhase) {
   }
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_cjs_shims();
+var import_node_crypto2 = require("crypto");
+var import_node_fs6 = require("fs");
+
 // consort/gates/gates.ts
 init_cjs_shims();
 var import_fs5 = require("fs");
@@ -7247,7 +7252,7 @@ var import_fs8 = require("fs");
 
 // consort/gates/gate-conformance-guard.ts
 init_cjs_shims();
-var import_node_fs6 = require("fs");
+var import_node_fs7 = require("fs");
 var import_node_path8 = require("path");
 
 // consort/architecture/architecture-conventions.ts

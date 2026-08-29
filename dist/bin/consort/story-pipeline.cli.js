@@ -7339,7 +7339,8 @@ function cutStoryExperiment(pipeline, storyId, args) {
     ...args.parent_sha !== void 0 ? { parent_sha: args.parent_sha } : {},
     n: args.n ?? 1,
     status: "active",
-    ...args.at !== void 0 ? { cut_at: args.at } : {}
+    ...args.at !== void 0 ? { cut_at: args.at } : {},
+    ...args.design_fingerprint !== void 0 ? { design_fingerprint: args.design_fingerprint } : {}
   };
   return pipeline;
 }
@@ -7393,9 +7394,23 @@ function reviseStory(pipeline, storyId, opts) {
   return pipeline;
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_esm_shims();
+import { createHash } from "crypto";
+import { readFileSync as readFileSync5 } from "fs";
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = readFileSync5(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
+}
+
 // consort/intake/spec-sync.ts
 init_esm_shims();
-import { readFileSync as readFileSync5, existsSync as existsSync5, readdirSync as readdirSync4, writeFileSync as writeFileSync3, statSync as statSync4 } from "fs";
+import { readFileSync as readFileSync6, existsSync as existsSync5, readdirSync as readdirSync4, writeFileSync as writeFileSync3, statSync as statSync4 } from "fs";
 import { join as join8, basename as basename2 } from "path";
 var STORY_ALLOWED_KEYS = /* @__PURE__ */ new Set(["id", "asA", "iWantTo", "soThat", "acs", "feature_id", "independence", "external_ref"]);
 function parseStoryNarrative(md) {
@@ -7421,7 +7436,7 @@ function normalizeStoryJson(consortDir, featureId) {
     if (!existsSync5(file)) continue;
     let obj;
     try {
-      obj = JSON.parse(readFileSync5(file, "utf8"));
+      obj = JSON.parse(readFileSync6(file, "utf8"));
     } catch {
       continue;
     }
@@ -7435,7 +7450,7 @@ function normalizeStoryJson(consortDir, featureId) {
       (k) => typeof obj[k] !== "string" || obj[k].trim().length === 0
     );
     if (needsNarrative && existsSync5(mdPath)) {
-      const narrative = parseStoryNarrative(readFileSync5(mdPath, "utf8"));
+      const narrative = parseStoryNarrative(readFileSync6(mdPath, "utf8"));
       for (const k of ["asA", "iWantTo", "soThat"]) {
         const cur = obj[k];
         if ((typeof cur !== "string" || cur.trim().length === 0) && narrative[k]) {
@@ -7468,7 +7483,7 @@ function healAndReportStoryNarrative(consortDir, featureId) {
       if (!existsSync5(file)) continue;
       let obj;
       try {
-        obj = JSON.parse(readFileSync5(file, "utf8"));
+        obj = JSON.parse(readFileSync6(file, "utf8"));
       } catch {
         missing.push({ story: s, fields: ["<unparseable story.json>"] });
         continue;
@@ -7484,12 +7499,12 @@ function healAndReportStoryNarrative(consortDir, featureId) {
 
 // consort/orchestrator/status/revise.ts
 init_esm_shims();
-import { existsSync as existsSync18, readFileSync as readFileSync19, writeFileSync as writeFileSync12, mkdirSync as mkdirSync11, readdirSync as readdirSync12, rmSync as rmSync8 } from "fs";
+import { existsSync as existsSync18, readFileSync as readFileSync20, writeFileSync as writeFileSync12, mkdirSync as mkdirSync11, readdirSync as readdirSync12, rmSync as rmSync8 } from "fs";
 import { join as join20, dirname as dirname11 } from "path";
 
 // consort/logging/agent-log.ts
 init_esm_shims();
-import { appendFileSync, existsSync as existsSync6, mkdirSync as mkdirSync3, readFileSync as readFileSync6 } from "fs";
+import { appendFileSync, existsSync as existsSync6, mkdirSync as mkdirSync3, readFileSync as readFileSync7 } from "fs";
 
 // consort/config/consort-env.ts
 init_esm_shims();
@@ -7657,8 +7672,8 @@ function emitAgentLogEvent(input, opts = {}) {
 
 // consort/smells/smells.ts
 init_esm_shims();
-import { existsSync as existsSync7, readFileSync as readFileSync7, writeFileSync as writeFileSync4 } from "fs";
-import { createHash } from "crypto";
+import { existsSync as existsSync7, readFileSync as readFileSync8, writeFileSync as writeFileSync4 } from "fs";
+import { createHash as createHash2 } from "crypto";
 import { join as join10 } from "path";
 
 // consort/pipeline/run-cycle.ts
@@ -7843,7 +7858,7 @@ Re-author this story's ${artifact} to address the above. Do NOT re-emit the same
 function readSmellsLog(consortDir) {
   const file = join10(consortDir, "smells.json");
   if (!existsSync7(file)) return { detected: [] };
-  return JSON.parse(readFileSync7(file, "utf8"));
+  return JSON.parse(readFileSync8(file, "utf8"));
 }
 function smellMatches(entry, smell, story_id) {
   if (entry.smell !== smell) return false;
@@ -7853,7 +7868,7 @@ function smellMatches(entry, smell, story_id) {
 function markSmellResolved(consortDir, smell, opts) {
   const file = join10(consortDir, "smells.json");
   if (!existsSync7(file)) return false;
-  const log = JSON.parse(readFileSync7(file, "utf8"));
+  const log = JSON.parse(readFileSync8(file, "utf8"));
   const entry = log.detected.find((d) => !d.resolution && smellMatches(d, smell, opts.story_id));
   if (!entry) return false;
   entry.resolution = opts.note ?? `${opts.kind} by PO`;
@@ -7864,7 +7879,7 @@ function markSmellResolved(consortDir, smell, opts) {
 function resolveAllOpenSmellsForStory(consortDir, story, note) {
   const file = join10(consortDir, "smells.json");
   if (!existsSync7(file)) return [];
-  const log = JSON.parse(readFileSync7(file, "utf8"));
+  const log = JSON.parse(readFileSync8(file, "utf8"));
   const cleared = [];
   for (const d of log.detected) {
     if (d.resolution || d.story_id !== story) continue;
@@ -7886,7 +7901,7 @@ function storyTestListFingerprint(consortDir, featureId, story_id) {
   const f = storyTestListJson(consortDir, featureId, story_id);
   if (!existsSync7(f)) return "";
   try {
-    return createHash("sha1").update(readFileSync7(f)).digest("hex");
+    return createHash2("sha1").update(readFileSync8(f)).digest("hex");
   } catch {
     return "";
   }
@@ -7894,7 +7909,7 @@ function storyTestListFingerprint(consortDir, featureId, story_id) {
 function resolveOpenReflectSmellsForStory(consortDir, story_id, note, artifactSha) {
   const file = join10(consortDir, "smells.json");
   if (!existsSync7(file)) return 0;
-  const log = JSON.parse(readFileSync7(file, "utf8"));
+  const log = JSON.parse(readFileSync8(file, "utf8"));
   let n = 0;
   for (const d of log.detected) {
     if (!d.resolution && isReflectSmell(d.smell) && d.story_id === story_id) {
@@ -7910,7 +7925,7 @@ function resolveOpenReflectSmellsForStory(consortDir, story_id, note, artifactSh
 
 // consort/smells/reflection.ts
 init_esm_shims();
-import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync5, mkdirSync as mkdirSync4, rmSync as rmSync2 } from "fs";
+import { existsSync as existsSync8, readFileSync as readFileSync9, writeFileSync as writeFileSync5, mkdirSync as mkdirSync4, rmSync as rmSync2 } from "fs";
 var SMELL_FOR_OWNER = {
   "spec-author": "reflect-spec-defect",
   "test-strategist": "reflect-testlist-defect"
@@ -7923,14 +7938,14 @@ var REFLECT_SMELLS = Object.values(SMELL_FOR_OWNER);
 
 // consort/pipeline/cycle-record.ts
 init_esm_shims();
-import { existsSync as existsSync17, readFileSync as readFileSync18, readdirSync as readdirSync11, statSync as statSync8, writeFileSync as writeFileSync11, mkdirSync as mkdirSync10, rmSync as rmSync7, copyFileSync } from "fs";
+import { existsSync as existsSync17, readFileSync as readFileSync19, readdirSync as readdirSync11, statSync as statSync8, writeFileSync as writeFileSync11, mkdirSync as mkdirSync10, rmSync as rmSync7, copyFileSync } from "fs";
 import { join as join19, dirname as dirname10, basename as basename3 } from "path";
 
 // consort/deploy/deploy.ts
 init_esm_shims();
 import { execSync, spawn } from "child_process";
 import { randomBytes } from "crypto";
-import { existsSync as existsSync11, mkdirSync as mkdirSync7, readFileSync as readFileSync12, rmSync as rmSync4, writeFileSync as writeFileSync8 } from "fs";
+import { existsSync as existsSync11, mkdirSync as mkdirSync7, readFileSync as readFileSync13, rmSync as rmSync4, writeFileSync as writeFileSync8 } from "fs";
 import { dirname as dirname8, join as join13 } from "path";
 import { readTargets } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import { pollUntil } from "@databricks-solutions/lakebase-scm-utils/util";
@@ -7977,7 +7992,7 @@ import * as path2 from "path";
 
 // consort/architecture/e2e-regex-clean.ts
 init_esm_shims();
-import { readdirSync as readdirSync6, readFileSync as readFileSync11, statSync as statSync5 } from "fs";
+import { readdirSync as readdirSync6, readFileSync as readFileSync12, statSync as statSync5 } from "fs";
 import { join as join12 } from "path";
 
 // consort/smells/ephemeral-verify.ts
@@ -7989,7 +8004,7 @@ import { getConnection as getConnection2, waitForBranchAuthReady } from "@databr
 
 // consort/architecture/design-adherence.ts
 init_esm_shims();
-import { existsSync as existsSync12, readFileSync as readFileSync13, readdirSync as readdirSync8 } from "fs";
+import { existsSync as existsSync12, readFileSync as readFileSync14, readdirSync as readdirSync8 } from "fs";
 import { join as join14 } from "path";
 
 // consort/smells/supersession.ts
@@ -7999,7 +8014,7 @@ import { join as join15 } from "path";
 
 // consort/architecture/contract-clean.ts
 init_esm_shims();
-import { existsSync as existsSync14, readFileSync as readFileSync15, readdirSync as readdirSync9, statSync as statSync6 } from "fs";
+import { existsSync as existsSync14, readFileSync as readFileSync16, readdirSync as readdirSync9, statSync as statSync6 } from "fs";
 import { join as join16, relative, extname } from "path";
 var ARTIFACT_ROOTS_RE = artifactRootsRegexAlternation();
 var EXCLUDE_DIR = new RegExp(
@@ -8016,7 +8031,7 @@ import * as path3 from "path";
 
 // consort/architecture/migration-app-clean.ts
 init_esm_shims();
-import { existsSync as existsSync16, readFileSync as readFileSync17, readdirSync as readdirSync10, statSync as statSync7 } from "fs";
+import { existsSync as existsSync16, readFileSync as readFileSync18, readdirSync as readdirSync10, statSync as statSync7 } from "fs";
 import { join as join18, relative as relative2, extname as extname2 } from "path";
 
 // consort/pipeline/cycle-record.ts
@@ -8033,7 +8048,7 @@ function resetStoryBuildState(consortDir, featureId, story) {
   const tlPath = storyTestListJson(consortDir, featureId, story);
   if (existsSync17(tlPath)) {
     try {
-      const tl = JSON.parse(readFileSync18(tlPath, "utf8"));
+      const tl = JSON.parse(readFileSync19(tlPath, "utf8"));
       for (const item of tl.items ?? []) {
         if (item.status && item.status !== "pending") {
           item.status = "pending";
@@ -8055,7 +8070,7 @@ function staleStoryArtifactsForRevise(consortDir, featureId, story, gate) {
   const master = featureTestListJson(consortDir, featureId);
   if (existsSync18(master)) {
     try {
-      const data = JSON.parse(readFileSync19(master, "utf8"));
+      const data = JSON.parse(readFileSync20(master, "utf8"));
       if (Array.isArray(data.items)) {
         data.items = data.items.filter((it) => !it.ac_id || !acIds.has(it.ac_id));
         writeFileSync12(master, JSON.stringify(data, null, 2) + "\n");
@@ -8083,7 +8098,7 @@ function clearArchitecturalNotes(consortDir, featureId, story) {
     if (!f.endsWith(".json")) continue;
     const p = join20(dir, f);
     try {
-      const ac = JSON.parse(readFileSync19(p, "utf8"));
+      const ac = JSON.parse(readFileSync20(p, "utf8"));
       if ("architectural_notes" in ac) {
         delete ac.architectural_notes;
         writeFileSync12(p, JSON.stringify(ac, null, 2) + "\n");
@@ -8555,7 +8570,12 @@ async function main() {
         lakebase_branch_uid: args.lakebaseUid,
         parent_sha: args.parentSha,
         n: args.n !== void 0 ? Number(args.n) : void 0,
-        at: args.at ?? (/* @__PURE__ */ new Date()).toISOString()
+        at: args.at ?? (/* @__PURE__ */ new Date()).toISOString(),
+        // Stamp the design this experiment is cut to build (stale-experiment guardrail).
+        ...(() => {
+          const fp = storyDesignFingerprint(consortDir, feature, args.story);
+          return fp !== void 0 ? { design_fingerprint: fp } : {};
+        })()
       });
       writePipeline(consortDir, pipeline);
       process.stdout.write(`cut experiment ${args.slug} for ${args.story} on ${args.branch} (parent ${args.parent})

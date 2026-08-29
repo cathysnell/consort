@@ -101,6 +101,12 @@ export interface StoryBuild {
    *  re-cut must re-fork it clean (--reset-stale-branch), mirroring the ci-pr
    *  --reset-stale-branch precedent (Finding 27). */
   experimentDiscarded?: boolean;
+  /** The active experiment was cut for a design (test-list) that has since been
+   *  re-authored under it , its stamped design fingerprint no longer matches the
+   *  story's current design. Reusing it would merge the superseded design's
+   *  code/tests, so nextBuildAction re-cuts a fresh experiment (reset-stale-branch)
+   *  instead. The stale-experiment guardrail; see design-fingerprint.ts. */
+  experimentStale?: boolean;
   /** The Navigator wrote the (failing) tests for the story. */
   testsWritten: boolean;
   /** The Driver made the tests pass. */

@@ -44,6 +44,9 @@ function fakeProbe(facts: Record<string, Partial<Record<keyof StoryArtifactProbe
     greenSupersededFailureAc: () => null,
     // No blocking escalation by default (raise-to-hil routing tested separately).
     pendingEscalation: () => null,
+    // Stale-experiment guardrail: these derive tests don't exercise a design change,
+    // so no experiment reads as stale (no fingerprint => never flagged).
+    designFingerprint: () => undefined,
   };
 }
 
@@ -192,6 +195,60 @@ describe("deriveDriveState + nextTransition: realistic on-disk situations", () =
       { build_active: "S1" },
     );
     const state = deriveDriveState(p, fakeProbe({ S1: { testsWritten: true } }), FEATURE);
+    expect(nextTransition(state)).toEqual({ kind: "invoke-role", role: "driver", story: "S1" });
+  });
+
+  it("build lane: an active experiment whose design fingerprint DIVERGED is re-cut (reset-stale-branch), not reused", () => {
+    // The stale-experiment guardrail (the withdraw-gate + set-status hazard): the story was
+    // re-authored under a still-active experiment, so its stamped design fingerprint no longer
+    // matches the current design. Reusing it would ride the superseded design's code/tests into
+    // the merge; the drive must re-cut a fresh experiment off the feature branch instead.
+    const p = pipeline(
+      {
+        S1: {
+          status: "building",
+          gate: { status: "approved", history: [] },
+          experiment: { slug: "e", branch: "exp/s1", parent: "feat", n: 1, status: "active", design_fingerprint: "OLDdesign" },
+        },
+      },
+      { build_active: "S1" },
+    );
+    const probe = { ...fakeProbe({ S1: { testsWritten: true } }), designFingerprint: () => "NEWdesign" };
+    const state = deriveDriveState(p, probe, FEATURE);
+    expect(nextTransition(state)).toEqual({ kind: "cut-experiment", story: "S1", resetStaleBranch: true });
+  });
+
+  it("build lane: an active experiment whose design fingerprint MATCHES is reused, not re-cut", () => {
+    const p = pipeline(
+      {
+        S1: {
+          status: "building",
+          gate: { status: "approved", history: [] },
+          experiment: { slug: "e", branch: "exp/s1", parent: "feat", n: 1, status: "active", design_fingerprint: "SAMEdesign" },
+        },
+      },
+      { build_active: "S1" },
+    );
+    const probe = { ...fakeProbe({ S1: { testsWritten: true } }), designFingerprint: () => "SAMEdesign" };
+    const state = deriveDriveState(p, probe, FEATURE);
+    // Reused: with RED tests written it proceeds to the Driver, never a cut-experiment.
+    expect(nextTransition(state)).toEqual({ kind: "invoke-role", role: "driver", story: "S1" });
+  });
+
+  it("build lane: an experiment with NO stamped fingerprint (cut before the guardrail) is never flagged stale", () => {
+    const p = pipeline(
+      {
+        S1: {
+          status: "building",
+          gate: { status: "approved", history: [] },
+          experiment: { slug: "e", branch: "exp/s1", parent: "feat", n: 1, status: "active" }, // no design_fingerprint
+        },
+      },
+      { build_active: "S1" },
+    );
+    // Even with a current fingerprint available, an unstamped experiment is reused (backward-compat).
+    const probe = { ...fakeProbe({ S1: { testsWritten: true } }), designFingerprint: () => "whatever" };
+    const state = deriveDriveState(p, probe, FEATURE);
     expect(nextTransition(state)).toEqual({ kind: "invoke-role", role: "driver", story: "S1" });
   });
 

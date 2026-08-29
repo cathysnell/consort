@@ -32,6 +32,7 @@ import {
   reviseStory,
 } from "../../consort/pipeline/story-pipeline";
 import { resetStoryBuildState } from "../../consort/pipeline/cycle-record";
+import { storyDesignFingerprint } from "../../consort/pipeline/design-fingerprint.js";
 import { parseExperimentArgs, validateExperimentArgs } from "../../consort/experiment/experiment-args";
 import { emitAgentLogEvent } from "../../consort/logging/agent-log";
 
@@ -92,6 +93,12 @@ async function main(): Promise<number> {
         branch: rec.branch_id,
         parent: args.parent as string,
         at,
+        // Stamp the design this experiment is cut to build (stale-experiment guardrail):
+        // a later redesign under this same experiment then reads as stale and re-cuts.
+        ...(() => {
+          const fp = storyDesignFingerprint(consortDir, feature, story);
+          return fp !== undefined ? { design_fingerprint: fp } : {};
+        })(),
       });
       writePipeline(consortDir, p);
       process.stdout.write(`cut experiment ${slug} on ${rec.branch_id} (parent ${args.parent})\n`);

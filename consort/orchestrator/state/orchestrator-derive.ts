@@ -95,6 +95,12 @@ export interface StoryArtifactProbe {
   /** An unresolved blocking escalation (failed honest-GREEN run, blocking smell,
    *  deploy verify-fail), or null. When set the driver routes to raise-to-hil. */
   pendingEscalation(): DriveEscalation | null;
+  /** The current design fingerprint (test-list content hash) of this story, or
+   *  undefined when there is no test-list to hash. Compared against the experiment's
+   *  stamped `design_fingerprint` to detect a REDESIGN under a still-active experiment
+   *  (the stale-experiment guardrail): a mismatch means the experiment would carry the
+   *  superseded design's code/tests into the merge, so it must be re-cut, not reused. */
+  designFingerprint(story: string): string | undefined;
 }
 
 /** Coarse driver context that lives outside pipeline.json (in workflow-state). */
@@ -159,6 +165,24 @@ function storyView(
 ): StoryView {
   const gateApproved = e.gate?.status === "approved";
   const accepted = e.acceptance?.decision === "accepted" || e.status === "done";
+  // Stale-experiment guardrail: an ACTIVE experiment whose stamped design fingerprint no
+  // longer matches the story's CURRENT design (test-list) was cut for a design that has
+  // since been re-authored under it (the `withdraw-gate` + `set --status designing`
+  // hand-surgery, which , unlike `revise` / `consort-reopen-story` , does not discard the
+  // experiment). Reusing it would ride the superseded design's code/tests into the merge.
+  // Flag it so nextBuildAction re-cuts a fresh experiment instead. Fires ONLY when a
+  // fingerprint was stamped (experiments cut before this guardrail, or with no test-list,
+  // carry none and are never falsely flagged), the current design is fingerprintable, and
+  // the two differ.
+  const exp = e.experiment;
+  const experimentStale =
+    exp != null &&
+    exp.status === "active" &&
+    exp.design_fingerprint !== undefined &&
+    (() => {
+      const cur = probe.designFingerprint(id);
+      return cur !== undefined && cur !== exp.design_fingerprint;
+    })();
   return {
     gateApproved,
     // The gate record exists once the story has been surfaced for review;
@@ -178,6 +202,7 @@ function storyView(
       // on revise); merged/active both count as cut.
       experimentCut: e.experiment != null && e.experiment.status !== "discarded",
       experimentDiscarded: e.experiment != null && e.experiment.status === "discarded",
+      experimentStale,
       testsWritten: probe.testsWritten(id),
       codeWritten: probe.codeWritten(id),
       loop,

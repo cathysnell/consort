@@ -622,11 +622,26 @@ export async function greenOpenCycle(
       });
       return { recorded: false, cycleId: open.cycle_id, testId: open.test_id, needsAssess: true, summary: result.summary };
     }
-    // Rounds exhausted: escalate to the HIL, carrying the Navigator's diagnosis
-    // when it recorded one (so the human gets the WHY, not just the verify summary).
+    // Rounds exhausted: escalate to the HIL, carrying the Navigator's diagnosis ONLY when
+    // it was recorded against the SAME failure this verify hit. green-failure.json's `summary`
+    // is the failure the recorded `diagnosis` explains; if the CURRENT verify's summary DIFFERS,
+    // the failure MODE changed since that diagnosis (a repair fixed one break and exposed another
+    // , or, the observed bug, the driver was sandbox-blocked and re-raised without a fresh
+    // diagnosis), so the recorded root-cause no longer explains what is failing. Blending a stale
+    // diagnosis with a fresh summary produces a self-contradictory escalation (e.g. an "e2e 500"
+    // diagnosis glued to a "client Vitest failed" summary) that misleads the human. When the mode
+    // changed, drop the stale diagnosis and say so; the current verify result stands as the truth.
+    const diagnosisMatchesMode = !!gf.diagnosis && (gf.summary === undefined || gf.summary === result.summary);
+    const staleDiagnosis = !!gf.diagnosis && !diagnosisMatchesMode;
     const escalation = writeEscalation(consortDir, {
       source: "driver-green",
-      reason: `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)${gf.diagnosis ? ` , ${gf.diagnosis}` : ""}: ${result.summary}`,
+      reason:
+        `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)` +
+        (diagnosisMatchesMode ? ` , ${gf.diagnosis}` : "") +
+        (staleDiagnosis
+          ? " , (the failure MODE changed since the last recorded diagnosis, which was for a different failure , re-diagnose from the CURRENT failure below; do not trust a prior root-cause)"
+          : "") +
+        `: ${result.summary}`,
       feature_id: featureId,
       story_id: story,
       ac_id: open.ac_id,

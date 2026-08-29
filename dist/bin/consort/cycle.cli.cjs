@@ -8563,9 +8563,11 @@ async function greenOpenCycle(args) {
       });
       return { recorded: false, cycleId: open.cycle_id, testId: open.test_id, needsAssess: true, summary: result.summary };
     }
+    const diagnosisMatchesMode = !!gf.diagnosis && (gf.summary === void 0 || gf.summary === result.summary);
+    const staleDiagnosis = !!gf.diagnosis && !diagnosisMatchesMode;
     const escalation = writeEscalation(consortDir, {
       source: "driver-green",
-      reason: `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)${gf.diagnosis ? ` , ${gf.diagnosis}` : ""}: ${result.summary}`,
+      reason: `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)` + (diagnosisMatchesMode ? ` , ${gf.diagnosis}` : "") + (staleDiagnosis ? " , (the failure MODE changed since the last recorded diagnosis, which was for a different failure , re-diagnose from the CURRENT failure below; do not trust a prior root-cause)" : "") + `: ${result.summary}`,
       feature_id: featureId,
       story_id: story,
       ac_id: open.ac_id

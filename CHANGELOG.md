@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.62] - 2026-08-29
+
+### Fixed
+
+- **Repoint `@databricks-solutions/lakebase-scm-utils` `#v0.2.18 -> #v0.2.19` , scaffold a `.claude/settings.json` that lets a headless drive self-verify.** A scaffolded project's role agents are spawned headlessly (`claude --agent <role>`, no human to approve a permission prompt) but must run the real-branch-DB verify (`run-tests.sh`, `uv run alembic`/`pytest`, the client `test`/`test:e2e`, `playwright install`). With no allowlist those invocations gated pending approval, so the drive could not self-confirm GREEN and re-raised a stale escalation. scm-utils now deploys a committed `.claude/settings.json` carrying those verify commands. It MUST be `settings.json` (the project source): the drive spawns agents with `--setting-sources project` (see `claude-runner.ts`), which loads ONLY `.claude/settings.json`; an allowlist in `settings.local.json` is never sourced by the spawned agent (the observed "allowlist not honored" wall).
+- **The build's honest-GREEN escalation no longer glues a STALE diagnosis to a fresh failure (`cycle-record.ts`).** When self-heal rounds are exhausted, the HIL escalation carried the last-recorded Navigator diagnosis blended with the current verify summary. If the failure MODE changed since that diagnosis (a repair exposed a different break, or , observed , a sandbox-blocked driver re-raised without a fresh diagnosis), the two contradict (e.g. an "e2e 500" diagnosis on a "client Vitest failed" summary). The escalation now includes the diagnosis ONLY when its recorded `summary` matches the current verify's; on a mode change it drops the stale diagnosis and says "the failure MODE changed , re-diagnose from the current failure." (2 guard tests.)
+- **Stale-experiment guardrail: a build experiment whose design was re-authored under it is re-cut, not reused (`nextBuildAction` + new `design-fingerprint.ts`).** Sending a story back to design with `withdraw-gate` + `set --status designing` (instead of `revise` / `consort-reopen-story`, which discard the experiment) left the experiment active, so the rebuild REUSED it and rode the abandoned design's code/tests into the accept-merge , surfacing as unrelated failures cycles later, with no gate flagging it. The experiment is now stamped at cut time with a fingerprint of its design (test-list content); when the story's current design fingerprint no longer matches, the derivation flags the experiment STALE and `nextBuildAction` re-cuts a fresh one off the feature branch (reset-stale-branch), exactly as for a discarded experiment. So ANY back-to-design path , including the manual hand-surgery , can no longer merge superseded artifacts. Backward-compatible: an experiment cut before this guardrail (no stamped fingerprint) is never falsely flagged. (10 tests: 4 routing + 6 fingerprint/storage.)
+
+### Changed
+
+- **`/consort:start` resume: the newer-kit upgrade offer is now a non-skippable step, surfaced BEFORE any diagnosis (`start.md`).** When `consort-check-update` reports a newer version, the resume flow must relay it and offer the upgrade first , even when a build blocker/escalation is open (the newer kit may be the fix). The prior wording let an open blocker draw attention and the upgrade offer get dropped.
+
 ## [0.3.61] - 2026-08-29
 
 ### Fixed

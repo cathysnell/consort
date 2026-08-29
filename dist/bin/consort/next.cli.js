@@ -7757,8 +7757,8 @@ function nextDesignAction(state) {
   return { kind: "design-complete" };
 }
 function nextBuildAction(story, b) {
-  if (!b.experimentCut) {
-    return b.experimentDiscarded ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
+  if (!b.experimentCut || b.experimentStale) {
+    return b.experimentDiscarded || b.experimentStale ? { kind: "cut-experiment", story, resetStaleBranch: true } : { kind: "cut-experiment", story };
   }
   if (b.refactorVerifyAssessEligible) return { kind: "invoke-role", role: "navigator", story, buildMode: "assess-refactor" };
   if (b.refactorVerifyRefactorPending) return { kind: "invoke-role", role: "driver", story, buildMode: "refactor-superseded" };
@@ -8506,6 +8506,11 @@ function effectiveLoopForStory(runLoop, storyId) {
 function storyView(id, e, probe, loop) {
   const gateApproved = e.gate?.status === "approved";
   const accepted = e.acceptance?.decision === "accepted" || e.status === "done";
+  const exp = e.experiment;
+  const experimentStale = exp != null && exp.status === "active" && exp.design_fingerprint !== void 0 && (() => {
+    const cur = probe.designFingerprint(id);
+    return cur !== void 0 && cur !== exp.design_fingerprint;
+  })();
   return {
     gateApproved,
     // The gate record exists once the story has been surfaced for review;
@@ -8525,6 +8530,7 @@ function storyView(id, e, probe, loop) {
       // on revise); merged/active both count as cut.
       experimentCut: e.experiment != null && e.experiment.status !== "discarded",
       experimentDiscarded: e.experiment != null && e.experiment.status === "discarded",
+      experimentStale,
       testsWritten: probe.testsWritten(id),
       codeWritten: probe.codeWritten(id),
       loop,
@@ -9249,9 +9255,23 @@ function refactorPending(consortDir, featureId, story) {
   return hasOpenBuildRefactorRoutableSmell(consortDir, story);
 }
 
+// consort/pipeline/design-fingerprint.ts
+init_esm_shims();
+import { createHash as createHash3 } from "crypto";
+import { readFileSync as readFileSync30 } from "fs";
+function storyDesignFingerprint(consortDir, feature, story) {
+  try {
+    const raw = readFileSync30(storyTestListJson(consortDir, feature, story), "utf8");
+    const canonical = JSON.stringify(JSON.parse(raw));
+    return createHash3("sha256").update(canonical).digest("hex").slice(0, 16);
+  } catch {
+    return void 0;
+  }
+}
+
 // consort/gates/gates.ts
 init_esm_shims();
-import { existsSync as existsSync33, readFileSync as readFileSync30, renameSync, unlinkSync, writeFileSync as writeFileSync20 } from "fs";
+import { existsSync as existsSync33, readFileSync as readFileSync31, renameSync, unlinkSync, writeFileSync as writeFileSync20 } from "fs";
 import { join as join34 } from "path";
 var GATES_SCHEMA_VERSION = 1;
 var GATE_STATUSES = ["open", "approved", "superseded", "withdrawn"];
@@ -9274,7 +9294,7 @@ function readGates(featureId, opts = {}) {
   if (!existsSync33(file)) {
     return defaultGatesState(featureId);
   }
-  const raw = readFileSync30(file, "utf8");
+  const raw = readFileSync31(file, "utf8");
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -9348,7 +9368,7 @@ import { readWorkflowState as readWorkflowState2, SCM_STATES } from "@databricks
 
 // consort/smells/reflection.ts
 init_esm_shims();
-import { existsSync as existsSync34, readFileSync as readFileSync31, writeFileSync as writeFileSync21, mkdirSync as mkdirSync21, rmSync as rmSync9 } from "fs";
+import { existsSync as existsSync34, readFileSync as readFileSync32, writeFileSync as writeFileSync21, mkdirSync as mkdirSync21, rmSync as rmSync9 } from "fs";
 var SMELL_FOR_OWNER = {
   "spec-author": "reflect-spec-defect",
   "test-strategist": "reflect-testlist-defect"
@@ -9357,7 +9377,7 @@ function readReflectVerdict(consortDir, feature, story) {
   const p = reflectVerdictJson(consortDir, feature, story);
   if (!existsSync34(p)) return void 0;
   try {
-    return JSON.parse(readFileSync31(p, "utf8"));
+    return JSON.parse(readFileSync32(p, "utf8"));
   } catch {
     return void 0;
   }
@@ -9372,7 +9392,7 @@ var REFLECT_SMELLS = Object.values(SMELL_FOR_OWNER);
 
 // consort/architecture/architecture-canon.ts
 init_esm_shims();
-import { existsSync as existsSync35, readFileSync as readFileSync32, writeFileSync as writeFileSync22, mkdirSync as mkdirSync22, readdirSync as readdirSync21 } from "fs";
+import { existsSync as existsSync35, readFileSync as readFileSync33, writeFileSync as writeFileSync22, mkdirSync as mkdirSync22, readdirSync as readdirSync21 } from "fs";
 function uniq(xs) {
   return [...new Set(xs.filter((x) => typeof x === "string" && x.length > 0))];
 }
@@ -9380,7 +9400,7 @@ function readCanon(consortDir) {
   const f = architectureCanonJson(consortDir);
   if (!existsSync35(f)) return void 0;
   try {
-    return JSON.parse(readFileSync32(f, "utf8"));
+    return JSON.parse(readFileSync33(f, "utf8"));
   } catch {
     return void 0;
   }
@@ -9550,6 +9570,9 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
         return false;
       }
     },
+    designFingerprint(story) {
+      return storyDesignFingerprint(consortDir, featureId, story);
+    },
     reflectionPassed(story) {
       return reflectionPassed(consortDir, featureId, story);
     },
@@ -9681,11 +9704,11 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
 
 // consort/pipeline/story-pipeline.ts
 init_esm_shims();
-import { existsSync as existsSync38, readFileSync as readFileSync35, writeFileSync as writeFileSync23, mkdirSync as mkdirSync23, readdirSync as readdirSync24, statSync as statSync15, rmSync as rmSync10 } from "fs";
+import { existsSync as existsSync38, readFileSync as readFileSync36, writeFileSync as writeFileSync23, mkdirSync as mkdirSync23, readdirSync as readdirSync24, statSync as statSync15, rmSync as rmSync10 } from "fs";
 
 // consort/gates/gate-conformance-guard.ts
 init_esm_shims();
-import { existsSync as existsSync37, readFileSync as readFileSync34, readdirSync as readdirSync23, statSync as statSync14 } from "fs";
+import { existsSync as existsSync37, readFileSync as readFileSync35, readdirSync as readdirSync23, statSync as statSync14 } from "fs";
 import { join as join36, dirname as dirname19 } from "path";
 
 // consort/architecture/architecture-conventions.ts
@@ -9701,12 +9724,12 @@ function pipelinePath(consortDir, featureId) {
 function readPipeline(consortDir, featureId) {
   const p = pipelinePath(consortDir, featureId);
   if (!existsSync38(p)) return initPipeline(featureId);
-  return JSON.parse(readFileSync35(p, "utf8"));
+  return JSON.parse(readFileSync36(p, "utf8"));
 }
 
 // consort/session/response-formatter.ts
 init_esm_shims();
-import { existsSync as existsSync39, readFileSync as readFileSync36, readdirSync as readdirSync25 } from "fs";
+import { existsSync as existsSync39, readFileSync as readFileSync37, readdirSync as readdirSync25 } from "fs";
 function designGuideConformance(consortDir) {
   const file = designGuideJson(consortDir);
   if (!existsSync39(file)) {
@@ -9714,7 +9737,7 @@ function designGuideConformance(consortDir) {
   }
   let content;
   try {
-    content = readFileSync36(file, "utf8");
+    content = readFileSync37(file, "utf8");
   } catch (e) {
     return { ok: false, problem: `unreadable: ${e instanceof Error ? e.message : String(e)}` };
   }
@@ -9791,7 +9814,7 @@ init_esm_shims();
 
 // consort/gates/sprint-gates.ts
 init_esm_shims();
-import { existsSync as existsSync41, mkdirSync as mkdirSync25, readFileSync as readFileSync39, renameSync as renameSync2, unlinkSync as unlinkSync2, writeFileSync as writeFileSync25 } from "fs";
+import { existsSync as existsSync41, mkdirSync as mkdirSync25, readFileSync as readFileSync40, renameSync as renameSync2, unlinkSync as unlinkSync2, writeFileSync as writeFileSync25 } from "fs";
 
 // consort/gates/gate-hash.ts
 init_esm_shims();
@@ -9814,7 +9837,7 @@ function readSprintGates(sprint, opts = {}) {
   if (!existsSync41(file)) return defaultSprintGatesState(sprint);
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync39(file, "utf8"));
+    parsed = JSON.parse(readFileSync40(file, "utf8"));
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
     throw new Error(`sprint gates.json at ${file} is not valid JSON: ${cause}`);

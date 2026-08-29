@@ -77,6 +77,12 @@ export interface StoryExperiment {
   status: StoryExperimentStatus;
   cut_at?: string;
   closed_at?: string;
+  /** Fingerprint of the design (test-list) this experiment was cut to build, stamped
+   *  at cut time. When the story's current design fingerprint later DIFFERS, the story
+   *  was re-authored under the still-active experiment (the withdraw-gate + set-status
+   *  hazard), so the derivation treats the experiment as STALE and forces a fresh
+   *  re-cut instead of reusing it (which would merge the superseded design's code). */
+  design_fingerprint?: string;
 }
 
 // PO acceptance of a built story, distinct from the pre-build spec
@@ -503,6 +509,10 @@ export interface CutExperimentArgs {
   /** 1 (default) or the count of competing experiments for an N>=2 race. */
   n?: number;
   at?: string;
+  /** Fingerprint of the design (test-list) this experiment is being cut to build ,
+   *  the stale-experiment guardrail stamps it so a later redesign under the same
+   *  experiment is detectable. Omit when there is no design to fingerprint. */
+  design_fingerprint?: string;
 }
 
 /**
@@ -526,6 +536,7 @@ export function cutStoryExperiment(
     n: args.n ?? 1,
     status: "active",
     ...(args.at !== undefined ? { cut_at: args.at } : {}),
+    ...(args.design_fingerprint !== undefined ? { design_fingerprint: args.design_fingerprint } : {}),
   };
   return pipeline;
 }
