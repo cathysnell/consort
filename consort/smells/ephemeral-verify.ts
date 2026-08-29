@@ -50,6 +50,17 @@ export interface EphemeralVerifyBranchArgs {
 }
 
 /**
+ * Just the Lakebase-op injection seams of a verify-branch fork (create / waitReady
+ * / resolveDsn / remove). Callers that thread an ephemeral fork through their own
+ * seams (e.g. the deploy verifier's hermetic tests) accept this and forward it to
+ * `withEphemeralVerifyBranch`; omitting it uses the real Lakebase CLI ops.
+ */
+export type EphemeralVerifyOps = Pick<
+  EphemeralVerifyBranchArgs,
+  "create" | "waitReady" | "resolveDsn" | "remove"
+>;
+
+/**
  * Fork a disposable child off `parentBranch`, hand its DSN to `run`, and ALWAYS
  * delete the child afterwards (best-effort; the TTL is the backstop). The child
  * is forked at the parent's committed schema, so `run` (migrate + test) starts

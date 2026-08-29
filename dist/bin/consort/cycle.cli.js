@@ -7638,7 +7638,7 @@ function readAppDatabaseName(projectDir) {
   const name = m ? m[1].replace(/^["']|["']$/g, "").trim() : "";
   return name || void 0;
 }
-async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebaseBranch, now) {
+async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebaseBranch, now, ops) {
   const instance = lakebaseBranch && consortEnv("EPHEMERAL_VERIFY") !== "0" ? readProjectInstance(projectDir) : void 0;
   if (!instance || !lakebaseBranch) {
     return normalizeVerifyRun(runVerify(cmd, projectDir, env));
@@ -7647,7 +7647,7 @@ async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebase
   const childName = ephemeralVerifyBranchName(lakebaseBranch, nonce);
   const database = readAppDatabaseName(projectDir);
   return withEphemeralVerifyBranch(
-    { instance, parentBranch: lakebaseBranch, childName, database },
+    { instance, parentBranch: lakebaseBranch, childName, database, ...ops },
     (childDsn) => normalizeVerifyRun(runVerify(cmd, projectDir, { ...env ?? process.env, VERIFY_DATABASE_URL: childDsn }))
   );
 }
@@ -7769,7 +7769,8 @@ async function ensureDeployedAndVerify(args) {
         args.projectDir,
         { ...env, SFTDD_PYTEST_MARKER: "not migration" },
         args.lakebaseBranch,
-        nowFn
+        nowFn,
+        args.verifyBranchOps
       );
       const mainPassed = mainRun.passed;
       if (!mainPassed) failOut = mainRun.output;
@@ -7779,24 +7780,36 @@ async function ensureDeployedAndVerify(args) {
         args.projectDir,
         { ...env, SFTDD_PYTEST_MARKER: "migration" },
         args.lakebaseBranch,
-        nowFn
+        nowFn,
+        args.verifyBranchOps
       ) : { passed: true, output: "" };
       const migPassed = migRun.passed;
       if (mainPassed && !migPassed) failOut = migRun.output;
       migrationFailed = mainPassed && !migPassed;
       const backendPassed = mainPassed && migPassed;
-      const clientRun = backendPassed && hasClientWorkspace(args.projectDir) ? normalizeVerifyRun(
-        runVerify(cfg.verify, args.projectDir, {
-          ...env ?? process.env,
-          SFTDD_CLIENT_ONLY: "1"
-        })
+      const clientRun = backendPassed && hasClientWorkspace(args.projectDir) ? await runVerifyMaybeEphemeral(
+        runVerify,
+        cfg.verify,
+        args.projectDir,
+        { ...env ?? process.env, SFTDD_CLIENT_ONLY: "1" },
+        args.lakebaseBranch,
+        nowFn,
+        args.verifyBranchOps
       ) : { passed: true, output: "" };
       const clientPassed = clientRun.passed;
       if (backendPassed && !clientPassed) failOut = clientRun.output;
       clientFailed = backendPassed && !clientPassed;
       passed = backendPassed && clientPassed;
     } else {
-      const run = await runVerifyMaybeEphemeral(runVerify, cfg.verify, args.projectDir, env, args.lakebaseBranch, nowFn);
+      const run = await runVerifyMaybeEphemeral(
+        runVerify,
+        cfg.verify,
+        args.projectDir,
+        env,
+        args.lakebaseBranch,
+        nowFn,
+        args.verifyBranchOps
+      );
       passed = run.passed;
       if (!passed) failOut = run.output;
     }

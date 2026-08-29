@@ -30,7 +30,11 @@ import {
 import { checkE2eRegexClean, summarizeE2eRegexViolations, E2E_REGEX_REMEDIATION } from "../../consort/architecture/e2e-regex-clean.js";
 import { emitAgentLogEvent, type AgentLogIoOpts } from "../../consort/logging/agent-log.js";
 import type { AgentLogEventName } from "../../consort/logging/agent-log-events.js";
-import { withEphemeralVerifyBranch, ephemeralVerifyBranchName } from "../../consort/smells/ephemeral-verify.js";
+import {
+  withEphemeralVerifyBranch,
+  ephemeralVerifyBranchName,
+  type EphemeralVerifyOps,
+} from "../../consort/smells/ephemeral-verify.js";
 import { consortEnv } from "../../consort/config/consort-env.js";
 
 /** Read the Lakebase project id from the project's .env (LAKEBASE_PROJECT_ID). */
@@ -102,6 +106,7 @@ async function runVerifyMaybeEphemeral(
   env: NodeJS.ProcessEnv | undefined,
   lakebaseBranch: string | undefined,
   now: () => Date,
+  ops?: EphemeralVerifyOps,
 ): Promise<VerifyRun> {
   const instance =
     lakebaseBranch && consortEnv("EPHEMERAL_VERIFY") !== "0" ? readProjectInstance(projectDir) : undefined;
@@ -114,8 +119,10 @@ async function runVerifyMaybeEphemeral(
   const nonce = `${String(now().getTime()).slice(-7)}-${randomBytes(3).toString("hex")}`;
   const childName = ephemeralVerifyBranchName(lakebaseBranch, nonce);
   const database = readAppDatabaseName(projectDir);
-  return withEphemeralVerifyBranch({ instance, parentBranch: lakebaseBranch, childName, database }, (childDsn) =>
-    normalizeVerifyRun(runVerify(cmd, projectDir, { ...(env ?? process.env), VERIFY_DATABASE_URL: childDsn })),
+  return withEphemeralVerifyBranch(
+    { instance, parentBranch: lakebaseBranch, childName, database, ...ops },
+    (childDsn) =>
+      normalizeVerifyRun(runVerify(cmd, projectDir, { ...(env ?? process.env), VERIFY_DATABASE_URL: childDsn })),
   );
 }
 
@@ -824,6 +831,9 @@ export interface CycleVerifyArgs {
   stop?: (projectDir: string, targetName: string) => void;
   sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
+  /** Injectable Lakebase ops for the ephemeral verify-branch fork (hermetic tests).
+   *  Omitted in production , withEphemeralVerifyBranch uses the real Lakebase CLI ops. */
+  verifyBranchOps?: EphemeralVerifyOps;
 }
 
 export interface CycleVerifyResult {
@@ -919,6 +929,7 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
         { ...env, SFTDD_PYTEST_MARKER: "not migration" },
         args.lakebaseBranch,
         nowFn,
+        args.verifyBranchOps,
       );
       const mainPassed = mainRun.passed;
       if (!mainPassed) failOut = mainRun.output;
@@ -932,6 +943,7 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
             { ...env, SFTDD_PYTEST_MARKER: "migration" },
             args.lakebaseBranch,
             nowFn,
+            args.verifyBranchOps,
           )
         : { passed: true, output: "" };
       const migPassed = migRun.passed;
@@ -943,16 +955,33 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
       // so build honest-GREEN would never run the client suite on a Python + client
       // scaffold, a false GREEN the deploy feature-verify (unmarked, so it reaches the
       // client block) later caught. Run the client suite ONCE here (SFTDD_CLIENT_ONLY:
-      // run-tests.sh skips the backend and runs only `cd client && npm test`) so build
-      // GREEN gates on the SAME client tests. No DB, so no ephemeral branch; a failing
-      // client test refuses GREEN. Only when a client/ workspace exists.
+      // run-tests.sh skips the backend and runs the client Vitest suite + the appended
+      // client Playwright E2E block) so build GREEN gates on the SAME client tests.
+      // ISOLATE on an ephemeral child branch, exactly like the backend passes above:
+      // the client Vitest alone touches no DB, but the appended client Playwright E2E
+      // block boots a real backend (migrate-before-serve, DATABASE_URL-pinned) and
+      // exercises the DB. Run on the SHARED experiment branch, one build turn's e2e
+      // writes bleed into the next turn's verify (cross-run state carried on the shared
+      // branch), and a server started before a later story's migration serves a stale
+      // schema. runVerifyMaybeEphemeral forks a throwaway child off the experiment branch
+      // and points VERIFY_DATABASE_URL at it (run-tests.sh then exports
+      // DATABASE_URL=childDsn, so alembic + the Playwright webServer both hit the fresh
+      // child), then deletes it , every client-E2E pass gets a pristine DB at the
+      // committed schema, matching the backend passes. (This isolates ACROSS verifies; a
+      // suite that piles up rows WITHIN one run without per-test cleanup is the suite's
+      // own concern, not this fork's.) Falls back in-place when there is no experiment
+      // branch / instance to fork from (opt-out stays LAKEBASE_CONSORT_EPHEMERAL_VERIFY=0).
+      // A failing client/E2E test refuses GREEN. Only when a client/ workspace exists.
       const clientRun =
         backendPassed && hasClientWorkspace(args.projectDir)
-          ? normalizeVerifyRun(
-              runVerify(cfg.verify, args.projectDir, {
-                ...(env ?? process.env),
-                SFTDD_CLIENT_ONLY: "1",
-              }),
+          ? await runVerifyMaybeEphemeral(
+              runVerify,
+              cfg.verify,
+              args.projectDir,
+              { ...(env ?? process.env), SFTDD_CLIENT_ONLY: "1" },
+              args.lakebaseBranch,
+              nowFn,
+              args.verifyBranchOps,
             )
           : { passed: true, output: "" };
       const clientPassed = clientRun.passed;
@@ -960,7 +989,15 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
       clientFailed = backendPassed && !clientPassed;
       passed = backendPassed && clientPassed;
     } else {
-      const run = await runVerifyMaybeEphemeral(runVerify, cfg.verify, args.projectDir, env, args.lakebaseBranch, nowFn);
+      const run = await runVerifyMaybeEphemeral(
+        runVerify,
+        cfg.verify,
+        args.projectDir,
+        env,
+        args.lakebaseBranch,
+        nowFn,
+        args.verifyBranchOps,
+      );
       passed = run.passed;
       if (!passed) failOut = run.output;
     }

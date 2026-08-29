@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.61] - 2026-08-29
+
+### Fixed
+
+- **Repoint `@databricks-solutions/lakebase-scm-utils` `#v0.2.17 -> #v0.2.18` , complete the migrate-before-serve e2e fix by pinning the served DB.** v0.2.17 made the scaffolded Playwright backend `webServer` run `alembic upgrade head && uvicorn …` (migrate-before-serve, no reuse), but the `webServer` command does not inherit the shell `DATABASE_URL`, so `alembic` could migrate a different database than `uvicorn` served , leaving the served schema missing a story's new table (the reconcile 500). The scaffolded `client/playwright.config.ts` now forwards `DATABASE_URL` and `VERIFY_DATABASE_URL` into the backend `webServer` env when set, so migrate + serve resolve the SAME DB.
+- **The build's honest-GREEN verify now isolates the client/E2E pass on an ephemeral child branch, like the backend passes.** `ensureDeployedAndVerify` already forked a throwaway child off the experiment branch for the two marked backend pytest passes (`VERIFY_DATABASE_URL`), but the client-only pass , which runs the appended client Playwright E2E block, and that block boots a real backend that exercises the DB , ran in place against the SHARED experiment branch. So one build turn's e2e writes bled into the next turn's verify (cross-run state on the shared branch), and a server started before a later story's migration served a stale schema. The client pass now routes through the same `runVerifyMaybeEphemeral` wrapper, so every client-E2E verify gets a pristine DB at the committed schema; the child is deleted after (opt-out `LAKEBASE_CONSORT_EPHEMERAL_VERIFY=0`; falls back in-place when no experiment branch is bound). This isolates ACROSS verifies; a suite that piles up rows WITHIN one run without per-test cleanup remains the suite's own concern. Internally, an injectable `verifyBranchOps` seam (threaded `CycleVerifyArgs -> runVerifyMaybeEphemeral -> withEphemeralVerifyBranch`) makes the fork path hermetically testable; new guard tests assert the client pass forks with `VERIFY_DATABASE_URL` set and falls back in-place with no branch bound.
+
 ## [0.3.60] - 2026-08-29
 
 ### Fixed

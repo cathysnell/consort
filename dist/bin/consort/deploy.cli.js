@@ -7115,7 +7115,7 @@ function readAppDatabaseName(projectDir) {
   const name = m ? m[1].replace(/^["']|["']$/g, "").trim() : "";
   return name || void 0;
 }
-async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebaseBranch, now) {
+async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebaseBranch, now, ops) {
   const instance = lakebaseBranch && consortEnv("EPHEMERAL_VERIFY") !== "0" ? readProjectInstance(projectDir) : void 0;
   if (!instance || !lakebaseBranch) {
     return normalizeVerifyRun(runVerify(cmd, projectDir, env));
@@ -7124,7 +7124,7 @@ async function runVerifyMaybeEphemeral(runVerify, cmd, projectDir, env, lakebase
   const childName = ephemeralVerifyBranchName(lakebaseBranch, nonce);
   const database = readAppDatabaseName(projectDir);
   return withEphemeralVerifyBranch(
-    { instance, parentBranch: lakebaseBranch, childName, database },
+    { instance, parentBranch: lakebaseBranch, childName, database, ...ops },
     (childDsn) => normalizeVerifyRun(runVerify(cmd, projectDir, { ...env ?? process.env, VERIFY_DATABASE_URL: childDsn }))
   );
 }

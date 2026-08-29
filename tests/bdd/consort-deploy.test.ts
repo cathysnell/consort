@@ -963,3 +963,116 @@ describe("ensureDeployedAndVerify: client Vitest pass on Python + client (Findin
     expect(clientOnlySeen).toEqual([]);
   });
 });
+
+// The client-only pass runs the appended client Playwright E2E block, which boots a
+// real backend against DATABASE_URL and exercises the DB. Run against the SHARED
+// experiment branch, one build turn's e2e writes bleed into the next turn's verify
+// (cross-run state on the shared branch), and a server started before a later story's
+// migration serves a stale schema. So the client pass must ISOLATE on an ephemeral
+// child branch , exactly like the two backend passes , not run in place. Guarded via
+// the injectable verifyBranchOps seam (hermetic; no real Lakebase). Staging
+// LAKEBASE_PROJECT_ID in .env makes readProjectInstance resolve an instance so the
+// fork path is taken.
+describe("ensureDeployedAndVerify: client E2E pass isolates on an ephemeral branch", () => {
+  function fastClock() {
+    let t = 0;
+    return () => new Date((t += 200));
+  }
+  function stagePythonClientOnBranch(d: string): void {
+    writeFileSync(join(d, "pyproject.toml"), "[project]\nname = 'x'\n");
+    mkdirSync(join(d, "client"), { recursive: true });
+    writeFileSync(join(d, "client", "package.json"), "{}\n");
+    // readProjectInstance reads LAKEBASE_PROJECT_ID; readAppDatabaseName reads DATABASE_URL.
+    writeFileSync(
+      join(d, ".env"),
+      "LAKEBASE_PROJECT_ID=proj-1\nDATABASE_URL=postgresql://u:p@h/stockflow\n",
+    );
+  }
+
+  it("forks a child branch for the client pass (VERIFY_DATABASE_URL set), not just the backend passes", async () => {
+    stagePythonClientOnBranch(dir);
+    const created: string[] = [];
+    const removed: string[] = [];
+    // One record per runVerify invocation: which pass it was + the child DSN it ran against.
+    const passes: Array<{ marker: string; clientOnly: string; verifyUrl: string }> = [];
+    const res = await ensureDeployedAndVerify({
+      projectDir: dir,
+      targetName: "localv",
+      lakebaseBranch: "experiment-s3-exp1",
+      startProcess: () => 4242,
+      reachable: async () => true,
+      runVerify: (_cmd, _cwd, env) => {
+        passes.push({
+          marker: env?.SFTDD_PYTEST_MARKER ?? "<unset>",
+          clientOnly: env?.SFTDD_CLIENT_ONLY ?? "<unset>",
+          verifyUrl: env?.VERIFY_DATABASE_URL ?? "<unset>",
+        });
+        return true;
+      },
+      stop: () => {},
+      sleep: async () => {},
+      now: fastClock(),
+      // Hermetic Lakebase ops: record forks/teardowns, hand back a per-branch DSN.
+      verifyBranchOps: {
+        create: async (a) => {
+          created.push(a.branch);
+        },
+        waitReady: async () => {},
+        resolveDsn: async (a) => `postgresql://child/${a.branch}/${a.database}`,
+        remove: async (a) => {
+          removed.push(a.branch);
+        },
+      },
+    });
+    expect(res.passed).toBe(true);
+    // Three passes: backend main, backend migration, then the client pass.
+    expect(passes.map((p) => p.marker)).toEqual(["not migration", "migration", "<unset>"]);
+    const clientPass = passes.find((p) => p.clientOnly === "1")!;
+    expect(clientPass).toBeDefined();
+    // THE GUARD: the client pass ran against a forked child DSN, not the shared branch.
+    // Reverting the client pass to an in-place runVerify leaves this "<unset>".
+    expect(clientPass.verifyUrl).not.toBe("<unset>");
+    expect(clientPass.verifyUrl).toMatch(/^postgresql:\/\/child\/experiment-s3-exp1-vrfy-/);
+    // Targets the app's CONFIGURED database (test-what-ships), not a fallback.
+    expect(clientPass.verifyUrl).toMatch(/\/stockflow$/);
+    // Every pass (backend main, backend migration, client) forked + tore down its OWN child.
+    expect(created).toHaveLength(3);
+    expect(removed.sort()).toEqual(created.sort());
+    expect(created.every((b) => b.includes("-vrfy-"))).toBe(true);
+    // The child the client pass ran against was one that was created AND removed (round-trip).
+    const clientChild = clientPass.verifyUrl.split("/")[3];
+    expect(created).toContain(clientChild);
+    expect(removed).toContain(clientChild);
+  });
+
+  it("falls back to an in-place client pass when no experiment branch is bound (no fork)", async () => {
+    stagePythonClientOnBranch(dir);
+    const created: string[] = [];
+    let clientVerifyUrl = "unset-sentinel";
+    const res = await ensureDeployedAndVerify({
+      projectDir: dir,
+      targetName: "localv",
+      // no lakebaseBranch , runVerifyMaybeEphemeral verifies in place.
+      startProcess: () => 4242,
+      reachable: async () => true,
+      runVerify: (_cmd, _cwd, env) => {
+        if (env?.SFTDD_CLIENT_ONLY === "1") clientVerifyUrl = env?.VERIFY_DATABASE_URL ?? "<unset>";
+        return true;
+      },
+      stop: () => {},
+      sleep: async () => {},
+      now: fastClock(),
+      verifyBranchOps: {
+        create: async (a) => {
+          created.push(a.branch);
+        },
+        waitReady: async () => {},
+        resolveDsn: async () => "postgresql://child/db",
+        remove: async () => {},
+      },
+    });
+    expect(res.passed).toBe(true);
+    expect(created).toEqual([]); // no branch bound , no fork on any pass
+    expect(clientVerifyUrl).toBe("<unset>"); // client pass ran in place
+  });
+});
