@@ -112,6 +112,21 @@ export function kitVersion(): string {
   }
 }
 
+/**
+ * Export this kit's version as `CONSORT_VERSION` so the substrate (lakebase-scm-utils)
+ * labels the Postgres connections it opens under a Consort run as `consort/<version>`
+ * rather than its own `scm-utils/<version>` (scm-utils reads this env in
+ * `connectionApplicationName()`; anything that is NOT Consort , the VS Code extension, a
+ * bare `lakebase-*` CLI , leaves it unset and keeps the scm-utils brand). Child processes
+ * a Consort run spawns inherit it. Call once at a Consort entry point BEFORE any substrate
+ * connection. Idempotent + non-destructive: it never overwrites an already-set value (so an
+ * outer Consort process's version wins over a re-derive), and skips an unresolved version.
+ * `version` is injectable for tests; it defaults to this kit's own `kitVersion()`. */
+export function exportConsortVersionEnv(version: string = kitVersion()): void {
+  if (process.env.CONSORT_VERSION) return;
+  if (version && version !== "unknown") process.env.CONSORT_VERSION = version;
+}
+
 /** Run a kit bin as a synchronous subprocess (inheriting stdio), returning its
  *  exit code. A kit bin resolves to its dist JS run under `node`; a non-kit name
  *  falls back to the bare command on PATH. Throws only when the process cannot be

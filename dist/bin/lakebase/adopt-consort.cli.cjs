@@ -138,6 +138,30 @@ function findBootstrapDir() {
   );
 }
 
+// consort/config/kit-bin.ts
+var import_node_child_process = require("child_process");
+var fs3 = __toESM(require("fs"), 1);
+var path2 = __toESM(require("path"), 1);
+var kitRootCache;
+function resolveKitRoot() {
+  if (kitRootCache !== void 0) return kitRootCache;
+  const env = process.env.LAKEBASE_KIT_DIR?.trim();
+  kitRootCache = env && fs3.existsSync(path2.join(env, "package.json")) ? env : path2.resolve(__dirname, "..", "..", "..");
+  return kitRootCache;
+}
+function kitVersion() {
+  try {
+    const pkg = JSON.parse(fs3.readFileSync(path2.join(resolveKitRoot(), "package.json"), "utf8"));
+    return pkg.version ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+function exportConsortVersionEnv(version = kitVersion()) {
+  if (process.env.CONSORT_VERSION) return;
+  if (version && version !== "unknown") process.env.CONSORT_VERSION = version;
+}
+
 // bin/lakebase/adopt-consort.cli.ts
 function parseArgs(argv) {
   const out = {};
@@ -192,6 +216,7 @@ Output: JSON to stdout: { added, inSync, drifted, updated, noChanges }
          1 - operational failure (not a git repo, .tdd/ exists without --update, etc.)
 `;
 async function main() {
+  exportConsortVersionEnv();
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     process.stdout.write(HELP);

@@ -4,6 +4,7 @@
 // which is the greenfield path. See `adopt-consort.ts` for the orchestrator.
 
 import { adoptTdd, type AdoptTddArgs } from "../../consort/lakebase/adopt-consort.js";
+import { exportConsortVersionEnv } from "../../consort/config/kit-bin.js";
 
 interface ParsedArgs {
   projectDir?: string;
@@ -68,6 +69,7 @@ Output: JSON to stdout: { added, inSync, drifted, updated, noChanges }
 `;
 
 async function main(): Promise<number> {
+  exportConsortVersionEnv(); // label connections consort/<version> (see kit-bin.ts)
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     process.stdout.write(HELP);

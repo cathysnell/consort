@@ -232,6 +232,28 @@ else
   fi
 fi
 
+# uv (the Python project runner) , LANGUAGE-SCOPED exactly like the JDK above, so an
+# ADVISORY, not a blocker. A Python project runs every install/test/migrate/run path
+# through `uv run` (and pr.yml sets up uv only when the detected language is python),
+# while a Node project uses npm and a Java project Maven. bootstrap has no --language,
+# so failing the run on a missing uv would block a Node/Java author who never touches
+# it , same reasoning as the JDK. uv also makes the system python3 floor above moot for
+# a Python project: `uv sync` builds the project's venv on its own interpreter regardless
+# of the system python3 version. Probe the version rather than mere presence (a broken uv
+# is as unusable as an absent one).
+uv_raw() { { uv --version 2>/dev/null; } || true; }
+UV_VER="$(uv_raw)"
+if [ -n "$UV_VER" ]; then
+  echo -e "  ${GREEN}✓${NC} ${UV_VER}"
+else
+  echo -e "  ${YELLOW}!${NC} uv not found on PATH (the Python project path runs on uv: uv sync / uv run)"
+  offer_brew_install "uv" "uv" "https://astral.sh/uv" || true
+  UV_VER="$(uv_raw)"
+  if [ -z "$UV_VER" ]; then
+    ADVISORIES+=("uv is not on PATH. Only Python projects need it (uv sync / uv run builds + runs the project's venv); a Node or Java project does not.")
+  fi
+fi
+
 # gh: presence is the tool requirement; authentication is a reminder, not a
 # blocker (the tool is installed; `gh auth login` is a one-liner run later).
 if have gh; then

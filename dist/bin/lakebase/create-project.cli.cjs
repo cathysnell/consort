@@ -114,11 +114,11 @@ var import_lakebase = require("@databricks-solutions/lakebase-scm-utils/lakebase
 var AGENT_SYNC_MARKER = path4.join(".claude", "agents", ".kit-version");
 
 // consort/setup/project-consort-setup.ts
-var __dirname = path5.dirname((0, import_node_url2.fileURLToPath)(importMetaUrl));
+var __dirname2 = path5.dirname((0, import_node_url2.fileURLToPath)(importMetaUrl));
 function kitPackageName() {
   const candidates = [
-    path5.resolve(__dirname, "../../package.json"),
-    path5.resolve(__dirname, "../../../package.json")
+    path5.resolve(__dirname2, "../../package.json"),
+    path5.resolve(__dirname2, "../../../package.json")
   ];
   for (const c of candidates) {
     try {
@@ -138,8 +138,8 @@ function layDownTddScaffold(targetDir) {
   }
   layDownKitClaudeAssets(targetDir);
   const candidates = [
-    path5.resolve(__dirname, `../../templates/consort-bootstrap/${ARTIFACT_ROOT}`),
-    path5.resolve(__dirname, `../../../templates/consort-bootstrap/${ARTIFACT_ROOT}`)
+    path5.resolve(__dirname2, `../../templates/consort-bootstrap/${ARTIFACT_ROOT}`),
+    path5.resolve(__dirname2, `../../../templates/consort-bootstrap/${ARTIFACT_ROOT}`)
   ];
   const source = candidates.find((c) => fs6.existsSync(c));
   if (!source) {
@@ -153,8 +153,8 @@ function layDownTddScaffold(targetDir) {
 }
 function resolveKitRoot() {
   const candidates = [
-    path5.resolve(__dirname, "../.."),
-    path5.resolve(__dirname, "../../..")
+    path5.resolve(__dirname2, "../.."),
+    path5.resolve(__dirname2, "../../..")
   ];
   for (const c of candidates) {
     if (fs6.existsSync(path5.join(c, "package.json")) && fs6.existsSync(path5.join(c, "skills", "consort", "agents"))) {
@@ -338,6 +338,30 @@ function declaredSubstrateVersionFromModule(metaUrl) {
   }
 }
 
+// consort/config/kit-bin.ts
+var import_node_child_process2 = require("child_process");
+var fs7 = __toESM(require("fs"), 1);
+var path6 = __toESM(require("path"), 1);
+var kitRootCache;
+function resolveKitRoot2() {
+  if (kitRootCache !== void 0) return kitRootCache;
+  const env = process.env.LAKEBASE_KIT_DIR?.trim();
+  kitRootCache = env && fs7.existsSync(path6.join(env, "package.json")) ? env : path6.resolve(__dirname, "..", "..", "..");
+  return kitRootCache;
+}
+function kitVersion2() {
+  try {
+    const pkg = JSON.parse(fs7.readFileSync(path6.join(resolveKitRoot2(), "package.json"), "utf8"));
+    return pkg.version ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+function exportConsortVersionEnv(version = kitVersion2()) {
+  if (process.env.CONSORT_VERSION) return;
+  if (version && version !== "unknown") process.env.CONSORT_VERSION = version;
+}
+
 // consort/lakebase/substrate-check.ts
 function substrateMismatchMessage(input) {
   const env = input.env ?? {};
@@ -359,13 +383,13 @@ Fix: clear the npx cache and retry the version-pinned create from /consort:start
 var import_node_module = require("module");
 var import_node_fs3 = require("fs");
 var os = __toESM(require("os"), 1);
-var path6 = __toESM(require("path"), 1);
+var path7 = __toESM(require("path"), 1);
 
 // consort/session/relaunch-detached.ts
-var import_node_child_process2 = require("child_process");
+var import_node_child_process3 = require("child_process");
 function relaunchDetached(childArgs, opts = {}) {
   try {
-    const child = (0, import_node_child_process2.spawn)(process.execPath, [process.argv[1], ...childArgs], {
+    const child = (0, import_node_child_process3.spawn)(process.execPath, [process.argv[1], ...childArgs], {
       detached: true,
       // setsid(2): new session + process group, escapes the caller's group-SIGTERM
       stdio: opts.stdio ?? "ignore",
@@ -546,6 +570,7 @@ Flags:
 Output: JSON on stdout (CreateProjectResult). Progress to stderr.
 `;
 async function main() {
+  exportConsortVersionEnv();
   const rawArgv = process.argv.slice(2);
   const args = parseArgs(rawArgv);
   if (args.help) {
@@ -554,7 +579,7 @@ async function main() {
   }
   if (rawArgv.includes("--detach")) {
     const childArgs = rawArgv.filter((a) => a !== "--detach");
-    const logPath = path6.join(os.tmpdir(), `consort-create-${Date.now()}.log`);
+    const logPath = path7.join(os.tmpdir(), `consort-create-${Date.now()}.log`);
     let pid = null;
     try {
       const fd = (0, import_node_fs3.openSync)(logPath, "a");

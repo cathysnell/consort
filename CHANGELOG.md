@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.59] - 2026-08-29
+
+### Added
+
+- **Transparent `application_name` on the substrate's Postgres connections (via `@databricks-solutions/lakebase-scm-utils` v0.2.16).** The pg connections the substrate opens (branch-schema diff, connection ping) now carry `application_name = consort/<consort-version>` when made under a Consort run, or `scm-utils/<scm-utils-version>` when scm-utils is used directly (the VS Code extension, a bare `lakebase-*` CLI). A transparent label , visible to the database OWNER in their own `pg_stat_activity` , identifying which tool + build connected, reading no table contents. Consort stamps its brand by exporting its own version: new `exportConsortVersionEnv()` (config/kit-bin.ts) sets `CONSORT_VERSION` from `kitVersion()` (idempotent , never overwrites an outer run's value , and skips an unresolved version), called at the connection-leading entry points (`consort-drive`, `lakebase-create-project`, `lakebase-adopt-consort`); child processes inherit it. scm-utils reads that env to pick the `consort/` brand, else falls back to its own `scm-utils/` brand. Re-pinned scm-utils `#v0.2.15 -> #v0.2.16`. Tests: `export-consort-version-env.test.ts` (3); scm-utils `application-name.test.ts` (5).
+
+### Fixed
+
+- **`bootstrap.sh` now checks for `uv`, reported as an advisory (not a blocker) , consistent with the JDK.** `uv` is required for the Python project path (every install/test/migrate/run is `uv run`, and pr.yml sets it up only when the detected language is python), but a Node project uses npm and a Java project Maven. `bootstrap.sh` has no `--language`, so , exactly like the JDK , a missing `uv` is reported as an advisory that does not fail the run (failing would block a Node/Java author who needs no `uv`). Probes `uv --version`, offers `brew install uv`, and advises if still absent. `uv` is also why the system-`python3` floor is moot for a Python project: `uv sync` builds the project's venv on its own interpreter regardless of the system `python3` version. Test: `bootstrap-prereqs.test.ts` (+2).
+
 ## [0.3.58] - 2026-08-28
 
 ### Fixed

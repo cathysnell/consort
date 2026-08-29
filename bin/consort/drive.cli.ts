@@ -65,7 +65,7 @@ import {
 } from "../../consort/intake/orchestrator-sprint.js";
 import { resolveConsortSettings, applyProjectOverrides } from "../../consort/orchestrator/settings/project-settings.js";
 import { describeAction, approveHint, makeOnAction } from "../../consort/logging/orchestrator-logging.js";
-import { kitVersion } from "../../consort/config/kit-bin.js";
+import { kitVersion, exportConsortVersionEnv } from "../../consort/config/kit-bin.js";
 import { isForeignFeatureClaim, readWorkflowState } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
 import { driveAuthPreflight } from "../../consort/orchestrator/provisioning/credentials.js";
@@ -1045,6 +1045,9 @@ function teeStderrToDriveLog(consortDir: string): void {
 }
 
 async function main(): Promise<number> {
+  // Label the substrate's Postgres connections this run opens as consort/<version> (see
+  // exportConsortVersionEnv); child processes the drive spawns inherit it.
+  exportConsortVersionEnv();
   const rawArgv = process.argv.slice(2);
   const args = parseArgs(rawArgv);
   if (args.help) {

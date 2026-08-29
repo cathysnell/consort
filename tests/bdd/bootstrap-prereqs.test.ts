@@ -21,6 +21,9 @@ interface Shims {
   node?: string;
   python3?: string;
   java?: string;
+  /** uv version string (e.g. "0.5.0"); "" means "not on PATH" (a failing shim that
+   *  shadows any real uv, so the absent-uv advisory path is reachable hermetically). */
+  uv?: string;
 }
 
 function shimDir(shims: Shims): string {
@@ -52,6 +55,14 @@ function shimDir(shims: Shims): string {
   }
   write("gh", `[ "$1" = "auth" ] && exit 0 || echo "gh version 2.89.0"`);
   write("databricks", `[ "$1" = "auth" ] && exit 0 || echo "Databricks CLI v1.12.1"`);
+  // A uv shim: "" means "not on PATH" , a failing shim that shadows any real uv so the
+  // absent-uv advisory is reachable. Default present + green so cases that don't vary uv
+  // see no uv advisory (the same way java/node default green).
+  if (shims.uv === "") {
+    write("uv", `exit 127`);
+  } else {
+    write("uv", `[ "$1" = "--version" ] && echo "uv ${shims.uv ?? "0.5.0"}" || exit 0`);
+  }
   write("brew", `[ "$1" = "--prefix" ] && echo "${dir}/nonexistent-prefix" || exit 0`);
 
   return dir;
@@ -131,6 +142,25 @@ describe("bootstrap.sh JDK handling", () => {
     expect(stdout).toContain("Advisories (not blocking)");
     // Green summary is still printed (nothing REQUIRED is missing) but it can no
     // longer hide the broken JDK.
+    expect(stdout).toContain("All required tools are present");
+    expect(status).toBe(0);
+  });
+});
+
+describe("bootstrap.sh uv handling (language-scoped, like the JDK)", () => {
+  it("accepts uv when present and raises no advisory", () => {
+    const { stdout } = run({ uv: "0.5.0" });
+    expect(stdout).toContain("uv 0.5.0");
+    expect(stdout).not.toContain("Advisories");
+  });
+
+  it("reports a missing uv as an advisory, never blocking (a Node/Java author needs no uv)", () => {
+    // uv is required for the Python project path (uv sync / uv run), but only for python
+    // , exactly like the JDK for java. bootstrap has no --language, so a missing uv must
+    // advise, not fail the run.
+    const { stdout, status } = run({ uv: "" });
+    expect(stdout).toContain("uv not found on PATH");
+    expect(stdout).toContain("Advisories (not blocking)");
     expect(stdout).toContain("All required tools are present");
     expect(status).toBe(0);
   });

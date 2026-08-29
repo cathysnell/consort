@@ -11938,6 +11938,10 @@ function kitVersion2() {
     return "unknown";
   }
 }
+function exportConsortVersionEnv(version = kitVersion2()) {
+  if (process.env.CONSORT_VERSION) return;
+  if (version && version !== "unknown") process.env.CONSORT_VERSION = version;
+}
 
 // consort/orchestrator/drive/claude-runner.ts
 import { readWorkflowState as readWorkflowState2 } from "@databricks-solutions/lakebase-scm-utils/lakebase";
@@ -16297,6 +16301,7 @@ function teeStderrToDriveLog(consortDir) {
   }
 }
 async function main() {
+  exportConsortVersionEnv();
   const rawArgv = process.argv.slice(2);
   const args = parseArgs(rawArgv);
   if (args.help) {

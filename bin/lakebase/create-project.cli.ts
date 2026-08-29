@@ -10,6 +10,7 @@ import { createProject, CreateProjectArgs } from "../../consort/lakebase/create-
 import { ALL_AGENT_ROLES, type SpawnableAgentRole } from "../../consort/config/agent-models.js";
 import { runCreateDoctorGate, formatGateBlockers } from "../../consort/lakebase/create-doctor-gate.js";
 import { kitRefPin, consortVersionFromModule, declaredSubstrateVersionFromModule } from "../../consort/lakebase/kit-ref-pin.js";
+import { exportConsortVersionEnv } from "../../consort/config/kit-bin.js";
 import { substrateMismatchMessage } from "../../consort/lakebase/substrate-check.js";
 import { createRequire } from "node:module";
 import { readFileSync, appendFileSync, writeFileSync, openSync, closeSync } from "node:fs";
@@ -210,6 +211,7 @@ Output: JSON on stdout (CreateProjectResult). Progress to stderr.
 `;
 
 async function main(): Promise<number> {
+  exportConsortVersionEnv(); // label provisioning connections consort/<version> (see kit-bin.ts)
   const rawArgv = process.argv.slice(2);
   const args = parseArgs(rawArgv);
   if (args.help) {
