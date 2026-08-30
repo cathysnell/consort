@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.63] - 2026-08-30
+
+### Changed
+
+- **Repoint `@databricks-solutions/lakebase-scm-utils` `#v0.2.19 -> #v0.2.20` , `application_name = consort/<version>` on EVERY Lakebase connection.** scm-utils v0.2.20 stamps a uniform, versioned `consort/<version>` on every connection it opens or hands out: `connectionApplicationName()` always brands `consort` (running Consort version under a drive, else the package SemVer), and `buildPostgresUrl()` puts `application_name` IN the DSN , so the app's uvicorn/psycopg runtime, `alembic`, `pytest`, `knex`, and `psql` all inherit it, not just the three direct `pg.Client`/pool sites. The scaffolded app + scripts follow suit. (Also folds in v0.2.20's widened `.claude/settings.json` verify-allowlist patterns.)
+- **Scaffolded scripts (`post-checkout.sh`, `setup-federation.sh`) export `PGAPPNAME=consort/<version>` and write it into `.env`.** Derived from `CONSORT_VERSION` (a drive) or the pinned `.lakebase/kit-ref`, so the psql readiness probes, the Spring `jdbc` `ApplicationName`, and every `.env`-sourcing tool connect labeled instead of unlabeled.
+
 ## [0.3.62] - 2026-08-29
 
 ### Fixed

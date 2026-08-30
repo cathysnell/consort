@@ -35,6 +35,10 @@ if [ -f "$REPO_ROOT/.env" ]; then
   set +a
 fi
 
+# consort/<version> label for the psql connections below: inherit the value the
+# post-checkout hook wrote into .env; else derive from CONSORT_VERSION / the pinned kit-ref.
+export PGAPPNAME="${PGAPPNAME:-consort/${CONSORT_VERSION:-$(sed 's/^v//' "$REPO_ROOT/.lakebase/kit-ref" 2>/dev/null || echo unknown)}}"
+
 DB_NAME="${1:-databricks_postgres}"
 CATALOG_NAME="${2:-lakebase_fed}"
 FED_USER="feduser"
@@ -51,7 +55,7 @@ echo ""
 # Step 1: Create native Postgres role
 echo "Step 1: Creating native Postgres role '$FED_USER'..."
 PGPASSWORD="$DB_PASSWORD" psql \
-  "host=$HOST port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require" \
+  "host=$HOST port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require application_name=$PGAPPNAME" \
   -c "
     DO \$\$
     BEGIN
@@ -70,7 +74,7 @@ PGPASSWORD="$DB_PASSWORD" psql \
 # Step 2: Grant read-only access
 echo "Step 2: Granting read-only access to public schema..."
 PGPASSWORD="$DB_PASSWORD" psql \
-  "host=$HOST port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require" \
+  "host=$HOST port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require application_name=$PGAPPNAME" \
   -c "
     GRANT USAGE ON SCHEMA public TO $FED_USER;
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO $FED_USER;
