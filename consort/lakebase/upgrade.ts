@@ -206,6 +206,26 @@ function substituteWorkflowVersion(workflowsDir: string, version: string): void 
   }
 }
 
+/** Substitute {{LAKEBASE_SCM_UTILS_VERSION}} in the scaffolded scripts on upgrade , the
+ *  post-checkout / setup-federation hooks carry it in their `scm-utils/<version>` connection
+ *  label (the direct-run case). refreshSurface copies scripts raw, so without this an upgrade
+ *  would ship the literal placeholder, exactly like the workflow CI-ref bug. Recursive
+ *  (scripts/ has no subdirs today, but keep it robust); best-effort per file. */
+function substituteScmUtilsVersionInScripts(scriptsDir: string, version: string): void {
+  if (!fs.existsSync(scriptsDir)) return;
+  for (const entry of fs.readdirSync(scriptsDir, { withFileTypes: true })) {
+    const p = path.join(scriptsDir, entry.name);
+    if (entry.isDirectory()) { substituteScmUtilsVersionInScripts(p, version); continue; }
+    try {
+      const before = fs.readFileSync(p, "utf8");
+      const after = before.replace(/\{\{LAKEBASE_SCM_UTILS_VERSION\}\}/g, version);
+      if (after !== before) fs.writeFileSync(p, after);
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
 /** Refresh the FULL kit-owned scaffolded surface from the target kit dir: agents +
  *  commands (.claude/), the scripts/ helper tree, and the CI workflows (.github/workflows/).
  *  Resets the agent-sync marker to the target so the next drive sees the surface current
@@ -219,12 +239,16 @@ export function refreshSurface(projectDir: string, kitDir: string, targetVersion
   const scripts = copyKitTree(path.join(commonDir, "scripts"), path.join(projectDir, "scripts"));
   const workflowsDir = path.join(projectDir, ".github", "workflows");
   const workflows = copyKitTree(path.join(commonDir, ".github", "workflows"), workflowsDir);
-  // Substitute the scaffold-time {{LAKEBASE_SCM_UTILS_VERSION}} placeholder the raw copy above
-  // just shipped verbatim , leaving the literal breaks the CI ref's bash expansion (see
-  // substituteWorkflowVersion). Resolve the scm-utils version from THIS kit's dep pin so an
-  // upgraded project's workflows match a freshly-scaffolded one.
+  // Substitute the scaffold-time {{LAKEBASE_SCM_UTILS_VERSION}} placeholder the raw copies above
+  // just shipped verbatim , leaving the literal breaks the CI ref's bash expansion (workflows)
+  // AND the post-checkout/setup-federation scripts' `scm-utils/<version>` connection label. The
+  // scripts get it too now (they carry the same placeholder). Resolve the scm-utils version from
+  // THIS kit's dep pin so an upgraded project matches a freshly-scaffolded one.
   const substrate = resolveSubstrateVersion(kitDir);
-  if (substrate) substituteWorkflowVersion(workflowsDir, substrate);
+  if (substrate) {
+    substituteWorkflowVersion(workflowsDir, substrate);
+    substituteScmUtilsVersionInScripts(path.join(projectDir, "scripts"), substrate);
+  }
   // Re-append the Playwright E2E block to run-tests.sh for a UI project. The scripts copy above
   // just reset run-tests.sh to the kit TEMPLATE, which carries NO E2E block , the block is appended
   // PER-PROJECT by enableE2eForProject, never shipped in the template. So without this, every

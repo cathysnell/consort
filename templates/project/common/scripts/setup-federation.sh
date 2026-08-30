@@ -35,9 +35,12 @@ if [ -f "$REPO_ROOT/.env" ]; then
   set +a
 fi
 
-# consort/<version> label for the psql connections below: inherit the value the
-# post-checkout hook wrote into .env; else derive from CONSORT_VERSION / the pinned kit-ref.
-export PGAPPNAME="${PGAPPNAME:-consort/${CONSORT_VERSION:-$(sed 's/^v//' "$REPO_ROOT/.lakebase/kit-ref" 2>/dev/null || echo unknown)}}"
+# application_name for the psql connections below: inherit the label post-checkout wrote into
+# .env; else `consort/<consort-version>` when driven by Consort, else `scm-utils/<scm-version>`
+# (the scm-utils version is stamped in at scaffold time).
+: "${PGAPPNAME:=${CONSORT_VERSION:+consort/${CONSORT_VERSION}}}"
+: "${PGAPPNAME:=scm-utils/{{LAKEBASE_SCM_UTILS_VERSION}}}"
+export PGAPPNAME
 
 DB_NAME="${1:-databricks_postgres}"
 CATALOG_NAME="${2:-lakebase_fed}"

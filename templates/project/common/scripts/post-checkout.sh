@@ -21,12 +21,15 @@ if [ -z "$BRANCH" ] || [ "$BRANCH" = "HEAD" ]; then
   exit 0
 fi
 
-# application_name for every Lakebase connection this project opens: consort/<version>.
-# Prefer the running Consort version (a drive exports CONSORT_VERSION), else the pinned kit
-# version (.lakebase/kit-ref, 'v' stripped), else unknown. Exported so libpq (psql,
-# alembic/psycopg, uvicorn) AND node-postgres pick it up, and written into .env below so the
-# app + run-tests subprocesses inherit the same label.
-export PGAPPNAME="consort/${CONSORT_VERSION:-$(sed 's/^v//' "$WORK_TREE/.lakebase/kit-ref" 2>/dev/null || echo unknown)}"
+# application_name for every Lakebase connection this project opens, reflecting WHO drove it:
+# `consort/<consort-version>` when the work comes from a Consort drive (it exports
+# CONSORT_VERSION), else `scm-utils/<scm-utils-version>` (this SCM hook running directly; the
+# scm-utils version is stamped in at scaffold time). Exported so libpq (psql, alembic/psycopg,
+# uvicorn) AND node-postgres pick it up, and written into .env below so the app + run-tests
+# subprocesses inherit the same label.
+PGAPPNAME="${CONSORT_VERSION:+consort/${CONSORT_VERSION}}"
+: "${PGAPPNAME:=scm-utils/{{LAKEBASE_SCM_UTILS_VERSION}}}"
+export PGAPPNAME
 
 # Scope guard: this hook only activates when a project-level .env exists at
 # the work-tree root. In monorepos where the hook is installed at a parent

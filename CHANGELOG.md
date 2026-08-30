@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.64] - 2026-08-30
+
+### Fixed
+
+- **Repoint `@databricks-solutions/lakebase-scm-utils` `#v0.2.20 -> #v0.2.21` , correct the `application_name` brand.** v0.2.20/v0.3.63 wrongly branded EVERY Lakebase connection `consort/<version>`. Restored the two-brand scheme, each with its OWN version: `consort/<consort-version>` when the work comes from Consort (`CONSORT_VERSION` set), `scm-utils/<scm-utils-version>` when scm-utils is invoked directly (extension / bare CLI). Flows through the DSN to the app runtime, `alembic`, `pytest`, `knex`, `psql`.
+- **Scaffolded scripts resolve the two-brand label, and `consort-upgrade` stamps it.** `post-checkout.sh` / `setup-federation.sh` export `PGAPPNAME=consort/<consort-version>` under a drive, else `scm-utils/<scm-utils-version>` (the scm-utils version stamped at scaffold time). `refreshSurface` now substitutes `{{LAKEBASE_SCM_UTILS_VERSION}}` in the scripts on upgrade too (new `substituteScmUtilsVersionInScripts`), so an upgraded project never ships the literal placeholder , the same guarantee the workflows already had.
+
 ## [0.3.63] - 2026-08-30
 
 ### Changed

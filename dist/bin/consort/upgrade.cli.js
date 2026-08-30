@@ -363,6 +363,22 @@ function substituteWorkflowVersion(workflowsDir, version) {
     }
   }
 }
+function substituteScmUtilsVersionInScripts(scriptsDir, version) {
+  if (!fs5.existsSync(scriptsDir)) return;
+  for (const entry of fs5.readdirSync(scriptsDir, { withFileTypes: true })) {
+    const p = path5.join(scriptsDir, entry.name);
+    if (entry.isDirectory()) {
+      substituteScmUtilsVersionInScripts(p, version);
+      continue;
+    }
+    try {
+      const before = fs5.readFileSync(p, "utf8");
+      const after = before.replace(/\{\{LAKEBASE_SCM_UTILS_VERSION\}\}/g, version);
+      if (after !== before) fs5.writeFileSync(p, after);
+    } catch {
+    }
+  }
+}
 function refreshSurface(projectDir, kitDir, targetVersion) {
   const a = updateAgents({ projectDir, kitDir, force: true });
   const c = updateCommands({ projectDir, kitDir, force: true });
@@ -371,7 +387,10 @@ function refreshSurface(projectDir, kitDir, targetVersion) {
   const workflowsDir = path5.join(projectDir, ".github", "workflows");
   const workflows = copyKitTree(path5.join(commonDir, ".github", "workflows"), workflowsDir);
   const substrate = resolveSubstrateVersion(kitDir);
-  if (substrate) substituteWorkflowVersion(workflowsDir, substrate);
+  if (substrate) {
+    substituteWorkflowVersion(workflowsDir, substrate);
+    substituteScmUtilsVersionInScripts(path5.join(projectDir, "scripts"), substrate);
+  }
   let e2e = false;
   try {
     const cfg = loadConsortConfig(projectDir);
