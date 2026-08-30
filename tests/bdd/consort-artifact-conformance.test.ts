@@ -26,6 +26,7 @@ import {
   checkServiceBackedDeclaration,
 } from "../../consort/orchestrator/validators/conformance/artifact-conformance";
 import { renderTestListMarkdown } from "../../consort/test-list/test-list";
+import { normalizeStoryJson } from "../../consort/intake/spec-sync";
 
 describe("checkServiceBackedDeclaration: evidence-bound service_backed (no silent under-declaration)", () => {
   const arch = (over: Record<string, unknown> = {}) => JSON.stringify({ feature_id: "F1", nfrs: [], ...over });
@@ -737,6 +738,38 @@ describe("scanFeatureConformance: checks every artifact that exists on disk", ()
     const bad = report.entries.find((e) => e.artifact.endsWith("feature-spec.json"));
     expect(bad?.ok).toBe(false);
     expect(bad?.violations.join(" ")).toMatch(/id|name|status|tdd_mode/);
+  });
+
+  // HEAL-THEN-CHECK (the gate-conformance CLI runs normalizeStoryJson before scanning): a
+  // {id}-only story.json stub whose narrative lives in story.md must PASS after the heal,
+  // WITHOUT hand-editing , but a stub whose story.md ALSO lacks the narrative must still FAIL.
+  const storyStub = (fid: string, sid: string, md: string): void => {
+    const sdir = join(fdir, "stories", sid);
+    mkdirSync(sdir, { recursive: true });
+    writeFileSync(join(sdir, "story.json"), JSON.stringify({ id: sid })); // minimal stub, no narrative
+    writeFileSync(join(sdir, "story.md"), md);
+  };
+  const badStoryJson = (): boolean =>
+    !scanFeatureConformance(tdd, "F1-initial-domain").entries.find((e) => e.artifact.endsWith("story.json"))!.ok;
+
+  it("story.json stub whose story.md carries the narrative: FAILS the raw scan, PASSES after normalizeStoryJson heal", () => {
+    writeFileSync(join(fdir, "feature-spec.json"), FEATURE_JSON);
+    writeFileSync(join(fdir, "feature-spec.md"), FEATURE_MD);
+    storyStub("F1-initial-domain", "S1-file-a-bug", "# S1: File a bug\nAs a user\nI want to file a bug\nSo that it gets tracked\n");
+    // Raw scan (no heal): the {id}-only story.json is missing asA/iWantTo/soThat.
+    expect(badStoryJson()).toBe(true);
+    // Heal from story.md, then scan again: now conformant , no hand-editing.
+    const changed = normalizeStoryJson(tdd, "F1-initial-domain");
+    expect(changed).toContain("S1-file-a-bug");
+    expect(scanFeatureConformance(tdd, "F1-initial-domain").ok).toBe(true);
+  });
+
+  it("story.json stub whose story.md ALSO lacks a parseable narrative: STILL fails after the heal (real gap surfaces)", () => {
+    writeFileSync(join(fdir, "feature-spec.json"), FEATURE_JSON);
+    writeFileSync(join(fdir, "feature-spec.md"), FEATURE_MD);
+    storyStub("F1-initial-domain", "S1-file-a-bug", "# S1: File a bug\n\nJust a title, no As-a/I-want/So-that lines.\n");
+    normalizeStoryJson(tdd, "F1-initial-domain"); // nothing to backfill , story.md has no narrative
+    expect(badStoryJson()).toBe(true);
   });
 });
 

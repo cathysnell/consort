@@ -17,6 +17,7 @@
 import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
 import { resolveConsortDir, ARTIFACT_ROOT } from "../../consort/config/consort-paths.js";
 import { scanFeatureConformance } from "../../consort/orchestrator/validators/conformance/artifact-conformance.js";
+import { normalizeStoryJson } from "../../consort/intake/spec-sync.js";
 
 interface ParsedArgs {
   feature?: string;
@@ -78,9 +79,18 @@ export function runGateConformanceCli(argv: string[]): number {
     process.stderr.write(`Error: --feature is required.\n\n${HELP}\n`);
     return 2;
   }
+  const consortDir = args.consortDir ?? resolveConsortDir();
   let report;
   try {
-    report = scanFeatureConformance(args.consortDir ?? resolveConsortDir(), args.feature);
+    // HEAL-THEN-CHECK: backfill each story.json's required narrative (asA/iWantTo/soThat)
+    // from the authoritative story.md BEFORE scanning. story.md is the source of truth; a
+    // minimal {id}-only stub (a story authored before the design-time sync-breakdown heal, or
+    // on an older kit) then conforms without hand-editing. A story whose story.md GENUINELY
+    // lacks a parseable narrative is NOT healed and still fails the scan below , the real gap
+    // surfaces, we just stop failing on stubs the source already answers. Idempotent + only
+    // backfills missing fields (never overwrites), so a fully-authored story.json is untouched.
+    normalizeStoryJson(consortDir, args.feature);
+    report = scanFeatureConformance(consortDir, args.feature);
   } catch (e) {
     process.stderr.write(`gate-conformance: ${(e as Error).message}\n`);
     return 3;

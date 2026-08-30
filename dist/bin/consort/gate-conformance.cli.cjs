@@ -6675,6 +6675,17 @@ function resolveConsortDir(projectDir = process.cwd()) {
   return next;
 }
 var featuresDir = (tdd) => (0, import_node_path.join)(tdd, "features");
+var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
+var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
+var storiesDir = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "stories");
+function findFeatureDir(tdd, featureId) {
+  const root = featuresDir(tdd);
+  if (!fs.existsSync(root)) return void 0;
+  const exact = (0, import_node_path.join)(root, featureId);
+  if (fs.existsSync(exact)) return exact;
+  const matches = fs.readdirSync(root).filter((d) => d === featureId || d.startsWith(`${featureId}-`));
+  return matches.length === 1 ? (0, import_node_path.join)(root, matches[0]) : void 0;
+}
 
 // consort/orchestrator/validators/conformance/artifact-conformance.ts
 init_cjs_shims();
@@ -7167,7 +7178,7 @@ function scanFeatureConformance(consortDir, featureId) {
   if (candidates.length === 0) {
     throw new Error(`feature ${featureId} not found under ${featuresDir2}`);
   }
-  const featureDir = (0, import_path2.join)(featuresDir2, candidates[0]);
+  const featureDir2 = (0, import_path2.join)(featuresDir2, candidates[0]);
   const paths = [];
   const pushIfExists = (p) => {
     if ((0, import_fs2.existsSync)(p)) paths.push(p);
@@ -7178,14 +7189,14 @@ function scanFeatureConformance(consortDir, featureId) {
     pushIfExists((0, import_path2.join)(consortDir, "design", name));
   }
   for (const name of ["feature-request.md", "feature-spec.json", "feature-spec.md", "nfrs.md", "architecture.md", "db-design.json", "plan.json", "test-list.json", "test-list.md"]) {
-    pushIfExists((0, import_path2.join)(featureDir, name));
+    pushIfExists((0, import_path2.join)(featureDir2, name));
   }
-  const storiesDir = (0, import_path2.join)(featureDir, "stories");
+  const storiesDir2 = (0, import_path2.join)(featureDir2, "stories");
   const storyJsons = [];
   const acsByStory = [];
-  if ((0, import_fs2.existsSync)(storiesDir)) {
-    for (const storyName of (0, import_fs2.readdirSync)(storiesDir)) {
-      const storyDir = (0, import_path2.join)(storiesDir, storyName);
+  if ((0, import_fs2.existsSync)(storiesDir2)) {
+    for (const storyName of (0, import_fs2.readdirSync)(storiesDir2)) {
+      const storyDir = (0, import_path2.join)(storiesDir2, storyName);
       if (!(0, import_fs2.statSync)(storyDir).isDirectory()) continue;
       const storyJsonPath = (0, import_path2.join)(storyDir, "story.json");
       pushIfExists(storyJsonPath);
@@ -7236,11 +7247,11 @@ function scanFeatureConformance(consortDir, featureId) {
       violations: indep.ok ? [] : indep.violations
     });
   }
-  const archPath = (0, import_path2.join)(featureDir, "architecture.json");
+  const archPath = (0, import_path2.join)(featureDir2, "architecture.json");
   if ((0, import_fs2.existsSync)(archPath)) {
     const archContent = (0, import_fs2.readFileSync)(archPath, "utf8");
     const siblingRefs = projectBriefRefs(consortDir);
-    for (const nfrsPath of [(0, import_path2.join)(consortDir, "nfrs.md"), (0, import_path2.join)(featureDir, "nfrs.md")]) {
+    for (const nfrsPath of [(0, import_path2.join)(consortDir, "nfrs.md"), (0, import_path2.join)(featureDir2, "nfrs.md")]) {
       if (!(0, import_fs2.existsSync)(nfrsPath)) continue;
       const cov = checkNfrCoverage((0, import_fs2.readFileSync)(nfrsPath, "utf8"), archContent, siblingRefs);
       const rel = nfrsPath.startsWith(consortDir) ? nfrsPath.slice(consortDir.length).replace(/^\//, "") : nfrsPath;
@@ -7256,7 +7267,7 @@ function scanFeatureConformance(consortDir, featureId) {
       ok: lay.ok,
       violations: lay.ok ? [] : lay.violations
     });
-    const dbDesignPath = (0, import_path2.join)(featureDir, "db-design.json");
+    const dbDesignPath = (0, import_path2.join)(featureDir2, "db-design.json");
     const dbDesignContent = (0, import_fs2.existsSync)(dbDesignPath) ? (0, import_fs2.readFileSync)(dbDesignPath, "utf8") : void 0;
     const dbd = checkDbDesign(dbDesignContent, archContent);
     entries.push({
@@ -7264,7 +7275,7 @@ function scanFeatureConformance(consortDir, featureId) {
       ok: dbd.ok,
       violations: dbd.ok ? [] : dbd.violations
     });
-    const testListPath = (0, import_path2.join)(featureDir, "test-list.json");
+    const testListPath = (0, import_path2.join)(featureDir2, "test-list.json");
     if ((0, import_fs2.existsSync)(testListPath)) {
       const testListContent = (0, import_fs2.readFileSync)(testListPath, "utf8");
       const fit = checkFitnessCoverage(testListContent, archContent);
@@ -7282,6 +7293,71 @@ function scanFeatureConformance(consortDir, featureId) {
     }
   }
   return { featureId, ok: entries.every((e) => e.ok), entries };
+}
+
+// consort/intake/spec-sync.ts
+init_cjs_shims();
+var import_fs3 = require("fs");
+var import_path3 = require("path");
+var STORY_ALLOWED_KEYS = /* @__PURE__ */ new Set(["id", "asA", "iWantTo", "soThat", "acs", "feature_id", "independence", "external_ref"]);
+function parseStoryNarrative(md) {
+  const grab = (label) => {
+    const m = md.match(label);
+    if (!m) return void 0;
+    const v = m[1].trim().replace(/[,.]$/, "").trim();
+    return v.length > 0 ? v : void 0;
+  };
+  return {
+    asA: grab(/^\s*As an?\s+(.+?)\s*$/im),
+    iWantTo: grab(/^\s*I want(?:\s+to)?\s+(.+?)\s*$/im),
+    soThat: grab(/^\s*So that\s+(.+?)\s*$/im)
+  };
+}
+function normalizeStoryJson(consortDir, featureId) {
+  const stories = storiesDir(consortDir, featureId);
+  if (!(0, import_fs3.existsSync)(stories)) return [];
+  const changed = [];
+  for (const s of (0, import_fs3.readdirSync)(stories)) {
+    const dir = (0, import_path3.join)(stories, s);
+    const file = (0, import_path3.join)(dir, "story.json");
+    if (!(0, import_fs3.existsSync)(file)) continue;
+    let obj;
+    try {
+      obj = JSON.parse((0, import_fs3.readFileSync)(file, "utf8"));
+    } catch {
+      continue;
+    }
+    let mutated = false;
+    if (typeof obj.feature === "string" && obj.feature_id === void 0) {
+      obj.feature_id = obj.feature;
+      mutated = true;
+    }
+    const mdPath = (0, import_path3.join)(dir, "story.md");
+    const needsNarrative = ["asA", "iWantTo", "soThat"].some(
+      (k) => typeof obj[k] !== "string" || obj[k].trim().length === 0
+    );
+    if (needsNarrative && (0, import_fs3.existsSync)(mdPath)) {
+      const narrative = parseStoryNarrative((0, import_fs3.readFileSync)(mdPath, "utf8"));
+      for (const k of ["asA", "iWantTo", "soThat"]) {
+        const cur = obj[k];
+        if ((typeof cur !== "string" || cur.trim().length === 0) && narrative[k]) {
+          obj[k] = narrative[k];
+          mutated = true;
+        }
+      }
+    }
+    for (const key of Object.keys(obj)) {
+      if (!STORY_ALLOWED_KEYS.has(key)) {
+        delete obj[key];
+        mutated = true;
+      }
+    }
+    if (mutated) {
+      (0, import_fs3.writeFileSync)(file, JSON.stringify(obj, null, 2) + "\n");
+      changed.push(s);
+    }
+  }
+  return changed;
 }
 
 // bin/consort/gate-conformance.cli.ts
@@ -7339,9 +7415,11 @@ ${HELP}
 `);
     return 2;
   }
+  const consortDir = args.consortDir ?? resolveConsortDir();
   let report;
   try {
-    report = scanFeatureConformance(args.consortDir ?? resolveConsortDir(), args.feature);
+    normalizeStoryJson(consortDir, args.feature);
+    report = scanFeatureConformance(consortDir, args.feature);
   } catch (e) {
     process.stderr.write(`gate-conformance: ${e.message}
 `);
