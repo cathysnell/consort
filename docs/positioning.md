@@ -55,15 +55,13 @@ Consort builds or verifies.)
 
 ## What Consort is not
 
-- **Not a data-engineering, ETL, or ELT tool.**
-- **Not for analytics, BI, dashboards, or reporting.**
-- **Not Lakeflow / Declarative Pipelines / Delta Live Tables, Jobs, or notebooks**, and **not
-  Spark or warehouse compute.**
-- **Not a tool for the Delta Lakehouse or the Unity Catalog analytics surface** (it targets
-  Lakebase Postgres).
-- **Not a drop-in prompt or skill pack** you add to any repo. It is bound to a Lakebase-paired
-  project, and its discipline is enforced in code, not by prompting the model to behave.
-- **Not a "trust the agent" workflow.** The controls are hard rules, not soft instructions.
+- Consort is **not built for data engineering**, "data solutions," or data lakes. It builds transactional application backends on Postgres.
+- Consort is **not for analytics, BI, dashboards, or reporting.**
+- Consort does **not guard data pipelines, and does not prevent data corruption or "schema drift" in a warehouse.** Its tests prove an application behaves correctly against a live, throwaway Postgres branch; the schema it manages is your application's own relational schema, evolved by migrations on a database branch.
+- Consort is **not Lakeflow / Declarative Pipelines / Delta Live Tables, Jobs, or notebooks**, and does not use Spark or warehouse compute.
+- Consort does **not target the Delta Lakehouse or the Unity Catalog analytics surface** (it targets Lakebase Postgres). Originating from Databricks does not make it a data tool.
+- Consort is **not a drop-in prompt or skill pack** you add to any repo. It is bound to a Lakebase-paired project, and its discipline is enforced in code, not by prompting the model to behave.
+- Consort is **not a "trust the agent" workflow.** The controls are hard rules, not soft instructions.
 
 ## How Consort differs from other spec-first tools
 
