@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-**Consort keeps AI-written code clean and correct: spec-first and test-driven, driven by a deterministic state machine with human-approval gates and immutable tests. Engineering discipline is no longer left to chance at the whim of a model. Every green is a real test run on a live branch of a real Lakebase database, enforced by hard rules, not soft prompts.**
+**Consort keeps AI-written code clean and correct: spec-first and test-driven, driven by a deterministic state machine with human-approval gates and immutable tests. Engineering discipline is no longer left to chance at the whim of a model. Every green is a real test run on a live branch of a real Lakebase database, enforced by contract, not suggestions.**
 
 Consort takes its name from the field of music. A *consort* is an ensemble that plays in concert: each musician holds one part, and a conductor keeps them in time. Consort is that, applied to building software. A set of agents each take on one familiar role from the software lifecycle, a product owner, a spec author, an architect, a DBA, a test strategist, a UX designer, and a navigator/driver pair at the keyboard, while a deterministic conductor keeps them in sequence and a human approves every gate. No agent plays another's part.
 
@@ -23,7 +23,7 @@ Lakebase removes that constraint. A database branch is a real, governed, copy-on
 - **Deterministically driven**: the control loop is codified, so it can't drift, skip a step, or get lost after a long session.
 - **Human-gated**: the gates fail closed, and nothing advances past one without your approval.
 
-**What makes Consort different.** Other spec-first frameworks ask the agent to comply: a strong spec then a trusted build (Spec Kit), or a firm test-first rule the model is told to honor (superpowers). Under pressure to go green, an agent can set either aside. Consort puts the controls in a deterministic state machine the agent runs inside but cannot edit: routing is code, human-approval gates fail closed, tests are immutable within a unit of work, and green means a real run against a real database. Engineering discipline is enforced by hard rules, not soft prompts.
+**What makes Consort different.** Other spec-first frameworks ask the agent to comply: a strong spec then a trusted build (Spec Kit), or a firm test-first rule the model is told to honor (superpowers). Under pressure to go green, an agent can set either aside. Consort puts the controls in a deterministic state machine the agent runs inside but cannot edit: routing is code, human-approval gates fail closed, tests are immutable within a unit of work, and green means a real run against a real database. Engineering discipline is enforced by contract, not suggestions.
 
 The domain is the other half of the distinction. Consort is for building and evolving **application backends on Lakebase Postgres**, using one-second database branching to make test-driven development safe. It is not a data-engineering tool: no ETL or ELT, no analytics, BI, or dashboards, no Lakeflow / Declarative Pipelines / Jobs / notebooks, no Spark or warehouse compute, and no work against the Delta Lakehouse or the Unity Catalog analytics surface. And it is not a drop-in prompt or skill pack for any repo; it is a deterministic orchestrator bound to a Lakebase-paired project.
 
