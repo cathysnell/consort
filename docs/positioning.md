@@ -20,6 +20,11 @@ Lakebase Postgres database. A scaffolded project is an app with database migrati
 behavior tests, and end-to-end tests, delivered story by story and verified against real
 data on a database branch.
 
+Every git branch is paired with its own Lakebase Postgres branch: creating a feature or
+experiment branch forks a matching copy-on-write database branch, and the two are checked out
+and torn down together. So each branch has its own real, isolated database, the schema evolves
+in lockstep with the code, and Consort can diff a branch's schema against its parent branch.
+
 ## What Lakebase is (and why it is not the Lakehouse)
 
 [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless,
@@ -74,6 +79,7 @@ they target** (a Postgres app on real infrastructure vs general, infrastructure-
 | **Enforcement** | Deterministic state machine the agent runs inside but cannot edit | A strong spec the agent is trusted to build to | Test-first and workflow rules the model is told to honor (`SKILL.md`) |
 | **"Green" means** | A real test run against a live, throwaway Postgres branch | The agent's report | A local red-green-refactor pass |
 | **Substrate** | Live Lakebase (Postgres / OLTP) copy-on-write branch | Infrastructure-free | Infrastructure-free, local terminal |
+| **Isolation model** | Each git branch paired with its own copy-on-write Lakebase Postgres branch (parent-aware schema diff) | None (infrastructure-free) | Local git worktrees |
 | **Human gates** | Fail-closed approval gates at every phase boundary | Advisory | Advisory |
 | **Domain** | Transactional applications backed by Postgres | General software | General software |
 | **Runs in** | Terminal + any VS Code-compatible IDE, against a Databricks workspace | Editor / CLI | Terminal-first clients (Claude Code, etc.) |
