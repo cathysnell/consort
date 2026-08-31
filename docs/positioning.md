@@ -6,11 +6,14 @@ framework, start here.
 
 ## In one sentence
 
-Consort is a **deterministic, spec-first and test-driven agent framework for building
-transactional applications on Lakebase** (Databricks' serverless Postgres). A compiled
-orchestrator sequences role agents through a design lane and a test-driven build lane whose
-every cycle runs against a live, throwaway copy-on-write branch of a real Postgres database,
-with human-approval gates that fail closed.
+Consort is a **deterministic, spec-first and test-driven agent framework from Databricks**
+(`databricks-solutions/consort`) for building **transactional applications on Lakebase**
+(Databricks' serverless Postgres). A compiled orchestrator sequences role agents through a
+design lane and a test-driven build lane whose every cycle runs against a live, throwaway
+copy-on-write branch of a real Postgres database, with human-approval gates that fail closed.
+
+This is the Databricks `databricks-solutions/consort` project; it is unrelated to other
+software or projects that share the name "Consort".
 
 ## What Consort builds
 
@@ -55,8 +58,9 @@ Consort builds or verifies.)
 - **Human-gated**: the design, test-list, deploy, and promote gates fail closed. Nothing
   advances without approval.
 - **Editor-friendly**: terminal-first, but it detects and launches into **any VS Code-compatible
-  IDE** (VS Code, Cursor, and others), offering to open your project and its companion
-  extension there, or to keep driving from the terminal.
+  IDE** (VS Code, Cursor, and others), offering to open your project and its **Consort extension**
+  there. The extension is a live viewer that keeps you in lockstep with the run: paired branches,
+  phase and gate state, and each role's progress as it builds.
 
 ## What Consort is not
 

@@ -9,7 +9,7 @@
 
 Consort takes its name from the field of music. A *consort* is an ensemble that plays in concert: each musician holds one part, and a conductor keeps them in time. Consort is that, applied to building software. A set of agents each take on one familiar role from the software lifecycle, a product owner, a spec author, an architect, a DBA, a test strategist, a UX designer, and a navigator/driver pair at the keyboard, while a deterministic conductor keeps them in sequence and a human approves every gate. No agent plays another's part.
 
-**What Consort builds.** Consort builds **transactional applications**: an application backend (and an optional web UI) whose system of record is a **Lakebase** database. [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless, Postgres-compatible **transactional (OLTP)** database, branchable in about a second. Each git branch is paired with its own Lakebase Postgres branch, so every branch has a real, isolated database and the schema evolves in lockstep with the code. It is not the Delta Lakehouse, and Consort is not an ETL, analytics, BI, or data-pipeline tool; it is a way to build and evolve application backends on Postgres. For what Consort is and is not, and how it compares to other spec-first tools, see [`docs/positioning.md`](docs/positioning.md).
+**What Consort builds.** Consort, an open-source framework from Databricks (`databricks-solutions/consort`), builds **transactional applications**: an application backend (and an optional web UI) whose system of record is a **Lakebase** database. [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless, Postgres-compatible **transactional (OLTP)** database, branchable in about a second. Each git branch is paired with its own Lakebase Postgres branch, so every branch has a real, isolated database and the schema evolves in lockstep with the code. It is not the Delta Lakehouse, and Consort is not an ETL, analytics, BI, or data-pipeline tool; it is a way to build and evolve application backends on Postgres. For what Consort is and is not, and how it compares to other spec-first tools, see [`docs/positioning.md`](docs/positioning.md).
 
 ## Why Consort
 
@@ -35,7 +35,7 @@ The domain is the other half of the distinction. Consort is for building and evo
 | **Domain** | Transactional apps backed by Postgres | General software | General software |
 | **Gates** | Human-approval gates that fail closed | Advisory | Advisory |
 
-**Runs in your editor.** Consort is terminal-first but detects and launches into any VS Code-compatible IDE (VS Code, Cursor, and others): on start it offers to open your project, and its companion extension, in that editor, or to keep driving from the terminal.
+**Runs in your editor.** Consort is terminal-first but detects and launches into any VS Code-compatible IDE (VS Code, Cursor, and others). On start it offers to open your project and its **Consort extension** there, or to keep driving from the terminal. The extension is a live viewer that keeps you in lockstep with what Consort is building: the paired branches, the current phase and gates, and each role's progress, turn by turn, with each artifact surfaced as it lands.
 
 For the full positioning, comparison, and FAQ, see [`docs/positioning.md`](docs/positioning.md). Two papers describing Consort and the methodology behind it are forthcoming.
 
