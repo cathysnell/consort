@@ -1,6 +1,6 @@
 # consort
 
-Consort's spec-first, test-driven build on paired Lakebase branches: RED → GREEN → REFACTOR composed with paired-branch primitives (cheap experiments, parent-aware schema diff, real per-branch databases) and human-in-the-loop gates at every phase boundary.
+Consort's spec-first, test-driven build on paired Lakebase branches (Lakebase is Databricks' serverless Postgres/OLTP database, not the Delta Lakehouse) for building transactional applications: RED → GREEN → REFACTOR composed with paired-branch primitives (cheap experiments, parent-aware schema diff, real per-branch databases) and human-in-the-loop gates at every phase boundary.
 
 **Spec-first: two disciplines, back to back.** Consort runs the design lane as **Spec Driven Development (SDD)** and the build lane as **Test Driven Development (TDD)**:
 

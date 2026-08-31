@@ -1,6 +1,6 @@
 {
   "version": "2",
-  "updated_at": "2026-07-30T03:22:17Z",
+  "updated_at": "2026-08-31T03:54:23Z",
   "skills": {
     "architectural-design-principles": {
       "version": "0.0.0",
@@ -17,9 +17,9 @@
     },
     "consort": {
       "version": "0.0.0",
-      "description": "Consort, a spec-first, test-driven agent framework for Lakebase-paired projects: a deterministic orchestrator drives role agents through a spec-first design lane (Spec Driven Development) and a Test Driven Development build lane (RED-GREEN-REFACTOR) that runs against a live copy-on-write branch of a real, governed Lakebase database, composed with paired-branch primitives (cheap experiments, parent-aware schema diff, real per-branch databases). The controls are code the agent cannot edit: gates fail closed, tests are immutable within a unit of work, and a green result is a real test run against real data. Spec-first means the spec is drafted, reviewed, and frozen at gates before any build cycle runs; the spec, the architecture, and the database all evolve increment over increment. Use when planning a new feature, running design-spec gates, running TDD cycles, comparing parallel experiments, or detecting build bad smells. Imports software-design-principles canon. Builds on lakebase-scm-workflows.",
+      "description": "Consort, a spec-first, test-driven agent framework for building transactional applications on Lakebase-paired projects: a deterministic orchestrator drives role agents through a spec-first design lane (Spec Driven Development) and a Test Driven Development build lane (RED-GREEN-REFACTOR) that runs against a live copy-on-write branch of a real, governed Lakebase database (Databricks' serverless Postgres/OLTP database, not the Delta Lakehouse), composed with paired-branch primitives (cheap experiments, parent-aware schema diff, real per-branch databases). The controls are code the agent cannot edit: gates fail closed, tests are immutable within a unit of work, and a green result is a real test run against real data. Spec-first means the spec is drafted, reviewed, and frozen at gates before any build cycle runs; the spec, the architecture, and the database all evolve increment over increment. Use when planning a new feature, running design-spec gates, running TDD cycles, comparing parallel experiments, or detecting build bad smells. Imports software-design-principles canon. Builds on lakebase-scm-workflows.",
       "experimental": false,
-      "updated_at": "2026-07-30T02:54:59Z",
+      "updated_at": "2026-08-31T03:52:06Z",
       "files": [
         "CONFIG.md",
         "README.md",
@@ -47,7 +47,7 @@
       "version": "0.1.0",
       "description": "Databricks CLI operations: auth, profiles, data exploration, and bundles. Contains up-to-date guidelines for Databricks-related CLI tasks.",
       "experimental": false,
-      "updated_at": "2026-07-29T23:31:29Z",
+      "updated_at": "2026-08-30T16:07:23Z",
       "files": [
         "SKILL.md",
         "data-exploration.md",
@@ -60,7 +60,7 @@
       "version": "0.1.0",
       "description": "Manage Lakebase Postgres Autoscaling projects, branches, and endpoints via Databricks CLI. Use when asked to create, configure, or manage Lakebase Postgres databases, projects, branches, computes, or endpoints.",
       "experimental": false,
-      "updated_at": "2026-07-29T23:31:31Z",
+      "updated_at": "2026-08-30T16:07:24Z",
       "files": [
         "SKILL.md"
       ]
@@ -69,7 +69,7 @@
       "version": "0.0.0",
       "description": "Foundational engineering canon \u2013 SOLID, DRY, clean code, layered architecture, cross-cutting concerns, NFRs. Imported by workflow skills (consort, lakebase-scm-workflows). Use when designing a module, reviewing a PR, planning a refactor, mapping cross-cutting concerns to layers, or arguing about API shape.",
       "experimental": false,
-      "updated_at": "2026-07-26T19:28:51Z",
+      "updated_at": "2026-08-06T00:21:12Z",
       "files": [
         "SKILL.md",
         "references/clean-code.md",
