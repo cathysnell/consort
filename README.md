@@ -9,6 +9,8 @@
 
 Consort takes its name from the field of music. A *consort* is an ensemble that plays in concert: each musician holds one part, and a conductor keeps them in time. Consort is that, applied to building software. A set of agents each take on one familiar role from the software lifecycle, a product owner, a spec author, an architect, a DBA, a test strategist, a UX designer, and a navigator/driver pair at the keyboard, while a deterministic conductor keeps them in sequence and a human approves every gate. No agent plays another's part.
 
+**What Consort builds.** Consort builds **transactional applications**: an application backend (and an optional web UI) whose system of record is a **Lakebase** database. [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless, Postgres-compatible **transactional (OLTP)** database, branchable in about a second. It is not the Delta Lakehouse, and Consort is not an ETL, analytics, BI, or data-pipeline tool; it is a way to build and evolve application backends on Postgres. For what Consort is and is not, and how it compares to other spec-first tools, see [`docs/positioning.md`](docs/positioning.md).
+
 ## Why Consort
 
 AI agents write code fast, but you can't trust that the code is correct or maintainable over the long haul. On their own they mark a task "done" with no test behind it, drift off the request, weaken a test to reach green, tangle the layers, and lose the plan across a context reset. The database is the hardest part to get right: it's the one dependency you can't cheaply branch, so it gets faked with mocks that fall out of sync with production, or shared across a staging box the tests quietly diverge from.
@@ -23,7 +25,19 @@ Lakebase removes that constraint. A database branch is a real, governed, copy-on
 
 **What makes Consort different.** Other spec-first frameworks ask the agent to comply: a strong spec then a trusted build (Spec Kit), or a firm test-first rule the model is told to honor (superpowers). Under pressure to go green, an agent can set either aside. Consort puts the controls in a deterministic state machine the agent runs inside but cannot edit: routing is code, human-approval gates fail closed, tests are immutable within a unit of work, and green means a real run against a real database. Engineering discipline is enforced by hard rules, not soft prompts.
 
-Two papers describing Consort and the methodology behind it are forthcoming.
+The domain is the other half of the distinction. Consort is for building and evolving **application backends on Lakebase Postgres**, using one-second database branching to make test-driven development safe. It is not a data-engineering tool: no ETL or ELT, no analytics, BI, or dashboards, no Lakeflow / Declarative Pipelines / Jobs / notebooks, no Spark or warehouse compute, and no work against the Delta Lakehouse or the Unity Catalog analytics surface. And it is not a drop-in prompt or skill pack for any repo; it is a deterministic orchestrator bound to a Lakebase-paired project.
+
+|  | Consort | GitHub Spec Kit | superpowers |
+|---|---|---|---|
+| **Enforcement** | Deterministic state machine the agent runs inside but cannot edit | Strong spec, then a trusted build | Test-first rules the model is told to honor |
+| **"Green" means** | A real test run against a live, throwaway Postgres branch | The agent's report | A local red-green-refactor pass |
+| **Substrate** | Live Lakebase (Postgres / OLTP) copy-on-write branch | Infrastructure-free | Infrastructure-free, local |
+| **Domain** | Transactional apps backed by Postgres | General software | General software |
+| **Gates** | Human-approval gates that fail closed | Advisory | Advisory |
+
+**Runs in your editor.** Consort is terminal-first but detects and launches into any VS Code-compatible IDE (VS Code, Cursor, and others): on start it offers to open your project, and its companion extension, in that editor, or to keep driving from the terminal.
+
+For the full positioning, comparison, and FAQ, see [`docs/positioning.md`](docs/positioning.md). Two papers describing Consort and the methodology behind it are forthcoming.
 
 ## The ensemble
 
@@ -83,7 +97,7 @@ Then, in any session, run:
 
 Nothing advances past a gate without you.
 
-**Walk through a full first project.** [`examples/first-project/`](examples/first-project/) is a step-by-step walkthrough of one session, install to first shipped feature, using a sample warehouse app (StockFlow). It ships copy-ready seed files so you can launch your own project from ours instead of starting from a blank page.
+**Walk through a full first project.** [`examples/first-project/`](examples/first-project/) is a step-by-step walkthrough of one session, install to first shipped feature, using a sample inventory app (StockFlow). It ships copy-ready seed files so you can launch your own project from ours instead of starting from a blank page.
 
 ### Other ways to install
 
