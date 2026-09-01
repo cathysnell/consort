@@ -123,3 +123,11 @@ snapshot_date,referrer,count,uniques
 "2026-08-31","lakebase-cookbook.com",4,2
 "2026-08-31","teams.public.onecdn.static.microsoft",8,6
 "2026-08-31","youtube.com",1,1
+"2026-09-01","Bing",9,2
+"2026-09-01","Google",70,29
+"2026-09-01","chatgpt.com",1,1
+"2026-09-01","com.slack",3,3
+"2026-09-01","github.com",101,34
+"2026-09-01","lakebase-cookbook.com",4,2
+"2026-09-01","teams.public.onecdn.static.microsoft",14,7
+"2026-09-01","youtube.com",1,1
