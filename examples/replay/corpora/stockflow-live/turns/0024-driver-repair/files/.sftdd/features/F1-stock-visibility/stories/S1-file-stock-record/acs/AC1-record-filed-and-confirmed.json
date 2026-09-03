@@ -1,9 +1,0 @@
-{
-  "id": "AC1-record-filed-and-confirmed",
-  "given": "The team member is on the file-stock screen and no stock record yet exists for a given (sku, location) pair",
-  "when": "They submit a filing with a valid sku, location, non-negative quantity, and inventory_code for that pair",
-  "then": "The stock record is persisted carrying all four values and a confirmation of the filed record is shown",
-  "status": "passing",
-  "layer": "E2E",
-  "architectural_notes": "Full write path: file-stock UI submit -> app/routes boundary -> StockService (owns create-or-update) -> StockRepository (only ORM layer) -> Stock model, asserting persisted branch state plus the rendered confirmation, so E2E. Required fields sku/location/quantity/inventory_code are NOT NULL (PI2); audit fields (created_at/actor, R1) are service-set."
-}

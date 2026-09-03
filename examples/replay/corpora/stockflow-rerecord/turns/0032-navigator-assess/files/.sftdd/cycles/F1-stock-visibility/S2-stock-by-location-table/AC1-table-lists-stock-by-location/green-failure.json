@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
-  "diagnosis": "client/tests/pages/StockByLocation.test.tsx (T20, T21, T23) fails because the Driver implemented the backend only: client/src/pages/StockByLocationPage.tsx does not exist and fetchStockByLocation is not exported from client/src/api/stock.ts. The test file import of StockByLocationPage at ../../src/pages/StockByLocationPage resolves to nothing, causing the entire test file to error. The FileStock and RetrieveStock client tests (T16, T17) should still pass -- they import only existing modules.",
-  "fixDirective": "1) Add fetchStockByLocation(location: string): Promise<...> to client/src/api/stock.ts (GET /api/stock/location/:location). 2) Create client/src/pages/StockByLocationPage.tsx that calls fetchStockByLocation via useParams, renders data-testid='stock-table' with rows data-testid='stock-row-<sku>' each containing sku/location/quantity, a data-testid='qty-cell-<sku>' cell with class='qty-right' for quantity, and data-testid='empty-state' with text 'No stock at this location' when the list is empty."
-}

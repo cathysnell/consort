@@ -1,7 +1,0 @@
-{
-  "id": "AC1-table-lists-filed-stock",
-  "given": "Two stock records for different SKUs have been filed",
-  "when": "The team member opens the home stock-by-location screen",
-  "then": "A table lists one row per filed record showing that record's SKU, location, and quantity",
-  "status": "draft"
-}

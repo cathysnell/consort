@@ -1,7 +1,0 @@
-{
-  "id": "AC1-stock-list-shows-separate-fields",
-  "status": "draft",
-  "given": "a warehouse operator viewing the stock list where a row carries a batch_number and a serial_number value",
-  "when": "the stock list renders",
-  "then": "batch_number and serial_number appear as two distinct, separately labeled fields (not a single combined code), each showing that row's respective value"
-}

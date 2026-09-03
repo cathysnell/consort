@@ -1,6 +1,0 @@
-{
-  "id": "S1-split-columns-migration",
-  "asA": "inventory manager",
-  "iWantTo": "have batch_number and serial_number added as their own columns, backfilled by splitting the existing inventory_code on the hyphen delimiter, the combined column dropped, and a count of nonconforming rows surfaced before the change is accepted",
-  "soThat": "batch and serial become first-class facts with no silent data loss and every sprint-1 stock row survives the migration"
-}

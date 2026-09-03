@@ -1,1 +1,0 @@
-Verdict written — `refactor: true` for the blank loading/error states in `HomePage.tsx` violating NFR-F1-empty-state-clean-render.

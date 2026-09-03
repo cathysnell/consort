@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-20T02:32:36.936Z",
-      "kind": "cut",
-      "branch": "experiment-s2-expose-batch-serial-in-api-exp1"
-    }
-  ]
-}

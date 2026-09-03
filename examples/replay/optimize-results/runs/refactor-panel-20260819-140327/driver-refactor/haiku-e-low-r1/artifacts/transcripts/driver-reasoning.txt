@@ -1,6 +1,0 @@
-Refactor complete. All 8 component tests pass:
-- Added `className="empty-state"` to empty-state `<p>` (line 27)
-- Added `className="table"` to `<table>` element (line 33)  
-- Added `className="table__num"` to quantity cells alongside existing `stock-table__quantity` (line 48)
-
-All design-vocabulary CSS classes now properly consume design tokens per the design guide.

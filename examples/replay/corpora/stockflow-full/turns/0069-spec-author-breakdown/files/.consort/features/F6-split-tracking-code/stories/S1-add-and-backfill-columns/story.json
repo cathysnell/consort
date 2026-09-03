@@ -1,4 +1,0 @@
-{
-  "id": "S1-add-and-backfill-columns",
-  "scope": "Add batch_number and serial_number columns, backfill from inventory_code, probe for nonconforming rows"
-}

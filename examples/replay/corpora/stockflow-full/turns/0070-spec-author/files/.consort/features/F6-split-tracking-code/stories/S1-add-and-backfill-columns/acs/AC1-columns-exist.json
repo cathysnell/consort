@@ -1,7 +1,0 @@
-{
-  "id": "AC1-columns-exist",
-  "given": "a stock table whose tracking data is held in the combined inventory_code",
-  "when": "the add-and-backfill migration is applied",
-  "then": "the stock record exposes batch_number and serial_number as distinct, separately addressable fields, while location and the existing inventory_code remain present and unchanged",
-  "status": "draft"
-}

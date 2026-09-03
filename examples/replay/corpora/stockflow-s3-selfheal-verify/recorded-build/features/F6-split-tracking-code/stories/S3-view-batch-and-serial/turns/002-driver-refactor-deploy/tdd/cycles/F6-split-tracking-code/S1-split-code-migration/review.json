@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-07-10T05:02:26.774Z",
-  "refactor_requested": false,
-  "refactor_notes": "Migration is additive-then-retire inside one revision (atomic, PI2), backfills batch_number/serial_number only for exactly-3-segment codes leaving others NULL per AC2, drops inventory_code only after backfill, and downgrade reconstructs it from location + COALESCE(batch_number,'')/COALESCE(serial_number,'') restoring NOT NULL last. location and the (sku, location) unique constraint are untouched, preserving NFR-F6-sku-location-uniqueness-preserved and NFR-F6-no-negative-overcommit-unaffected. DB connection is resolved from env (alembic/env.py reads DATABASE_URL), no hardcoded DSN. Schema-only story, no UI/service/repository code required at this stage. No rubric-cited improvement warranted."
-}

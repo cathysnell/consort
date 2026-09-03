@@ -1,7 +1,0 @@
-{
-  "id": "S3-expose-batch-serial-in-stock-ui",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "This is the user-facing (E2E UI) story that makes batch and serial visible to operators. The database migration (S1–S2) can be complete with inventory_code dropped, but the UI still displays only the old combined code (or nothing). This story delivers the distinct behavior: the operator sees batch and serial broken out in the interface."
-  }
-}

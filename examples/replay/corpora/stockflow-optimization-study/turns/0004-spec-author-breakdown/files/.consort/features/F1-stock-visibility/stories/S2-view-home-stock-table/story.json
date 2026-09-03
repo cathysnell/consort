@@ -1,8 +1,0 @@
-{
-  "id": "S2-view-home-stock-table",
-  "scope": "Warehouse operator views all stock on the home screen in a scannable table with empty state",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "Displays stock records aggregated by location in a table view on home screen, distinct from filing individual records (S1) and viewing per-SKU details (S3); could build S1 fully (data persistence works) without any UI table display"
-  }
-}

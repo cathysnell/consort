@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-09T17:03:32.917Z",
-  "refactor_requested": true,
-  "refactor_notes": "The boundary layer (app/routes/stock.py) imports app.repositories.stock directly and passes it as _repo= into the service call. This gives the boundary a dependency on the repository layer, skipping the service layer's responsibility for owning its own collaborators. Per architecture.md the boundary delegates to the service only; the service should wire its own repository (via a default argument or module-level import) so the route calls stock_service.file_stock(sku, location, quantity, inventory_code, db=db) with no _repo kwarg. No test assertion changes are needed: all tests drive the public HTTP boundary and will remain green after the refactor."
-}

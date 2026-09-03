@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "a warehouse team member supplies a valid SKU, a warehouse location identifier, a quantity on hand, and a combined tracking code (encoding location, batch, and serial)",
-  "when": "they submit a request to file the stock level for that SKU at that location",
-  "then": "a stock record is created and persisted for the given SKU-and-location pair, storing the supplied quantity and tracking code; a subsequent read of that SKU-and-location pair returns exactly that record with all submitted values intact",
-  "status": "draft"
-}

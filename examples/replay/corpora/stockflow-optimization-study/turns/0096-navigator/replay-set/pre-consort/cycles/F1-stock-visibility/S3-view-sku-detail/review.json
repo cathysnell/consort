@@ -1,6 +1,0 @@
-{
-  "reviewed_at": "2026-08-20T01:26:25.133Z",
-  "refactor_requested": true,
-  "refactor_notes": "Two IA adherence issues: (1) The SKU detail route is mounted at /stock/:sku but the IA declares /sku/:skuId — the path diverges from the information architecture, breaking the nav contract the UX gate checks. (2) StockTable renders SKU cells as plain text with no Link to /sku/:sku, so the IA-declared entry point ('reached from Home rows') is absent; the detail page is reachable only by typing the URL. Driver should (a) change the App.tsx Route path from /stock/:sku to /sku/:sku and update useSkuDetail/api/client accordingly, and (b) wrap the SKU cell in StockTable with a React Router Link to /sku/{rec.sku}. Layering is clean: route → service → repository, no session leak at the boundary or service layer. NFR-F1-8 par-level untracked indicator is present and correct. No other rubric violations.",
-  "refactored_at": "2026-08-20T01:31:58.051Z"
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-table-lists-stock-by-location",
-  "given": "stock records exist for one or more SKUs at one or more locations",
-  "when": "the warehouse team member opens the home screen",
-  "then": "a table lists one row per stock record showing that record's SKU, location, and quantity",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercises the React SPA (client/) rendering a list read through the boundary (app/routes/, renders_via react, JSON only) -> service (app/services/) -> repository (app/repositories/) -> models (app/models/) read of stock_records. No new persistence; reads the same table S1 writes, so PI1/PI2 guarantee one well-formed row per (sku, location). Cross-cutting: read-path shaping (row ordering/DTO) lives in the service, never the boundary or the React component; the query is the repository's sole ORM touch. Verified real-branch (NFR-F1-4): seed rows on the paired branch, assert the table renders one row per record with SKU/location/quantity."
-}

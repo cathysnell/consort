@@ -1,4 +1,0 @@
-{
-  "refactor": false,
-  "notes": "StockDetail/StockTable render batch/serial as distinct SPA fields via typed API DTOs (react/JSON boundary intact), NULL segments render an explicit 'not tracked' placeholder (no crash/blank region, NFR-F6-no-null-crash-on-missing-split satisfied), and all styling routes through design-guide CSS custom properties (theme.css) with no inline styles or hardcoded hex/px. Layering respected (presentational components take props, hooks own fetch, api/ layer is sole fetch boundary). No concrete rubric-cited defect found."
-}

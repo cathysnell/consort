@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-01T05:48:51.300Z",
-      "kind": "cut",
-      "branch": "experiment-s1-split-columns-migration-exp1"
-    }
-  ]
-}

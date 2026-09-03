@@ -1,1 +1,0 @@
-REFACTOR complete: HomePage now consumes `.table`, `.table__num` (alongside `stock-table__quantity`), and `.empty-state` design classes; 8/8 HomeStockTable tests green.

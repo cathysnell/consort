@@ -1,9 +1,0 @@
-{
-  "id": "AC1-table-lists-filed-stock",
-  "given": "One or more stock records have been filed for distinct (sku, location) pairs",
-  "when": "The team member opens the home stock-by-location table",
-  "then": "Each filed record appears as a row showing its SKU, its location, and its quantity",
-  "status": "passing",
-  "layer": "E2E",
-  "architectural_notes": "Read path: home stock-by-location view -> app/routes boundary -> StockService -> StockRepository read against the paired branch, then the rendered table, so E2E. Lists the records filed by S1; no new persistence."
-}

@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-01T07:11:51.535Z",
-      "kind": "cut",
-      "branch": "experiment-s2-reversible-down-migration-exp1"
-    }
-  ]
-}

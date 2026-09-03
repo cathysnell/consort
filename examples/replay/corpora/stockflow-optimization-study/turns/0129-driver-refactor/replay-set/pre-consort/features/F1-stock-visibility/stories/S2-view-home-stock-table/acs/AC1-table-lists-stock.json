@@ -1,9 +1,0 @@
-{
-  "id": "AC1-table-lists-stock",
-  "status": "passing",
-  "given": "one or more stock records exist across one or more locations",
-  "when": "a warehouse operator opens the home screen",
-  "then": "a table is shown with one row per stock record, each row carrying that record's SKU, location, and quantity",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercises the full path from persisted stock_records through the JSON boundary (app/routes) reading via stock-service (app/services) and stock-repository (app/repositories) into the React SPA home table (client/). No new server logic — the repository read and boundary shape land in the established layers; the boundary returns data (R5), never HTML, and the SPA renders one row per record. Cross-cutting: rendering/presentation owned by the client, ORM access confined to the repository. Verified via a real-branch integration test that seeds records and asserts the API response, plus a client component test asserting a row per record."
-}

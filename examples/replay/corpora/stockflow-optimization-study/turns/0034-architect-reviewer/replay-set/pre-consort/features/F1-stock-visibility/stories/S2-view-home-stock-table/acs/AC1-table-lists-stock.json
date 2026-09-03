@@ -1,7 +1,0 @@
-{
-  "id": "AC1-table-lists-stock",
-  "status": "draft",
-  "given": "one or more stock records exist across one or more locations",
-  "when": "a warehouse operator opens the home screen",
-  "then": "a table is shown with one row per stock record, each row carrying that record's SKU, location, and quantity"
-}

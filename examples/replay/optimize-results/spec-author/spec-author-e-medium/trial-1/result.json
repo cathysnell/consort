@@ -1,8 +1,0 @@
-{
-  "gatePassed": false,
-  "durationMs": 50394,
-  "costUsd": 0,
-  "inputTokens": 36,
-  "cacheReadTokens": 298848,
-  "gateReason": "semantic: score 0.50 < 0.85 vs stockflow features/F1-stock-visibility/feature-spec.json. missing: S2 home view scoped to stock-by-location (candidate S1 is a generic home stock table without the by-location intent); tdd_mode N=1 single-test-per-AC discipline (candidate declares N>=2); the reference expresses exactly three stories/behaviors; the duplicate-prevention behavior (candidate S4) is not part of the reference's expressed scope, but its absence of the by-location framing on the home view drops material intent"
-}

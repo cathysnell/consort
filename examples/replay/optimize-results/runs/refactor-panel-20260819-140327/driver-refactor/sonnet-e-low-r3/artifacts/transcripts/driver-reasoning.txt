@@ -1,1 +1,0 @@
-The three design-token class changes are applied to `HomePage.tsx`. The `npm install` for the client is running in the background — tests will confirm green once it completes.

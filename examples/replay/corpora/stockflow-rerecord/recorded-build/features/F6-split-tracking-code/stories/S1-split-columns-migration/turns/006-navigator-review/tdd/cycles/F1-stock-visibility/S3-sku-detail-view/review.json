@@ -1,6 +1,0 @@
-{
-  "reviewed_at": "2026-08-01T05:38:33.342Z",
-  "refactor_requested": true,
-  "refactor_notes": "SkuDetailPage.tsx renders a bare <table> with no CSS classes consuming design tokens (typography via --font-sans, spacing via --space-*, color via --color-text/--color-card). The design-guide requires all surfaces to consume tokens via var(--token) rather than leave them absent. Add a .sku-detail-table / .page wrapper in theme.css and apply the class to the <table> and container div so the card surface, font, and spacing are token-driven. Layer boundaries, service/repository split, JSON-only API boundary (NFR-F1-5), config-in-env (NFR-F1-7), and no-mock DB (NFR-F1-4) are all satisfied; no production code concerns beyond the missing token classes.",
-  "refactored_at": "2026-08-01T05:42:07.385Z"
-}

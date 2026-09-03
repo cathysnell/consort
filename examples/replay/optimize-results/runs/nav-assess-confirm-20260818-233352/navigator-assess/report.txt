@@ -1,8 +1,0 @@
-=== per-role sweep: navigator ===
-baseline: 0.0s
-gate-passers (fastest first):
-  opus: 93.7s | $0.64 | -0% wall , {"model":"opus"}  [driver-fixable regression (viable)]
-  opus-3: 159.4s | $0.82 | -0% wall , {"model":"opus"}  [driver-fixable regression (viable)]
-  opus-2: 174.6s | $0.90 | -0% wall , {"model":"opus"}  [driver-fixable regression (viable)]
-  sonnet: 174.8s | $0.68 | -0% wall , {"model":"sonnet"}  [driver-fixable regression (viable)]
-WINNER: none , no candidate beat the baseline (the role's default levers stand).

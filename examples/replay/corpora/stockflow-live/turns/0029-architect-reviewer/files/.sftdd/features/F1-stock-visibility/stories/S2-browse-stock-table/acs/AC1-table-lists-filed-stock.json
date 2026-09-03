@@ -1,9 +1,0 @@
-{
-  "id": "AC1-table-lists-filed-stock",
-  "given": "Two stock records for different SKUs have been filed",
-  "when": "The team member opens the home stock-by-location screen",
-  "then": "A table lists one row per filed record showing that record's SKU, location, and quantity",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercises the full read path from the paired-branch DB up. The repository (app/repositories/) reads stock_records, the service (app/services/) returns the row set, the boundary (app/routes/, renders_via react) serves JSON, and the React SPA renders one row per record. Owner module: stock-service list operation + the client stock-table page. Verified against real seeded branch rows (PI2 NOT NULL means every row carries sku/location/quantity); the boundary holds no presentation logic and never touches the session."
-}

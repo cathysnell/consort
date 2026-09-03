@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-20T03:01:07.501Z",
-      "kind": "cut",
-      "branch": "experiment-s3-display-batch-serial-separately-exp1"
-    }
-  ]
-}

@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED against the running app",
-  "diagnosis": "T48 (test_detail_api_returns_batch_number_as_json_null_when_column_is_null) fails with AttributeError at app/services/stock.py:45 — the line 'return repos.stock.get_stock(db, sku=sku, location=location)'. app/repositories/__init__.py is empty so repos.stock only resolves if app.repositories.stock was imported by a prior code path; this test is the first in collection order (tests/architecture/ sorts before tests/step_defs/) to hit the GET detail route, exposing the latent unguarded submodule reference.",
-  "fixDirective": "Add 'from . import stock' to app/repositories/__init__.py so repos.stock always resolves regardless of import order."
-}

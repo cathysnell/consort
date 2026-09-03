@@ -1,8 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "a warehouse team member with a SKU, a location, a quantity, and a combined inventory_code",
-  "when": "they file the stock level for that SKU at that location",
-  "then": "a stock record is durably saved capturing that SKU, location, quantity, and combined inventory_code",
-  "status": "draft",
-  "layer": "E2E"
-}

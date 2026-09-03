@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-stock-record",
-  "status": "draft",
-  "given": "no stock record exists for a given (SKU, location) pair",
-  "when": "a warehouse operator files a stock record for that SKU at that location with a quantity and a combined tracking code",
-  "then": "a new stock record is created and can be read back carrying exactly the SKU, location, quantity, and combined tracking code that were filed",
-  "layer": "API",
-  "architectural_notes": "API boundary: the filing POST enters app/routes/ (boundary), which delegates to app/services/ (business logic) and persists via app/repositories/ into stock_records over app/models/. Dependencies point inward (boundary -> service -> repository -> models); the boundary never touches the DB session. Cross-cutting concern INPUT VALIDATION is owned at the API boundary and applied BEFORE any persistence: the boundary validates the required fields (SKU, location, quantity, combined tracking code) and, when one is missing or blank, rejects with an HTTP error whose body NAMES the specific offending field (NFR-F1-6, brief_ref PO preference). This named-required-field validation is a distinct behavior from AC3's negative-quantity guard (which names the quantity field via the service guard + PI3 CHECK) and must be verified by its own kind:behavior real-branch test that POSTs an invalid payload (e.g. missing/blank SKU or tracking code) and asserts the response body names that field. The happy-path create is backed by PI1 (unique (sku,location)) and PI2 (NOT NULL on sku/location/quantity)."
-}

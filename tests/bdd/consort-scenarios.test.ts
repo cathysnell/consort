@@ -21,18 +21,12 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-// The replay MACHINERY dir (engine, launchers, SCENARIOS.md); corpora live under its corpora/ subdir.
+// The replay MACHINERY dir (engine, launchers, SCENARIOS.md) stays in the kit; the corpora it
+// replays live under examples/replay/corpora/ in the consort-examples repo. This guard keeps the
+// MACHINERY checks + the validator-LOGIC exercised against synthetic fixtures; the guard that scans
+// the real committed corpora set ("every scenario is replay-ready") moved to consort-examples with
+// the corpora.
 const REPLAY_DIR = path.join(REPO_ROOT, "examples", "replay");
-const SCENARIOS_DIR = path.join(REPLAY_DIR, "corpora");
-
-interface ScenarioManifest {
-  name: string;
-  description: string;
-  tiers?: number;
-  uiTrack?: boolean;
-  features: { id: string; buildReplay?: boolean; summary?: string }[];
-  pauseBefore?: "navigator" | "release-engineer";
-}
 
 /** Structural integrity of a recorded corpus (a scenario dir, or any dir that
  *  holds recorded-artifacts/ + optionally recorded-build/ + turns/). `features`
@@ -159,13 +153,8 @@ function assertBuildTurnsReplayable(corpusRoot: string, featureId: string): void
   }
 }
 
-function readManifest(scenarioDir: string): ScenarioManifest {
-  return JSON.parse(fs.readFileSync(path.join(scenarioDir, "scenario.json"), "utf8")) as ScenarioManifest;
-}
-
 describe("replay-scenarios: framework scaffolding", () => {
-  it("ships the scenarios home + the SCENARIOS.md capture/replay guide", () => {
-    expect(fs.existsSync(SCENARIOS_DIR)).toBe(true);
+  it("ships the SCENARIOS.md capture/replay guide", () => {
     expect(fs.existsSync(path.join(REPLAY_DIR, "SCENARIOS.md"))).toBe(true);
   });
 
@@ -316,40 +305,7 @@ describe("assertScenarioCorpus: build-turn replay-consistency guard", () => {
   });
 });
 
-describe("replay-scenarios: every committed scenario is well-formed + replay-ready", () => {
-  // A subdir is a COMMITTED scenario only once it carries a scenario.json manifest.
-  // A capture records INTO examples/replay/corpora/<name>/ and only writes the
-  // manifest when the author finalizes it ("add scenario.json, then commit"), so a
-  // manifest-less dir is an in-progress / uncommitted capture, NOT a scenario to
-  // validate. Requiring the manifest here keeps a live capture from breaking `npm test`.
-  const scenarioDirs = fs.existsSync(SCENARIOS_DIR)
-    ? fs
-        .readdirSync(SCENARIOS_DIR, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .filter((e) => fs.existsSync(path.join(SCENARIOS_DIR, e.name, "scenario.json")))
-        .map((e) => e.name)
-    : [];
-
-  if (scenarioDirs.length === 0) {
-    it("(no scenarios committed yet, the framework is ready for the first drop-in)", () => {
-      expect(scenarioDirs).toEqual([]);
-    });
-  }
-
-  for (const name of scenarioDirs) {
-    describe(`scenario: ${name}`, () => {
-      const dir = path.join(SCENARIOS_DIR, name);
-      it("has a scenario.json manifest with the required fields", () => {
-        const m = readManifest(dir);
-        expect(m.name, "manifest name matches the directory name").toBe(name);
-        expect(typeof m.description).toBe("string");
-        expect(Array.isArray(m.features) && m.features.length > 0).toBe(true);
-        for (const f of m.features) expect(f.id).toMatch(/^F[0-9]+(-[a-z0-9-]+)?$/);
-        if (m.pauseBefore) expect(["navigator", "release-engineer"]).toContain(m.pauseBefore);
-      });
-      it("corpus is structurally complete for every manifest feature", () => {
-        assertScenarioCorpus(dir, readManifest(dir).features);
-      });
-    });
-  }
-});
+// (The "every committed scenario is well-formed + replay-ready" guard scans the real corpora set
+//  under examples/replay/corpora/, so it moved to the consort-examples repo with the corpora. Its
+//  validator logic — assertScenarioCorpus + assertBuildTurnsReplayable above — stays exercised here
+//  against synthetic fixtures, so the shape-machine coverage lives in the kit.)

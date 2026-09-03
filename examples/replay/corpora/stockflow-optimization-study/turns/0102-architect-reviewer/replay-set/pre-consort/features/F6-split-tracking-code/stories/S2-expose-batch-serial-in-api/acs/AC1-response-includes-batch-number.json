@@ -1,7 +1,0 @@
-{
-  "id": "AC1-response-includes-batch-number",
-  "status": "draft",
-  "given": "a stock record whose batch_number holds a value",
-  "when": "an API client fetches that stock record",
-  "then": "the response contains a distinct batch_number field carrying that record's batch value"
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-detail-lists-sku-locations",
-  "given": "A SKU has stock filed at more than one location",
-  "when": "The team member opens that SKU's detail view",
-  "then": "Every location holding that SKU is listed, each with its per-location quantity",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: the React SKU-detail page calls the GET detail endpoint on the app/routes boundary, which returns JSON aggregated by stock-service (app/services) from a stock-repository (app/repositories) query over every stock_records row matching the sku. Owner module: stock-service performs the fan-out across locations; the repository is the only layer touching the ORM/session and the boundary returns JSON only (renders_via react). Leans on PI1 (composite UNIQUE(sku, location)) so each holding location surfaces exactly once with its per-location quantity. Read-path only, so no new cross-cutting concern beyond query scoping owned by the repository."
-}

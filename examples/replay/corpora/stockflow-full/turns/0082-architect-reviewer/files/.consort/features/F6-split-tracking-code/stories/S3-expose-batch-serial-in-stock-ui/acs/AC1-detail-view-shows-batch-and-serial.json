@@ -1,9 +1,0 @@
-{
-  "id": "AC1-detail-view-shows-batch-and-serial",
-  "given": "a stock record whose batch_number and serial_number are populated",
-  "when": "an operator opens the stock detail view for that record",
-  "then": "batch number and serial number are each shown as their own distinct, separately labeled field",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercised through the React SPA detail page (client/) fed by the JSON API boundary (app/routes/, renders_via: react) which reads through the stock service -> repository -> app/models Stock, so it spans UI + service + real branch DB state. Presentation of the split fields lives entirely in the SPA view/component; the boundary returns batch_number and serial_number as distinct JSON fields (never server-rendered HTML) per NFR-F6-spa-json-boundary (R5). No new cross-cutting concern: validation/auth are out of bounds for V1; owner module is the SPA stock-detail view over app/routes/ stock read endpoint."
-}

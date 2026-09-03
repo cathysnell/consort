@@ -1,6 +1,0 @@
-{
-  "id": "S1-perform-batch-serial-schema-migration",
-  "asA": "system",
-  "iWantTo": "the stock table schema to be refactored with batch_number and serial_number as first-class columns",
-  "soThat": "batch and serial are stored separately and independently addressable"
-}

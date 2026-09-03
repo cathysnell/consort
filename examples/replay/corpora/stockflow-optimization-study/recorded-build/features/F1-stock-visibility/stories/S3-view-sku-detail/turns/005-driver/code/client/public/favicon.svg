@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="app icon">
-  <!-- Generic brandable app icon (Databricks-brand spark mark, brand red). Replace
-       this with your product's icon; keep a favicon.svg here so the browser tab is
-       branded. A project with a bitmap icon can add public/favicon.png alongside. -->
-  <rect width="32" height="32" rx="6" fill="#1b3139"/>
-  <path fill="#ff3621" d="M16 5 5 11l4 2.2L16 9.4l7 3.8 4-2.2L16 5Zm-7 9.9L5 17l11 6 11-6-4-2.1-7 3.8-7-3.8Z"/>
-</svg>

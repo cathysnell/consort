@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-20T03:24:37.480Z",
-  "refactor_requested": true,
-  "refactor_notes": "StockPage inlines its own table rows (with batch_number/serial_number columns) while StockTable.tsx (used by HomePage) renders the same domain rows without those columns — two divergent presentational implementations of the same stock-row shape. Per DRY/SRP, extend StockTable to accept optional batch/serial column rendering (or a variant prop) so both pages share a single row component; HomePage can suppress the new columns via a prop. No test changes needed: the existing data-testid seams (batch-number, serial-number, stock-table-row) are stable across the consolidation."
-}

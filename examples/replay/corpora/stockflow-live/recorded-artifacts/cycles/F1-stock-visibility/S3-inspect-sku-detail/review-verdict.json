@@ -1,4 +1,0 @@
-{
-  "refactor": false,
-  "notes": "Layering holds: route validates + delegates only, service owns the non-negative floor and audit stamping, repository is the sole ORM/session touchpoint, model documents immutable created_at/actor and the nullable par_level addition (PI4). JSON-only boundary satisfies the SPA/JSON NFR, and the additive migration keeps prior rows intact with par_level null. No rubric-cited improvement warranted."
-}

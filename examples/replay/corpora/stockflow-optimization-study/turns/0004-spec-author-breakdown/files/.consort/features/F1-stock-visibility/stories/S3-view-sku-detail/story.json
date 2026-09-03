@@ -1,8 +1,0 @@
-{
-  "id": "S3-view-sku-detail",
-  "scope": "Warehouse operator views a single SKU's stock across all its locations with tracking codes and optional field status",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "Displays per-SKU detail view showing stock across multiple locations with tracking codes, distinct from the home screen aggregated table (S2); could build S2 fully (table works) without any per-SKU detail page"
-  }
-}

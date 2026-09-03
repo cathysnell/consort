@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-stock",
-  "given": "no stock record yet exists for a given SKU at a given physical location",
-  "when": "a warehouse operator files that SKU at that location with a quantity",
-  "then": "a stock record for that (SKU, location) pair exists, and retrieving it returns the SKU, location, and quantity exactly as filed",
-  "status": "draft",
-  "layer": "API",
-  "architectural_notes": "Lives at the API boundary (app/routes/, renders_via react): the operator files via an HTTP POST that returns JSON, and read-back is a GET. The boundary validates the payload and delegates persistence to the Stock service (app/services/), which calls the Stock repository (app/repositories/) as the sole ORM-touching layer writing a Stock model (app/models/stock.py); the (sku, location, quantity) NOT NULL guarantees (PI3) back the exact read-back. Cross-cutting concern: input validation is OWNED AT THIS BOUNDARY (NFR-F1-validation-messages) — an invalid file (negative quantity, missing required field) must be rejected before any DB write with an HTTP error body that NAMES the offending field, not a generic 'bad request'. This boundary field-named-error behavior requires its own real-branch behavior/fitness test (POST invalid payload to the endpoint, assert the response body identifies the field), distinct from the service-layer validation-before-write check."
-}

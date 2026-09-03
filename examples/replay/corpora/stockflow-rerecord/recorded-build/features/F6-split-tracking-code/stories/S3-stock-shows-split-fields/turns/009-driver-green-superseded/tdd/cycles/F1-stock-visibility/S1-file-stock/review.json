@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-01T04:11:14.016Z",
-  "refactor_requested": false,
-  "refactor_notes": "Layer boundaries are respected: route validates + delegates to service, service delegates to repository, no Session usage in routes or services. StaticFiles mount is guarded by os.path.isdir so no import-time build coupling. Design tokens delivered via CSS custom properties consumed by components via var(--token). NFR-F1-1 (immutable created_at via ON CONFLICT DO UPDATE), F1-2 (CHECK constraint + Pydantic validator + service guard), F1-3 (UNIQUE constraint + upsert), F1-4 (real branch DB in tests), F1-5 (SPA + JSON boundary), F1-6 (field-named validation messages), and F1-7 (DATABASE_URL from env) are all satisfied. No concrete improvement warranted."
-}

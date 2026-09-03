@@ -1,8 +1,0 @@
-{
-  "id": "S3-display-batch-serial-separately",
-  "scope": "Update UI to display batch_number and serial_number as separate fields in stock list and forms instead of the combined inventory_code.",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "S1 and S2 complete the schema and API layer. S3 adds the distinct user-facing behavior of displaying batch and serial as separate UI fields. S1 and S2 together do not render the UI change; S3's presentation layer is independently observable by the end user."
-  }
-}

@@ -22,16 +22,11 @@ import type { StoryPipeline, StoryEntry } from "../../consort/pipeline/story-pip
 import { writeReflectVerdict } from "../../consort/smells/reflection.js";
 import { storyAcIds, acsDir, storyTestListJson } from "../../consort/config/consort-paths.js";
 
-const CORPUS = join(
-  __dirname,
-  "..",
-  "..",
-  "examples",
-  "replay",
-  "corpora",
-  "stockflow",
-  "recorded-artifacts",
-);
+// A readable, self-contained copy of the recorded F1 design (architecture + test-list +
+// per-story ACs) lives under tests/fixtures/, so this test OWNS its input and never reaches
+// into the shared corpora (which live in the consort-examples repo, fetched via
+// scripts/fetch-examples.sh). See tests/fixtures/reflection-stockflow/README.md.
+const CORPUS = join(__dirname, "..", "fixtures", "reflection-stockflow");
 const FEATURE = "F1-stock-visibility";
 const RECORDED_F1 = join(CORPUS, "features", FEATURE);
 

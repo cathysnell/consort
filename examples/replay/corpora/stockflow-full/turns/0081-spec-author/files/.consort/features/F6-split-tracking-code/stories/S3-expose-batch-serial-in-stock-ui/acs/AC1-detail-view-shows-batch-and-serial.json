@@ -1,7 +1,0 @@
-{
-  "id": "AC1-detail-view-shows-batch-and-serial",
-  "given": "a stock record whose batch_number and serial_number are populated",
-  "when": "an operator opens the stock detail view for that record",
-  "then": "batch number and serial number are each shown as their own distinct, separately labeled field",
-  "status": "draft"
-}

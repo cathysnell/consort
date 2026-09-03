@@ -1,8 +1,0 @@
-{
-  "id": "AC1-table-lists-stock-by-location",
-  "given": "stock records exist for one or more SKUs at one or more locations",
-  "when": "the warehouse team member opens the home screen",
-  "then": "a table lists one row per stock record showing that record's SKU, location, and quantity",
-  "status": "draft",
-  "layer": "E2E"
-}

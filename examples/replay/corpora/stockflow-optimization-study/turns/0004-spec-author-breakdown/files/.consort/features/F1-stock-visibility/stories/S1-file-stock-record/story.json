@@ -1,4 +1,0 @@
-{
-  "id": "S1-file-stock-record",
-  "scope": "Warehouse operator can file a stock record for a SKU at a location with quantity and tracking code; duplicate (SKU, location) pairs update in place without duplication"
-}

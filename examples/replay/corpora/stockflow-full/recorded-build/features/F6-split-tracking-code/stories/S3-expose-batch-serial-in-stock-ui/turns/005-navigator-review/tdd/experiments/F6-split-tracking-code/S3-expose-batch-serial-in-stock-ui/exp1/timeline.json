@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-12T15:11:42.817Z",
-      "kind": "cut",
-      "branch": "experiment-s3-expose-batch-serial-in-stock-ui-exp1"
-    }
-  ]
-}

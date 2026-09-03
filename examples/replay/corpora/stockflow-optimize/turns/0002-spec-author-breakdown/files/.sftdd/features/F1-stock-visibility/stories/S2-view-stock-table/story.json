@@ -1,8 +1,0 @@
-{
-  "id": "S2-view-stock-table",
-  "story_summary": "View stock in a home screen table by SKU and location",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "S1 persists stock to the database; S2 reads and displays it on the home screen table. S1 could be fully built (data in DB) with no UI to view it. S2 adds the new capability: rendering the table and handling the empty location state."
-  }
-}

@@ -1,3 +1,0 @@
-architect-estimator: winner e-low (14.6s vs baseline 19.0s, saved 23%)
-ux-designer: winner m-opus-e-low (31.6s vs baseline 33.7s, saved 6%)
-architect-reviewer: no winner (no quality-holding candidate beat the baseline)

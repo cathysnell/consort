@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-stock-record",
-  "status": "draft",
-  "given": "no stock record exists for a given (SKU, location) pair",
-  "when": "a warehouse operator files a stock record for that SKU at that location with a quantity and a combined tracking code",
-  "then": "a new stock record is created and can be read back carrying exactly the SKU, location, quantity, and combined tracking code that were filed",
-  "layer": "API",
-  "architectural_notes": "Lives at the JSON API boundary (app/routes/) over the service (app/services/) and the repository (app/repositories/, the only ORM/session holder) writing app/models/stock_record.py. The happy-path create round-trips the persisted record back as JSON (R5/NFR-F1-5; the React SPA reads it, no server-rendered HTML). Persistence realizes PI2 (NOT NULL sku/location/quantity) so a created record always carries its identity and level. Cross-cutting: request validation is owned here at the boundary, never the domain — a filing payload with an invalid or missing field (blank SKU, missing tracking code) is rejected at the boundary with a message that names the offending field (NFR-F1-6), which the boundary behavior suite must exercise by POSTing an invalid payload and asserting the response body names that field. Verified end-to-end against the paired Lakebase branch by the real-branch pytest-bdd suite (NFR-F1-4)."
-}

@@ -384,6 +384,12 @@ else
   yellow "  --no-github-runner: skipping self-hosted-runner suite"
 fi
 
+# Fetch the recorded corpora (they live in the consort-examples repo, not this one)
+# so the live replay / build-support / per-agent tests resolve their inputs. Idempotent.
+blue ""
+blue "==> Fetching recorded corpora (consort-examples)"
+"$REPO_ROOT/scripts/fetch-examples.sh"
+
 # Build dist so the integration tests import the latest compiled substrate.
 blue ""
 blue "==> Building dist/"

@@ -1,6 +1,0 @@
-{
-  "tests": [
-    "tests/step_defs/test_S3_view_sku_detail.py::test_t25__sku_detail_returns_combined_tracking_code_when_present"
-  ],
-  "reason": "F6 splits the combined tracking/inventory code into batch_number + serial_number; S2 AC4 (combined-code-not-returned) makes the combined code absent from the stock response, with batch_number and serial_number returned in its place. The prior-feature test T25 (tests/step_defs/test_S3_view_sku_detail.py) asserts the combined tracking_code IS present in GET /api/stock/{sku}, which this feature intentionally removes. The deterministic inventory_code grep missed it because the prior test names the retired field tracking_code rather than inventory_code."
-}

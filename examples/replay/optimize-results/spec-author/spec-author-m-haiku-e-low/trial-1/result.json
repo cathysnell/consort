@@ -1,8 +1,0 @@
-{
-  "gatePassed": false,
-  "durationMs": 45262,
-  "costUsd": 0,
-  "inputTokens": 79,
-  "cacheReadTokens": 205111,
-  "gateReason": "semantic: score 0.70 < 0.85 vs stockflow features/F1-stock-visibility/feature-spec.json. missing: tdd_mode N=1 (candidate specifies N>=2, a different TDD mode / test-count decision)"
-}

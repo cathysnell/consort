@@ -1,4 +1,0 @@
-spec-author-propose: winner e-low (29.6s vs baseline 49.0s, saved 39%)
-architect-estimator: no winner (no quality-holding candidate beat the baseline)
-spec-author-story: winner e-low (11.5s vs baseline 31.0s, saved 63%)
-architect-reviewer: no winner (no quality-holding candidate beat the baseline)

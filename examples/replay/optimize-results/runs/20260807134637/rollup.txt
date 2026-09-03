@@ -1,1 +1,0 @@
-test-strategist: winner s-low+a-all-low (173.6s vs baseline 585.5s, saved 70%)

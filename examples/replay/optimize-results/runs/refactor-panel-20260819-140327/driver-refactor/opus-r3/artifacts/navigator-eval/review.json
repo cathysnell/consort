@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-19T20:09:31.148Z",
-  "refactor_requested": true,
-  "refactor_notes": "NFR-F1-empty-state-clean-render requires 'never a blank region': HomePage.renderStockSection() returns null for both 'loading' and 'error' states, silently producing a blank region rather than an explicit user-facing message. Refactor: return a visible loading indicator (e.g. <p className=\"empty-state\">Loading...</p>) and an error message (e.g. <p className=\"empty-state\">Failed to load stock.</p>) instead of null for those two branches. No outer-boundary test assertions change."
-}

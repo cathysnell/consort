@@ -1,6 +1,0 @@
-{
-  "reviewed_at": "2026-08-01T23:51:00.197Z",
-  "refactor_requested": true,
-  "refactor_notes": "Client types and UI components still use the old `inventory_code` field instead of the split `batch_number` / `serial_number` fields that are the entire purpose of this story (NFR-F6-9 + the AC). `StockRecord` in client/src/api/stock.ts declares `inventory_code: string`, `SkuDetailEntry` likewise, `FileStockPage` posts `inventory_code`, and `RetrieveStockPage` renders `data-testid='stock-inventory-code'`. The backend correctly returns `batch_number` and `serial_number`; the client API contract and pages must be updated to match: replace `inventory_code` with `batch_number: string | null` and `serial_number: string | null` in all client interfaces, form fields (data-testid='field-batch-number', 'field-serial-number'), and display slots (data-testid='stock-batch-number', 'stock-serial-number'). No outer-boundary test assertions change; the E2E tests already assert on those testids.",
-  "refactored_at": "2026-08-01T23:55:02.374Z"
-}

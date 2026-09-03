@@ -42,3 +42,7 @@ examples/sftdd-scenarios/stockflow-s3-selfheal-verify/
 
 # Per-role live-run telemetry output (survives the workspace; not source)
 .role-telemetry/
+
+# Heavy recorded corpora live in kevin-hartman/consort-examples (fetch via scripts/fetch-examples.sh)
+examples/replay/corpora/
+examples/replay/optimize-results/

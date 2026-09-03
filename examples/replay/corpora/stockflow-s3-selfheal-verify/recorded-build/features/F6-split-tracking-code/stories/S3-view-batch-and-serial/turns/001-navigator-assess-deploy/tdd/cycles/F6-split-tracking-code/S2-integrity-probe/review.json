@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-07-10T05:19:49.070Z",
-  "refactor_requested": false,
-  "refactor_notes": "count_nonconforming lives in StockRepository (persistence), count_nonconforming_rows is a thin service delegation; routes untouched. Matches Infra layer + repository/service split at declared LAYOUT paths. No session access outside repository, no HTTP/UI coupling, NFR-F6-real-branch-tests satisfied via db_session fixture against paired branch. No concrete improvement warranted."
-}

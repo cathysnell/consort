@@ -1,7 +1,0 @@
-{
-  "id": "AC1-detail-lists-sku-locations",
-  "given": "a SKU holds stock at more than one location",
-  "when": "the operator opens the detail view for that SKU",
-  "then": "the view lists one row per location where that SKU holds stock, showing each location and its quantity, and shows only that SKU's records",
-  "status": "draft"
-}

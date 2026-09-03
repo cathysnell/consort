@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "The system is initialized",
-  "when": "A warehouse team member files a stock record with SKU 'ABC-123', location 'SHELF-A', tracking code 'TCX-001', and quantity 100",
-  "then": "The stock record is persisted with those exact values (SKU='ABC-123', location='SHELF-A', tracking code='TCX-001', quantity=100)",
-  "status": "draft"
-}

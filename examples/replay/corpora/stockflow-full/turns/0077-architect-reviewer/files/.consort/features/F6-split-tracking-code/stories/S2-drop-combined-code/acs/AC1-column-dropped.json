@@ -1,9 +1,0 @@
-{
-  "id": "AC1-column-dropped",
-  "given": "a stock table that carries the combined inventory_code alongside the backfilled batch_number and serial_number columns",
-  "when": "the drop migration is applied",
-  "then": "the stock record no longer exposes inventory_code, while batch_number, serial_number, and location remain present and unchanged",
-  "status": "draft",
-  "layer": "Infra",
-  "architectural_notes": "Infra-layer contract on the stock table's schema shape, realized by an Alembic upgrade owned by the migrations module (not the app/repositories runtime path). The migration drops the inventory_code column while leaving the canonical location and the split-out batch_number/serial_number columns intact — the repository is the only layer that ever touches the ORM, so the schema change is verified against the paired Lakebase branch by inspecting column presence, never through boundary or service code. Cross-cutting: schema-migration reversibility (PI5) and additive-safe rollout (nfrs additive preference) are the concerns exercised here; verified by a real-branch DB-integration test, not a mocked schema."
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "a warehouse team member with a SKU, a location, a quantity, and a combined inventory_code",
-  "when": "they file the stock level for that SKU at that location",
-  "then": "a stock record is durably saved capturing that SKU, location, quantity, and combined inventory_code",
-  "status": "passing",
-  "layer": "E2E",
-  "architectural_notes": "Lives at the E2E boundary: the React SPA form posts to the JSON API boundary (app/routes/stock.py), which delegates to the stock service (app/services/stock_service.py) that invokes the repository (app/repositories/stock_repository.py) to persist a StockRecord (app/models/stock_record.py) against the paired Lakebase branch. Durability (the Then clause) is only observable across UI + service + DB, so it is verified as a full-stack integration flow, not an isolated unit. Cross-cutting field validation (naming the offending field) is owned at the API boundary; persistence is owned solely by the repository (the only layer touching the ORM/session)."
-}

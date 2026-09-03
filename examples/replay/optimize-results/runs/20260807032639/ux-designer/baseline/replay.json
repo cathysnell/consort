@@ -1,9 +1,0 @@
-{
-  "role": "ux-designer-chain",
-  "candidateId": "baseline",
-  "baseModel": "sonnet",
-  "levers": {},
-  "seedCorpus": "tests/integration/intake (recorded intake replayed into the chain)",
-  "gatePassed": true,
-  "qualityPassed": true
-}

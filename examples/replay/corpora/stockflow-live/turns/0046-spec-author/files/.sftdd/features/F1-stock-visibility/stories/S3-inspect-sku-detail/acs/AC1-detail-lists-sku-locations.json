@@ -1,8 +1,0 @@
-{
-  "id": "AC1-detail-lists-sku-locations",
-  "given": "A SKU has stock filed at more than one location",
-  "when": "The team member opens that SKU's detail view",
-  "then": "Every location holding that SKU is listed, each with its per-location quantity",
-  "status": "draft",
-  "layer": "E2E"
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-stock",
-  "given": "no stock record yet exists for a given SKU at a given physical location",
-  "when": "a warehouse operator files that SKU at that location with a quantity",
-  "then": "a stock record for that (SKU, location) pair exists, and retrieving it returns the SKU, location, and quantity exactly as filed",
-  "status": "draft",
-  "layer": "API",
-  "architectural_notes": "Lives at the API boundary: a file (POST/PUT) then a read (GET) against the JSON stock endpoint, verified through the pytest-bdd suite hitting the paired Lakebase branch. The boundary (app/routes) validates the payload and delegates to app/services, which calls app/repositories to persist and read back the Stock row (app/models/stock.py). Cross-cutting: request validation owned at the boundary; the (sku,location) uniqueness invariant (PI1) is enforced in the DB, not the domain. No business logic in the boundary; the repository is the only layer touching the session."
-}

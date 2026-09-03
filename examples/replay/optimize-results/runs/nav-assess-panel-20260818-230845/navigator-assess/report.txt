@@ -1,9 +1,0 @@
-=== per-role sweep: navigator ===
-baseline: 0.0s
-gate-passers (fastest first):
-  haiku: 71.6s | $0.17 | -0% wall , {"model":"haiku"}  [driver-fixable regression (viable)]
-  haiku-e-low: 116.6s | $0.22 | -0% wall , {"model":"haiku","effort":"low"}  [driver-fixable regression (viable)]
-  opus: 143.8s | $0.84 | -0% wall , {"model":"opus"}  [driver-fixable regression (viable)]
-  sonnet-e-low: 230.6s | $0.87 | -0% wall , {"model":"sonnet","effort":"low"}  [driver-fixable regression (viable)]
-  opus-e-low: 253.1s | $1.54 | -0% wall , {"model":"opus","effort":"low"}  [driver-fixable regression (viable)]
-WINNER: none , no candidate beat the baseline (the role's default levers stand).

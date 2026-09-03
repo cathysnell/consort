@@ -1,9 +1,0 @@
-=== per-role sweep: navigator ===
-baseline: 0.0s
-gate-passers (fastest first):
-  sonnet-e-low: 129.4s | $0.54 | -0% wall , {"model":"sonnet","effort":"low"}
-  opus: 188.0s | $1.02 | -0% wall , {"model":"opus"}
-  haiku-e-low: 202.5s | $0.30 | -0% wall , {"model":"haiku","effort":"low"}
-  haiku: 227.3s | $0.41 | -0% wall , {"model":"haiku"}
-  sonnet: 687.2s | $2.08 | -0% wall , {"model":"sonnet"}
-WINNER: none , no candidate beat the baseline (the role's default levers stand).

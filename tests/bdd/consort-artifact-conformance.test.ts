@@ -335,17 +335,8 @@ describe("checkArtifactConformance: JSON artifacts (schema-validated)", () => {
     expect(checkArtifactConformance("architecture.json", empty).ok).toBe(false);
   });
 
-  it("the canonical stockflow reference architecture.json conforms to its own schema", () => {
-    // The regression this locks: the reference is the semantic-gate target + what
-    // downstream roles read; it MUST validate against the schema the gate enforces.
-    const ref = readFileSync(
-      join(__dirname, "../../examples/replay/corpora/stockflow/recorded-artifacts/features/F1-stock-visibility/architecture.json"),
-      "utf8",
-    );
-    const r = checkArtifactConformance("architecture.json", ref);
-    expect(r.ok ? "" : r.violations.join("; ")).toBe("");
-    expect(r.ok).toBe(true);
-  });
+  // (The "canonical stockflow reference architecture.json conforms to its own schema" guard
+  //  moved to consort-examples with the corpus it validates.)
 
   it("accepts architecture.json with service_backed + layers; rejects a bad layer role", () => {
     const layered = JSON.stringify({

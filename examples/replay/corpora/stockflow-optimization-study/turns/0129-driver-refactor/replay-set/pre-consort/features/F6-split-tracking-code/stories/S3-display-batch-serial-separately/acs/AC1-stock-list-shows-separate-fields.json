@@ -1,9 +1,0 @@
-{
-  "id": "AC1-stock-list-shows-separate-fields",
-  "status": "passing",
-  "given": "a warehouse operator viewing the stock list where a row carries a batch_number and a serial_number value",
-  "when": "the stock list renders",
-  "then": "batch_number and serial_number appear as two distinct, separately labeled fields (not a single combined code), each showing that row's respective value",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercises the React SPA list view rendering the two separate fields from the JSON API (boundary app/routes -> service app/services -> repository app/repositories -> models app/models), reading persisted stock_records batch_number/serial_number end to end. The list-column presentation lives entirely in the client/ presentation layer over the JSON boundary (NFR-F6-5); the boundary returns data, never HTML, and no business logic lives in the client. Cross-cutting: validation stays at the API boundary and read-only rendering touches no transaction; owner module is the SPA stock-list component backed by the stock-api boundary."
-}

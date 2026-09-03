@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-19T20:04:00.060Z",
-  "refactor_requested": false,
-  "refactor_notes": "Layer boundaries are clean: routes validate+delegate, service enforces the non-negative invariant, repository is the sole ORM touchpoint. JSON boundary satisfied (list[StockOut]). HomePage renders the explicit empty-state message and the table via design-token class names (page, table, empty-state, table__num); both are wired into App.tsx Routes and the navbar. NFR-F1-real-branch-integration-tests met (pytest-bdd against real DB). No layering violations, no import-time build coupling, no duplicate logic."
-}

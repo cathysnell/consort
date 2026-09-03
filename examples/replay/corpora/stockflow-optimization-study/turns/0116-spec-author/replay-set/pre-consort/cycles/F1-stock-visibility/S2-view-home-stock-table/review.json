@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-20T00:56:29.385Z",
-  "refactor_requested": false,
-  "refactor_notes": "Layer boundaries respected (route→service→repository, no DB session in boundary or service). main.py guards the StaticFiles mount with os.path.isdir (no import-time build coupling). StockTable renders quantity right-aligned via stock-table__cell--quantity and shows an explicit empty-state; HomePage is routed in App.tsx with a nav affordance. All required NFRs covered (migration reversibility, no-negative-stock guard at service layer, real-branch integration, JSON API, clean render)."
-}

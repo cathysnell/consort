@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-12T11:49:03.476Z",
-  "refactor_requested": false,
-  "refactor_notes": "Migration correctly drops inventory_code and its trigger, downgrade restores column + trigger, all data-survival assertions are delta-scoped with uuid-suffixed keys (NFR-F6-data-durability satisfied). Layer boundary respected: persistence change lives entirely in the Alembic migration (Infra), no route/service touched. NFR-F6-unique-identity-preserved: batch_number and serial_number retained unchanged; location not re-derived. NFR-F6-real-branch-integration-tests: pytest-bdd scenarios run against the real branch DB. No naming, layering, or NFR gap found."
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-detail-lists-locations",
-  "status": "passing",
-  "given": "a SKU holds stock at more than one location",
-  "when": "a warehouse operator opens the detail view for that SKU",
-  "then": "one row is shown per location where that SKU holds stock, each carrying that location and its quantity for the SKU",
-  "layer": "E2E",
-  "architectural_notes": "E2E path over the JSON boundary (R5/NFR-F1-5): app/routes/ (boundary) -> app/services/ -> app/repositories/ reading app/models/ returns the per-location stock rows for the SKU; the React SPA (client/) renders one row per location with location + quantity. No presentation logic in the boundary. Coverage MUST assert row CONTENT, not merely row count or the data-testid seam: (1) the R4 branch integration test (NFR-F1-4) asserts the boundary returns exactly one record per location for a SKU stocked at multiple locations, each record carrying its location and its quantity value; (2) a REQUIRED SPA client component test asserts each rendered location row contains the location NAME text AND the quantity NUMBER for that location — an empty data-testid='location-row' with no visible location/quantity text must FAIL. A test checking only row count or seam presence is insufficient for AC1's 'then'."
-}

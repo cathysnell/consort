@@ -1,9 +1,0 @@
-{
-  "id": "AC1-backfill-wellformed-code",
-  "status": "draft",
-  "given": "a stock record whose inventory_code is a well-formed location-batch-serial code such as \"A12-B7-S001\"",
-  "when": "the up migration runs",
-  "then": "that record exposes batch_number and serial_number as distinct, separately addressable fields holding the second and third hyphen-delimited segments (\"B7\" and \"S001\") respectively",
-  "layer": "Infra",
-  "architectural_notes": "Infra: a data-store schema contract realized by an Alembic up migration (migrations/versions/) over the stock table, not application code. The migration adds nullable batch_number/serial_number columns and backfills them by parsing the hyphen-delimited inventory_code; the transform lives in the migration script (a one-time data operation), never in the boundary or ORM models. Verified by a real-branch integration test (R4) that applies the migration and asserts the extracted second/third segments, keeping the parsing rule out of the runtime service/repository layers."
-}

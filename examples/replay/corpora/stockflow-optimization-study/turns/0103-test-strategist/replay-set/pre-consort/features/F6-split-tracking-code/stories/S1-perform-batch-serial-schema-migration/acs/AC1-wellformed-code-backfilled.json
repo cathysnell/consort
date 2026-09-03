@@ -1,9 +1,0 @@
-{
-  "id": "AC1-wellformed-code-backfilled",
-  "status": "passing",
-  "given": "an existing stock row whose inventory_code is a well-formed hyphen-delimited code carrying a distinct batch segment and a distinct serial segment",
-  "when": "the up migration runs its backfill",
-  "then": "that row's batch_number holds the extracted batch segment and its serial_number holds the extracted serial segment, exactly as parsed from the code",
-  "layer": "Infra",
-  "architectural_notes": "Infra contract on the Alembic migration backfill transform, not a runtime layer (the parsing rule is confined to the migration so no runtime layer inherits legacy-code-format logic). The new batch_number/serial_number columns are NULLABLE per PI2-batch-serial-nullable, which is what lets the backfill write extracted values for conforming codes and NULL for the rest. Verified by an R4/NFR-F6-4 real-branch integration test that seeds a well-formed code, runs the up migration, and asserts the two extracted segments."
-}

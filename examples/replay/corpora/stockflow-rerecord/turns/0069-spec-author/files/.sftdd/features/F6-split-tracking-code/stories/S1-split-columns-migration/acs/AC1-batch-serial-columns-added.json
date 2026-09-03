@@ -1,8 +1,0 @@
-{
-  "id": "AC1-batch-serial-columns-added",
-  "given": "a stock record whose tracking identity was stored only in the combined inventory_code",
-  "when": "the migration has run",
-  "then": "the stock record exposes batch_number and serial_number as its own separately addressable columns",
-  "status": "draft",
-  "layer": "Infra"
-}

@@ -1,8 +1,0 @@
-{
-  "id": "AC1-combined-column-restored",
-  "given": "a stock record on the split schema with batch_number and serial_number columns",
-  "when": "the migration's down path runs",
-  "then": "the stock record again exposes a combined inventory_code column",
-  "status": "draft",
-  "layer": "Infra"
-}

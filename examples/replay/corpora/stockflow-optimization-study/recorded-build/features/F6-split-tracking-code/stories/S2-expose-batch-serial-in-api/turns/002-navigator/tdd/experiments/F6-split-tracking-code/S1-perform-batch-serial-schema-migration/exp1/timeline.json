@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "ts": "2026-08-20T02:07:30.603Z",
-      "kind": "cut",
-      "branch": "experiment-s1-perform-batch-serial-schema-migration-exp1"
-    }
-  ]
-}

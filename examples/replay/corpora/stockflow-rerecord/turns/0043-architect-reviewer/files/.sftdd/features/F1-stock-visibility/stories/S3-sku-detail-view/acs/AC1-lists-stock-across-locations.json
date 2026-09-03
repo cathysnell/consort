@@ -1,9 +1,0 @@
-{
-  "id": "AC1-lists-stock-across-locations",
-  "given": "a SKU that holds stock at more than one location",
-  "when": "the warehouse team member opens that SKU's detail view",
-  "then": "the view lists one row per location where that SKU holds stock, each showing the location and quantity",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: the SKU-detail read path, React SPA (client/) -> boundary (app/routes/, renders_via react, JSON only) -> service (app/services/) -> repository (app/repositories/) query of stock_records filtered by sku. No new persistence; reads the same table S1 writes, PI1/PI2 guarantee one well-formed row per (sku, location). Cross-cutting: the group-by-location shaping (one row per location for a sku) lives in the service, the ORM query is the repository's sole touch, the component only renders. Verified real-branch (NFR-F1-4): seed a sku across multiple locations, assert one row per location with location + quantity."
-}

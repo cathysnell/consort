@@ -1,9 +1,0 @@
-{
-  "id": "AC1-columns-exist",
-  "given": "a stock table whose tracking data is held in the combined inventory_code",
-  "when": "the add-and-backfill migration is applied",
-  "then": "the stock record exposes batch_number and serial_number as distinct, separately addressable fields, while location and the existing inventory_code remain present and unchanged",
-  "status": "draft",
-  "layer": "Infra",
-  "architectural_notes": "Infra: this is a contract on the data-store shape, verified by a parent-aware schema diff of the stock table on the paired Lakebase branch. Realized by an additive Alembic migration (infrastructure) that adds two nullable columns to app/models/stock.py while leaving location and inventory_code untouched; the repository (app/repositories) remains the only layer touching the ORM/session, and the boundary/service are unaffected by this AC. Cross-cutting concern: schema evolution / data durability (R1), owned by the migration, never the domain."
-}

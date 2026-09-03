@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
-  "fixAttempts": 1,
-  "diagnosis": "ALL client test files in tests/pages/*.test.tsx were not collected at verify time because the vite.config.ts test.include was limited to src/**/*.test.{ts,tsx} only — the tests/pages/ tree was silently excluded. The Driver's new StockView.test.tsx (placed at tests/pages/ per the architecture routing) and all prior-feature client tests (RetrieveStock T17, FileStock T16, StockByLocation T20/T21/T23, SkuDetail T26/T28/T30/T32, StatusBadge, useHealth) all appeared failed because they were never run, not because the code was broken. The existing regression-assessment.json mis-diagnosed a DB migration state issue — that was a backend concern unrelated to the client-suite failure captured in green-failure.json. Fix applied in fixAttempts:1: vite.config.ts test.include broadened to ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'] with tests/e2e/** excluded. All 44 client tests now pass. No tests are superseded: RetrieveStockPage still legitimately renders stock-inventory-code, SkuDetailPage still renders sku-detail-code-* per location, and FileStockPage still takes inventory_code input — S3 removes the combined code only from the StockViewPage, not from every page in the app."
-}

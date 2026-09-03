@@ -1,6 +1,0 @@
-{
-  "reviewed_at": "2026-08-12T15:49:18.288Z",
-  "refactor_requested": true,
-  "refactor_notes": "Three concrete issues: (1) API boundary gap — StockDetailPage fetches /api/stock/detail/${id} (a by-numeric-id route) but no such route exists in app/routes/stock.py; the path collides with /api/stock/{sku}/{location} returning a 404 for sku='detail', so the detail card never renders — add a GET /api/stock/detail/{id:int} route to StockOut. (2) NFR-F6-clean-render-optional-detail requires null batch/serial to display as 'not tracked'; both pages render an em-dash '—' instead, which does not satisfy the stated NFR text. (3) Design-token misuse — .empty-state is a block-level flex section class (display:flex, column, large padding) but is applied as an inline <span> inside <td> and card <div>; use a dedicated inline null-indicator class (e.g. .text-muted or a var(--color-navy-500) span) rather than the section-scoped empty-state component class.",
-  "refactored_at": "2026-08-12T15:58:11.562Z"
-}

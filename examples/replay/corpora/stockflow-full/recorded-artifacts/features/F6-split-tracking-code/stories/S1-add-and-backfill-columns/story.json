@@ -1,6 +1,0 @@
-{
-  "id": "S1-add-and-backfill-columns",
-  "asA": "warehouse data engineer",
-  "iWantTo": "the stock table to include batch_number and serial_number as separate columns",
-  "soThat": "batch and serial can be queried and validated independently."
-}

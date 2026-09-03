@@ -1,4 +1,0 @@
-{
-  "diagnosis": "T16 (FileStock.test.tsx) and T17 (RetrieveStock.test.tsx) fail because the Driver implemented the backend (routes, service, repository, migration) but did not create the client-side React pages: src/pages/FileStockPage.tsx and src/pages/RetrieveStockPage.tsx are absent, and src/api/stock.ts (fetchStockRecord) is missing. AC1 does not change or drop any prior behavior; the client pages simply were not implemented.",
-  "fixDirective": "Create client/src/pages/FileStockPage.tsx exposing data-testid seams field-sku, field-location, field-quantity, field-inventory-code, btn-save; create client/src/pages/RetrieveStockPage.tsx exposing data-testid seams stock-quantity and stock-inventory-code (reading from a fetchStockRecord call); and create client/src/api/stock.ts exporting fetchStockRecord."
-}

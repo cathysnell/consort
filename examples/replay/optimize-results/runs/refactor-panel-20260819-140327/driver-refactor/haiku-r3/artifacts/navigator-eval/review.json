@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-19T19:25:40.315Z",
-  "refactor_requested": true,
-  "refactor_notes": "HomePage.renderStockSection returns null for both 'loading' and 'error' states, leaving a blank region — violates NFR-F1-empty-state-clean-render ('never a blank region'). The Driver should render an explicit loading indicator (e.g. <p data-testid=\"stock-loading\">Loading…</p>) and an explicit error message (e.g. <p data-testid=\"stock-error\">…</p>) for those two states. All layer boundaries, naming, JSON boundary, non-negative CHECK constraint, and client routing/token usage are otherwise correct."
-}

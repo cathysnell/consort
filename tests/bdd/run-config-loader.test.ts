@@ -79,22 +79,8 @@ describe("loadRunConfig: resolves markers + coerces types", () => {
     expect(cfg.start).toEqual({ kind: "invoke-role", role: "product-owner", mode: "author-requests" });
   });
 
-  it("loads the shipped stockflow-demo.run.json with its defaults (project name timestamped, collision-free)", () => {
-    // env unset => the shipped defaults resolve (host = fevm-... , owner = kevin-hartman).
-    setEnv("DATABRICKS_HOST", undefined);
-    setEnv("STOCKFLOW_DEMO_GH_OWNER", undefined);
-    setEnv("STOCKFLOW_DEMO_PROJECT", undefined);
-    const shipped = join(process.cwd(), "examples/replay/corpora/stockflow/stockflow-demo.run.json");
-    const cfg = loadRunConfig(shipped);
-    expect(cfg.id).toBe("stockflow-demo");
-    const c = cfg.setup!.config as Record<string, unknown>;
-    expect(String(c.databricksHost)).toContain("fevm-serverless-stable-ecparr");
-    expect(c.githubOwner).toBe("kevin-hartman");
-    expect(c.tiers).toBe(1);
-    expect(c.uiTrack).toBe(true);
-    // {{TS}} expanded to a compact timestamp so the default name never collides.
-    expect(String(c.projectName)).toMatch(/^stockflow-demo-\d{8}-\d{6}$/);
-  });
+  // (The "loads the shipped stockflow-demo.run.json" guard moved to consort-examples
+  //  with the corpus run.json it loads.)
 
   it("expands the {{TS}} token to a compact timestamp (collision-free default names)", () => {
     setEnv("DEMO_NAME", undefined);

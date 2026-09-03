@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
-  "diagnosis": "T28 (AC2 quantity alignment) fails because the stock table with quantity cells (data-testid stock-quantity-{sku}, class stock-table__quantity) was never rendered in HomePage. The AC3 Driver pass added the empty-state element but did not add the populated-table branch that renders stock rows with the stock-table__quantity CSS class on quantity cells. The DOM shows only the scaffold health-check content with no stock table at all.",
-  "fixDirective": "In client/src/pages/HomePage.tsx, add the useStockList hook (or equivalent) and render the stock table conditionally: when stock is empty show the stock-empty-state element (already done by AC3), and when stock is non-empty render a table with data-testid=stock-table, one row per stock with data-testid=stock-row-{sku}, and quantity cells with data-testid=stock-quantity-{sku} and className including stock-table__quantity."
-}

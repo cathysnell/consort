@@ -1,1 +1,0 @@
-Refactor complete. All 18 tests pass (18 passed, 47 warnings in 87.65s), including the S2 story's 2 tests. The design-token CSS classes are now properly consumed: `.table` on the `<table>`, `.table__num` on quantity cells (alongside existing `.stock-table__quantity`), and `.empty-state` on the empty-state paragraph.

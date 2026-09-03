@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-record-shows-confirmation",
-  "given": "a warehouse team member is on the stock filing form, which offers inputs for SKU, location, quantity, and the combined tracking code (inventory_code)",
-  "when": "they enter a SKU, a location, a quantity, and a tracking code for a (sku, location) pair that has no existing record, and save",
-  "then": "the record is filed and they land on a confirmation that shows the saved SKU, location, quantity, and tracking code",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: exercises the full write path from the React SPA filing form (client/) through the JSON boundary (app/routes/) -> service (create-or-update on the (sku, location) key) -> repository (the only ORM layer) -> stock_records, then the confirmation view echoes the persisted SKU/location/quantity/inventory_code. Cross-cutting: input validation is owned at the boundary (field-named messages, R5/preference); the confirmation is rendered client-side by the SPA off the boundary's JSON response, never server-rendered HTML. Realizes the inward-only dependency direction and the no-full-page-reload SPA contract (R5); verified as a real integration test against the paired Lakebase branch."
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-batch-serial-columns-added",
-  "given": "a stock record whose tracking identity was stored only in the combined inventory_code",
-  "when": "the migration has run",
-  "then": "the stock record exposes batch_number and serial_number as its own separately addressable columns",
-  "status": "draft",
-  "layer": "Infra",
-  "architectural_notes": "Infra layer: a schema contract on the stock_records table realized by an Alembic up-migration that adds the nullable batch_number and serial_number columns. Owner module: the Alembic migration (versions/) plus the app/models/ stock aggregate that gains the two fields; the repository (app/repositories) is the only layer that later reads them via the ORM. Cross-cutting concern: schema evolution / data-integrity, owned by the migration + repository, never the boundary. Verified by a real-branch integration test (R4) that applies the migration and asserts both columns are separately addressable."
-}

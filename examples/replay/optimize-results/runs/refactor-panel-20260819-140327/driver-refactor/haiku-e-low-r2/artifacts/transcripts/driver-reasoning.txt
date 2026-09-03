@@ -1,1 +1,0 @@
-Refactor complete. Applied design-vocabulary CSS classes to HomePage.tsx: `className="table"` on `<table>`, `className="empty-state"` on empty-state `<p>`, and `className="table__num"` on quantity cells. All 8 client tests pass.

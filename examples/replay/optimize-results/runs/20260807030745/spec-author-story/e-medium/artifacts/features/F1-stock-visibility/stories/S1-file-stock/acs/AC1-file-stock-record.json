@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "no stock record exists yet for SKU \"WIDGET-1\" at location \"A-01\"",
-  "when": "a warehouse team member files a stock record for SKU \"WIDGET-1\" at location \"A-01\" with tracking code \"A01-B7-000123\" and quantity 12",
-  "then": "the record is stored durably, and retrieving stock for SKU \"WIDGET-1\" at location \"A-01\" returns quantity 12 with the tracking code \"A01-B7-000123\"",
-  "status": "draft"
-}

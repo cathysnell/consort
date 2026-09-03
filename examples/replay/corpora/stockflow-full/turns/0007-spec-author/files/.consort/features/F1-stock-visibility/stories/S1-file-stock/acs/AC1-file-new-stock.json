@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-new-stock",
-  "given": "no stock record yet exists for a given SKU at a given physical location",
-  "when": "a warehouse operator files that SKU at that location with a quantity",
-  "then": "a stock record for that (SKU, location) pair exists, and retrieving it returns the SKU, location, and quantity exactly as filed",
-  "status": "draft"
-}

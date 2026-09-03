@@ -15,7 +15,6 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const REPLAY_DIR = path.join(REPO_ROOT, "examples", "replay");
-const CORPORA_DIR = path.join(REPLAY_DIR, "corpora");
 
 describe("replay layout: one machinery dir + corpora/ subdir (anti-drift)", () => {
   it("the machinery dir examples/replay/ exists with the shared engine + generic launchers", () => {
@@ -25,22 +24,8 @@ describe("replay layout: one machinery dir + corpora/ subdir (anti-drift)", () =
     }
   });
 
-  it("corpora live under examples/replay/corpora/<name>/, NOT beside the machinery", () => {
-    expect(fs.existsSync(CORPORA_DIR), "examples/replay/corpora/ present").toBe(true);
-    // bug-tracker is the engine's DEFAULT corpus (the ex-tdd-workflow-smoke corpus,
-    // now just another corpora/ entry). Its recorded-artifacts/ is what run-smoke.sh
-    // resolves by default, so its presence here is load-bearing.
-    expect(
-      fs.existsSync(path.join(CORPORA_DIR, "bug-tracker", "recorded-artifacts")),
-      "corpora/bug-tracker/recorded-artifacts/ is the engine's default corpus",
-    ).toBe(true);
-    // At least one finalized scenario (a scenario.json) is nested under corpora/.
-    const scenarioDirs = fs
-      .readdirSync(CORPORA_DIR, { withFileTypes: true })
-      .filter((e) => e.isDirectory())
-      .filter((e) => fs.existsSync(path.join(CORPORA_DIR, e.name, "scenario.json")));
-    expect(scenarioDirs.length, "at least one finalized scenario under corpora/").toBeGreaterThan(0);
-  });
+  // (The "corpora live under examples/replay/corpora/<name>/" nesting guard moved to
+  //  consort-examples with the corpora; here corpora may be absent, fetched on demand.)
 
   it("the retired split trees are GONE (no examples/replay-scenarios, no examples/tdd-workflow-smoke)", () => {
     expect(

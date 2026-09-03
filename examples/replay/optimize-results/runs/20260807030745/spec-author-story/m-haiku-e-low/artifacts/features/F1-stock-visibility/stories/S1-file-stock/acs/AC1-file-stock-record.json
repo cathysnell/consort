@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "a warehouse team member is on the stock entry interface and no existing stock record exists for SKU ABC-123 at warehouse location Shelf-A",
-  "when": "the operator enters SKU ABC-123, location Shelf-A, quantity 50 units, and combined tracking code ABC-123-BAT-SER-001, then submits the filing form",
-  "then": "the system creates a stock record with SKU=ABC-123, location=Shelf-A, quantity=50, tracking_code=ABC-123-BAT-SER-001, persists it durably, and the operator receives a success confirmation",
-  "status": "draft"
-}

@@ -1,7 +1,0 @@
-{
-  "id": "AC1-column-dropped",
-  "given": "a stock table that carries the combined inventory_code alongside the backfilled batch_number and serial_number columns",
-  "when": "the drop migration is applied",
-  "then": "the stock record no longer exposes inventory_code, while batch_number, serial_number, and location remain present and unchanged",
-  "status": "draft"
-}

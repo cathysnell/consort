@@ -1,6 +1,0 @@
-{
-  "id": "S1-record-stock",
-  "asA": "warehouse operator",
-  "iWantTo": "file a SKU's stock level at a physical location through a form, capturing its quantity and combined inventory_code",
-  "soThat": "what is on the shelf is recorded once per (sku, location) with no duplicate and no error page"
-}

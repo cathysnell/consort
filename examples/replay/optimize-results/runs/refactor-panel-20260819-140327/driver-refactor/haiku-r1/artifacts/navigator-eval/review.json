@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-19T19:24:38.667Z",
-  "refactor_requested": true,
-  "refactor_notes": "NFR-F1-empty-state-clean-render violation: HomePage.tsx renderStockSection() returns null for both 'loading' and 'error' states, producing a blank region, which the NFR explicitly forbids ('never a blank region'). Refactor: replace the two null-returns with explicit feedback nodes, e.g. a <p data-testid=\"stock-loading\"> Loading… </p> for loading and a <p data-testid=\"stock-error\" className=\"empty-state\"> {message} </p> for error, consistent with the design vocabulary. No layer-boundary violations found (route→service→repository chain is clean; service has no ORM imports; UI consumes design-token classes and is routed in App.tsx)."
-}

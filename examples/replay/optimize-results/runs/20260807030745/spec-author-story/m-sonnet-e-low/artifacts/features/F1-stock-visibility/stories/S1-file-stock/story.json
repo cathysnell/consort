@@ -1,6 +1,0 @@
-{
-  "id": "S1-file-stock",
-  "asA": "warehouse team member",
-  "iWantTo": "file the stock level of one SKU at one location with its combined tracking code and retrieve it later",
-  "soThat": "we have a durable record of what is on a shelf that we can read back"
-}

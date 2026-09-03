@@ -66,6 +66,11 @@ green()  { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 blue()   { printf '\033[34m%s\033[0m\n' "$*"; }
 
+# The recorded corpora these live tests replay live in the consort-examples repo, not here.
+# Fetch them into examples/replay/ (idempotent) before the replay + vitest paths read them.
+blue "==> Fetching recorded corpora (consort-examples)"
+"$SCRIPT_DIR/fetch-examples.sh"
+
 missing=0
 require_env() {
   local name="$1"

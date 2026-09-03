@@ -1,4 +1,0 @@
-{
-  "id": "S1-perform-batch-serial-schema-migration",
-  "scope": "Add batch_number and serial_number columns to stock table, backfill from inventory_code with NULL handling for malformed codes, verify integrity via migration probe, drop inventory_code column, ensure reversibility."
-}

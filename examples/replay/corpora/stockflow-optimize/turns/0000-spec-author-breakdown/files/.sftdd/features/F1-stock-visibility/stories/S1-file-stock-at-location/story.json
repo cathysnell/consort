@@ -1,7 +1,0 @@
-{
-  "id": "S1-file-stock-at-location",
-  "asA": "warehouse operator",
-  "iWantTo": "record the stock level of a SKU at a physical location with its tracking code",
-  "soThat": "the system knows what is on the shelf and can retrieve it later",
-  "status": "draft"
-}

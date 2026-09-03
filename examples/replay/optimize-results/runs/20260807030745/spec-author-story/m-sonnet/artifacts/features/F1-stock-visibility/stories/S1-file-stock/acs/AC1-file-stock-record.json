@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "no stock record exists for SKU 'SKU-001' at location 'A-01-01'",
-  "when": "a warehouse team member files a stock record with SKU 'SKU-001', location 'A-01-01', quantity 42, and tracking code 'A-01-01-LOT2-SN999'",
-  "then": "the record is persisted and a subsequent retrieval by SKU 'SKU-001' and location 'A-01-01' returns exactly one record with quantity 42 and tracking code 'A-01-01-LOT2-SN999'",
-  "status": "draft"
-}

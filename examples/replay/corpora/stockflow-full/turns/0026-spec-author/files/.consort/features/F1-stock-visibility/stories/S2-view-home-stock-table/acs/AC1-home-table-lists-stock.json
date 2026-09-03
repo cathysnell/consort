@@ -1,7 +1,0 @@
-{
-  "id": "AC1-home-table-lists-stock",
-  "given": "stock records have been filed for one or more (SKU, location) pairs",
-  "when": "the operator opens the home screen",
-  "then": "a table lists one row per stock record showing the SKU, the location, and the quantity",
-  "status": "draft"
-}

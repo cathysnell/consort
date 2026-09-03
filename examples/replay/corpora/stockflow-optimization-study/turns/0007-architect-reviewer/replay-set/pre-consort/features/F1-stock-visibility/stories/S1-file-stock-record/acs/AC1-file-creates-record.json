@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-creates-record",
-  "given": "no stock record exists for a given SKU at a given physical location",
-  "when": "the operator files a stock level for that SKU at that location with a quantity",
-  "then": "a stock record for that (SKU, location) pair exists holding the filed SKU, location, and quantity",
-  "status": "draft"
-}

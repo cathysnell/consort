@@ -1,1 +1,0 @@
-All 8 tests green. Refactor complete: HomePage now consumes `.table`, `.table__num`, and `.empty-state` design classes.

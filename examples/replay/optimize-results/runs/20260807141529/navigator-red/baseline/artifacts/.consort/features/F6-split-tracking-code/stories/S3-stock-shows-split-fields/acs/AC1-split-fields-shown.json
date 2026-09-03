@@ -1,9 +1,0 @@
-{
-  "id": "AC1-split-fields-shown",
-  "given": "a stock record is open on the stock view",
-  "when": "the warehouse team member looks at where the combined tracking code used to be shown",
-  "then": "batch and serial appear as two distinct, separately labelled fields",
-  "status": "passing",
-  "layer": "E2E",
-  "architectural_notes": "E2E: UI rendering assertion exercised end-to-end through the React SPA (client/) reading JSON from the boundary (app/routes/, renders_via react) backed by app/services and app/repositories over the split stock_records columns. Owner module is the SPA stock-view component/page; the boundary returns batch_number and serial_number as separate JSON fields (no combined code), and the component renders each as its own labelled field. No cross-cutting concern beyond presentation binding; business logic stays in the service layer, the boundary never touches the DB session."
-}

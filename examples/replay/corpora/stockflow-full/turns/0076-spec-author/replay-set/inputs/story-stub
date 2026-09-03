@@ -1,7 +1,0 @@
-{
-  "id": "S2-drop-combined-code",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "Dropping the column is independently observable and testable from backfilling. The code can add and backfill batch/serial while inventory_code remains present (confirmed via schema diff), so the drop is a distinct outcome that can be reversed independently via the down-migration."
-  }
-}

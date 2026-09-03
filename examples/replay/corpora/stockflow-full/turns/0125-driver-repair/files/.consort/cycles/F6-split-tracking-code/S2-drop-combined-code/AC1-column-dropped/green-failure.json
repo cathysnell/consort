@@ -1,7 +1,0 @@
-{
-  "assessed": true,
-  "summary": "app not reachable at http://localhost:8000/ after 60s; cannot run GREEN verify",
-  "fixAttempts": 1,
-  "diagnosis": "App startup failure, not a test assertion error: uvicorn cannot be reached at http://localhost:8000/ within 60s. All production code is clean (no inventory_code in models.py, routes, services, or repositories). Migration chain is correct (create_stock_table seeds inventory_code; 20260811000002 drops it after tearing down the trigger). Most likely cause: a stale uvicorn process from the prior verify attempt is still holding port 8000, OR the alembic upgrade head step is hanging because a prior migration test left the DB at an intermediate revision and the trigger teardown in 20260811000002 is slow.",
-  "fixDirective": "Kill any process on port 8000 (lsof -ti:8000 | xargs kill -9), run alembic upgrade head manually to confirm it completes cleanly, then re-run the verify."
-}

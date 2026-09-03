@@ -1,9 +1,0 @@
-{
-  "id": "AC1-response-includes-batch-number",
-  "status": "draft",
-  "given": "a stock record whose batch_number holds a value",
-  "when": "an API client fetches that stock record",
-  "then": "the response contains a distinct batch_number field carrying that record's batch value",
-  "layer": "API",
-  "architectural_notes": "API/boundary AC exercised through the JSON stock endpoint (app/routes/, renders_via react — data not HTML per R5/NFR-F6-5). The batch_number originates on the domain model (app/models/) loaded via app/repositories/ and passed through app/services/; the boundary's response serializer maps that model field to a distinct batch_number key. No business logic in the boundary — it only shapes the service result. Cross-cutting concern touched: response contract/serialization, owned by the API layer; verified by an R4 real-branch integration test that seeds a batch-bearing row and asserts the returned field."
-}

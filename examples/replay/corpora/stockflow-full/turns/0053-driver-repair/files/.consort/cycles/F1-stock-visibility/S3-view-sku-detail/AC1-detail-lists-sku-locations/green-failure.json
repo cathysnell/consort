@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
-  "diagnosis": "T41 and T42 are AC3 (par-level not-tracked) tests written RED for a future AC. The Driver built AC1 location rows and added the sku-detail-par-level-section container (T40 passes), but did not implement the not-tracked child: when par_level is null the section must render a child element with data-testid='sku-detail-par-level-not-tracked' and text content matching /not tracked/i. No par_level is null check and no such child element was added.",
-  "fixDirective": "In the SkuDetailPage component, inside the sku-detail-par-level-section, when par_level is null (or all rows have null par_level) render a child element with data-testid='sku-detail-par-level-not-tracked' containing the text 'Not tracked'. Do not add an inline style attribute to that element."
-}

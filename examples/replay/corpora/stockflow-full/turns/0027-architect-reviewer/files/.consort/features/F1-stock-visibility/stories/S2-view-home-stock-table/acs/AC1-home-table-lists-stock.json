@@ -1,9 +1,0 @@
-{
-  "id": "AC1-home-table-lists-stock",
-  "given": "stock records have been filed for one or more (SKU, location) pairs",
-  "when": "the operator opens the home screen",
-  "then": "a table lists one row per stock record showing the SKU, the location, and the quantity",
-  "status": "draft",
-  "layer": "E2E",
-  "architectural_notes": "E2E: the React SPA home page fetches from the JSON stock read endpoint (boundary app/routes/, renders_via react) which delegates to app/services/ -> app/repositories/ against real DB state, so it spans UI + services + persistence and is verified through the real-branch pytest-bdd suite (plus SPA component tests per R5). Cross-cutting concerns: read-path projection (SKU/location/quantity) stays in the service, the boundary returns JSON only, and no business logic lives in the client. Owner: home-table view in client/ over the stock read route in app/routes/."
-}

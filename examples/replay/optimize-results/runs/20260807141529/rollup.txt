@@ -1,4 +1,0 @@
-navigator-red: winner m-opus-e-low (65.9s vs baseline 529.6s, saved 88%)
-navigator-assess: no winner (no quality-holding candidate beat the baseline)
-navigator-review: no winner (no quality-holding candidate beat the baseline)
-navigator-reflect: winner m-haiku-e-low (101.1s vs baseline 666.8s, saved 85%)

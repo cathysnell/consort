@@ -1,1 +1,0 @@
-Refactored HomePage.tsx to apply design-vocabulary CSS classes: `table` on the table element, `table__num` on quantity cells (alongside the existing `stock-table__quantity`), and `empty-state` on the empty-state paragraph. All 18 backend tests + 19 client tests pass.

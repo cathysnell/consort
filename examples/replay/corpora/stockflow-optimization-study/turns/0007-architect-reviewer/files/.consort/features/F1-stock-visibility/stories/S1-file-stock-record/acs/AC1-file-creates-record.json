@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-creates-record",
-  "given": "no stock record exists for a given SKU at a given physical location",
-  "when": "the operator files a stock level for that SKU at that location with a quantity",
-  "then": "a stock record for that (SKU, location) pair exists holding the filed SKU, location, and quantity",
-  "status": "draft",
-  "layer": "API",
-  "architectural_notes": "API-layer AC exercised through the JSON filing endpoint on the boundary (app/routes). The boundary validates and delegates to the stock service (app/services), which calls the stock repository (app/repositories) to insert a new row via the ORM; the repository is the only layer touching the DB session. Validation is a cross-cutting concern owned at the boundary; persistence is owned by the repository against the paired Lakebase branch. Verified as a real-DB integration test asserting the persisted (sku, location, quantity)."
-}

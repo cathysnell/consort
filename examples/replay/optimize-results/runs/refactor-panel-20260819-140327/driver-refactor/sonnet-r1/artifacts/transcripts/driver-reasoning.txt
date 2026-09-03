@@ -1,1 +1,0 @@
-All tests green. Three changes made: `<table className="table">`, `className="stock-table__quantity table__num"`, `<p className="empty-state">` in `HomePage.tsx`, plus `app/repositories/__init__.py` wired to expose `repos.stock`.

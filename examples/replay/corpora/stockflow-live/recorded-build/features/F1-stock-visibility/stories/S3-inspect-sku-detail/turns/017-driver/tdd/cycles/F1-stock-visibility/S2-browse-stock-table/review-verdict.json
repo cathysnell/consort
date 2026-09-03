@@ -1,4 +1,0 @@
-{
-  "refactor": false,
-  "notes": "Route/service/repository layering respected (only StockRepository touches the ORM session); StockService owns validation + audit stamping without touching persistence directly. React StockTable is presentational, fetch isolated in useStockRecords hook, JSON-only API boundary satisfies NFR-F1-spa-json-boundary. All styling consumes design tokens via var(--...) (color, font, spacing, radius, shadow) per design-guide, no hardcoded values. No concrete rubric-cited improvement identified."
-}

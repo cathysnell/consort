@@ -1,1 +1,0 @@
-dba: winner m-sonnet-e-low (20.9s vs baseline 29.5s, saved 29%)

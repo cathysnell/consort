@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "fs";
+import { mkdtempSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
@@ -73,12 +73,5 @@ describe("formatScenarioConditionField (shell-friendly)", () => {
   });
 });
 
-describe("stockflow scenario.json declares its conditions (the single source)", () => {
-  it("uiTrack:true + python/self-hosted, so the capture funnels them to create-project", () => {
-    const p = join(__dirname, "..", "..", "examples", "replay", "corpora", "stockflow", "scenario.json");
-    const m = JSON.parse(readFileSync(p, "utf8"));
-    expect(m.uiTrack).toBe(true);
-    expect(m.language).toBe("python");
-    expect(m.runner).toBe("self-hosted");
-  });
-});
+// (The "stockflow scenario.json declares its conditions" guard moved to consort-examples
+//  with the corpus scenario.json it reads.)

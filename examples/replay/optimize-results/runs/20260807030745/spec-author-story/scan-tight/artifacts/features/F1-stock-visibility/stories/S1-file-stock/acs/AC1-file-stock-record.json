@@ -1,7 +1,0 @@
-{
-  "id": "AC1-file-stock-record",
-  "given": "no stock record yet exists for a given SKU at a given location within the warehouse",
-  "when": "a warehouse team member files a stock record supplying that SKU, that location, the unit's combined tracking code, and a quantity",
-  "then": "the record is stored durably and can be retrieved afterward, returning the same SKU, location, combined tracking code, and quantity that were filed",
-  "status": "draft"
-}

@@ -1,1 +1,0 @@
-Refactor complete: HomePage.tsx now consumes design-vocabulary CSS classes (.table, .table__num, .empty-state) per review.

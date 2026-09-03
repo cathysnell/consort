@@ -1,9 +1,0 @@
-{
-  "id": "AC1-file-new-stock-record",
-  "status": "draft",
-  "given": "no stock record exists for a given (SKU, location) pair",
-  "when": "a warehouse operator files a stock record for that SKU at that location with a quantity and a combined tracking code",
-  "then": "a new stock record is created and can be read back carrying exactly the SKU, location, quantity, and combined tracking code that were filed",
-  "layer": "API",
-  "architectural_notes": "Verified at the JSON boundary (app/routes/) which delegates to app/services/ for the file operation and app/repositories/ for the INSERT into stock_records; read-back exercises the same repository via ORM only. Realizes the create path: the service persists a StockRecord (app/models/) whose PI2 NOT-NULL columns guarantee the round-tripped SKU/location/quantity/tracking-code. Cross-cutting: request validation owned at the boundary; the transaction wraps the write in the service layer. Covered by the real-branch pytest-bdd integration suite (R4/NFR-F1-4), never a mock."
-}

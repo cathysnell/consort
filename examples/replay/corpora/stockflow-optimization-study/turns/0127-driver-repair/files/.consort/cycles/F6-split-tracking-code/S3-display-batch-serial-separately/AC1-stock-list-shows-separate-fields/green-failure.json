@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
-  "diagnosis": "StockPage T42/T43 fail because rendering /stock produces only the navbar: the client /stock stock-list surface is not built for the new fields. App.tsx has no /stock route and there is no StockPage component, and client/src/api/stock.ts StockRecord still only declares sku/location/quantity (no batch_number/serial_number). So data-testid='batch-number' and data-testid='serial-number' never appear, and the required 'not tracked' indicator for a null batch_number/serial_number is absent. This is the current AC's new behavior, not superseded.",
-  "fixDirective": "Add batch_number: string|null and serial_number: string|null to the StockRecord type in client/src/api/stock.ts. Build (or complete) the /stock StockPage list, wire it into App.tsx <Routes> plus a nav affordance per the IA, and for each record render its batch_number in data-testid='batch-number' and serial_number in data-testid='serial-number', substituting a 'not tracked' indicator (never blank, never omit the element) when the value is null. Style via the design-guide component vocabulary/tokens."
-}

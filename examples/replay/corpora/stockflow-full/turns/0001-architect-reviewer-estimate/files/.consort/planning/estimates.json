@@ -1,8 +1,0 @@
-{
-  "estimates": [
-    { "feature_id": "FP1", "size": "M", "rationale": "Read-only stock grid + SKU/location detail + empty state SPA over one table." },
-    { "feature_id": "FP2", "size": "L", "rationale": "Write path with upsert on unique (sku,location), no-negative rule, immutable audit fields, and in-place optimistic UI." },
-    { "feature_id": "FP3", "size": "M", "rationale": "Supplier-attributed inbound receipt form + increment; reuses FP2 write foundation." },
-    { "feature_id": "FP4", "size": "M", "rationale": "Outbound pick form with overcommit rejection enforcing the no-negative invariant at write time." }
-  ]
-}

@@ -1,9 +1,0 @@
-{
-  "id": "AC1-combined-column-restored",
-  "given": "a stock record on the split schema with batch_number and serial_number columns",
-  "when": "the migration's down path runs",
-  "then": "the stock record again exposes a combined inventory_code column",
-  "status": "passing",
-  "layer": "Infra",
-  "architectural_notes": "Infra: a schema contract on the stock_records table shape, realized by the Alembic downgrade() (owner: the migration revision that S1's up() added). This asserts the DDL half of reversibility (PI3-rows-preserved, migration_reversible) , the down path adds the combined inventory_code column back before backfilling it. Cross-cutting: config-in-env (Alembic sources DATABASE_URL for the paired branch, NFR-F6-7); no service/repository code runs, the guarantee lives entirely in the migration script. Verified by a real-branch round-trip integration test (upgrade then downgrade), never an in-memory substitute (R4)."
-}

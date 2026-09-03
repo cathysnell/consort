@@ -1,5 +1,0 @@
-{
-  "reviewed_at": "2026-08-19T19:56:02.972Z",
-  "refactor_requested": true,
-  "refactor_notes": "NFR-F1-empty-state-clean-render requires no blank region in every data state. HomePage.renderStockSection() returns null for both loading and error states, producing a silent blank region. Per the NFR ('never a blank region'), these states need explicit feedback: a loading indicator (e.g. <p data-testid=\"stock-loading\">Loading...</p>) and an error message (e.g. <p data-testid=\"stock-error\">Failed to load stock</p>). All other concerns are clean: boundary delegates to service which delegates to repository (no cross-layer leakage), design tokens are consumed via className vocabulary (table, empty-state, page), HomePage is routed and linked in App.tsx, and the non-negative CHECK is enforced at both boundary (field_validator) and service layer."
-}

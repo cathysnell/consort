@@ -18,10 +18,14 @@ import { checkArtifactConformance, parseRequiredNfrs } from "../../consort/orche
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-// The replay machinery (run-smoke.sh, assertions/) lives at examples/replay/; the bug-tracker
-// intake docs + feature-requests are its recorded corpus, under corpora/bug-tracker/.
+// The replay machinery (run-smoke.sh, assertions/) lives at examples/replay/ and STAYS in the kit,
+// so the machinery assertions below still read it directly.
 const SMOKE_DIR = path.join(REPO_ROOT, "examples", "replay");
-const BUG_TRACKER = path.join(SMOKE_DIR, "corpora", "bug-tracker");
+// The bug-tracker intake docs (product-overview / nfrs / design-brief / feature-requests) are the
+// recorded corpus, which moved to the consort-examples repo (fetched via scripts/fetch-examples.sh).
+// This test OWNS a readable copy under tests/fixtures/ so its role-voice + artifact-conformance
+// assertions run offline and never reach into examples/replay/corpora. See the fixture's README.
+const BUG_TRACKER = path.join(__dirname, "..", "fixtures", "smoke-bug-tracker");
 
 const ITERATIONS = [
   "v1-file-bug",

@@ -1,6 +1,0 @@
-{
-  "assessed": true,
-  "summary": "GREEN verify FAILED against the running app",
-  "diagnosis": "Not a production regression and not a supersession: the /api/stock/file boundary correctly rejects a filing missing the required non-blank tracking_code (established behavior in S1 — see the blank-tracking_code 422 scenario and _REQUIRED_TEXT_FIELDS in app/routes/stock.py). The failure is a seed defect in this AC's own test: the T24 given step seed_sku_at_two_locations in tests/step_defs/test_S3_view_sku_detail.py builds its two location records WITHOUT a tracking_code field, so both seed POSTs return 422 'tracking_code field is required and must not be blank' and the scenario cannot set up. The sibling seeds T25/T26 in the same file correctly include a unique per-run tracking_code; T24 simply omitted it. AC1-detail-lists-locations does not change the tracking_code-required contract, so no test is superseded.",
-  "fixDirective": "In seed_sku_at_two_locations (tests/step_defs/test_S3_view_sku_detail.py), add a unique per-run tracking_code to each of the two seeded location dicts (e.g. f'TC-T24-A-{run_id}' and f'TC-T24-B-{run_id}'), matching the pattern already used by the T25/T26 seeds, so each /api/stock/file POST includes the required non-blank field and returns 201."
-}

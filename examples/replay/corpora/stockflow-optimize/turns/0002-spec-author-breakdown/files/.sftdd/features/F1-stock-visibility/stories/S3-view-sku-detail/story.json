@@ -1,8 +1,0 @@
-{
-  "id": "S3-view-sku-detail",
-  "story_summary": "View a SKU's stock across all its locations with tracking codes",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "S1 persists stock; S2 displays it on the home table. S3 adds a drill-down view to one SKU showing its stock across all locations. S1+S2 could be fully built with no SKU detail page. S3 is a new, distinct UI screen and data retrieval path."
-  }
-}

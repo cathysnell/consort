@@ -1,8 +1,0 @@
-{
-  "id": "S2-expose-batch-serial-in-api",
-  "scope": "Update API responses to return batch_number and serial_number as separate fields instead of the combined inventory_code.",
-  "independence": {
-    "distinct_from_prior": true,
-    "rationale": "S1 completes the schema migration, leaving inventory_code dropped and batch/serial columns populated. S2 adds the distinct behavior of exposing these fields via API responses. S1 alone does not return the new fields; S2's API layer change is independently observable."
-  }
-}
