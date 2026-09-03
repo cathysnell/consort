@@ -7157,7 +7157,7 @@ var navigator_assess_refactor_default = {
   agent: { kind: "claude", config: { role: "navigator" } },
   match: { kind: "invoke-role", role: "navigator", buildMode: "assess-refactor" },
   inputs: [
-    { id: "refactor-verify-failure", source: "story:refactor-verify-failure.json", description: "The refactor-verify failure marker the Navigator discriminates for superseded tests vs a genuine regression." }
+    { id: "refactor-verify-assess", source: "story:refactor-verify-assess.json", description: "The refactor-verify failure marker (written by refactorStory as refactor-verify-assess.json) the Navigator discriminates for superseded tests vs a genuine regression." }
   ],
   outputs: [],
   routing: {
@@ -10608,6 +10608,11 @@ var import_fs8 = require("fs");
 var import_path8 = require("path");
 var import_node_child_process5 = require("child_process");
 var import_lakebase3 = require("@databricks-solutions/lakebase-scm-utils/lakebase");
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 function branchIdOf(info) {
   const leaf = info.name.split("/").pop();
   if (!leaf) throw new Error(`could not derive branch_id from ${info.name}`);
@@ -10669,7 +10674,7 @@ async function cutExperiment(args, deps = {}) {
   }
   let dirtyTracked = "";
   try {
-    dirtyTracked = (0, import_node_child_process5.execFileSync)("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/")).join("\n").trim();
+    dirtyTracked = (0, import_node_child_process5.execFileSync)("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx))).join("\n").trim();
   } catch {
     dirtyTracked = "";
   }

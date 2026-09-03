@@ -36,6 +36,7 @@ import { recordBuildTurn, nextBuildTurnNumber } from "../../consort/pipeline/rec
 import { runDriver, driverBoundOptions, ProtocolViolationError, UnexpectedCallbackError, type DriveEffects, type DriverBound, type RunDriverResult, type RunDriverOptions } from "../../consort/orchestrator/drive/orchestrator-run.js";
 import type { DriveState } from "../../consort/orchestrator/workflow/workflow-vocabulary.js";
 import { writeEscalation } from "../../consort/gates/escalation.js";
+import { RouteContractError } from "../../consort/orchestrator/steps/assert-route-satisfiable.js";
 import { emitNextJson, buildNextSnapshot } from "../../consort/orchestrator/status/next.js";
 import { emitAgentLogEvent } from "../../consort/logging/agent-log.js";
 import { resetStaleTerminalPhase } from "../../consort/gates/workflow-phase.js";
@@ -1394,6 +1395,49 @@ async function main(): Promise<number> {
           `        reason: ${reason}\n` +
           (captured_output ? `        failing output (tail):\n${captured_output.split("\n").map((l) => "        | " + l).join("\n")}\n` : "") +
           `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.\n` +
+          `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
+      );
+      return 3;
+    }
+    // A PRE-DISPATCH route-contract failure: the router selected a turn whose REQUIRED
+    // process event was never produced (assertRouteSatisfiable), so the turn is refused
+    // BEFORE any agent spawns. Without a typed branch this fell to the bare ABORTED
+    // catch-all below (return 1, NO escalation), so a `--detach`ed run died leaving only
+    // a truncated drive log , no escalation, so consort-next never showed awaiting_human
+    // and a resuming session had nothing to act on. Record a RESUMABLE escalation (so
+    // consort-next surfaces awaiting_human) and emit the classified halt line, mirroring
+    // the ProtocolViolationError path. It is a routing/producer defect , the same
+    // fix-then-resume shape as the other pre-spawn contract failures.
+    if (err instanceof RouteContractError) {
+      const story =
+        "story" in err.action && typeof (err.action as { story?: unknown }).story === "string"
+          ? (err.action as { story: string }).story
+          : undefined;
+      const source = `route-contract:${err.event}`;
+      try {
+        writeEscalation(cfg.consortDir, {
+          source,
+          reason: err.message,
+          feature_id: cfg.featureId,
+          ...(story ? { story_id: story } : {}),
+        });
+        emitAgentLogEvent(
+          {
+            role: "orchestrator",
+            level: "error",
+            event: "escalation.raised",
+            feature_id: cfg.featureId,
+            slots: { source, reason: err.message, ...(story ? { story } : {}) },
+          },
+          { consortDir: cfg.consortDir },
+        );
+      } catch {
+        /* best-effort; the classified halt line below is the load-bearing signal */
+      }
+      process.stderr.write(
+        `[drive] RAISED TO HIL , route-contract check refused a mis-fired turn before dispatch.\n` +
+          `        reason: ${err.message}\n` +
+          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; fix the route or the producer, then clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it) and re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );
       return 3;

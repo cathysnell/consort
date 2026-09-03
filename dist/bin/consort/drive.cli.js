@@ -8301,6 +8301,11 @@ import { getConnection } from "@databricks-solutions/lakebase-scm-utils/lakebase
 init_esm_shims();
 import { execFileSync as execFileSync2 } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 
 // consort/pipeline/run-cycle.ts
 function readAcLayer2(consortDir, featureId, acId) {
@@ -8990,6 +8995,83 @@ function firstPendingEscalation(consortDir, featureId) {
   return fromSmells.length > 0 ? fromSmells.sort((a, b) => a.raised_at < b.raised_at ? -1 : 1)[0] : null;
 }
 
+// consort/orchestrator/steps/assert-route-satisfiable.ts
+init_esm_shims();
+import { existsSync as existsSync18 } from "fs";
+import { join as join18 } from "path";
+
+// consort/orchestrator/steps/turn-events.ts
+init_esm_shims();
+var hasAc = (action) => typeof action.ac === "string" && action.ac.length > 0;
+var TURN_EVENTS = {
+  "green-failure": {
+    kind: "green-failure",
+    scopeFor: () => "cycle",
+    filename: "green-failure.json",
+    description: "The failed honest-GREEN verify marker the Navigator ASSESS turn discriminates."
+  },
+  "superseded-tests": {
+    kind: "superseded-tests",
+    scopeFor: () => "cycle",
+    filename: "superseded-tests.json",
+    description: "The prior tests the new AC supersedes, for the Driver's permissive refactor."
+  },
+  "regression-assessment": {
+    kind: "regression-assessment",
+    scopeFor: () => "cycle",
+    filename: "regression-assessment.json",
+    description: "The Navigator's regression diagnosis (+ optional fixDirective) for the Driver repair."
+  },
+  "review-verdict": {
+    kind: "review-verdict",
+    // Dual-scoped: per-CYCLE when the loop runs per-AC (the action carries an `ac`), per-STORY
+    // otherwise , matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
+    scopeFor: (action) => hasAc(action) ? "cycle" : "story",
+    filename: "review-verdict.json",
+    description: "The Navigator's REVIEW verdict (refactor yes/no + notes) the Driver refactor consumes."
+  }
+};
+
+// consort/orchestrator/steps/assert-route-satisfiable.ts
+var RouteContractError = class extends Error {
+  constructor(action, event, expectedPath) {
+    super(
+      `route selected turn ${JSON.stringify(action)} but its required process event "${event}" was not produced (expected at ${expectedPath}). A prior turn must RAISE "${event}" before this route may fire , the router chose this turn on stale/derived state. Fix the route or the producer, not this turn's inputs.`
+    );
+    this.action = action;
+    this.event = event;
+    this.expectedPath = expectedPath;
+    this.name = "RouteContractError";
+  }
+  action;
+  event;
+  expectedPath;
+};
+function eventArtifactPath(event, action, ctx) {
+  const spec = TURN_EVENTS[event];
+  const scope = spec.scopeFor(action);
+  const story = "story" in action && typeof action.story === "string" ? action.story : void 0;
+  const ac = "ac" in action && typeof action.ac === "string" ? action.ac : void 0;
+  const f = ctx.featureId;
+  switch (scope) {
+    case "feature":
+      return join18(featuresDir(ctx.consortDir), f, spec.filename);
+    case "story":
+      if (!story) return join18(ctx.consortDir, spec.filename);
+      return join18(cyclesRootDir(ctx.consortDir), f, story, spec.filename);
+    case "ac":
+    case "cycle":
+      if (!story || !ac) return join18(ctx.consortDir, spec.filename);
+      return join18(cycleDir(ctx.consortDir, f, story, ac), spec.filename);
+  }
+}
+function assertRouteSatisfiable(action, step, ctx, exists = existsSync18) {
+  for (const event of step.requiresEvents(action)) {
+    const p = eventArtifactPath(event, action, ctx);
+    if (!exists(p)) throw new RouteContractError(action, event, p);
+  }
+}
+
 // consort/orchestrator/status/next.ts
 init_esm_shims();
 import * as fs19 from "fs";
@@ -9250,8 +9332,8 @@ function storyDesignFingerprint(consortDir, feature, story) {
 
 // consort/gates/gates.ts
 init_esm_shims();
-import { existsSync as existsSync18, readFileSync as readFileSync19, renameSync as renameSync2, unlinkSync, writeFileSync as writeFileSync11 } from "fs";
-import { join as join18 } from "path";
+import { existsSync as existsSync19, readFileSync as readFileSync19, renameSync as renameSync2, unlinkSync, writeFileSync as writeFileSync11 } from "fs";
+import { join as join19 } from "path";
 var GATES_SCHEMA_VERSION = 1;
 var GATE_STATUSES = ["open", "approved", "superseded", "withdrawn"];
 function defaultGatesState(featureId) {
@@ -9270,7 +9352,7 @@ function defaultGatesState(featureId) {
 function readGates(featureId, opts = {}) {
   const consortDir = opts.consortDir ?? resolveConsortDir();
   const file = gatesFilePath(consortDir, featureId);
-  if (!existsSync18(file)) {
+  if (!existsSync19(file)) {
     return defaultGatesState(featureId);
   }
   const raw = readFileSync19(file, "utf8");
@@ -9284,7 +9366,7 @@ function readGates(featureId, opts = {}) {
   return validateGatesState(parsed, file);
 }
 function gatesFilePath(consortDir, featureId) {
-  return join18(requireFeatureDir(consortDir, featureId), "gates.json");
+  return join19(requireFeatureDir(consortDir, featureId), "gates.json");
 }
 function validateGatesState(parsed, file) {
   if (typeof parsed !== "object" || parsed === null) {
@@ -9381,13 +9463,13 @@ function resetStaleTerminalPhase(consortDir) {
 
 // consort/config/consort-config-file.ts
 init_esm_shims();
-import { existsSync as existsSync21, readFileSync as readFileSync22, mkdirSync as mkdirSync13, writeFileSync as writeFileSync14 } from "fs";
-import { dirname as dirname8, join as join20 } from "path";
+import { existsSync as existsSync22, readFileSync as readFileSync22, mkdirSync as mkdirSync13, writeFileSync as writeFileSync14 } from "fs";
+import { dirname as dirname8, join as join21 } from "path";
 
 // consort/config/agent-models.ts
 init_esm_shims();
-import { existsSync as existsSync20, readFileSync as readFileSync21, writeFileSync as writeFileSync13, mkdirSync as mkdirSync12 } from "fs";
-import { dirname as dirname7, join as join19 } from "path";
+import { existsSync as existsSync21, readFileSync as readFileSync21, writeFileSync as writeFileSync13, mkdirSync as mkdirSync12 } from "fs";
+import { dirname as dirname7, join as join20 } from "path";
 var RECOMMENDED_MODELS = {
   "spec-author": "opus",
   "architect-reviewer": "opus",
@@ -9399,10 +9481,10 @@ var RECOMMENDED_MODELS = {
   "product-owner": "opus"
 };
 var ALL_AGENT_ROLES = Object.keys(RECOMMENDED_MODELS);
-var AGENT_CONFIG_REL = join19(".lakebase", "agent-config.json");
+var AGENT_CONFIG_REL = join20(".lakebase", "agent-config.json");
 function readAgentConfig(projectDir) {
-  const p = join19(projectDir, AGENT_CONFIG_REL);
-  if (!existsSync20(p)) return void 0;
+  const p = join20(projectDir, AGENT_CONFIG_REL);
+  if (!existsSync21(p)) return void 0;
   return JSON.parse(readFileSync21(p, "utf8"));
 }
 function resolveModelForRole(role, projectDir) {
@@ -9412,16 +9494,16 @@ function resolveModelForRole(role, projectDir) {
 }
 
 // consort/config/consort-config-file.ts
-var CONSORT_CONFIG_REL = join20(".lakebase", "consort-config.json");
+var CONSORT_CONFIG_REL = join21(".lakebase", "consort-config.json");
 var LEGACY_CONFIG_RELS = [
-  join20(".lakebase", "sftdd-config.json"),
-  join20(".lakebase", "tdd-config.json")
+  join21(".lakebase", "sftdd-config.json"),
+  join21(".lakebase", "tdd-config.json")
 ];
 var LEGACY_TDD_CONFIG_REL = LEGACY_CONFIG_RELS[0];
 function loadConsortConfig(projectDir) {
   for (const rel of [CONSORT_CONFIG_REL, ...LEGACY_CONFIG_RELS]) {
-    const f = join20(projectDir, rel);
-    if (!existsSync21(f)) continue;
+    const f = join21(projectDir, rel);
+    if (!existsSync22(f)) continue;
     try {
       return JSON.parse(readFileSync22(f, "utf8"));
     } catch {
@@ -9472,8 +9554,8 @@ function defaultConsortConfig() {
   };
 }
 function writeConsortConfig(projectDir, config, opts) {
-  const f = join20(projectDir, CONSORT_CONFIG_REL);
-  if (existsSync21(f) && !opts?.force) return false;
+  const f = join21(projectDir, CONSORT_CONFIG_REL);
+  if (existsSync22(f) && !opts?.force) return false;
   mkdirSync13(dirname8(f), { recursive: true });
   writeFileSync14(f, JSON.stringify(config, null, 2) + "\n");
   return true;
@@ -9493,14 +9575,14 @@ import { readWorkflowState, SCM_STATES } from "@databricks-solutions/lakebase-sc
 
 // consort/smells/reflection.ts
 init_esm_shims();
-import { existsSync as existsSync22, readFileSync as readFileSync23, writeFileSync as writeFileSync15, mkdirSync as mkdirSync14, rmSync as rmSync8 } from "fs";
+import { existsSync as existsSync23, readFileSync as readFileSync23, writeFileSync as writeFileSync15, mkdirSync as mkdirSync14, rmSync as rmSync8 } from "fs";
 var SMELL_FOR_OWNER = {
   "spec-author": "reflect-spec-defect",
   "test-strategist": "reflect-testlist-defect"
 };
 function readReflectVerdict(consortDir, feature, story) {
   const p = reflectVerdictJson(consortDir, feature, story);
-  if (!existsSync22(p)) return void 0;
+  if (!existsSync23(p)) return void 0;
   try {
     return JSON.parse(readFileSync23(p, "utf8"));
   } catch {
@@ -9517,13 +9599,13 @@ var REFLECT_SMELLS = Object.values(SMELL_FOR_OWNER);
 
 // consort/architecture/architecture-canon.ts
 init_esm_shims();
-import { existsSync as existsSync23, readFileSync as readFileSync24, writeFileSync as writeFileSync16, mkdirSync as mkdirSync15, readdirSync as readdirSync13 } from "fs";
+import { existsSync as existsSync24, readFileSync as readFileSync24, writeFileSync as writeFileSync16, mkdirSync as mkdirSync15, readdirSync as readdirSync13 } from "fs";
 function uniq(xs) {
   return [...new Set(xs.filter((x) => typeof x === "string" && x.length > 0))];
 }
 function readCanon(consortDir) {
   const f = architectureCanonJson(consortDir);
-  if (!existsSync23(f)) return void 0;
+  if (!existsSync24(f)) return void 0;
   try {
     return JSON.parse(readFileSync24(f, "utf8"));
   } catch {
@@ -9562,7 +9644,7 @@ function architectNovelty(canon, storyAcs, storyArchitectureJsonContent) {
 
 // consort/orchestrator/validators/conformance/artifact-conformance.ts
 init_esm_shims();
-import { join as join21, basename as basename2, dirname as dirname9 } from "path";
+import { join as join22, basename as basename2, dirname as dirname9 } from "path";
 var ARTIFACT_FORMATS = {
   "feature-spec.json": { kind: "json-schema", schema: "feature.schema.json" },
   "story.json": { kind: "json-schema", schema: "story.schema.json" },
@@ -10060,19 +10142,19 @@ init_esm_shims();
 
 // consort/pipeline/story-pipeline.ts
 init_esm_shims();
-import { existsSync as existsSync27, readFileSync as readFileSync28, writeFileSync as writeFileSync18, mkdirSync as mkdirSync17, readdirSync as readdirSync16, statSync as statSync10, rmSync as rmSync9 } from "fs";
+import { existsSync as existsSync28, readFileSync as readFileSync28, writeFileSync as writeFileSync18, mkdirSync as mkdirSync17, readdirSync as readdirSync16, statSync as statSync10, rmSync as rmSync9 } from "fs";
 
 // consort/gates/gate-conformance-guard.ts
 init_esm_shims();
-import { existsSync as existsSync26, readFileSync as readFileSync27, readdirSync as readdirSync15, statSync as statSync9 } from "fs";
-import { join as join23, dirname as dirname11 } from "path";
+import { existsSync as existsSync27, readFileSync as readFileSync27, readdirSync as readdirSync15, statSync as statSync9 } from "fs";
+import { join as join24, dirname as dirname11 } from "path";
 
 // consort/architecture/architecture-conventions.ts
 init_esm_shims();
-import { existsSync as existsSync25, readFileSync as readFileSync26, writeFileSync as writeFileSync17, mkdirSync as mkdirSync16 } from "fs";
+import { existsSync as existsSync26, readFileSync as readFileSync26, writeFileSync as writeFileSync17, mkdirSync as mkdirSync16 } from "fs";
 function readConventions(consortDir) {
   const f = architectureConventionsJson(consortDir);
-  if (!existsSync25(f)) return void 0;
+  if (!existsSync26(f)) return void 0;
   try {
     return JSON.parse(readFileSync26(f, "utf8"));
   } catch {
@@ -10089,7 +10171,7 @@ function pipelinePath(consortDir, featureId) {
 }
 function readPipeline(consortDir, featureId) {
   const p = pipelinePath(consortDir, featureId);
-  if (!existsSync27(p)) return initPipeline(featureId);
+  if (!existsSync28(p)) return initPipeline(featureId);
   return JSON.parse(readFileSync28(p, "utf8"));
 }
 
@@ -10123,8 +10205,8 @@ import { dirname as dirname23, join as join43 } from "path";
 
 // consort/orchestrator/steps/manifest.ts
 init_esm_shims();
-import { readFileSync as readFileSync29, readdirSync as readdirSync17, existsSync as existsSync28 } from "fs";
-import { join as join24 } from "path";
+import { readFileSync as readFileSync29, readdirSync as readdirSync17, existsSync as existsSync29 } from "fs";
+import { join as join25 } from "path";
 
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
@@ -10545,7 +10627,7 @@ var navigator_assess_refactor_default = {
   agent: { kind: "claude", config: { role: "navigator" } },
   match: { kind: "invoke-role", role: "navigator", buildMode: "assess-refactor" },
   inputs: [
-    { id: "refactor-verify-failure", source: "story:refactor-verify-failure.json", description: "The refactor-verify failure marker the Navigator discriminates for superseded tests vs a genuine regression." }
+    { id: "refactor-verify-assess", source: "story:refactor-verify-assess.json", description: "The refactor-verify failure marker (written by refactorStory as refactor-verify-assess.json) the Navigator discriminates for superseded tests vs a genuine regression." }
   ],
   outputs: [],
   routing: {
@@ -10844,12 +10926,12 @@ function manifestForAction(action, manifests = SHIPPED_MANIFESTS) {
 // consort/orchestrator/drive/executor-dispatch.ts
 init_esm_shims();
 import * as fs16 from "fs";
-import { join as join40, relative as relative6 } from "path";
+import { join as join41, relative as relative6 } from "path";
 
 // consort/orchestrator/turns/step-executor.ts
 init_esm_shims();
-import { existsSync as existsSync29 } from "fs";
-import { join as join25 } from "path";
+import { existsSync as existsSync30 } from "fs";
+import { join as join26 } from "path";
 
 // consort/orchestrator/provisioning/channels.ts
 init_esm_shims();
@@ -10911,8 +10993,8 @@ async function execute(step, ctx, deps) {
   for (const spec of outputSpecs) {
     const rel = outputPaths?.[spec.id] ?? spec.filename;
     const root = resolveChannelRoot(spec.channel, { workspaceDir, artifactDir, metaDir });
-    const abs = producedPaths.find((p) => p.endsWith(rel)) ?? join25(root, rel);
-    if (!existsSync29(abs)) {
+    const abs = producedPaths.find((p) => p.endsWith(rel)) ?? join26(root, rel);
+    if (!existsSync30(abs)) {
       if (!spec.optional && runResult.produced) violations.push(`declared output "${spec.id}" (${spec.filename}) was not produced`);
       continue;
     }
@@ -10930,13 +11012,13 @@ async function execute(step, ctx, deps) {
 
 // consort/orchestrator/steps/step.ts
 init_esm_shims();
-import { join as join27 } from "path";
-import { existsSync as existsSync31 } from "fs";
+import { join as join28 } from "path";
+import { existsSync as existsSync32 } from "fs";
 
 // consort/orchestrator/validators/conformance/validator-registry.ts
 init_esm_shims();
-import { readFileSync as readFileSync30, existsSync as existsSync30, statSync as statSync11, readdirSync as readdirSync18 } from "fs";
-import { join as join26 } from "path";
+import { readFileSync as readFileSync30, existsSync as existsSync31, statSync as statSync11, readdirSync as readdirSync18 } from "fs";
+import { join as join27 } from "path";
 function featureSpecNonEmptyStories(producedPath) {
   let content;
   try {
@@ -11024,13 +11106,13 @@ function conformsTo(artifactName) {
   };
 }
 function navigatorTestsAuthored(producedPath) {
-  if (!existsSync30(producedPath) || !statSync11(producedPath).isDirectory()) {
+  if (!existsSync31(producedPath) || !statSync11(producedPath).isDirectory()) {
     return { ok: false, violations: [`navigator RED wrote no tests/ tree at ${producedPath}`] };
   }
   const isTest = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync18(dir, { withFileTypes: true })) {
-      const abs = join26(dir, e.name);
+      const abs = join27(dir, e.name);
       if (e.isDirectory()) {
         if (walk2(abs)) return true;
       } else if (isTest(e.name)) {
@@ -11042,13 +11124,13 @@ function navigatorTestsAuthored(producedPath) {
   return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function driverCodePresent(producedPath) {
-  if (!existsSync30(producedPath) || !statSync11(producedPath).isDirectory()) {
+  if (!existsSync31(producedPath) || !statSync11(producedPath).isDirectory()) {
     return { ok: false, violations: [`driver GREEN wrote no product tree (app/ or src/) at ${producedPath}`] };
   }
   const isSource = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync18(dir, { withFileTypes: true })) {
-      const abs = join26(dir, e.name);
+      const abs = join27(dir, e.name);
       if (e.isDirectory()) {
         if (walk2(abs)) return true;
       } else if (isSource(e.name)) {
@@ -11060,10 +11142,10 @@ function driverCodePresent(producedPath) {
   return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN product tree at ${producedPath} has no source file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function assessMarkerWritten(producedPath) {
-  const sup = join26(producedPath, "superseded-tests.json");
-  const reg = join26(producedPath, "regression-assessment.json");
-  const hasSup = existsSync30(sup);
-  const hasReg = existsSync30(reg);
+  const sup = join27(producedPath, "superseded-tests.json");
+  const reg = join27(producedPath, "regression-assessment.json");
+  const hasSup = existsSync31(sup);
+  const hasReg = existsSync31(reg);
   if (!hasSup && !hasReg) {
     return { ok: false, violations: [`assess wrote no marker (expected superseded-tests.json OR regression-assessment.json) in ${producedPath}`] };
   }
@@ -11090,7 +11172,7 @@ function assessMarkerWritten(producedPath) {
   return { ok: true, violations: [] };
 }
 function acsDirConformant(producedPath) {
-  if (!existsSync30(producedPath) || !statSync11(producedPath).isDirectory()) {
+  if (!existsSync31(producedPath) || !statSync11(producedPath).isDirectory()) {
     return { ok: false, violations: [`spec-author wrote no acs/ dir at ${producedPath} (expected >=1 acs/<AC>.json)`] };
   }
   const acFiles = readdirSync18(producedPath).filter((n) => n.endsWith(".json"));
@@ -11101,7 +11183,7 @@ function acsDirConformant(producedPath) {
   for (const name of acFiles) {
     let content;
     try {
-      content = readFileSync30(join26(producedPath, name), "utf8");
+      content = readFileSync30(join27(producedPath, name), "utf8");
     } catch {
       violations.push(`acs/${name} not readable`);
       continue;
@@ -11187,38 +11269,6 @@ function resolveValidator(name) {
   return fn;
 }
 
-// consort/orchestrator/steps/turn-events.ts
-init_esm_shims();
-var hasAc = (action) => typeof action.ac === "string" && action.ac.length > 0;
-var TURN_EVENTS = {
-  "green-failure": {
-    kind: "green-failure",
-    scopeFor: () => "cycle",
-    filename: "green-failure.json",
-    description: "The failed honest-GREEN verify marker the Navigator ASSESS turn discriminates."
-  },
-  "superseded-tests": {
-    kind: "superseded-tests",
-    scopeFor: () => "cycle",
-    filename: "superseded-tests.json",
-    description: "The prior tests the new AC supersedes, for the Driver's permissive refactor."
-  },
-  "regression-assessment": {
-    kind: "regression-assessment",
-    scopeFor: () => "cycle",
-    filename: "regression-assessment.json",
-    description: "The Navigator's regression diagnosis (+ optional fixDirective) for the Driver repair."
-  },
-  "review-verdict": {
-    kind: "review-verdict",
-    // Dual-scoped: per-CYCLE when the loop runs per-AC (the action carries an `ac`), per-STORY
-    // otherwise , matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
-    scopeFor: (action) => hasAc(action) ? "cycle" : "story",
-    filename: "review-verdict.json",
-    description: "The Navigator's REVIEW verdict (refactor yes/no + notes) the Driver refactor consumes."
-  }
-};
-
 // consort/orchestrator/steps/step.ts
 function primaryOutputId(manifest) {
   return manifest.outputs[0]?.id;
@@ -11227,7 +11277,7 @@ var Step = class {
   constructor(manifest, agent, exists) {
     this.manifest = manifest;
     this.agent = agent;
-    this.exists = exists ?? existsSync31;
+    this.exists = exists ?? existsSync32;
   }
   manifest;
   agent;
@@ -11333,7 +11383,7 @@ var Step = class {
     let primaryPresent = false;
     for (const spec of specs) {
       const rel = provided.outputPaths?.[spec.id] ?? spec.filename;
-      const p = join27(rootFor(spec.channel), rel);
+      const p = join28(rootFor(spec.channel), rel);
       if (this.exists(p)) {
         producedPaths.push(p);
         if (spec.id === primary) primaryPresent = true;
@@ -11403,8 +11453,8 @@ var Step = class {
 
 // consort/orchestrator/agents/agent-catalogue.ts
 init_esm_shims();
-import { join as join39 } from "path";
-import { readFileSync as readFileSync39, writeFileSync as writeFileSync25, existsSync as existsSync42 } from "fs";
+import { join as join40 } from "path";
+import { readFileSync as readFileSync39, writeFileSync as writeFileSync25, existsSync as existsSync43 } from "fs";
 
 // consort/orchestrator/agents/claude-step-agent.ts
 init_esm_shims();
@@ -11488,15 +11538,15 @@ import { spawnSync } from "child_process";
 
 // consort/config/kit-ref.ts
 init_esm_shims();
-import { existsSync as existsSync34, readFileSync as readFileSync33, writeFileSync as writeFileSync20, mkdirSync as mkdirSync20 } from "fs";
-import { dirname as dirname14, join as join30 } from "path";
+import { existsSync as existsSync35, readFileSync as readFileSync33, writeFileSync as writeFileSync20, mkdirSync as mkdirSync20 } from "fs";
+import { dirname as dirname14, join as join31 } from "path";
 var KIT_REF_FILE = "kit-ref";
 var KIT_REF_LOCAL_FILE = "kit-ref.local";
 function lakebaseFile(projectDir, name) {
-  return join30(projectDir, ".lakebase", name);
+  return join31(projectDir, ".lakebase", name);
 }
 function readTrimmed(file) {
-  if (!existsSync34(file)) return void 0;
+  if (!existsSync35(file)) return void 0;
   try {
     const v = readFileSync33(file, "utf8").trim();
     return v.length > 0 ? v : void 0;
@@ -11609,8 +11659,8 @@ import * as readline from "readline";
 
 // consort/logging/replay-artifacts.ts
 init_esm_shims();
-import { existsSync as existsSync38, mkdirSync as mkdirSync24, readdirSync as readdirSync24, copyFileSync as copyFileSync4, statSync as statSync13 } from "fs";
-import { join as join34, dirname as dirname18 } from "path";
+import { existsSync as existsSync39, mkdirSync as mkdirSync24, readdirSync as readdirSync24, copyFileSync as copyFileSync4, statSync as statSync13 } from "fs";
+import { join as join35, dirname as dirname18 } from "path";
 var REPLAYABLE_DESIGN_ROLES = /* @__PURE__ */ new Set([
   "spec-author",
   "architect-reviewer",
@@ -11620,79 +11670,79 @@ var REPLAYABLE_DESIGN_ROLES = /* @__PURE__ */ new Set([
   "product-owner"
 ]);
 function cp(src, dst) {
-  if (!existsSync38(src)) return false;
+  if (!existsSync39(src)) return false;
   mkdirSync24(dirname18(dst), { recursive: true });
   copyFileSync4(src, dst);
   return true;
 }
 function cpDir(srcDir, dstDir) {
-  if (!existsSync38(srcDir)) return false;
+  if (!existsSync39(srcDir)) return false;
   let copied = false;
   mkdirSync24(dstDir, { recursive: true });
   for (const name of readdirSync24(srcDir)) {
-    const s = join34(srcDir, name);
+    const s = join35(srcDir, name);
     if (!statSync13(s).isFile()) continue;
-    copyFileSync4(s, join34(dstDir, name));
+    copyFileSync4(s, join35(dstDir, name));
     copied = true;
   }
   return copied;
 }
 function replayDesignTurn(args) {
   const { turn, replayDir, consortDir, featureId } = args;
-  const cf = join34(featuresDir(replayDir), featureId);
-  const tf = join34(featuresDir(consortDir), featureId);
+  const cf = join35(featuresDir(replayDir), featureId);
+  const tf = join35(featuresDir(consortDir), featureId);
   switch (turn.role) {
     case "spec-author": {
       if (turn.mode === "propose") {
-        return cp(join34(replayDir, "planning", "feature-proposals.md"), join34(consortDir, "planning", "feature-proposals.md"));
+        return cp(join35(replayDir, "planning", "feature-proposals.md"), join35(consortDir, "planning", "feature-proposals.md"));
       }
       if (turn.mode === "breakdown") {
-        let ok = cp(join34(cf, "feature-spec.json"), join34(tf, "feature-spec.json"));
-        cp(join34(cf, "feature-spec.md"), join34(tf, "feature-spec.md"));
-        const storiesSrc = join34(cf, "stories");
-        if (existsSync38(storiesSrc)) {
+        let ok = cp(join35(cf, "feature-spec.json"), join35(tf, "feature-spec.json"));
+        cp(join35(cf, "feature-spec.md"), join35(tf, "feature-spec.md"));
+        const storiesSrc = join35(cf, "stories");
+        if (existsSync39(storiesSrc)) {
           for (const s of readdirSync24(storiesSrc)) {
-            cp(join34(storiesSrc, s, "story.json"), join34(tf, "stories", s, "story.json"));
-            cp(join34(storiesSrc, s, "story.md"), join34(tf, "stories", s, "story.md"));
+            cp(join35(storiesSrc, s, "story.json"), join35(tf, "stories", s, "story.json"));
+            cp(join35(storiesSrc, s, "story.md"), join35(tf, "stories", s, "story.md"));
           }
         }
         return ok;
       }
       if (turn.story) {
-        return cpDir(join34(cf, "stories", turn.story, "acs"), join34(tf, "stories", turn.story, "acs"));
+        return cpDir(join35(cf, "stories", turn.story, "acs"), join35(tf, "stories", turn.story, "acs"));
       }
       return false;
     }
     case "architect-reviewer": {
       if (turn.mode === "estimate" || turn.mode === "estimate-committed") {
-        return cp(join34(replayDir, "planning", "estimates.json"), join34(consortDir, "planning", "estimates.json"));
+        return cp(join35(replayDir, "planning", "estimates.json"), join35(consortDir, "planning", "estimates.json"));
       }
-      let ok = cp(join34(cf, "architecture.json"), join34(tf, "architecture.json"));
-      cp(join34(cf, "architecture.md"), join34(tf, "architecture.md"));
+      let ok = cp(join35(cf, "architecture.json"), join35(tf, "architecture.json"));
+      cp(join35(cf, "architecture.md"), join35(tf, "architecture.md"));
       if (turn.story) {
-        const acs = cpDir(join34(cf, "stories", turn.story, "acs"), join34(tf, "stories", turn.story, "acs"));
+        const acs = cpDir(join35(cf, "stories", turn.story, "acs"), join35(tf, "stories", turn.story, "acs"));
         ok = ok || acs;
       }
       return ok;
     }
     case "dba": {
-      let ok = cp(join34(cf, "db-design.json"), join34(tf, "db-design.json"));
-      cp(join34(cf, "db-design.md"), join34(tf, "db-design.md"));
+      let ok = cp(join35(cf, "db-design.json"), join35(tf, "db-design.json"));
+      cp(join35(cf, "db-design.md"), join35(tf, "db-design.md"));
       return ok;
     }
     case "test-strategist": {
-      let ok = cp(join34(cf, "test-list.json"), join34(tf, "test-list.json"));
-      cp(join34(cf, "test-list.md"), join34(tf, "test-list.md"));
+      let ok = cp(join35(cf, "test-list.json"), join35(tf, "test-list.json"));
+      cp(join35(cf, "test-list.md"), join35(tf, "test-list.md"));
       const story = turn.story;
       if (story) {
-        cp(join34(cf, "stories", story, "test-list-per-ac.json"), join34(tf, "stories", story, "test-list-per-ac.json"));
+        cp(join35(cf, "stories", story, "test-list-per-ac.json"), join35(tf, "stories", story, "test-list-per-ac.json"));
       }
       return ok;
     }
     case "ux-designer": {
-      let ok = cp(join34(replayDir, "design", "design-guide.json"), join34(consortDir, "design", "design-guide.json"));
-      cp(join34(replayDir, "design", "design-guide.md"), join34(consortDir, "design", "design-guide.md"));
-      cp(join34(replayDir, "design", "ia.md"), join34(consortDir, "design", "ia.md"));
+      let ok = cp(join35(replayDir, "design", "design-guide.json"), join35(consortDir, "design", "design-guide.json"));
+      cp(join35(replayDir, "design", "design-guide.md"), join35(consortDir, "design", "design-guide.md"));
+      cp(join35(replayDir, "design", "ia.md"), join35(consortDir, "design", "ia.md"));
       return ok;
     }
     default:
@@ -11702,8 +11752,8 @@ function replayDesignTurn(args) {
 function restoreReflectVerdict(args) {
   const { replayDir, consortDir, featureId, story } = args;
   return cp(
-    join34(featuresDir(replayDir), featureId, "stories", story, "reflect-verdict.json"),
-    join34(featuresDir(consortDir), featureId, "stories", story, "reflect-verdict.json")
+    join35(featuresDir(replayDir), featureId, "stories", story, "reflect-verdict.json"),
+    join35(featuresDir(consortDir), featureId, "stories", story, "reflect-verdict.json")
   );
 }
 
@@ -11983,8 +12033,8 @@ import { readWorkflowState as readWorkflowState2 } from "@databricks-solutions/l
 
 // consort/setup/stray-artifact-recovery.ts
 init_esm_shims();
-import { existsSync as existsSync40, mkdirSync as mkdirSync25, cpSync as cpSync6, rmSync as rmSync11, readdirSync as readdirSync25, statSync as statSync14 } from "fs";
-import { join as join36, dirname as dirname20, basename as basename3 } from "path";
+import { existsSync as existsSync41, mkdirSync as mkdirSync25, cpSync as cpSync6, rmSync as rmSync11, readdirSync as readdirSync25, statSync as statSync14 } from "fs";
+import { join as join37, dirname as dirname20, basename as basename3 } from "path";
 function malformedSiblingRoot(projectDir) {
   const p = projectDir.replace(/\/+$/, "");
   return `${dirname20(p)}-${basename3(p)}`;
@@ -11993,8 +12043,8 @@ function listFilesRel(dir) {
   const out = [];
   const walk2 = (abs, rel) => {
     for (const entry of readdirSync25(abs)) {
-      const childAbs = join36(abs, entry);
-      const childRel = rel ? join36(rel, entry) : entry;
+      const childAbs = join37(abs, entry);
+      const childRel = rel ? join37(rel, entry) : entry;
       if (statSync14(childAbs).isDirectory()) walk2(childAbs, childRel);
       else out.push(childRel);
     }
@@ -12004,13 +12054,13 @@ function listFilesRel(dir) {
 }
 function relocateStrayDesignArtifacts(projectDir) {
   const sibling = malformedSiblingRoot(projectDir);
-  if (!existsSync40(sibling)) return { relocated: false, moved: [] };
+  if (!existsSync41(sibling)) return { relocated: false, moved: [] };
   const moved = [];
   for (const artRoot of ALL_ARTIFACT_ROOTS) {
-    const strayRoot = join36(sibling, artRoot);
-    if (!existsSync40(strayRoot)) continue;
-    for (const rel of listFilesRel(strayRoot)) moved.push(join36(artRoot, rel));
-    const realRoot = join36(projectDir, artRoot);
+    const strayRoot = join37(sibling, artRoot);
+    if (!existsSync41(strayRoot)) continue;
+    for (const rel of listFilesRel(strayRoot)) moved.push(join37(artRoot, rel));
+    const realRoot = join37(projectDir, artRoot);
     mkdirSync25(realRoot, { recursive: true });
     cpSync6(strayRoot, realRoot, { recursive: true, force: true });
     rmSync11(strayRoot, { recursive: true, force: true });
@@ -12797,21 +12847,21 @@ ${instructions.guidelines.map((g) => `- ${g}`).join("\n")}` : "";
 
 // consort/orchestrator/agents/mock-replay-agent.ts
 init_esm_shims();
-import { readFileSync as readFileSync38, writeFileSync as writeFileSync24, existsSync as existsSync41, mkdirSync as mkdirSync27, cpSync as cpSync7, readdirSync as readdirSync27, statSync as statSync16 } from "fs";
-import { join as join38, dirname as dirname21, relative as relative5, sep } from "path";
+import { readFileSync as readFileSync38, writeFileSync as writeFileSync24, existsSync as existsSync42, mkdirSync as mkdirSync27, cpSync as cpSync7, readdirSync as readdirSync27, statSync as statSync16 } from "fs";
+import { join as join39, dirname as dirname21, relative as relative5, sep } from "path";
 function makeMockReplayAgent(opts) {
   const role = opts.role ?? "product-owner";
   return {
     async invoke(invocation) {
       const materialized = [];
       for (const seed of opts.seeds) {
-        const src = join38(opts.corpusRoot, seed.from);
-        if (!existsSync41(src)) {
+        const src = join39(opts.corpusRoot, seed.from);
+        if (!existsSync42(src)) {
           throw new Error(
             `ReplayPoMockAgent: recorded seed for "${seed.outputId}" not found at ${src} , a replay cannot fabricate it. Check the corpus root + recorded path.`
           );
         }
-        const dst = join38(invocation.workspaceDir, seed.to);
+        const dst = join39(invocation.workspaceDir, seed.to);
         if (seed.kind === "tree") {
           mkdirSync27(dst, { recursive: true });
           cpSync7(src, dst, { recursive: true, force: true, filter: codeTreeFilter(src) });
@@ -12828,8 +12878,8 @@ function makeMockReplayAgent(opts) {
         event: "artifact.written",
         message: `replayed PO authoring: ${materialized.join(", ")}`
       };
-      const logPath = join38(invocation.workspaceDir, "agent-log.jsonl");
-      const prior = existsSync41(logPath) ? readFileSync38(logPath, "utf8") : "";
+      const logPath = join39(invocation.workspaceDir, "agent-log.jsonl");
+      const prior = existsSync42(logPath) ? readFileSync38(logPath, "utf8") : "";
       writeFileSync24(logPath, prior + JSON.stringify(event) + "\n");
     }
   };
@@ -12840,10 +12890,10 @@ function actionSignature(a) {
   return JSON.stringify(a);
 }
 function resolveTurnsDir(corpusRoot) {
-  const here = join38(corpusRoot, "turns");
-  if (existsSync41(here)) return here;
-  const parent = join38(dirname21(corpusRoot), "turns");
-  if (existsSync41(parent)) return parent;
+  const here = join39(corpusRoot, "turns");
+  if (existsSync42(here)) return here;
+  const parent = join39(dirname21(corpusRoot), "turns");
+  if (existsSync42(parent)) return parent;
   return void 0;
 }
 function loadCursor(corpusRoot) {
@@ -12857,9 +12907,9 @@ function loadCursor(corpusRoot) {
   }
   const turns = [];
   for (const name of readdirSync27(turnsDir).sort()) {
-    const dir = join38(turnsDir, name);
-    const tj = join38(dir, "turn.json");
-    if (!existsSync41(tj) || !statSync16(dir).isDirectory()) continue;
+    const dir = join39(turnsDir, name);
+    const tj = join39(dir, "turn.json");
+    if (!existsSync42(tj) || !statSync16(dir).isDirectory()) continue;
     try {
       const parsed = JSON.parse(readFileSync38(tj, "utf8"));
       if (parsed.action) turns.push({ dir, action: parsed.action });
@@ -12888,13 +12938,13 @@ function materializeFiles(filesDir, workspaceDir) {
   const out = [];
   const walk2 = (abs) => {
     for (const name of readdirSync27(abs)) {
-      const src = join38(abs, name);
+      const src = join39(abs, name);
       if (statSync16(src).isDirectory()) {
         walk2(src);
         continue;
       }
       const rel = remapArtifactRoot(relative5(filesDir, src));
-      const dst = join38(workspaceDir, rel);
+      const dst = join39(workspaceDir, rel);
       mkdirSync27(dirname21(dst), { recursive: true });
       writeFileSync24(dst, readFileSync38(src));
       out.push(rel);
@@ -12937,8 +12987,8 @@ function makeStepReplayAgent(opts) {
         );
       }
       cursor.consumed.set(sig2, already + 1);
-      const filesDir = join38(turn.dir, "files");
-      const materialized = existsSync41(filesDir) ? materializeFiles(filesDir, invocation.workspaceDir) : [];
+      const filesDir = join39(turn.dir, "files");
+      const materialized = existsSync42(filesDir) ? materializeFiles(filesDir, invocation.workspaceDir) : [];
       const role = invocation.action.kind === "invoke-role" ? invocation.action.role : "orchestrator";
       const event = {
         timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -12947,8 +12997,8 @@ function makeStepReplayAgent(opts) {
         event: "artifact.written",
         message: `replayed ${role} turn ${turn.dir.split(sep).pop()}: ${materialized.join(", ") || "(no files delta)"}`
       };
-      const logPath = join38(invocation.workspaceDir, "agent-log.jsonl");
-      const prior = existsSync41(logPath) ? readFileSync38(logPath, "utf8") : "";
+      const logPath = join39(invocation.workspaceDir, "agent-log.jsonl");
+      const prior = existsSync42(logPath) ? readFileSync38(logPath, "utf8") : "";
       writeFileSync24(logPath, prior + JSON.stringify(event) + "\n");
     }
   };
@@ -12981,10 +13031,10 @@ function buildMock(config, _context) {
   return {
     async invoke(invocation) {
       for (const [filename, contents] of Object.entries(outputs)) {
-        writeFileSync25(join39(invocation.workspaceDir, filename), contents);
+        writeFileSync25(join40(invocation.workspaceDir, filename), contents);
       }
-      const logPath = join39(invocation.workspaceDir, "agent-log.jsonl");
-      const prior = existsSync42(logPath) ? readFileSync39(logPath, "utf8") : "";
+      const logPath = join40(invocation.workspaceDir, "agent-log.jsonl");
+      const prior = existsSync43(logPath) ? readFileSync39(logPath, "utf8") : "";
       const event = { timestamp: (/* @__PURE__ */ new Date()).toISOString(), level: "info", role, event: "artifact.written", message: `mock wrote ${Object.keys(outputs).join(", ") || "(nothing)"}` };
       writeFileSync25(logPath, prior + JSON.stringify(event) + "\n");
     }
@@ -13185,7 +13235,7 @@ function outputPathsForAction(action, consortDir, featureId, projectDir) {
     return {};
   }
   if (action.role === "navigator" && story && "buildMode" in action && action.buildMode === "assess-deploy") {
-    return { scope: rel(join40(storyResolved(consortDir, f, story), "deploy-verify-scope.json")) };
+    return { scope: rel(join41(storyResolved(consortDir, f, story), "deploy-verify-scope.json")) };
   }
   return {};
 }
@@ -13246,15 +13296,15 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
   const inputPath = (source) => {
     if (source.startsWith("cycle:") || source.startsWith("ac:")) {
       const rel = expandRel(source.slice(source.indexOf(":") + 1));
-      if (!story || !ac) return join40(cfg.consortDir, rel);
-      return join40(cycleDir(cfg.consortDir, f, story, ac), rel);
+      if (!story || !ac) return join41(cfg.consortDir, rel);
+      return join41(cycleDir(cfg.consortDir, f, story, ac), rel);
     }
     if (source.startsWith("story:")) {
       const rel = expandRel(source.slice("story:".length));
-      if (!story) return join40(cfg.consortDir, rel);
-      return join40(storyResolved(cfg.consortDir, f, story), rel);
+      if (!story) return join41(cfg.consortDir, rel);
+      return join41(storyResolved(cfg.consortDir, f, story), rel);
     }
-    return join40(cfg.consortDir, expandRel(source.replace(/^feature:/, "")));
+    return join41(cfg.consortDir, expandRel(source.replace(/^feature:/, "")));
   };
   const executorDeps = {
     // Uncontained: the agent reads the tree itself, but Step still gates on the presence of
@@ -13332,49 +13382,6 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     });
   }
   return result.bounded;
-}
-
-// consort/orchestrator/steps/assert-route-satisfiable.ts
-init_esm_shims();
-import { existsSync as existsSync44 } from "fs";
-import { join as join41 } from "path";
-var RouteContractError = class extends Error {
-  constructor(action, event, expectedPath) {
-    super(
-      `route selected turn ${JSON.stringify(action)} but its required process event "${event}" was not produced (expected at ${expectedPath}). A prior turn must RAISE "${event}" before this route may fire , the router chose this turn on stale/derived state. Fix the route or the producer, not this turn's inputs.`
-    );
-    this.action = action;
-    this.event = event;
-    this.expectedPath = expectedPath;
-    this.name = "RouteContractError";
-  }
-  action;
-  event;
-  expectedPath;
-};
-function eventArtifactPath(event, action, ctx) {
-  const spec = TURN_EVENTS[event];
-  const scope = spec.scopeFor(action);
-  const story = "story" in action && typeof action.story === "string" ? action.story : void 0;
-  const ac = "ac" in action && typeof action.ac === "string" ? action.ac : void 0;
-  const f = ctx.featureId;
-  switch (scope) {
-    case "feature":
-      return join41(featuresDir(ctx.consortDir), f, spec.filename);
-    case "story":
-      if (!story) return join41(ctx.consortDir, spec.filename);
-      return join41(cyclesRootDir(ctx.consortDir), f, story, spec.filename);
-    case "ac":
-    case "cycle":
-      if (!story || !ac) return join41(ctx.consortDir, spec.filename);
-      return join41(cycleDir(ctx.consortDir, f, story, ac), spec.filename);
-  }
-}
-function assertRouteSatisfiable(action, step, ctx, exists = existsSync44) {
-  for (const event of step.requiresEvents(action)) {
-    const p = eventArtifactPath(event, action, ctx);
-    if (!exists(p)) throw new RouteContractError(action, event, p);
-  }
 }
 
 // consort/session/response-formatter.ts
@@ -16610,6 +16617,37 @@ then re-run.
 ` + (captured_output ? `        failing output (tail):
 ${captured_output.split("\n").map((l) => "        | " + l).join("\n")}
 ` : "") + `        recorded under ${path14.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.
+        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose
+`
+        );
+        return 3;
+      }
+      if (err instanceof RouteContractError) {
+        const story = "story" in err.action && typeof err.action.story === "string" ? err.action.story : void 0;
+        const source = `route-contract:${err.event}`;
+        try {
+          writeEscalation(cfg.consortDir, {
+            source,
+            reason: err.message,
+            feature_id: cfg.featureId,
+            ...story ? { story_id: story } : {}
+          });
+          emitAgentLogEvent(
+            {
+              role: "orchestrator",
+              level: "error",
+              event: "escalation.raised",
+              feature_id: cfg.featureId,
+              slots: { source, reason: err.message, ...story ? { story } : {} }
+            },
+            { consortDir: cfg.consortDir }
+          );
+        } catch {
+        }
+        process.stderr.write(
+          `[drive] RAISED TO HIL , route-contract check refused a mis-fired turn before dispatch.
+        reason: ${err.message}
+        recorded under ${path14.basename(cfg.consortDir)}/escalations/ ; fix the route or the producer, then clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it) and re-run to resume.
         To troubleshoot or share the failure, bundle the local forensics: consort-diagnose
 `
         );

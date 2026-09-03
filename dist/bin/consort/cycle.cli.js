@@ -6970,6 +6970,11 @@ import { existsSync as existsSync3, mkdirSync as mkdirSync3, readdirSync as read
 import { join as join3 } from "path";
 import { execFileSync } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 function acLayerToTag(layer) {
   switch (layer) {
     case "API":

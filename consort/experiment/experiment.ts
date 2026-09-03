@@ -12,7 +12,21 @@ import {
   nfrsMd,
   designDir,
   architectureDir,
+  ALL_ARTIFACT_ROOTS,
 } from "../config/consort-paths.js";
+
+/** The path prefixes the pre-fork dirty guard TOLERATES on a tracked-dirty tree:
+ *  runtime-artifact dirs whose churn does not corrupt the experiment fork. Built
+ *  from the artifact roots (the single source, `.consort`/`.sftdd`/`.tdd`) plus
+ *  the paired-branch bookkeeping (`.lakebase/`, e.g. a re-pinned kit-ref /
+ *  scm-utils-ref) and the agent scratch (`.claude/agent-memory/`). Mirrors
+ *  scm-utils' RUNTIME_ARTIFACT_IGNORE (the fork guard) WITHOUT importing it, so a
+ *  dirty `.lakebase/*-ref` never blocks a cut while a tracked SOURCE edit still does. */
+const RUNTIME_ARTIFACT_PREFIXES: readonly string[] = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/",
+];
 
 function branchIdOf(info: LakebaseBranchInfo): string {
   const leaf = info.name.split("/").pop();
@@ -242,7 +256,7 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   try {
     dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" })
       .split("\n")
-      .filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/"))
+      .filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx)))
       .join("\n")
       .trim();
   } catch {

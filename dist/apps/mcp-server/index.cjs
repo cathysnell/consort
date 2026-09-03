@@ -7018,6 +7018,11 @@ var import_fs2 = require("fs");
 var import_path3 = require("path");
 var import_node_child_process2 = require("child_process");
 var import_lakebase3 = require("@databricks-solutions/lakebase-scm-utils/lakebase");
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 function experimentsRoot(consortDir, featureId, storyId) {
   return (0, import_path3.join)(consortDir, "experiments", featureId, storyId);
 }

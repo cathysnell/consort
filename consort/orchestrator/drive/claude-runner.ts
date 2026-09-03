@@ -34,8 +34,6 @@ import { resolveModelForRole } from "../../config/agent-models.js";
 import { resolveConsortSettings } from "../settings/project-settings.js";
 import { parseTurnUsage, assistantTextFromLine, assistantEventSummary, type TurnUsage } from "../../session/claude-usage.js";
 import { resumeFitsBudget, turnContextTokens, CONTEXT_FREE_FRACTION_REQUIRED, isPromptTooLongSignal, isTransientApiErrorSignal, startsFreshEachTurn } from "../../session/context-budget.js";
-import { writeRunConfig } from "../../session/run-config.js";
-import { resolveLaunchKitRef, pinRunKitRef, kitRefDriftWarning } from "../../config/kit-ref.js";
 import type { AgentRole } from "../../logging/agent-log.js";
 import { makeOnAction, describeAction } from "../../logging/orchestrator-logging.js";
 import { resolveKitBinJs } from "../../config/kit-bin.js";

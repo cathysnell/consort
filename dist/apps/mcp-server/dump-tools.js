@@ -7014,6 +7014,11 @@ import { existsSync as existsSync9, mkdirSync as mkdirSync9, readdirSync as read
 import { join as join10 } from "path";
 import { execFileSync } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 function experimentsRoot(consortDir, featureId, storyId) {
   return join10(consortDir, "experiments", featureId, storyId);
 }

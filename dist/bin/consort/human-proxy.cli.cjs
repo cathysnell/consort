@@ -8719,6 +8719,11 @@ var import_lakebase2 = require("@databricks-solutions/lakebase-scm-utils/lakebas
 init_cjs_shims();
 var import_node_child_process = require("child_process");
 var import_lakebase = require("@databricks-solutions/lakebase-scm-utils/lakebase");
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 
 // consort/smells/smells.ts
 function composeReviseBrief(input) {

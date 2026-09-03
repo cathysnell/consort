@@ -91,6 +91,31 @@ describe("cutExperiment is fail-closed on uncommitted TRACKED source, but tolera
     expect(forked, "untracked files are tolerated , the cut reaches createPairedBranch").toBe(true);
   });
 
+  it("TOLERATES a dirty TRACKED runtime-artifact ref (.lakebase/scm-utils-ref) , a re-pin never blocks the cut", async () => {
+    // The paired-branch bookkeeping under .lakebase/ (the committed scm-utils-ref / kit-ref) is a
+    // runtime artifact: a checkout/re-pin dirties it, but it never rides onto the fork as source. So
+    // a dirty TRACKED .lakebase/*-ref must NOT block the cut (mirrors scm-utils' RUNTIME_ARTIFACT_IGNORE),
+    // whereas a dirty tracked SOURCE file still does (the case above). Commit the ref first so it is
+    // TRACKED, then modify it , the guard must still reach createPairedBranch.
+    const refFile = join(dir, ".lakebase", "scm-utils-ref");
+    mkdirSync(join(dir, ".lakebase"), { recursive: true });
+    writeFileSync(refFile, "v0.2.26\n");
+    git(dir, "add", "-A");
+    git(dir, "commit", "-q", "-m", "pin scm-utils-ref");
+    writeFileSync(refFile, "v0.2.27\n"); // tracked dirty runtime ref (a re-pin)
+    let forked = false;
+    await expect(
+      cutExperiment(args(), {
+        createPairedBranch: (async () => {
+          forked = true;
+          throw new Error("REACHED_PAIRED_CUT");
+        }) as never,
+        deletePairedBranch: (async () => {}) as never,
+      }),
+    ).rejects.toThrow(/REACHED_PAIRED_CUT/);
+    expect(forked, "a dirty tracked .lakebase/*-ref is tolerated , the cut reaches createPairedBranch").toBe(true);
+  });
+
   it("COMMITS the design corpus churn on the feature branch BEFORE forking (persists it + cleans the tree)", async () => {
     // The build lane mutates tracked corpus files (per-cycle test-list/AC status) under the artifact
     // root every cycle, but its green-commit helper EXCLUDES .consort to avoid experiment-branch

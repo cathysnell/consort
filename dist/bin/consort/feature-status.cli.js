@@ -6745,6 +6745,11 @@ function readEstimates(tdd) {
 var hasEstimates = (tdd) => readEstimates(tdd).length > 0;
 
 // consort/experiment/experiment.ts
+var RUNTIME_ARTIFACT_PREFIXES = [
+  ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
+  ".lakebase/",
+  ".claude/agent-memory/"
+];
 function experimentsRoot(consortDir, featureId, storyId) {
   return join2(consortDir, "experiments", featureId, storyId);
 }
