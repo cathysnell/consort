@@ -6666,8 +6666,9 @@ function resolveConsortDir(projectDir = process.cwd()) {
   return next;
 }
 var featuresDir = (tdd) => join(tdd, "features");
-var designGuideJson = (tdd) => join(tdd, "design", "design-guide.json");
-var designAssetsDir = (tdd) => join(tdd, "design", "assets");
+var designDir = (tdd) => join(tdd, "design");
+var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
+var designAssetsDir = (tdd) => join(designDir(tdd), "assets");
 var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureSpecJson = (tdd, f) => join(featureResolved(tdd, f), "feature-spec.json");

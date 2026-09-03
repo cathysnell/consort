@@ -6714,7 +6714,8 @@ var escalationFile = (tdd, id) => (0, import_node_path.join)(escalationsDir(tdd)
 var acReviewJson = (tdd, f, s, ac) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, ac, "review.json");
 var storyReviewJson = (tdd, f, s) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, "review.json");
 var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state.json");
-var designGuideJson = (tdd) => (0, import_node_path.join)(tdd, "design", "design-guide.json");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
 var architectureConventionsJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "conventions.json");
 var architectureCanonJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "canon.json");

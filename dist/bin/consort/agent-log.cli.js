@@ -6668,7 +6668,8 @@ function resolveConsortDir(projectDir = process.cwd()) {
   return next;
 }
 var featuresDir = (tdd) => join(tdd, "features");
-var designGuideJson = (tdd) => join(tdd, "design", "design-guide.json");
+var designDir = (tdd) => join(tdd, "design");
+var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => join(tdd, "architecture");
 var architectureConventionsJson = (tdd) => join(architectureDir(tdd), "conventions.json");
 var architectureCanonJson = (tdd) => join(architectureDir(tdd), "canon.json");
@@ -7215,10 +7216,10 @@ function discoverArtifacts(consortDir, featureId) {
   add(join5(fdir, "architecture.json"), "architect-reviewer", "architecture.json");
   add(join5(fdir, "test-list.json"), "test-strategist", "test-list.json");
   add(architectureConventionsJson(consortDir), "architect-reviewer", "architecture conventions (project)");
-  const designDir = dirname4(designGuideJson(consortDir));
-  add(join5(designDir, "design-guide.json"), "ux-designer", "design-guide.json");
-  add(join5(designDir, "design-guide.md"), "ux-designer", "design-guide.md");
-  add(join5(designDir, "ia.md"), "ux-designer", "ia.md");
+  const designDir2 = dirname4(designGuideJson(consortDir));
+  add(join5(designDir2, "design-guide.json"), "ux-designer", "design-guide.json");
+  add(join5(designDir2, "design-guide.md"), "ux-designer", "design-guide.md");
+  add(join5(designDir2, "ia.md"), "ux-designer", "ia.md");
   const sdir = join5(fdir, "stories");
   if (existsSync7(sdir)) {
     for (const s of readdirSync4(sdir).sort()) {

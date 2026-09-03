@@ -6676,7 +6676,8 @@ function resolveConsortDir(projectDir = process.cwd()) {
   return next;
 }
 var featuresDir = (tdd) => (0, import_node_path.join)(tdd, "features");
-var designGuideJson = (tdd) => (0, import_node_path.join)(tdd, "design", "design-guide.json");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
 var architectureConventionsJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "conventions.json");
 var architectureCanonJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "canon.json");
@@ -7223,10 +7224,10 @@ function discoverArtifacts(consortDir, featureId) {
   add((0, import_path6.join)(fdir, "architecture.json"), "architect-reviewer", "architecture.json");
   add((0, import_path6.join)(fdir, "test-list.json"), "test-strategist", "test-list.json");
   add(architectureConventionsJson(consortDir), "architect-reviewer", "architecture conventions (project)");
-  const designDir = (0, import_path6.dirname)(designGuideJson(consortDir));
-  add((0, import_path6.join)(designDir, "design-guide.json"), "ux-designer", "design-guide.json");
-  add((0, import_path6.join)(designDir, "design-guide.md"), "ux-designer", "design-guide.md");
-  add((0, import_path6.join)(designDir, "ia.md"), "ux-designer", "ia.md");
+  const designDir2 = (0, import_path6.dirname)(designGuideJson(consortDir));
+  add((0, import_path6.join)(designDir2, "design-guide.json"), "ux-designer", "design-guide.json");
+  add((0, import_path6.join)(designDir2, "design-guide.md"), "ux-designer", "design-guide.md");
+  add((0, import_path6.join)(designDir2, "ia.md"), "ux-designer", "ia.md");
   const sdir = (0, import_path6.join)(fdir, "stories");
   if ((0, import_fs6.existsSync)(sdir)) {
     for (const s of (0, import_fs6.readdirSync)(sdir).sort()) {

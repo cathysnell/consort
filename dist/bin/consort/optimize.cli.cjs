@@ -6993,9 +6993,11 @@ var escalationsDir = (tdd) => (0, import_node_path.join)(tdd, "escalations");
 var acReviewJson = (tdd, f, s, ac) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, ac, "review.json");
 var storyReviewJson = (tdd, f, s) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, "review.json");
 var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
 var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
-var designGuideJson = (tdd) => (0, import_node_path.join)(tdd, "design", "design-guide.json");
-var designAssetsDir = (tdd) => (0, import_node_path.join)(tdd, "design", "assets");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
+var designAssetsDir = (tdd) => (0, import_node_path.join)(designDir(tdd), "assets");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
 var architectureConventionsJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "conventions.json");
 var architectureCanonJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "canon.json");
@@ -12238,6 +12240,26 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? import_lakebase3.createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? import_lakebase3.deletePairedBranch;
+  try {
+    const corpusPaths = [
+      featuresDir(consortDir),
+      planningDir(consortDir),
+      sprintsDir(consortDir),
+      workflowStateJson(consortDir),
+      productOverviewMd(consortDir),
+      nfrsMd(consortDir),
+      designDir(consortDir),
+      architectureDir(consortDir)
+    ].filter((p) => (0, import_fs9.existsSync)(p));
+    if (corpusPaths.length > 0) {
+      (0, import_node_child_process4.execFileSync)("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = (0, import_node_child_process4.execFileSync)("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      if (staged) {
+        (0, import_node_child_process4.execFileSync)("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+      }
+    }
+  } catch {
+  }
   let dirtyTracked = "";
   try {
     dirtyTracked = (0, import_node_child_process4.execFileSync)("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/")).join("\n").trim();

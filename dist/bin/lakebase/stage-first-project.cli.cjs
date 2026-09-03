@@ -64,7 +64,8 @@ function resolveConsortDir(projectDir = process.cwd()) {
 var featuresDir = (tdd) => (0, import_node_path.join)(tdd, "features");
 var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
 var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
-var designBriefMd = (tdd) => (0, import_node_path.join)(tdd, "design", "design-brief.md");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designBriefMd = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-brief.md");
 var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureRequestMd = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "feature-request.md");

@@ -6665,96 +6665,57 @@ import { getConnection } from "@databricks-solutions/lakebase-scm-utils/lakebase
 
 // consort/experiment/experiment.ts
 init_esm_shims();
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { join } from "path";
+import { existsSync as existsSync2, mkdirSync as mkdirSync2, readdirSync as readdirSync2, readFileSync as readFileSync2, statSync as statSync2, writeFileSync as writeFileSync2 } from "fs";
+import { join as join2 } from "path";
 import { execFileSync } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
-function experimentsRoot(consortDir, featureId, storyId) {
-  return join(consortDir, "experiments", featureId, storyId);
-}
-function experimentDir(consortDir, featureId, storyId, slug) {
-  return join(experimentsRoot(consortDir, featureId, storyId), slug);
-}
-function listExperimentStories(consortDir, featureId) {
-  const root = join(consortDir, "experiments", featureId);
-  if (!existsSync(root)) return [];
-  return readdirSync(root).filter((d) => statSync(join(root, d)).isDirectory()).sort();
-}
-function listExperiments(consortDir, featureId, storyId) {
-  const root = experimentsRoot(consortDir, featureId, storyId);
-  if (!existsSync(root)) return [];
-  const out = [];
-  for (const slug of readdirSync(root)) {
-    const dir = join(root, slug);
-    if (!statSync(dir).isDirectory()) continue;
-    const branchFile = join(dir, "branch.txt");
-    if (!existsSync(branchFile)) continue;
-    out.push({
-      feature_id: featureId,
-      story_id: storyId,
-      experiment_slug: slug,
-      branch_id: readFileSync(branchFile, "utf8").trim(),
-      created_at: statSync(branchFile).birthtime.toISOString(),
-      dir
-    });
-  }
-  return out;
-}
-function readOutcomes(consortDir, featureId, storyId, slug) {
-  const file = join(experimentDir(consortDir, featureId, storyId, slug), "outcomes.json");
-  if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, "utf8"));
-}
-
-// consort/logging/agent-log.ts
-init_esm_shims();
 
 // consort/config/consort-paths.ts
 init_esm_shims();
 import * as fs from "fs";
-import { join as join2 } from "path";
+import { join } from "path";
 var ARTIFACT_ROOT = ".consort";
 var LEGACY_ARTIFACT_ROOTS = [".sftdd", ".tdd"];
 var ALL_ARTIFACT_ROOTS = [ARTIFACT_ROOT, ...LEGACY_ARTIFACT_ROOTS];
 var artifactRootsRegexAlternation = () => ALL_ARTIFACT_ROOTS.map((r) => r.replace(/[.]/g, "\\.")).join("|");
 function resolveConsortDir(projectDir = process.cwd()) {
-  const next = join2(projectDir, ARTIFACT_ROOT);
+  const next = join(projectDir, ARTIFACT_ROOT);
   if (fs.existsSync(next)) return next;
   for (const legacyName of LEGACY_ARTIFACT_ROOTS) {
-    const legacy = join2(projectDir, legacyName);
+    const legacy = join(projectDir, legacyName);
     if (fs.existsSync(legacy)) return legacy;
   }
   return next;
 }
-var featuresDir = (tdd) => join2(tdd, "features");
-var planningDir = (tdd) => join2(tdd, "planning");
-var workflowStateJson = (tdd) => join2(tdd, "workflow-state.json");
-var featureDir = (tdd, featureId) => join2(featuresDir(tdd), featureId);
+var featuresDir = (tdd) => join(tdd, "features");
+var planningDir = (tdd) => join(tdd, "planning");
+var workflowStateJson = (tdd) => join(tdd, "workflow-state.json");
+var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
-var featureSpecJson = (tdd, f) => join2(featureResolved(tdd, f), "feature-spec.json");
-var featureRequestMd = (tdd, f) => join2(featureResolved(tdd, f), "feature-request.md");
-var featureTestListJson = (tdd, f) => join2(featureResolved(tdd, f), "test-list.json");
-var pipelineJson = (tdd, f) => join2(featureResolved(tdd, f), "pipeline.json");
-var featureDeployEvidenceJson = (tdd, f) => join2(featureResolved(tdd, f), "deploy-evidence.json");
-var storiesDir = (tdd, f) => join2(featureResolved(tdd, f), "stories");
-var storyDir = (tdd, f, s) => join2(storiesDir(tdd, f), s);
+var featureSpecJson = (tdd, f) => join(featureResolved(tdd, f), "feature-spec.json");
+var featureRequestMd = (tdd, f) => join(featureResolved(tdd, f), "feature-request.md");
+var featureTestListJson = (tdd, f) => join(featureResolved(tdd, f), "test-list.json");
+var pipelineJson = (tdd, f) => join(featureResolved(tdd, f), "pipeline.json");
+var featureDeployEvidenceJson = (tdd, f) => join(featureResolved(tdd, f), "deploy-evidence.json");
+var storiesDir = (tdd, f) => join(featureResolved(tdd, f), "stories");
+var storyDir = (tdd, f, s) => join(storiesDir(tdd, f), s);
 function findStoryDir(tdd, f, s) {
   const root = storiesDir(tdd, f);
   if (!fs.existsSync(root)) return void 0;
-  const exact = join2(root, s);
+  const exact = join(root, s);
   if (fs.existsSync(exact)) return exact;
   const matches = fs.readdirSync(root).filter((d) => d === s || d.startsWith(`${s}-`));
-  return matches.length === 1 ? join2(root, matches[0]) : void 0;
+  return matches.length === 1 ? join(root, matches[0]) : void 0;
 }
 var storyResolved = (tdd, f, s) => findStoryDir(tdd, f, s) ?? storyDir(tdd, f, s);
-var storyPlanJson = (tdd, f, s) => join2(storyResolved(tdd, f, s), "plan.json");
+var storyPlanJson = (tdd, f, s) => join(storyResolved(tdd, f, s), "plan.json");
 function findFeatureDir(tdd, featureId) {
   const root = featuresDir(tdd);
   if (!fs.existsSync(root)) return void 0;
-  const exact = join2(root, featureId);
+  const exact = join(root, featureId);
   if (fs.existsSync(exact)) return exact;
   const matches = fs.readdirSync(root).filter((d) => d === featureId || d.startsWith(`${featureId}-`));
-  return matches.length === 1 ? join2(root, matches[0]) : void 0;
+  return matches.length === 1 ? join(root, matches[0]) : void 0;
 }
 function requireFeatureDir(tdd, featureId) {
   const dir = findFeatureDir(tdd, featureId);
@@ -6763,7 +6724,7 @@ function requireFeatureDir(tdd, featureId) {
 }
 var TSHIRT_SIZES = /* @__PURE__ */ new Set(["XS", "S", "M", "L", "XL"]);
 var isTshirtSize = (x) => typeof x === "string" && TSHIRT_SIZES.has(x);
-var planningEstimatesJson = (tdd) => join2(planningDir(tdd), "estimates.json");
+var planningEstimatesJson = (tdd) => join(planningDir(tdd), "estimates.json");
 function readEstimates(tdd) {
   const file = planningEstimatesJson(tdd);
   if (!fs.existsSync(file)) return [];
@@ -6782,6 +6743,47 @@ function readEstimates(tdd) {
   }
 }
 var hasEstimates = (tdd) => readEstimates(tdd).length > 0;
+
+// consort/experiment/experiment.ts
+function experimentsRoot(consortDir, featureId, storyId) {
+  return join2(consortDir, "experiments", featureId, storyId);
+}
+function experimentDir(consortDir, featureId, storyId, slug) {
+  return join2(experimentsRoot(consortDir, featureId, storyId), slug);
+}
+function listExperimentStories(consortDir, featureId) {
+  const root = join2(consortDir, "experiments", featureId);
+  if (!existsSync2(root)) return [];
+  return readdirSync2(root).filter((d) => statSync2(join2(root, d)).isDirectory()).sort();
+}
+function listExperiments(consortDir, featureId, storyId) {
+  const root = experimentsRoot(consortDir, featureId, storyId);
+  if (!existsSync2(root)) return [];
+  const out = [];
+  for (const slug of readdirSync2(root)) {
+    const dir = join2(root, slug);
+    if (!statSync2(dir).isDirectory()) continue;
+    const branchFile = join2(dir, "branch.txt");
+    if (!existsSync2(branchFile)) continue;
+    out.push({
+      feature_id: featureId,
+      story_id: storyId,
+      experiment_slug: slug,
+      branch_id: readFileSync2(branchFile, "utf8").trim(),
+      created_at: statSync2(branchFile).birthtime.toISOString(),
+      dir
+    });
+  }
+  return out;
+}
+function readOutcomes(consortDir, featureId, storyId, slug) {
+  const file = join2(experimentDir(consortDir, featureId, storyId, slug), "outcomes.json");
+  if (!existsSync2(file)) return null;
+  return JSON.parse(readFileSync2(file, "utf8"));
+}
+
+// consort/logging/agent-log.ts
+init_esm_shims();
 
 // consort/config/consort-env.ts
 init_esm_shims();

@@ -6669,8 +6669,9 @@ var acReviewJson = (tdd, f, s, ac) => (0, import_node_path.join)(cyclesRootDir(t
 var acReviewVerdictJson = (tdd, f, s, ac) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, ac, "review-verdict.json");
 var storyReviewJson = (tdd, f, s) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, "review.json");
 var storyReviewVerdictJson = (tdd, f, s) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, "review-verdict.json");
-var designGuideJson = (tdd) => (0, import_node_path.join)(tdd, "design", "design-guide.json");
-var designAssetsDir = (tdd) => (0, import_node_path.join)(tdd, "design", "assets");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
+var designAssetsDir = (tdd) => (0, import_node_path.join)(designDir(tdd), "assets");
 var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureTestListJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "test-list.json");

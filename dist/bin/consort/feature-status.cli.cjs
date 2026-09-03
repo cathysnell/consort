@@ -6664,45 +6664,6 @@ var import_fs = require("fs");
 var import_path = require("path");
 var import_node_child_process = require("child_process");
 var import_lakebase = require("@databricks-solutions/lakebase-scm-utils/lakebase");
-function experimentsRoot(consortDir, featureId, storyId) {
-  return (0, import_path.join)(consortDir, "experiments", featureId, storyId);
-}
-function experimentDir(consortDir, featureId, storyId, slug) {
-  return (0, import_path.join)(experimentsRoot(consortDir, featureId, storyId), slug);
-}
-function listExperimentStories(consortDir, featureId) {
-  const root = (0, import_path.join)(consortDir, "experiments", featureId);
-  if (!(0, import_fs.existsSync)(root)) return [];
-  return (0, import_fs.readdirSync)(root).filter((d) => (0, import_fs.statSync)((0, import_path.join)(root, d)).isDirectory()).sort();
-}
-function listExperiments(consortDir, featureId, storyId) {
-  const root = experimentsRoot(consortDir, featureId, storyId);
-  if (!(0, import_fs.existsSync)(root)) return [];
-  const out = [];
-  for (const slug of (0, import_fs.readdirSync)(root)) {
-    const dir = (0, import_path.join)(root, slug);
-    if (!(0, import_fs.statSync)(dir).isDirectory()) continue;
-    const branchFile = (0, import_path.join)(dir, "branch.txt");
-    if (!(0, import_fs.existsSync)(branchFile)) continue;
-    out.push({
-      feature_id: featureId,
-      story_id: storyId,
-      experiment_slug: slug,
-      branch_id: (0, import_fs.readFileSync)(branchFile, "utf8").trim(),
-      created_at: (0, import_fs.statSync)(branchFile).birthtime.toISOString(),
-      dir
-    });
-  }
-  return out;
-}
-function readOutcomes(consortDir, featureId, storyId, slug) {
-  const file = (0, import_path.join)(experimentDir(consortDir, featureId, storyId, slug), "outcomes.json");
-  if (!(0, import_fs.existsSync)(file)) return null;
-  return JSON.parse((0, import_fs.readFileSync)(file, "utf8"));
-}
-
-// consort/logging/agent-log.ts
-init_cjs_shims();
 
 // consort/config/consort-paths.ts
 init_cjs_shims();
@@ -6777,6 +6738,47 @@ function readEstimates(tdd) {
   }
 }
 var hasEstimates = (tdd) => readEstimates(tdd).length > 0;
+
+// consort/experiment/experiment.ts
+function experimentsRoot(consortDir, featureId, storyId) {
+  return (0, import_path.join)(consortDir, "experiments", featureId, storyId);
+}
+function experimentDir(consortDir, featureId, storyId, slug) {
+  return (0, import_path.join)(experimentsRoot(consortDir, featureId, storyId), slug);
+}
+function listExperimentStories(consortDir, featureId) {
+  const root = (0, import_path.join)(consortDir, "experiments", featureId);
+  if (!(0, import_fs.existsSync)(root)) return [];
+  return (0, import_fs.readdirSync)(root).filter((d) => (0, import_fs.statSync)((0, import_path.join)(root, d)).isDirectory()).sort();
+}
+function listExperiments(consortDir, featureId, storyId) {
+  const root = experimentsRoot(consortDir, featureId, storyId);
+  if (!(0, import_fs.existsSync)(root)) return [];
+  const out = [];
+  for (const slug of (0, import_fs.readdirSync)(root)) {
+    const dir = (0, import_path.join)(root, slug);
+    if (!(0, import_fs.statSync)(dir).isDirectory()) continue;
+    const branchFile = (0, import_path.join)(dir, "branch.txt");
+    if (!(0, import_fs.existsSync)(branchFile)) continue;
+    out.push({
+      feature_id: featureId,
+      story_id: storyId,
+      experiment_slug: slug,
+      branch_id: (0, import_fs.readFileSync)(branchFile, "utf8").trim(),
+      created_at: (0, import_fs.statSync)(branchFile).birthtime.toISOString(),
+      dir
+    });
+  }
+  return out;
+}
+function readOutcomes(consortDir, featureId, storyId, slug) {
+  const file = (0, import_path.join)(experimentDir(consortDir, featureId, storyId, slug), "outcomes.json");
+  if (!(0, import_fs.existsSync)(file)) return null;
+  return JSON.parse((0, import_fs.readFileSync)(file, "utf8"));
+}
+
+// consort/logging/agent-log.ts
+init_cjs_shims();
 
 // consort/config/consort-env.ts
 init_cjs_shims();

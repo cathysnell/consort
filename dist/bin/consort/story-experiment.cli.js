@@ -6651,10 +6651,62 @@ init_esm_shims();
 
 // consort/experiment/experiment.ts
 init_esm_shims();
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { join } from "path";
+import { existsSync as existsSync2, mkdirSync as mkdirSync2, readdirSync as readdirSync2, readFileSync as readFileSync2, statSync as statSync2, writeFileSync as writeFileSync2 } from "fs";
+import { join as join2 } from "path";
 import { execFileSync } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
+
+// consort/config/consort-paths.ts
+init_esm_shims();
+import * as fs from "fs";
+import { join } from "path";
+var ARTIFACT_ROOT = ".consort";
+var LEGACY_ARTIFACT_ROOTS = [".sftdd", ".tdd"];
+var ALL_ARTIFACT_ROOTS = [ARTIFACT_ROOT, ...LEGACY_ARTIFACT_ROOTS];
+var artifactRootsRegexAlternation = () => ALL_ARTIFACT_ROOTS.map((r) => r.replace(/[.]/g, "\\.")).join("|");
+function resolveConsortDir(projectDir = process.cwd()) {
+  const next = join(projectDir, ARTIFACT_ROOT);
+  if (fs.existsSync(next)) return next;
+  for (const legacyName of LEGACY_ARTIFACT_ROOTS) {
+    const legacy = join(projectDir, legacyName);
+    if (fs.existsSync(legacy)) return legacy;
+  }
+  return next;
+}
+var featuresDir = (tdd) => join(tdd, "features");
+var planningDir = (tdd) => join(tdd, "planning");
+var sprintsDir = (tdd) => join(tdd, "sprints");
+var cyclesRootDir = (tdd) => join(tdd, "cycles");
+var workflowStateJson = (tdd) => join(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
+var nfrsMd = (tdd) => join(tdd, "nfrs.md");
+var designDir = (tdd) => join(tdd, "design");
+var architectureDir = (tdd) => join(tdd, "architecture");
+var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
+var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
+var pipelineJson = (tdd, f) => join(featureResolved(tdd, f), "pipeline.json");
+var storiesDir = (tdd, f) => join(featureResolved(tdd, f), "stories");
+var storyDir = (tdd, f, s) => join(storiesDir(tdd, f), s);
+function findStoryDir(tdd, f, s) {
+  const root = storiesDir(tdd, f);
+  if (!fs.existsSync(root)) return void 0;
+  const exact = join(root, s);
+  if (fs.existsSync(exact)) return exact;
+  const matches = fs.readdirSync(root).filter((d) => d === s || d.startsWith(`${s}-`));
+  return matches.length === 1 ? join(root, matches[0]) : void 0;
+}
+var storyResolved = (tdd, f, s) => findStoryDir(tdd, f, s) ?? storyDir(tdd, f, s);
+var storyTestListJson = (tdd, f, s) => join(storyResolved(tdd, f, s), "test-list-per-story.json");
+function findFeatureDir(tdd, featureId) {
+  const root = featuresDir(tdd);
+  if (!fs.existsSync(root)) return void 0;
+  const exact = join(root, featureId);
+  if (fs.existsSync(exact)) return exact;
+  const matches = fs.readdirSync(root).filter((d) => d === featureId || d.startsWith(`${featureId}-`));
+  return matches.length === 1 ? join(root, matches[0]) : void 0;
+}
+
+// consort/experiment/experiment.ts
 function branchIdOf(info) {
   const leaf = info.name.split("/").pop();
   if (!leaf) throw new Error(`could not derive branch_id from ${info.name}`);
@@ -6685,15 +6737,35 @@ function gitRevParse(cwd, ref) {
   }
 }
 function experimentsRoot(consortDir, featureId, storyId) {
-  return join(consortDir, "experiments", featureId, storyId);
+  return join2(consortDir, "experiments", featureId, storyId);
 }
 function experimentDir(consortDir, featureId, storyId, slug) {
-  return join(experimentsRoot(consortDir, featureId, storyId), slug);
+  return join2(experimentsRoot(consortDir, featureId, storyId), slug);
 }
 async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
+  try {
+    const corpusPaths = [
+      featuresDir(consortDir),
+      planningDir(consortDir),
+      sprintsDir(consortDir),
+      workflowStateJson(consortDir),
+      productOverviewMd(consortDir),
+      nfrsMd(consortDir),
+      designDir(consortDir),
+      architectureDir(consortDir)
+    ].filter((p) => existsSync2(p));
+    if (corpusPaths.length > 0) {
+      execFileSync("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = execFileSync("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      if (staged) {
+        execFileSync("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+      }
+    }
+  } catch {
+  }
   let dirtyTracked = "";
   try {
     dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/")).join("\n").trim();
@@ -6737,19 +6809,19 @@ ${dirtyTracked}`
   }
   const branchId = branchIdOf(paired.branch);
   const dir = experimentDir(consortDir, featureId, storyId, experimentSlug);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "branch.txt"), branchId);
-  writeFileSync(
-    join(dir, "notes.md"),
+  mkdirSync2(dir, { recursive: true });
+  writeFileSync2(join2(dir, "branch.txt"), branchId);
+  writeFileSync2(
+    join2(dir, "notes.md"),
     notes ?? `# ${experimentSlug}
 
 Experiment cut from \`${parentBranch ?? "staging"}\`. Strategy + learning notes go here.
 `
   );
   const outcomes = { status: "running" };
-  writeFileSync(join(dir, "outcomes.json"), JSON.stringify(outcomes, null, 2) + "\n");
-  writeFileSync(
-    join(dir, "timeline.json"),
+  writeFileSync2(join2(dir, "outcomes.json"), JSON.stringify(outcomes, null, 2) + "\n");
+  writeFileSync2(
+    join2(dir, "timeline.json"),
     JSON.stringify(
       { entries: [{ ts: (/* @__PURE__ */ new Date()).toISOString(), kind: "cut", branch: branchId }] },
       null,
@@ -6768,56 +6840,13 @@ Experiment cut from \`${parentBranch ?? "staging"}\`. Strategy + learning notes 
 async function deleteExperiment(args) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, deleteBranchToo, ...lookup } = args;
   const dir = experimentDir(consortDir, featureId, storyId, experimentSlug);
-  if (!existsSync(dir)) {
+  if (!existsSync2(dir)) {
     throw new Error(`experiment ${featureId}/${storyId}/${experimentSlug} not found at ${dir}`);
   }
   if (deleteBranchToo) {
-    const branchId = readFileSync(join(dir, "branch.txt"), "utf8").trim();
+    const branchId = readFileSync2(join2(dir, "branch.txt"), "utf8").trim();
     await deletePairedBranch({ instance: lookup.instance, branch: branchId, cwd: projectDir });
   }
-}
-
-// consort/config/consort-paths.ts
-init_esm_shims();
-import * as fs from "fs";
-import { join as join2 } from "path";
-var ARTIFACT_ROOT = ".consort";
-var LEGACY_ARTIFACT_ROOTS = [".sftdd", ".tdd"];
-var ALL_ARTIFACT_ROOTS = [ARTIFACT_ROOT, ...LEGACY_ARTIFACT_ROOTS];
-var artifactRootsRegexAlternation = () => ALL_ARTIFACT_ROOTS.map((r) => r.replace(/[.]/g, "\\.")).join("|");
-function resolveConsortDir(projectDir = process.cwd()) {
-  const next = join2(projectDir, ARTIFACT_ROOT);
-  if (fs.existsSync(next)) return next;
-  for (const legacyName of LEGACY_ARTIFACT_ROOTS) {
-    const legacy = join2(projectDir, legacyName);
-    if (fs.existsSync(legacy)) return legacy;
-  }
-  return next;
-}
-var featuresDir = (tdd) => join2(tdd, "features");
-var cyclesRootDir = (tdd) => join2(tdd, "cycles");
-var featureDir = (tdd, featureId) => join2(featuresDir(tdd), featureId);
-var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
-var pipelineJson = (tdd, f) => join2(featureResolved(tdd, f), "pipeline.json");
-var storiesDir = (tdd, f) => join2(featureResolved(tdd, f), "stories");
-var storyDir = (tdd, f, s) => join2(storiesDir(tdd, f), s);
-function findStoryDir(tdd, f, s) {
-  const root = storiesDir(tdd, f);
-  if (!fs.existsSync(root)) return void 0;
-  const exact = join2(root, s);
-  if (fs.existsSync(exact)) return exact;
-  const matches = fs.readdirSync(root).filter((d) => d === s || d.startsWith(`${s}-`));
-  return matches.length === 1 ? join2(root, matches[0]) : void 0;
-}
-var storyResolved = (tdd, f, s) => findStoryDir(tdd, f, s) ?? storyDir(tdd, f, s);
-var storyTestListJson = (tdd, f, s) => join2(storyResolved(tdd, f, s), "test-list-per-story.json");
-function findFeatureDir(tdd, featureId) {
-  const root = featuresDir(tdd);
-  if (!fs.existsSync(root)) return void 0;
-  const exact = join2(root, featureId);
-  if (fs.existsSync(exact)) return exact;
-  const matches = fs.readdirSync(root).filter((d) => d === featureId || d.startsWith(`${featureId}-`));
-  return matches.length === 1 ? join2(root, matches[0]) : void 0;
 }
 
 // consort/experiment/experiment-lifecycle.ts

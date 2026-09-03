@@ -97,16 +97,20 @@ export const storyReviewVerdictJson = (tdd: string, f: string, s: string): strin
 export const workflowStateJson = (tdd: string): string => join(tdd, "workflow-state.json");
 export const productOverviewMd = (tdd: string): string => join(tdd, "product-overview.md");
 export const nfrsMd = (tdd: string): string => join(tdd, "nfrs.md");
-export const designBriefMd = (tdd: string): string => join(tdd, "design", "design-brief.md");
+/** The design corpus dir (`.consort/design/`): the design brief, project-level
+ *  design-guide, IA, and staged brand assets , the committed design half of a
+ *  feature's spec. */
+export const designDir = (tdd: string): string => join(tdd, "design");
+export const designBriefMd = (tdd: string): string => join(designDir(tdd), "design-brief.md");
 /** The UX Designer's project-level style guide (machine-checkable tokens),
  *  authored once from the design brief; gates the UI build (design-guide.md is
  *  its human-readable sibling, ia.md the information architecture). */
-export const designGuideJson = (tdd: string): string => join(tdd, "design", "design-guide.json");
+export const designGuideJson = (tdd: string): string => join(designDir(tdd), "design-guide.json");
 /** The staged brand/design assets dir (`.consort/design/assets/`): where the intake
  *  stages an app icon / logo (e.g. `warehouse.png`) for the UX Designer to declare via
  *  the guide's `app_icon` and the kit to install the real bytes from. A staged asset
  *  with no `app_icon` is a design-guide defect (`brandAssetDeclared`). */
-export const designAssetsDir = (tdd: string): string => join(tdd, "design", "assets");
+export const designAssetsDir = (tdd: string): string => join(designDir(tdd), "assets");
 /** Project-level architecture conventions: the canonical layer layout (role ->
  *  module) the FIRST service-backed feature establishes, persisted across
  *  features so every later feature's architecture inherits + conforms to it

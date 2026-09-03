@@ -6674,8 +6674,9 @@ var acReviewJson = (tdd, f, s, ac) => join(cyclesRootDir(tdd), f, s, ac, "review
 var acReviewVerdictJson = (tdd, f, s, ac) => join(cyclesRootDir(tdd), f, s, ac, "review-verdict.json");
 var storyReviewJson = (tdd, f, s) => join(cyclesRootDir(tdd), f, s, "review.json");
 var storyReviewVerdictJson = (tdd, f, s) => join(cyclesRootDir(tdd), f, s, "review-verdict.json");
-var designGuideJson = (tdd) => join(tdd, "design", "design-guide.json");
-var designAssetsDir = (tdd) => join(tdd, "design", "assets");
+var designDir = (tdd) => join(tdd, "design");
+var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
+var designAssetsDir = (tdd) => join(designDir(tdd), "assets");
 var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureTestListJson = (tdd, f) => join(featureResolved(tdd, f), "test-list.json");

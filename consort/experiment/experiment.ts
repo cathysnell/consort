@@ -3,6 +3,16 @@ import { join } from "path";
 import { execFileSync } from "node:child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import type { BranchLookupOpts, LakebaseBranchInfo } from "@databricks-solutions/lakebase-scm-utils/lakebase";
+import {
+  featuresDir,
+  planningDir,
+  sprintsDir,
+  workflowStateJson,
+  productOverviewMd,
+  nfrsMd,
+  designDir,
+  architectureDir,
+} from "../config/consort-paths.js";
 
 function branchIdOf(info: LakebaseBranchInfo): string {
   const leaf = info.name.split("/").pop();
@@ -190,6 +200,36 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
+  // Persist the design/spec CORPUS on the CURRENT (feature) branch BEFORE forking. The build lane
+  // writes per-cycle status into .consort/features/ (test-list + AC status) , committed corpus per
+  // the scaffold template , but commitExperimentCode EXCLUDES .consort (to avoid experiment-branch
+  // divergence that breaks accept's checkout), so the interactive path otherwise leaves that corpus
+  // uncommitted and re-dirties the tree at the NEXT cut. Committing it here , pre-fork, on the
+  // feature branch , persists the corpus AND cleans the tree, with NO experiment-branch divergence
+  // (the fork below inherits the committed corpus). Only the committed-corpus paths are staged; the
+  // TRANSIENT run-state (cycles/, experiments/, pipeline.json, next.json, logs) is gitignored and
+  // intentionally left out. Best-effort: a non-repo (hermetic tests) or nothing-to-commit is fine.
+  try {
+    const corpusPaths = [
+      featuresDir(consortDir),
+      planningDir(consortDir),
+      sprintsDir(consortDir),
+      workflowStateJson(consortDir),
+      productOverviewMd(consortDir),
+      nfrsMd(consortDir),
+      designDir(consortDir),
+      architectureDir(consortDir),
+    ].filter((p) => existsSync(p));
+    if (corpusPaths.length > 0) {
+      execFileSync("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = execFileSync("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      if (staged) {
+        execFileSync("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+      }
+    }
+  } catch {
+    /* not a git repo (hermetic tests) or nothing to commit , the dirty check + fork below still run */
+  }
   // FAIL-CLOSED on uncommitted TRACKED changes OUTSIDE .consort/ , the harmful case: a tracked-source
   // edit silently rides onto the experiment fork (git checkout -b carries it), leaving the tree
   // building on the feature branch's uncommitted state (the "cut refused but the Navigator ran anyway"

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cutExperiment } from "../../consort/experiment/experiment.js";
@@ -89,5 +89,34 @@ describe("cutExperiment is fail-closed on uncommitted TRACKED source, but tolera
       }),
     ).rejects.toThrow(/REACHED_PAIRED_CUT/);
     expect(forked, "untracked files are tolerated , the cut reaches createPairedBranch").toBe(true);
+  });
+
+  it("COMMITS the design corpus churn on the feature branch BEFORE forking (persists it + cleans the tree)", async () => {
+    // The build lane mutates tracked corpus files (per-cycle test-list/AC status) under the artifact
+    // root every cycle, but its green-commit helper EXCLUDES .consort to avoid experiment-branch
+    // divergence , so the interactive path otherwise leaves that corpus uncommitted and re-dirties
+    // the tree at the next cut. cutExperiment must PERSIST it (commit on the current/feature branch)
+    // before forking: neither leave it uncommitted (spec history lost + tree re-dirtied) nor let a
+    // tracked corpus modification block the cut. consortDir is the artifact root here.
+    const corpusDir = join(dir, ".lakebase", "features", "F1-x", "stories", "S1-x");
+    mkdirSync(corpusDir, { recursive: true });
+    const corpusFile = join(corpusDir, "test-list.json");
+    writeFileSync(corpusFile, JSON.stringify({ status: "initial" }));
+    git(dir, "add", "-A");
+    git(dir, "commit", "-q", "-m", "seed corpus");
+    writeFileSync(corpusFile, JSON.stringify({ status: "cycle-1-churn" })); // per-cycle mutation
+    let forked = false;
+    await expect(
+      cutExperiment(args(), {
+        createPairedBranch: (async () => {
+          forked = true;
+          throw new Error("REACHED_PAIRED_CUT");
+        }) as never,
+        deletePairedBranch: (async () => {}) as never,
+      }),
+    ).rejects.toThrow(/REACHED_PAIRED_CUT/);
+    expect(forked, "corpus churn is persisted, not blocking , the cut reaches createPairedBranch").toBe(true);
+    const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: dir, encoding: "utf8" }).trim();
+    expect(dirty, "the design corpus churn was committed on the feature branch (tree clean)").toBe("");
   });
 });

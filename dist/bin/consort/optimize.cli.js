@@ -6984,9 +6984,11 @@ var escalationsDir = (tdd) => join2(tdd, "escalations");
 var acReviewJson = (tdd, f, s, ac) => join2(cyclesRootDir(tdd), f, s, ac, "review.json");
 var storyReviewJson = (tdd, f, s) => join2(cyclesRootDir(tdd), f, s, "review.json");
 var workflowStateJson = (tdd) => join2(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => join2(tdd, "product-overview.md");
 var nfrsMd = (tdd) => join2(tdd, "nfrs.md");
-var designGuideJson = (tdd) => join2(tdd, "design", "design-guide.json");
-var designAssetsDir = (tdd) => join2(tdd, "design", "assets");
+var designDir = (tdd) => join2(tdd, "design");
+var designGuideJson = (tdd) => join2(designDir(tdd), "design-guide.json");
+var designAssetsDir = (tdd) => join2(designDir(tdd), "assets");
 var architectureDir = (tdd) => join2(tdd, "architecture");
 var architectureConventionsJson = (tdd) => join2(architectureDir(tdd), "conventions.json");
 var architectureCanonJson = (tdd) => join2(architectureDir(tdd), "canon.json");
@@ -12239,6 +12241,26 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
+  try {
+    const corpusPaths = [
+      featuresDir(consortDir),
+      planningDir(consortDir),
+      sprintsDir(consortDir),
+      workflowStateJson(consortDir),
+      productOverviewMd(consortDir),
+      nfrsMd(consortDir),
+      designDir(consortDir),
+      architectureDir(consortDir)
+    ].filter((p) => existsSync28(p));
+    if (corpusPaths.length > 0) {
+      execFileSync("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = execFileSync("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      if (staged) {
+        execFileSync("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+      }
+    }
+  } catch {
+  }
   let dirtyTracked = "";
   try {
     dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/")).join("\n").trim();

@@ -24,7 +24,8 @@ function resolveConsortDir(projectDir = process.cwd()) {
 var featuresDir = (tdd) => join(tdd, "features");
 var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
 var nfrsMd = (tdd) => join(tdd, "nfrs.md");
-var designBriefMd = (tdd) => join(tdd, "design", "design-brief.md");
+var designDir = (tdd) => join(tdd, "design");
+var designBriefMd = (tdd) => join(designDir(tdd), "design-brief.md");
 var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureRequestMd = (tdd, f) => join(featureResolved(tdd, f), "feature-request.md");
