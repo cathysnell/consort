@@ -7978,7 +7978,12 @@ function resolveProjectSettings(projectDir) {
     // file or as a RUN-SCOPED --gates override (never persisted by a flag).
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
-    clientFramework: file?.project?.clientFramework ?? "none"
+    clientFramework: file?.project?.clientFramework ?? "none",
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
+    // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
+    // default only affects config-less/legacy trees.
+    language: file?.project?.language ?? "python"
   };
   const plan = { sizing: file?.plan?.sizing ?? true };
   return { build, plan, project };

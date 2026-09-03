@@ -6689,6 +6689,18 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? import_lakebase.createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? import_lakebase.deletePairedBranch;
+  let dirty = "";
+  try {
+    dirty = (0, import_node_child_process.execFileSync)("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+  } catch {
+    dirty = "";
+  }
+  if (dirty) {
+    throw new Error(
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, which would block the paired-branch checkout and leave the tree on the feature branch. Commit or stash them first. Changed paths:
+${dirty}`
+    );
+  }
   if (resetStaleBranch) {
     try {
       await dropBranch({ instance: lookup.instance, branch, cwd: projectDir });

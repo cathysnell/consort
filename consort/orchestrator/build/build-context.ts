@@ -16,6 +16,7 @@ import { dirname, join } from "node:path";
 import { readConventions } from "../../architecture/architecture-conventions.js";
 import { consortEnv } from "../../config/consort-env.js";
 import { storyAcIds, readAcLayer, architectureJson, designGuideJson } from "../../config/consort-paths.js";
+import { projectLanguage } from "../../config/consort-config-file.js";
 
 /** The .consort artifact root for a project (identity: the artifact dir IS the root). */
 function artifactRoot(consortDir: string): string {
@@ -139,6 +140,10 @@ const defaultDbStateReader: DbStateReader = (projectDir) => {
  *  path from the story slug and reads it (tail-bounded). Returns "" when no test file resolves. */
 export type FailingTestReader = (projectDir: string, story: string) => string | undefined;
 const defaultFailingTestReader: FailingTestReader = (projectDir, story) => {
+  // The pytest-bdd step-def path is python-only; a nodejs project's RED test lives elsewhere and the
+  // driver discovers it itself, so skip this pre-injection lever for node (returning undefined is
+  // graceful , it just means no pre-read of the failing test body).
+  if (projectLanguage(projectDir) === "nodejs") return undefined;
   // Story slug "S2-drop-combined-code" -> tests/step_defs/test_S2_drop_combined_code.py.
   const file = join(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
   try {
@@ -294,12 +299,24 @@ function buildContextPack(
   // and grepped scripts/lk to find `lakebase-new-migration` before it could start , pure opening waste.
   const migrationOn = opts.migration ?? marker.migration ?? consortEnv("CTX_MIGRATION") === "1";
   if (migrationOn) {
-    parts.push(
-      ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with` +
-        ` \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file` +
-        ` or grep scripts/lk to find the command). ORM models are in app/models.py; apply with` +
-        ` \`uv run --env-file .env alembic upgrade head\`.`,
-    );
+    // Language-aware: the create command (lakebase-new-migration) is uniform, but the tool, the
+    // migrations dir, the models location, and the apply command differ per stack. A python hint
+    // (alembic/app/models.py) is actively misleading on a nodejs (knex) or java/kotlin (flyway) project.
+    const language = projectLanguage(dirname(consortDir));
+    const migrationGuide =
+      language === "nodejs"
+        ? ` MIGRATION :: knex migrations live in migrations/. Create one with \`./scripts/lk` +
+          ` lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk).` +
+          ` Source/models live under src/; apply with \`npm run migrate\`.`
+        : language === "java" || language === "kotlin"
+          ? ` MIGRATION :: flyway migrations live in src/main/resources/db/migration/. Create one with` +
+            ` \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep` +
+            ` scripts/lk). Apply with \`./mvnw -q flyway:migrate\`.`
+          : ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with` +
+            ` \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision` +
+            ` file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with` +
+            ` \`uv run --env-file .env alembic upgrade head\`.`;
+    parts.push(migrationGuide);
   }
 
   return parts.join("");

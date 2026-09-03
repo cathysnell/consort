@@ -7958,7 +7958,7 @@ function navigatorTestsAuthored(producedPath) {
   if (!existsSync4(producedPath) || !statSync2(producedPath).isDirectory()) {
     return { ok: false, violations: [`navigator RED wrote no tests/ tree at ${producedPath}`] };
   }
-  const isTest = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isTest = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync3(dir, { withFileTypes: true })) {
       const abs = join5(dir, e.name);
@@ -7970,13 +7970,13 @@ function navigatorTestsAuthored(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function driverCodePresent(producedPath) {
   if (!existsSync4(producedPath) || !statSync2(producedPath).isDirectory()) {
-    return { ok: false, violations: [`driver GREEN wrote no app/ tree at ${producedPath}`] };
+    return { ok: false, violations: [`driver GREEN wrote no product tree (app/ or src/) at ${producedPath}`] };
   }
-  const isSource = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isSource = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync3(dir, { withFileTypes: true })) {
       const abs = join5(dir, e.name);
@@ -7988,7 +7988,7 @@ function driverCodePresent(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN app/ tree at ${producedPath} has no source file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN product tree at ${producedPath} has no source file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function assessMarkerWritten(producedPath) {
   const sup = join5(producedPath, "superseded-tests.json");
@@ -8363,7 +8363,7 @@ init_esm_shims();
 init_esm_shims();
 import { execSync } from "child_process";
 import * as fs2 from "fs";
-import { dirname as dirname2, join as join7 } from "path";
+import { dirname as dirname4, join as join9 } from "path";
 
 // consort/architecture/architecture-conventions.ts
 init_esm_shims();
@@ -8405,6 +8405,101 @@ function warnLegacyEnv(legacyName, suffix) {
     );
   } catch {
   }
+}
+
+// consort/config/consort-config-file.ts
+init_esm_shims();
+import { existsSync as existsSync8, readFileSync as readFileSync7, mkdirSync as mkdirSync4, writeFileSync as writeFileSync4 } from "fs";
+import { dirname as dirname3, join as join8 } from "path";
+
+// consort/config/agent-models.ts
+init_esm_shims();
+import { existsSync as existsSync7, readFileSync as readFileSync6, writeFileSync as writeFileSync3, mkdirSync as mkdirSync3 } from "fs";
+import { dirname as dirname2, join as join7 } from "path";
+var RECOMMENDED_MODELS = {
+  "spec-author": "opus",
+  "architect-reviewer": "opus",
+  dba: "opus",
+  "test-strategist": "sonnet",
+  "ux-designer": "sonnet",
+  navigator: "sonnet",
+  driver: "sonnet",
+  "product-owner": "opus"
+};
+var ALL_AGENT_ROLES = Object.keys(RECOMMENDED_MODELS);
+var AGENT_CONFIG_REL = join7(".lakebase", "agent-config.json");
+function readAgentConfig(projectDir) {
+  const p = join7(projectDir, AGENT_CONFIG_REL);
+  if (!existsSync7(p)) return void 0;
+  return JSON.parse(readFileSync6(p, "utf8"));
+}
+
+// consort/config/consort-config-file.ts
+var CONSORT_CONFIG_REL = join8(".lakebase", "consort-config.json");
+var LEGACY_CONFIG_RELS = [
+  join8(".lakebase", "sftdd-config.json"),
+  join8(".lakebase", "tdd-config.json")
+];
+var LEGACY_TDD_CONFIG_REL = LEGACY_CONFIG_RELS[0];
+function loadConsortConfig(projectDir) {
+  for (const rel of [CONSORT_CONFIG_REL, ...LEGACY_CONFIG_RELS]) {
+    const f = join8(projectDir, rel);
+    if (!existsSync8(f)) continue;
+    try {
+      return JSON.parse(readFileSync7(f, "utf8"));
+    } catch {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function resolveProjectSettings(projectDir) {
+  const file = loadConsortConfig(projectDir);
+  const build = {
+    loopGranularity: file?.build?.loopGranularity ?? "story",
+    batchCap: file?.build?.batchCap,
+    sessionScope: file?.build?.sessionScope ?? "story"
+  };
+  const project = {
+    uiTrack: file?.project?.uiTrack ?? true,
+    // HITL-first: the declared project policy defaults to interactive (a human
+    // approves each gate). Headless (proxy) is a deliberate opt-in, set in the
+    // file or as a RUN-SCOPED --gates override (never persisted by a flag).
+    gates: file?.project?.gates ?? "interactive",
+    deployTarget: file?.project?.deployTarget ?? "local",
+    clientFramework: file?.project?.clientFramework ?? "none",
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
+    // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
+    // default only affects config-less/legacy trees.
+    language: file?.project?.language ?? "python"
+  };
+  const plan = { sizing: file?.plan?.sizing ?? true };
+  return { build, plan, project };
+}
+function productDirForLanguage(language) {
+  return language === "nodejs" ? "src" : "app";
+}
+function projectLanguage(projectDir) {
+  return resolveProjectSettings(projectDir).project.language;
+}
+function defaultConsortConfig() {
+  const roles = {};
+  for (const role of ALL_AGENT_ROLES) roles[role] = {};
+  return {
+    version: 1,
+    roles,
+    build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
+    plan: { sizing: true },
+    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none", language: "java" }
+  };
+}
+function writeConsortConfig(projectDir, config, opts) {
+  const f = join8(projectDir, CONSORT_CONFIG_REL);
+  if (existsSync8(f) && !opts?.force) return false;
+  mkdirSync4(dirname3(f), { recursive: true });
+  writeFileSync4(f, JSON.stringify(config, null, 2) + "\n");
+  return true;
 }
 
 // consort/orchestrator/build/build-context.ts
@@ -8457,7 +8552,8 @@ var defaultDbStateReader = (projectDir) => {
   return current || heads ? { current, heads } : void 0;
 };
 var defaultFailingTestReader = (projectDir, story) => {
-  const file = join7(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
+  if (projectLanguage(projectDir) === "nodejs") return void 0;
+  const file = join9(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
   try {
     const body = fs2.readFileSync(file, "utf8");
     return body.length > 4e3 ? body.slice(0, 4e3) + "\n\u2026 (truncated; read the full file if needed)" : body;
@@ -8467,13 +8563,13 @@ var defaultFailingTestReader = (projectDir, story) => {
 };
 function readCtxLeverMarker(consortDir) {
   try {
-    return JSON.parse(fs2.readFileSync(join7(consortDir, "ctx-levers.json"), "utf8"));
+    return JSON.parse(fs2.readFileSync(join9(consortDir, "ctx-levers.json"), "utf8"));
   } catch {
     return {};
   }
 }
 function failingTestBlock(consortDir, story, reader = defaultFailingTestReader) {
-  const body = reader(dirname2(consortDir), story);
+  const body = reader(dirname4(consortDir), story);
   return body ? ` FAILING TEST (make THIS pass; do NOT search for it) ::
 \`\`\`python
 ${body}
@@ -8512,7 +8608,7 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   const marker = readCtxLeverMarker(consortDir);
   const dbOn = opts.dbState ?? marker.dbState ?? consortEnv("CTX_DBSTATE") === "1";
   if (dbOn) {
-    const st = (opts.dbStateReader ?? defaultDbStateReader)(dirname2(consortDir));
+    const st = (opts.dbStateReader ?? defaultDbStateReader)(dirname4(consortDir));
     if (st && (st.current || st.heads)) {
       parts.push(
         ` DB STATE (already probed, do NOT re-run alembic current/heads) ::${st.current ? ` current=${st.current.replace(/\s+/g, " ")}` : ""}${st.heads ? ` head=${st.heads.replace(/\s+/g, " ")}` : ""}. The branch is migrated to head; iterate with \`uv run --env-file .env pytest <path>\` (no re-migrate).`
@@ -8528,9 +8624,9 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   if (scopeOn) parts.push(scopeNoteBlock());
   const migrationOn = opts.migration ?? marker.migration ?? consortEnv("CTX_MIGRATION") === "1";
   if (migrationOn) {
-    parts.push(
-      ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`
-    );
+    const language = projectLanguage(dirname4(consortDir));
+    const migrationGuide = language === "nodejs" ? ` MIGRATION :: knex migrations live in migrations/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Source/models live under src/; apply with \`npm run migrate\`.` : language === "java" || language === "kotlin" ? ` MIGRATION :: flyway migrations live in src/main/resources/db/migration/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Apply with \`./mvnw -q flyway:migrate\`.` : ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`;
+    parts.push(migrationGuide);
   }
   return parts.join("");
 }
@@ -8538,9 +8634,9 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
 // consort/smells/supersession.ts
 init_esm_shims();
 import * as fs3 from "fs";
-import { join as join8 } from "path";
+import { join as join10 } from "path";
 function supersededTestsJson(tdd, feature, story, ac) {
-  return join8(cycleDir(tdd, feature, story, ac), "superseded-tests.json");
+  return join10(cycleDir(tdd, feature, story, ac), "superseded-tests.json");
 }
 function readSupersededTests(tdd, feature, story, ac) {
   const parseSuperseded = (raw) => {
@@ -8576,7 +8672,7 @@ function hasPendingSupersession(tdd, feature, story, ac) {
   return s !== void 0 && s.refactored !== true;
 }
 function greenFailureJson(tdd, feature, story, ac) {
-  return join8(cycleDir(tdd, feature, story, ac), "green-failure.json");
+  return join10(cycleDir(tdd, feature, story, ac), "green-failure.json");
 }
 function readGreenFailure(tdd, feature, story, ac) {
   const file = greenFailureJson(tdd, feature, story, ac);
@@ -8596,7 +8692,7 @@ function hasPendingRegressionFix(tdd, feature, story, ac) {
   return gf !== void 0 && gf.assessed === true && typeof gf.fixDirective === "string" && gf.fixDirective.length > 0 && gf.repairAttempted !== true;
 }
 function regressionAssessmentJson(tdd, feature, story, ac) {
-  return join8(cycleDir(tdd, feature, story, ac), "regression-assessment.json");
+  return join10(cycleDir(tdd, feature, story, ac), "regression-assessment.json");
 }
 
 // consort/test-list/test-analyst-roster.ts
@@ -8670,90 +8766,6 @@ function renderTestAnalystRoster(ctx, opts = {}) {
 \`\`\`
 <<END TEST-ANALYST ROSTER>>
 `;
-}
-
-// consort/config/consort-config-file.ts
-init_esm_shims();
-import { existsSync as existsSync9, readFileSync as readFileSync9, mkdirSync as mkdirSync5, writeFileSync as writeFileSync5 } from "fs";
-import { dirname as dirname4, join as join10 } from "path";
-
-// consort/config/agent-models.ts
-init_esm_shims();
-import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync4, mkdirSync as mkdirSync4 } from "fs";
-import { dirname as dirname3, join as join9 } from "path";
-var RECOMMENDED_MODELS = {
-  "spec-author": "opus",
-  "architect-reviewer": "opus",
-  dba: "opus",
-  "test-strategist": "sonnet",
-  "ux-designer": "sonnet",
-  navigator: "sonnet",
-  driver: "sonnet",
-  "product-owner": "opus"
-};
-var ALL_AGENT_ROLES = Object.keys(RECOMMENDED_MODELS);
-var AGENT_CONFIG_REL = join9(".lakebase", "agent-config.json");
-function readAgentConfig(projectDir) {
-  const p = join9(projectDir, AGENT_CONFIG_REL);
-  if (!existsSync8(p)) return void 0;
-  return JSON.parse(readFileSync8(p, "utf8"));
-}
-
-// consort/config/consort-config-file.ts
-var CONSORT_CONFIG_REL = join10(".lakebase", "consort-config.json");
-var LEGACY_CONFIG_RELS = [
-  join10(".lakebase", "sftdd-config.json"),
-  join10(".lakebase", "tdd-config.json")
-];
-var LEGACY_TDD_CONFIG_REL = LEGACY_CONFIG_RELS[0];
-function loadConsortConfig(projectDir) {
-  for (const rel of [CONSORT_CONFIG_REL, ...LEGACY_CONFIG_RELS]) {
-    const f = join10(projectDir, rel);
-    if (!existsSync9(f)) continue;
-    try {
-      return JSON.parse(readFileSync9(f, "utf8"));
-    } catch {
-      return void 0;
-    }
-  }
-  return void 0;
-}
-function resolveProjectSettings(projectDir) {
-  const file = loadConsortConfig(projectDir);
-  const build = {
-    loopGranularity: file?.build?.loopGranularity ?? "story",
-    batchCap: file?.build?.batchCap,
-    sessionScope: file?.build?.sessionScope ?? "story"
-  };
-  const project = {
-    uiTrack: file?.project?.uiTrack ?? true,
-    // HITL-first: the declared project policy defaults to interactive (a human
-    // approves each gate). Headless (proxy) is a deliberate opt-in, set in the
-    // file or as a RUN-SCOPED --gates override (never persisted by a flag).
-    gates: file?.project?.gates ?? "interactive",
-    deployTarget: file?.project?.deployTarget ?? "local",
-    clientFramework: file?.project?.clientFramework ?? "none"
-  };
-  const plan = { sizing: file?.plan?.sizing ?? true };
-  return { build, plan, project };
-}
-function defaultConsortConfig() {
-  const roles = {};
-  for (const role of ALL_AGENT_ROLES) roles[role] = {};
-  return {
-    version: 1,
-    roles,
-    build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
-    plan: { sizing: true },
-    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none" }
-  };
-}
-function writeConsortConfig(projectDir, config, opts) {
-  const f = join10(projectDir, CONSORT_CONFIG_REL);
-  if (existsSync9(f) && !opts?.force) return false;
-  mkdirSync5(dirname4(f), { recursive: true });
-  writeFileSync5(f, JSON.stringify(config, null, 2) + "\n");
-  return true;
 }
 
 // consort/orchestrator/build/preconditions.ts
@@ -8959,6 +8971,7 @@ function seedConsortConfig(projectDir, opts) {
   if (consortConfig.project) {
     consortConfig.project.uiTrack = opts.uiTrack ?? true;
     consortConfig.project.clientFramework = opts.clientFramework;
+    consortConfig.project.language = opts.language ?? "java";
   }
   writeConsortConfig(projectDir, consortConfig);
 }
@@ -9758,20 +9771,37 @@ var TRANSIENT_BACKOFF_MS = Number(consortEnv("TRANSIENT_BACKOFF_MS") ?? "5000");
 var TURN_INACTIVITY_TIMEOUT_MS = Number(consortEnv("TURN_INACTIVITY_TIMEOUT_MS") ?? String(10 * 60 * 1e3));
 var TURN_HEARTBEAT_MS = Number(consortEnv("TURN_HEARTBEAT_MS") ?? String(60 * 1e3));
 var CliEffectError = class extends Error {
-  constructor(bin, code) {
+  constructor(bin, code, capturedOutput) {
     super(`${bin} exited ${code}`);
     this.bin = bin;
     this.code = code;
+    this.capturedOutput = capturedOutput;
     this.name = "CliEffectError";
   }
   bin;
   code;
+  capturedOutput;
 };
+var CLI_CAPTURE_MAX = 16e3;
 function spawnCmd(bin, args, cwd) {
   return new Promise((resolve3, reject) => {
-    const child = spawn(bin, args, { cwd, stdio: "inherit" });
+    const child = spawn(bin, args, { cwd, stdio: ["inherit", "pipe", "pipe"] });
+    const chunks = [];
+    child.stdout?.on("data", (d) => {
+      process.stdout.write(d);
+      chunks.push(d.toString());
+    });
+    child.stderr?.on("data", (d) => {
+      process.stderr.write(d);
+      chunks.push(d.toString());
+    });
     child.on("error", (err) => reject(err));
-    child.on("close", (code) => code === 0 ? resolve3() : reject(new CliEffectError(bin, code)));
+    child.on("close", (code) => {
+      if (code === 0) return resolve3();
+      const captured = chunks.join("");
+      const tail = captured.length > CLI_CAPTURE_MAX ? captured.slice(-CLI_CAPTURE_MAX) : captured;
+      reject(new CliEffectError(bin, code, tail.trim() || void 0));
+    });
   });
 }
 var ClaudeTurnError = class extends Error {
@@ -10590,6 +10620,18 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
+  let dirty = "";
+  try {
+    dirty = execFileSync("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+  } catch {
+    dirty = "";
+  }
+  if (dirty) {
+    throw new Error(
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, which would block the paired-branch checkout and leave the tree on the feature branch. Commit or stash them first. Changed paths:
+${dirty}`
+    );
+  }
   if (resetStaleBranch) {
     try {
       await dropBranch({ instance: lookup.instance, branch, cwd: projectDir });
@@ -17082,7 +17124,7 @@ function manifestPostTurnCommands(manifest, when, action, cfg, deps) {
 function declaredPreconditionKinds(manifest) {
   return new Set((manifest.preconditions ?? []).map((p) => p.kind));
 }
-function outputPathsForAction(action, consortDir, featureId) {
+function outputPathsForAction(action, consortDir, featureId, projectDir) {
   if (action.kind !== "invoke-role") return {};
   const f = featureId;
   const story = "story" in action && typeof action.story === "string" ? action.story : void 0;
@@ -17120,7 +17162,8 @@ function outputPathsForAction(action, consortDir, featureId) {
       return { tests: "tests", ...META };
     }
     if (action.role === "driver" && story) {
-      return { code: "app", ...META };
+      const productSubdir = projectDir ? productDirForLanguage(projectLanguage(projectDir)) : "app";
+      return { code: productSubdir, ...META };
     }
     return {};
   }
@@ -17221,7 +17264,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
     // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
-    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f) }),
+    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
     // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.

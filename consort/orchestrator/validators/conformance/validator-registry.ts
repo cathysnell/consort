@@ -146,7 +146,7 @@ export function navigatorTestsAuthored(producedPath: string): OutputValidationRe
   if (!existsSync(producedPath) || !statSync(producedPath).isDirectory()) {
     return { ok: false, violations: [`navigator RED wrote no tests/ tree at ${producedPath}`] };
   }
-  const isTest = (n: string): boolean => /\.(py|ts|tsx)$/.test(n);
+  const isTest = (n: string): boolean => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk = (dir: string): boolean => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const abs = join(dir, e.name);
@@ -160,7 +160,7 @@ export function navigatorTestsAuthored(producedPath: string): OutputValidationRe
   };
   return walk(producedPath)
     ? { ok: true, violations: [] }
-    : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx)`] };
+    : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 
 /**
@@ -174,9 +174,9 @@ export function navigatorTestsAuthored(producedPath: string): OutputValidationRe
  */
 export function driverCodePresent(producedPath: string): OutputValidationResult {
   if (!existsSync(producedPath) || !statSync(producedPath).isDirectory()) {
-    return { ok: false, violations: [`driver GREEN wrote no app/ tree at ${producedPath}`] };
+    return { ok: false, violations: [`driver GREEN wrote no product tree (app/ or src/) at ${producedPath}`] };
   }
-  const isSource = (n: string): boolean => /\.(py|ts|tsx)$/.test(n);
+  const isSource = (n: string): boolean => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk = (dir: string): boolean => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const abs = join(dir, e.name);
@@ -190,7 +190,7 @@ export function driverCodePresent(producedPath: string): OutputValidationResult 
   };
   return walk(producedPath)
     ? { ok: true, violations: [] }
-    : { ok: false, violations: [`driver GREEN app/ tree at ${producedPath} has no source file (.py/.ts/.tsx)`] };
+    : { ok: false, violations: [`driver GREEN product tree at ${producedPath} has no source file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 
 /**

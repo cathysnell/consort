@@ -254,7 +254,13 @@ interface ParsedArgs {
 declare class CliEffectError extends Error {
     readonly bin: string;
     readonly code: number | null;
-    constructor(bin: string, code: number | null);
+    /** The failing command's captured stdout+stderr tail, threaded into the escalation so a human
+     *  sees the actual error without re-running the command. Undefined when nothing was captured. */
+    readonly capturedOutput?: string | undefined;
+    constructor(bin: string, code: number | null, 
+    /** The failing command's captured stdout+stderr tail, threaded into the escalation so a human
+     *  sees the actual error without re-running the command. Undefined when nothing was captured. */
+    capturedOutput?: string | undefined);
 }
 declare function spawnCmd(bin: string, args: string[], cwd: string): Promise<void>;
 /**

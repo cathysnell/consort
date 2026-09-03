@@ -39,6 +39,7 @@ import { wrapWithRecorder } from "../agents/replay-recorder-wrapper.js";
 import { isBuildTurn, lastSyncedBuildTurnIndex } from "../agents/mock-replay-agent.js";
 import { assertReplayBuildVerdictMatch } from "../../logging/replay-build.js";
 import { consortEnv } from "../../config/consort-env.js";
+import { productDirForLanguage, projectLanguage } from "../../config/consort-config-file.js";
 import type { WorkflowAction, DriveState } from "./orchestrator-drive.js";
 import type { BoundedRoute, ValidateBoundDeps } from "../steps/step-contract.js";
 // Types only (erased at compile) , so this module never imports orchestrator-effects at runtime.
@@ -252,7 +253,7 @@ export function declaredPreconditionKinds(manifest: StepManifest): ReadonlySet<s
   return new Set((manifest.preconditions ?? []).map((p) => p.kind));
 }
 
-export function outputPathsForAction(action: WorkflowAction, consortDir: string, featureId: string): Record<string, string> {
+export function outputPathsForAction(action: WorkflowAction, consortDir: string, featureId: string, projectDir?: string): Record<string, string> {
   if (action.kind !== "invoke-role") return {};
   const f = featureId;
   const story = "story" in action && typeof action.story === "string" ? action.story : undefined;
@@ -303,10 +304,13 @@ export function outputPathsForAction(action: WorkflowAction, consortDir: string,
     if (action.role === "navigator" && story) {
       return { tests: "tests", ...META };
     }
-    // driver GREEN: the PRODUCT code (app/ at the project root). The real correctness gate is the
-    // post-turn @build-cycle honest-GREEN verify; app/ is the in-turn produced signal.
+    // driver GREEN: the PRODUCT code at the project root. Language-aware: python/java/kotlin -> app/,
+    // nodejs -> src/ (the ONE app/-vs-src/ owner is productDirForLanguage). When projectDir is not
+    // supplied (legacy callers), it stays "app". The real correctness gate is the post-turn
+    // @build-cycle honest-GREEN verify; this dir is the in-turn produced signal.
     if (action.role === "driver" && story) {
-      return { code: "app", ...META };
+      const productSubdir = projectDir ? productDirForLanguage(projectLanguage(projectDir)) : "app";
+      return { code: productSubdir, ...META };
     }
     return {};
   }
@@ -490,7 +494,7 @@ export async function performTurnViaExecutor(
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
     // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
-    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f) }),
+    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
     // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.

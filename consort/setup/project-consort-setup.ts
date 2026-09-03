@@ -233,7 +233,7 @@ export function resyncAgentsOnKitDrift(projectDir: string): {
 /** Seed .lakebase/consort-config.json from per-role model overrides + UI knobs. */
 export function seedConsortConfig(
   projectDir: string,
-  opts: { agentModels?: Record<string, string>; uiTrack?: boolean; clientFramework?: string },
+  opts: { agentModels?: Record<string, string>; uiTrack?: boolean; clientFramework?: string; language?: "java" | "kotlin" | "python" | "nodejs" },
 ): void {
   const consortConfig = defaultConsortConfig();
   for (const [role, model] of Object.entries(opts.agentModels ?? {})) {
@@ -244,6 +244,9 @@ export function seedConsortConfig(
   if (consortConfig.project) {
     consortConfig.project.uiTrack = opts.uiTrack ?? true;
     consortConfig.project.clientFramework = opts.clientFramework as ClientFramework;
+    // The backend language drives the build lane's product dir + file extensions (app/+.py vs
+    // src/+.ts). Persist it so the drive resolves the right convention; absent -> "java" default.
+    consortConfig.project.language = opts.language ?? "java";
   }
   writeConsortConfig(projectDir, consortConfig);
 }

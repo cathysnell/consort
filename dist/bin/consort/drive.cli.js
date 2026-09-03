@@ -9443,10 +9443,21 @@ function resolveProjectSettings(projectDir) {
     // file or as a RUN-SCOPED --gates override (never persisted by a flag).
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
-    clientFramework: file?.project?.clientFramework ?? "none"
+    clientFramework: file?.project?.clientFramework ?? "none",
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
+    // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
+    // default only affects config-less/legacy trees.
+    language: file?.project?.language ?? "python"
   };
   const plan = { sizing: file?.plan?.sizing ?? true };
   return { build, plan, project };
+}
+function productDirForLanguage(language) {
+  return language === "nodejs" ? "src" : "app";
+}
+function projectLanguage(projectDir) {
+  return resolveProjectSettings(projectDir).project.language;
 }
 function defaultConsortConfig() {
   const roles = {};
@@ -9456,7 +9467,7 @@ function defaultConsortConfig() {
     roles,
     build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
     plan: { sizing: true },
-    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none" }
+    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none", language: "java" }
   };
 }
 function writeConsortConfig(projectDir, config, opts) {
@@ -11015,7 +11026,7 @@ function navigatorTestsAuthored(producedPath) {
   if (!existsSync30(producedPath) || !statSync11(producedPath).isDirectory()) {
     return { ok: false, violations: [`navigator RED wrote no tests/ tree at ${producedPath}`] };
   }
-  const isTest = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isTest = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync18(dir, { withFileTypes: true })) {
       const abs = join26(dir, e.name);
@@ -11027,13 +11038,13 @@ function navigatorTestsAuthored(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function driverCodePresent(producedPath) {
   if (!existsSync30(producedPath) || !statSync11(producedPath).isDirectory()) {
-    return { ok: false, violations: [`driver GREEN wrote no app/ tree at ${producedPath}`] };
+    return { ok: false, violations: [`driver GREEN wrote no product tree (app/ or src/) at ${producedPath}`] };
   }
-  const isSource = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isSource = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of readdirSync18(dir, { withFileTypes: true })) {
       const abs = join26(dir, e.name);
@@ -11045,7 +11056,7 @@ function driverCodePresent(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN app/ tree at ${producedPath} has no source file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN product tree at ${producedPath} has no source file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function assessMarkerWritten(producedPath) {
   const sup = join26(producedPath, "superseded-tests.json");
@@ -12091,20 +12102,37 @@ var TRANSIENT_BACKOFF_MS = Number(consortEnv("TRANSIENT_BACKOFF_MS") ?? "5000");
 var TURN_INACTIVITY_TIMEOUT_MS = Number(consortEnv("TURN_INACTIVITY_TIMEOUT_MS") ?? String(10 * 60 * 1e3));
 var TURN_HEARTBEAT_MS = Number(consortEnv("TURN_HEARTBEAT_MS") ?? String(60 * 1e3));
 var CliEffectError = class extends Error {
-  constructor(bin, code) {
+  constructor(bin, code, capturedOutput) {
     super(`${bin} exited ${code}`);
     this.bin = bin;
     this.code = code;
+    this.capturedOutput = capturedOutput;
     this.name = "CliEffectError";
   }
   bin;
   code;
+  capturedOutput;
 };
+var CLI_CAPTURE_MAX = 16e3;
 function spawnCmd(bin, args, cwd) {
   return new Promise((resolve3, reject) => {
-    const child = spawn3(bin, args, { cwd, stdio: "inherit" });
+    const child = spawn3(bin, args, { cwd, stdio: ["inherit", "pipe", "pipe"] });
+    const chunks = [];
+    child.stdout?.on("data", (d) => {
+      process.stdout.write(d);
+      chunks.push(d.toString());
+    });
+    child.stderr?.on("data", (d) => {
+      process.stderr.write(d);
+      chunks.push(d.toString());
+    });
     child.on("error", (err) => reject(err));
-    child.on("close", (code) => code === 0 ? resolve3() : reject(new CliEffectError(bin, code)));
+    child.on("close", (code) => {
+      if (code === 0) return resolve3();
+      const captured = chunks.join("");
+      const tail = captured.length > CLI_CAPTURE_MAX ? captured.slice(-CLI_CAPTURE_MAX) : captured;
+      reject(new CliEffectError(bin, code, tail.trim() || void 0));
+    });
   });
 }
 var ClaudeTurnError = class extends Error {
@@ -13112,7 +13140,7 @@ function manifestPostTurnCommands(manifest, when, action, cfg, deps) {
 function declaredPreconditionKinds(manifest) {
   return new Set((manifest.preconditions ?? []).map((p) => p.kind));
 }
-function outputPathsForAction(action, consortDir, featureId) {
+function outputPathsForAction(action, consortDir, featureId, projectDir) {
   if (action.kind !== "invoke-role") return {};
   const f = featureId;
   const story = "story" in action && typeof action.story === "string" ? action.story : void 0;
@@ -13150,7 +13178,8 @@ function outputPathsForAction(action, consortDir, featureId) {
       return { tests: "tests", ...META };
     }
     if (action.role === "driver" && story) {
-      return { code: "app", ...META };
+      const productSubdir = projectDir ? productDirForLanguage(projectLanguage(projectDir)) : "app";
+      return { code: productSubdir, ...META };
     }
     return {};
   }
@@ -13251,7 +13280,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
     // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
-    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f) }),
+    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
     // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.
@@ -13419,6 +13448,7 @@ var defaultDbStateReader = (projectDir) => {
   return current || heads ? { current, heads } : void 0;
 };
 var defaultFailingTestReader = (projectDir, story) => {
+  if (projectLanguage(projectDir) === "nodejs") return void 0;
   const file = join42(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
   try {
     const body = fs17.readFileSync(file, "utf8");
@@ -13478,9 +13508,9 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   if (scopeOn) parts.push(scopeNoteBlock());
   const migrationOn = opts.migration ?? marker.migration ?? consortEnv("CTX_MIGRATION") === "1";
   if (migrationOn) {
-    parts.push(
-      ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`
-    );
+    const language = projectLanguage(dirname22(consortDir));
+    const migrationGuide = language === "nodejs" ? ` MIGRATION :: knex migrations live in migrations/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Source/models live under src/; apply with \`npm run migrate\`.` : language === "java" || language === "kotlin" ? ` MIGRATION :: flyway migrations live in src/main/resources/db/migration/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Apply with \`./mvnw -q flyway:migrate\`.` : ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`;
+    parts.push(migrationGuide);
   }
   return parts.join("");
 }
@@ -16558,8 +16588,9 @@ then re-run.
       }
       if (err instanceof CliEffectError) {
         const reason = `${err.bin} exited ${err.code}. See the drive log above for the failing checks / cause; fix them (push to the branch) and re-run.`;
+        const captured_output = err.capturedOutput;
         try {
-          writeEscalation(cfg.consortDir, { source: `cli:${err.bin}`, reason, feature_id: cfg.featureId });
+          writeEscalation(cfg.consortDir, { source: `cli:${err.bin}`, reason, feature_id: cfg.featureId, captured_output });
           emitAgentLogEvent(
             {
               role: "orchestrator",
@@ -16575,7 +16606,9 @@ then re-run.
         process.stderr.write(
           `[drive] RAISED TO HIL , ${err.bin} failed.
         reason: ${reason}
-        recorded under ${path14.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.
+` + (captured_output ? `        failing output (tail):
+${captured_output.split("\n").map((l) => "        | " + l).join("\n")}
+` : "") + `        recorded under ${path14.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.
         To troubleshoot or share the failure, bundle the local forensics: consort-diagnose
 `
         );

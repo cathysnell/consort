@@ -61,6 +61,10 @@ export interface ConsortConfigFile {
     gates?: "interactive" | "proxy";
     deployTarget?: string;
     clientFramework?: "react" | "none";
+    // The backend language of the scaffolded project. The build lane resolves the product dir
+    // + source/test file extensions from this (python/java/kotlin -> app/ + .py; nodejs -> src/ +
+    // .ts/.tsx/.js). create-project persists it; absent (legacy projects) resolves to "java".
+    language?: "java" | "kotlin" | "python" | "nodejs";
   };
 }
 
@@ -74,6 +78,7 @@ export interface ProjectFileSettings {
     gates: "interactive" | "proxy";
     deployTarget: string;
     clientFramework: "react" | "none";
+    language: "java" | "kotlin" | "python" | "nodejs";
   };
 }
 
@@ -116,9 +121,42 @@ export function resolveProjectSettings(projectDir: string): ProjectFileSettings 
     gates: (file?.project?.gates ?? "interactive") as "interactive" | "proxy",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: (file?.project?.clientFramework ?? "none") as "react" | "none",
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
+    // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
+    // default only affects config-less/legacy trees.
+    language: (file?.project?.language ?? "python") as "java" | "kotlin" | "python" | "nodejs",
   };
   const plan = { sizing: file?.plan?.sizing ?? true };
   return { build, plan, project };
+}
+
+/** The backend language of a project (with the java default legacy projects resolve to). */
+export type ProjectLanguage = "java" | "kotlin" | "python" | "nodejs";
+
+/** Product-code directory (project-root-relative) the build lane writes/validates PRODUCT code in:
+ *  nodejs -> "src"; python/java/kotlin -> "app". This is the ONE place the app/-vs-src/ convention
+ *  lives, so the driver's produced-path declaration and the semantic-gate readers agree by
+ *  construction. */
+export function productDirForLanguage(language: ProjectLanguage): string {
+  return language === "nodejs" ? "src" : "app";
+}
+
+/** Source-file extensions the build-lane validators read PRODUCT code by, per language. */
+export function productExtsForLanguage(language: ProjectLanguage): string[] {
+  return language === "nodejs" ? [".ts", ".tsx", ".js", ".jsx"] : [".py"];
+}
+
+/** Test-file extensions the build-lane validators read TEST code by, per language. Non-node keeps
+ *  the existing .py + react-client .ts/.tsx set; node adds .js/.jsx so a nodejs scaffold's tests
+ *  are recognized. */
+export function testExtsForLanguage(language: ProjectLanguage): string[] {
+  return language === "nodejs" ? [".ts", ".tsx", ".js", ".jsx"] : [".py", ".ts", ".tsx"];
+}
+
+/** Convenience: resolve the project's language from its config (java default). */
+export function projectLanguage(projectDir: string): ProjectLanguage {
+  return resolveProjectSettings(projectDir).project.language;
 }
 
 /** A default config seeded from the recommended models (for scaffold / `--init`),
@@ -141,7 +179,7 @@ export function defaultConsortConfig(): ConsortConfigFile {
     roles,
     build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
     plan: { sizing: true },
-    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none" },
+    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none", language: "java" },
   };
 }
 

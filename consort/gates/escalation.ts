@@ -37,6 +37,10 @@ export interface Escalation {
    *  this file directly (rather than `consort-next` / `consort-watch`) still learns the correct clear
    *  path , the resolve verb , instead of improvising a hand-edit / rm of this file or smells.json. */
   how_to_resolve?: string;
+  /** The failing command's captured stdout+stderr tail, for a CLI-effect escalation (deploy-verify,
+   *  wait-ci, merge, experiment cut, ...). Without this a human had to manually re-run the underlying
+   *  command to see WHY it failed; here the error travels with the escalation record. */
+  captured_output?: string;
 }
 
 /** Bad smells that BLOCK the build (vs. advisory ones). A flagged blocking smell

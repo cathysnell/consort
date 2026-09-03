@@ -7201,10 +7201,21 @@ function resolveProjectSettings(projectDir) {
     // file or as a RUN-SCOPED --gates override (never persisted by a flag).
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
-    clientFramework: file?.project?.clientFramework ?? "none"
+    clientFramework: file?.project?.clientFramework ?? "none",
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
+    // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
+    // default only affects config-less/legacy trees.
+    language: file?.project?.language ?? "python"
   };
   const plan = { sizing: file?.plan?.sizing ?? true };
   return { build, plan, project };
+}
+function productDirForLanguage(language) {
+  return language === "nodejs" ? "src" : "app";
+}
+function projectLanguage(projectDir) {
+  return resolveProjectSettings(projectDir).project.language;
 }
 function defaultConsortConfig() {
   const roles = {};
@@ -7214,7 +7225,7 @@ function defaultConsortConfig() {
     roles,
     build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
     plan: { sizing: true },
-    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none" }
+    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none", language: "java" }
   };
 }
 function writeConsortConfig(projectDir, config, opts) {
@@ -9051,20 +9062,37 @@ var TRANSIENT_BACKOFF_MS = Number(consortEnv("TRANSIENT_BACKOFF_MS") ?? "5000");
 var TURN_INACTIVITY_TIMEOUT_MS = Number(consortEnv("TURN_INACTIVITY_TIMEOUT_MS") ?? String(10 * 60 * 1e3));
 var TURN_HEARTBEAT_MS = Number(consortEnv("TURN_HEARTBEAT_MS") ?? String(60 * 1e3));
 var CliEffectError = class extends Error {
-  constructor(bin, code) {
+  constructor(bin, code, capturedOutput) {
     super(`${bin} exited ${code}`);
     this.bin = bin;
     this.code = code;
+    this.capturedOutput = capturedOutput;
     this.name = "CliEffectError";
   }
   bin;
   code;
+  capturedOutput;
 };
+var CLI_CAPTURE_MAX = 16e3;
 function spawnCmd(bin, args, cwd) {
   return new Promise((resolve4, reject) => {
-    const child = (0, import_node_child_process3.spawn)(bin, args, { cwd, stdio: "inherit" });
+    const child = (0, import_node_child_process3.spawn)(bin, args, { cwd, stdio: ["inherit", "pipe", "pipe"] });
+    const chunks = [];
+    child.stdout?.on("data", (d) => {
+      process.stdout.write(d);
+      chunks.push(d.toString());
+    });
+    child.stderr?.on("data", (d) => {
+      process.stderr.write(d);
+      chunks.push(d.toString());
+    });
     child.on("error", (err) => reject(err));
-    child.on("close", (code) => code === 0 ? resolve4() : reject(new CliEffectError(bin, code)));
+    child.on("close", (code) => {
+      if (code === 0) return resolve4();
+      const captured = chunks.join("");
+      const tail = captured.length > CLI_CAPTURE_MAX ? captured.slice(-CLI_CAPTURE_MAX) : captured;
+      reject(new CliEffectError(bin, code, tail.trim() || void 0));
+    });
   });
 }
 var ClaudeTurnError = class extends Error {
@@ -10676,7 +10704,7 @@ function navigatorTestsAuthored(producedPath) {
   if (!(0, import_node_fs5.existsSync)(producedPath) || !(0, import_node_fs5.statSync)(producedPath).isDirectory()) {
     return { ok: false, violations: [`navigator RED wrote no tests/ tree at ${producedPath}`] };
   }
-  const isTest = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isTest = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of (0, import_node_fs5.readdirSync)(dir, { withFileTypes: true })) {
       const abs = (0, import_node_path6.join)(dir, e.name);
@@ -10688,13 +10716,13 @@ function navigatorTestsAuthored(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`navigator RED tests/ tree at ${producedPath} has no test file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function driverCodePresent(producedPath) {
   if (!(0, import_node_fs5.existsSync)(producedPath) || !(0, import_node_fs5.statSync)(producedPath).isDirectory()) {
-    return { ok: false, violations: [`driver GREEN wrote no app/ tree at ${producedPath}`] };
+    return { ok: false, violations: [`driver GREEN wrote no product tree (app/ or src/) at ${producedPath}`] };
   }
-  const isSource = (n) => /\.(py|ts|tsx)$/.test(n);
+  const isSource = (n) => /\.(py|ts|tsx|js|jsx)$/.test(n);
   const walk2 = (dir) => {
     for (const e of (0, import_node_fs5.readdirSync)(dir, { withFileTypes: true })) {
       const abs = (0, import_node_path6.join)(dir, e.name);
@@ -10706,7 +10734,7 @@ function driverCodePresent(producedPath) {
     }
     return false;
   };
-  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN app/ tree at ${producedPath} has no source file (.py/.ts/.tsx)`] };
+  return walk2(producedPath) ? { ok: true, violations: [] } : { ok: false, violations: [`driver GREEN product tree at ${producedPath} has no source file (.py/.ts/.tsx/.js/.jsx)`] };
 }
 function assessMarkerWritten(producedPath) {
   const sup = (0, import_node_path6.join)(producedPath, "superseded-tests.json");
@@ -11826,7 +11854,7 @@ function manifestPostTurnCommands(manifest, when, action, cfg, deps) {
 function declaredPreconditionKinds(manifest) {
   return new Set((manifest.preconditions ?? []).map((p) => p.kind));
 }
-function outputPathsForAction(action, consortDir, featureId) {
+function outputPathsForAction(action, consortDir, featureId, projectDir) {
   if (action.kind !== "invoke-role") return {};
   const f = featureId;
   const story = "story" in action && typeof action.story === "string" ? action.story : void 0;
@@ -11864,7 +11892,8 @@ function outputPathsForAction(action, consortDir, featureId) {
       return { tests: "tests", ...META };
     }
     if (action.role === "driver" && story) {
-      return { code: "app", ...META };
+      const productSubdir = projectDir ? productDirForLanguage(projectLanguage(projectDir)) : "app";
+      return { code: productSubdir, ...META };
     }
     return {};
   }
@@ -11965,7 +11994,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
     // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
-    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f) }),
+    provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
     // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.
@@ -12209,6 +12238,18 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? import_lakebase3.createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? import_lakebase3.deletePairedBranch;
+  let dirty = "";
+  try {
+    dirty = (0, import_node_child_process4.execFileSync)("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+  } catch {
+    dirty = "";
+  }
+  if (dirty) {
+    throw new Error(
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, which would block the paired-branch checkout and leave the tree on the feature branch. Commit or stash them first. Changed paths:
+${dirty}`
+    );
+  }
   if (resetStaleBranch) {
     try {
       await dropBranch({ instance: lookup.instance, branch, cwd: projectDir });
@@ -14227,6 +14268,7 @@ var defaultDbStateReader = (projectDir) => {
   return current || heads ? { current, heads } : void 0;
 };
 var defaultFailingTestReader = (projectDir, story) => {
+  if (projectLanguage(projectDir) === "nodejs") return void 0;
   const file = (0, import_node_path20.join)(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
   try {
     const body = fs16.readFileSync(file, "utf8");
@@ -14286,9 +14328,9 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   if (scopeOn) parts.push(scopeNoteBlock());
   const migrationOn = opts.migration ?? marker.migration ?? consortEnv("CTX_MIGRATION") === "1";
   if (migrationOn) {
-    parts.push(
-      ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`
-    );
+    const language = projectLanguage((0, import_node_path20.dirname)(consortDir));
+    const migrationGuide = language === "nodejs" ? ` MIGRATION :: knex migrations live in migrations/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Source/models live under src/; apply with \`npm run migrate\`.` : language === "java" || language === "kotlin" ? ` MIGRATION :: flyway migrations live in src/main/resources/db/migration/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author it or grep scripts/lk). Apply with \`./mvnw -q flyway:migrate\`.` : ` MIGRATION :: alembic migrations live in alembic/versions/. Create one with \`./scripts/lk lakebase-new-migration --name "<short desc>"\` (do NOT hand-author the revision file or grep scripts/lk to find the command). ORM models are in app/models.py; apply with \`uv run --env-file .env alembic upgrade head\`.`;
+    parts.push(migrationGuide);
   }
   return parts.join("");
 }

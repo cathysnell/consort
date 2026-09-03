@@ -26,6 +26,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { TurnKey } from "../../consort/orchestrator/settings/project-settings.js";
 import { designGuideJson, featureSpecJson, architectureJson, featureTestListJson, dbDesignJson, featureProposalsMd, planningEstimatesJson, acsDir, storiesDir, featureDir } from "../../consort/config/consort-paths.js";
+import { projectLanguage, productDirForLanguage, productExtsForLanguage, testExtsForLanguage } from "../../consort/config/consort-config-file.js";
 
 /** The .tdd-layout artifact path for a step, built via consort-paths (the single source
  *  of truth for the layout). `base` is a .tdd-shaped root: the live project's .sftdd
@@ -371,8 +372,12 @@ export function resolveBuildReference(args: {
  *  or app/ (driver), under the project dir (the experiment branch is checked out
  *  there). Returns "" when the subtree is absent. */
 export function readCandidateBuildOutput(args: { projectDir: string; kind: BuildOutputKind }): string {
-  const sub = join(args.projectDir, args.kind === "tests" ? "tests" : "app");
-  return readTree(sub, args.kind === "tests" ? [".py", ".tsx", ".ts"] : [".py"]);
+  // Language-aware: the candidate is the LIVE experiment tree, so its product dir + file extensions
+  // follow the project's language (python/java/kotlin -> app/ + .py; nodejs -> src/ + .ts/.tsx/.js).
+  // The recorded-build REFERENCE reader above stays app/+.py (the reference corpus is python).
+  const language = projectLanguage(args.projectDir);
+  const sub = join(args.projectDir, args.kind === "tests" ? "tests" : productDirForLanguage(language));
+  return readTree(sub, args.kind === "tests" ? testExtsForLanguage(language) : productExtsForLanguage(language));
 }
 
 /** Evaluate a BUILD turn's produced output for FUNCTIONAL similarity to the recorded-

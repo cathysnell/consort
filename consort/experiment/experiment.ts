@@ -190,6 +190,30 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
+  // FAIL-CLOSED on a dirty working tree. createPairedBranch git-switches to the new experiment
+  // branch; git refuses to switch on uncommitted changes (or a best-effort path silently skips the
+  // checkout, like the .env sync below), leaving the tree on the FEATURE branch WHILE the experiment
+  // is recorded , the next role then runs on the wrong branch, finds prior passes' files, and burns
+  // its budget into a PROTOCOL VIOLATION (the "cut refused but the Navigator ran anyway" report).
+  // Refuse BEFORE any mutation/record so the cut hard-fails: experimentCut stays false and the lane
+  // halts (or retries) instead of building on a branch that was never checked out. A clean tree
+  // (the normal path) passes untouched.
+  let dirty = "";
+  try {
+    dirty = execFileSync("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+  } catch {
+    // Not a git repo / git unavailable: we can't assess cleanliness here, and the paired cut's own
+    // git operations will surface any real problem. Don't block on an inability to check (this also
+    // keeps hermetic tests that mock the fork without a real repo working).
+    dirty = "";
+  }
+  if (dirty) {
+    throw new Error(
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, ` +
+        `which would block the paired-branch checkout and leave the tree on the feature branch. Commit or ` +
+        `stash them first. Changed paths:\n${dirty}`,
+    );
+  }
   // Re-cut re-fork (Finding 27): a discarded experiment's paired branch of this
   // same deterministic name still carries its schema, so reusing it makes the
   // rebuild's migrations collide. Drop it first so the fork below is clean. The

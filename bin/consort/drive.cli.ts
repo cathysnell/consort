@@ -1371,8 +1371,11 @@ async function main(): Promise<number> {
     // consort-diagnose bundles it. Mirrors the deploy-verify escalation pattern.
     if (err instanceof CliEffectError) {
       const reason = `${err.bin} exited ${err.code}. See the drive log above for the failing checks / cause; fix them (push to the branch) and re-run.`;
+      // The failing command's captured stdout/stderr travels WITH the escalation, so a human (or a
+      // resuming session) sees the actual error without manually re-running the command.
+      const captured_output = err.capturedOutput;
       try {
-        writeEscalation(cfg.consortDir, { source: `cli:${err.bin}`, reason, feature_id: cfg.featureId });
+        writeEscalation(cfg.consortDir, { source: `cli:${err.bin}`, reason, feature_id: cfg.featureId, captured_output });
         emitAgentLogEvent(
           {
             role: "orchestrator",
@@ -1389,6 +1392,7 @@ async function main(): Promise<number> {
       process.stderr.write(
         `[drive] RAISED TO HIL , ${err.bin} failed.\n` +
           `        reason: ${reason}\n` +
+          (captured_output ? `        failing output (tail):\n${captured_output.split("\n").map((l) => "        | " + l).join("\n")}\n` : "") +
           `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );

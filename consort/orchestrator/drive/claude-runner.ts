@@ -102,17 +102,34 @@ export class CliEffectError extends Error {
   constructor(
     public readonly bin: string,
     public readonly code: number | null,
+    /** The failing command's captured stdout+stderr tail, threaded into the escalation so a human
+     *  sees the actual error without re-running the command. Undefined when nothing was captured. */
+    public readonly capturedOutput?: string,
   ) {
     super(`${bin} exited ${code}`);
     this.name = "CliEffectError";
   }
 }
 
+/** Cap on the captured output tail attached to a CliEffectError (keep the escalation legible). */
+const CLI_CAPTURE_MAX = 16_000;
+
 export function spawnCmd(bin: string, args: string[], cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { cwd, stdio: "inherit" });
+    // PIPE stdout/stderr so a non-zero exit can attach the failing output to the escalation, but TEE
+    // it straight back to the parent's streams so live tailing (drive-live.log) + console output are
+    // unchanged , the failure is both surfaced live AND captured for the escalation record.
+    const child = spawn(bin, args, { cwd, stdio: ["inherit", "pipe", "pipe"] });
+    const chunks: string[] = [];
+    child.stdout?.on("data", (d: Buffer) => { process.stdout.write(d); chunks.push(d.toString()); });
+    child.stderr?.on("data", (d: Buffer) => { process.stderr.write(d); chunks.push(d.toString()); });
     child.on("error", (err) => reject(err));
-    child.on("close", (code) => (code === 0 ? resolve() : reject(new CliEffectError(bin, code))));
+    child.on("close", (code) => {
+      if (code === 0) return resolve();
+      const captured = chunks.join("");
+      const tail = captured.length > CLI_CAPTURE_MAX ? captured.slice(-CLI_CAPTURE_MAX) : captured;
+      reject(new CliEffectError(bin, code, tail.trim() || undefined));
+    });
   });
 }
 

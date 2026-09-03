@@ -58,7 +58,7 @@ function defaultConsortConfig() {
     roles,
     build: { loopGranularity: "story", batchCap: 3, sessionScope: "story" },
     plan: { sizing: true },
-    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none" }
+    project: { uiTrack: true, gates: "interactive", deployTarget: "local", clientFramework: "none", language: "java" }
   };
 }
 function writeConsortConfig(projectDir, config, opts) {
@@ -206,6 +206,7 @@ function seedConsortConfig(projectDir, opts) {
   if (consortConfig.project) {
     consortConfig.project.uiTrack = opts.uiTrack ?? true;
     consortConfig.project.clientFramework = opts.clientFramework;
+    consortConfig.project.language = opts.language ?? "java";
   }
   writeConsortConfig(projectDir, consortConfig);
 }
