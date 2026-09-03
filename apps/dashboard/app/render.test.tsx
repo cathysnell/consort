@@ -22,12 +22,16 @@ import { AgentBubble } from "./AgentBubble";
 import { WorkflowGraph } from "./WorkflowGraph";
 import { Transport } from "./Transport";
 import { LaneGraph } from "./LaneGraph";
-import { DrilldownPanel, turnUrl } from "./DrilldownPanel";
+import { DrilldownPanel, TranscriptView, turnUrl, type TurnPayload } from "./DrilldownPanel";
 import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-parts";
 import type { DashboardState } from "@/lib/types";
 
 const fixture = (name: string): DashboardState =>
   JSON.parse(readFileSync(join(__dirname, "..", "lib", "__fixtures__", name), "utf8"));
+
+// React escapes &, <, > in text nodes; renderToStaticMarkup emits the escaped form. Mirror that so
+// a `toContain` on raw corpus text stays correct if the text ever carries an HTML-special char.
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const state = fixture("render-state.json");
 // The same run pinned at event 40 — atLive false, so snapshot-fenced panels must differ.
@@ -393,6 +397,29 @@ describe("render — EventTicker turn affordance", () => {
     const s = withSource({ correlation: health({ recentTurns: state.recentEvents.map(() => 3) }) });
     expect(renderToStaticMarkup(<EventTicker state={s} />)).not.toContain("turn 3 ›");
   });
+
+  // Kevin's parity ask: the agent's own reasoning must be visible in the stream, not buried in a
+  // drill-down. A reasoning event renders distinctly — a 💭 marker and italic narration that
+  // WRAPS instead of ellipsis-clipping — so the "what's passed back and forth" reads at a glance.
+  it("renders reasoning events distinctly (💭 marker, italic, wrapping)", () => {
+    // EventTicker renders only the last MERGED_TAIL (60) rows of the merged events+correspondence
+    // stream. Pin the two premises that make the 💭 count exact for THIS fixture — no correspondence
+    // and ≤ 60 events, so every reasoning event is actually rendered — rather than silently counting
+    // events the component never drew.
+    expect(state.source?.correspondence?.recent?.length ?? 0).toBe(0);
+    expect(state.recentEvents.length).toBeLessThanOrEqual(60);
+    const reasoningCount = state.recentEvents.filter((e) => e.event === "reasoning").length;
+    expect(reasoningCount).toBeGreaterThan(0); // fixture guard: the assertions below are vacuous otherwise
+    const markup = renderToStaticMarkup(<EventTicker state={state} />);
+    // One 💭 per reasoning event, and only for reasoning events.
+    expect((markup.match(/💭/g) ?? []).length).toBe(reasoningCount);
+    // Reasoning narration is italic and set to wrap (never clipped to one line).
+    expect(markup).toContain("font-style:italic");
+    // A reasoning event's full message survives into the markup (wrapping is CSS, not truncation).
+    // Escape as React does for text nodes, so a message with &/</> in a future corpus still matches.
+    const firstReasoning = state.recentEvents.find((e) => e.event === "reasoning")!;
+    expect(markup).toContain(escapeHtml(firstReasoning.message));
+  });
 });
 
 describe("render — DriftBanner", () => {
@@ -524,6 +551,37 @@ describe("render — DrilldownPanel", () => {
     const markup = renderToStaticMarkup(<DrilldownPanel target={{ kind: "step", node: "plan" }} mode="replay" feature="F1-stock-visibility" onClose={() => {}} />);
     expect(markup).toContain("STEP OUTPUTS");
     expect(markup).toContain("Close drill-down panel");
+  });
+
+  // Kevin's ask, in the drill-down: the turn must read as an EXCHANGE — an inbound prompt to the
+  // role, then the role's tools + reasoning back — with the tool NAME legible apart from its args.
+  it("frames the transcript as a directional exchange with the role named, and splits tool name from args", () => {
+    const turn = {
+      ordinal: 20,
+      step: 20,
+      label: "spec-author",
+      kind: "invoke-role",
+      role: "spec-author",
+      produced: [],
+      deleted: [],
+      transcript: { prompt: "Propose the features.", tools: ["Read app/models.py lines 1-40", "Write .consort/spec.json"], reasoning: "Chose the thinnest slice." },
+      transcriptSummary: null,
+    } as TurnPayload;
+    const markup = renderToStaticMarkup(<TranscriptView turn={turn} />);
+    // Inbound and outbound are labelled and name the role.
+    expect(markup).toContain("▸ Prompt → spec-author");
+    expect(markup).toContain("◂ Tools spec-author invoked (2)");
+    expect(markup).toContain("◂ spec-author&#x27;s final reasoning");
+    // The tool NAME is bolded (its own span) and the args are present but rendered muted.
+    expect(markup).toMatch(/font-weight:700[^>]*>Read<\/span>/);
+    expect(markup).toContain("app/models.py lines 1-40");
+  });
+
+  it("says a non-role step has no transcript rather than rendering an empty exchange", () => {
+    const turn = { ordinal: 5, step: 5, label: "cut", kind: "experiment-cut", produced: [], deleted: [], transcript: null, transcriptSummary: null } as TurnPayload;
+    const markup = renderToStaticMarkup(<TranscriptView turn={turn} />);
+    expect(markup).toContain("no agent transcript");
+    expect(markup).not.toContain("Prompt →");
   });
 
   it("builds turn URLs without asserting a mode it wasn't given", () => {

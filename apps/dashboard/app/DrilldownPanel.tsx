@@ -249,7 +249,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 type TurnKind = "code" | "artifact";
 
 // Most fields optional because the corpus's turn.json genuinely omits them (mode on 36/126, etc.).
-interface TurnPayload {
+export interface TurnPayload {
   ordinal: number;
   step: number;
   label: string;
@@ -429,7 +429,7 @@ function TabButton({ active, onClick, disabled, children }: { active: boolean; o
   );
 }
 
-function TranscriptView({ turn }: { turn: TurnPayload }) {
+export function TranscriptView({ turn }: { turn: TurnPayload }) {
   if (!turn.transcript) {
     return (
       <div style={{ fontSize: "0.76rem", color: "var(--text-faint)" }}>
@@ -438,24 +438,38 @@ function TranscriptView({ turn }: { turn: TurnPayload }) {
     );
   }
   const { prompt, tools, reasoning } = turn.transcript;
+  // Frame the turn as the EXCHANGE Kevin's original made obvious: an inbound prompt sent TO the
+  // role (▸), then what the role sent back (◂) — its tools and its reasoning. The direction glyphs
+  // + the role name in each label make "what was passed back and forth" legible at a glance rather
+  // than three flat sections a viewer has to mentally assign a direction to.
+  const role = turn.role ?? "agent";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <Section label="Prompt">
+      <Section label={`▸ Prompt → ${role}`}>
         <Pre>{prompt || "(empty)"}</Pre>
       </Section>
       {tools.length > 0 ? (
-        <Section label={`Tools used (${tools.length})`}>
+        <Section label={`◂ Tools ${role} invoked (${tools.length})`}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 168, overflowY: "auto" }}>
-            {tools.map((t, i) => (
-              <div key={i} title={t} style={{ fontSize: "0.68rem", fontFamily: font.mono, color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {t}
-              </div>
-            ))}
+            {tools.map((t, i) => {
+              // Tool lines arrive as "ToolName rest of the call…"; bold the tool name and mute the
+              // arguments so a viewer scans WHICH tools ran without the args drowning them out
+              // (Kevin's `.tn` treatment).
+              const sp = t.indexOf(" ");
+              const name = sp > 0 ? t.slice(0, sp) : t;
+              const rest = sp > 0 ? t.slice(sp) : "";
+              return (
+                <div key={i} title={t} style={{ fontSize: "0.68rem", fontFamily: font.mono, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{name}</span>
+                  <span style={{ color: "var(--text-muted)" }}>{rest}</span>
+                </div>
+              );
+            })}
           </div>
         </Section>
       ) : null}
       {reasoning ? (
-        <Section label="Final reasoning">
+        <Section label={`◂ ${role}'s final reasoning`}>
           <Pre>{reasoning}</Pre>
         </Section>
       ) : null}

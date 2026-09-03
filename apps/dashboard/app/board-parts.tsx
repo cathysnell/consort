@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from "react";
 import type { DashboardState } from "@/lib/types";
-import { font, radius } from "@/lib/theme";
+import { colorForRole, font, radius } from "@/lib/theme";
 
 /**
  * `?mode=live|replay` from the page URL, so a mode is linkable.
@@ -138,21 +138,37 @@ export function EventTicker({
           const artifactPath = openTurn ? null : onOpenArtifact ? artifactPathOf(e) : null;
           const clickable = openTurn || artifactPath !== null;
           const onClick = openTurn ? () => onOpenTurn!(turn!) : artifactPath !== null ? () => onOpenArtifact!(artifactPath) : undefined;
+          // A `reasoning` event is the agent narrating its own thinking ("established the layer
+          // canon …") — the single most demo-worthy line in the stream, and the thing Kevin's
+          // original surfaced inline. Every other row is a machine event clipped to one column-
+          // aligned line; a reasoning row instead WRAPS (so the whole thought is legible without a
+          // drill-down) and is tied to its agent by the role colour + a 💭 marker. This is the
+          // "you see what's passed back and forth" parity fix.
+          const isReasoning = e.event === "reasoning";
+          const roleColor = e.role ? colorForRole(e.role) : "var(--text-on-dark-accent)";
+          // Role-tint the marker/columns only on a NON-clickable reasoning row. A clickable row sits
+          // on the light `.consort-open` highlight, where a saturated role hue (e.g. amber dba) is
+          // unreadable in light mode — clickable rows must keep the semantic tokens the affordance
+          // comment below relies on. In practice reasoning events don't begin a turn, so this is a
+          // guard, not a common case.
+          const reasonTint = isReasoning && !clickable;
           return (
             <div
               key={i}
               onClick={onClick}
               className={clickable ? "consort-open" : undefined}
-              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : undefined}
+              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : isReasoning ? e.message : undefined}
               style={{
                 display: "flex",
                 gap: 10,
-                alignItems: "center",
+                // A wrapping reasoning row aligns its columns to the first line, not centre.
+                alignItems: isReasoning ? "flex-start" : "center",
                 // Clickable rows carry the accent rail (via the class), so pull their padding in by
                 // the 2px border to keep every row's text on the same left edge.
                 padding: clickable ? "2px 0 2px 4px" : "2px 0 2px 6px",
                 color: "var(--border-default)",
-                whiteSpace: "nowrap",
+                // Reasoning wraps to full text; all other rows stay single-line.
+                whiteSpace: isReasoning ? "normal" : "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 cursor: clickable ? "pointer" : undefined,
@@ -160,22 +176,36 @@ export function EventTicker({
             >
               {/* A fixed-width left gutter carrying a bold `»` on openable rows (blank otherwise, so
                   columns stay aligned). This is the marker Kevin remembers — leading the row, not a
-                  faint trailing span, so it survives the auto-scroll and reads at a glance. */}
+                  faint trailing span, so it survives the auto-scroll and reads at a glance. A
+                  reasoning row shows 💭 in its agent's colour instead. */}
               {/* A clickable row carries the `surface.inset` highlight (via .consort-open), so its
                   text must switch to the SEMANTIC tokens — the always-light onDark* colors used on
                   the dark-terminal rows are unreadable on that highlight in light mode (light-on-
                   white). Using strong/body/muted (not hardcoded black) makes it correct in both
                   palettes: light row + dark text in light mode, dark row + light text in dark. */}
-              <span style={{ width: 10, color: clickable ? "var(--status-accent)" : "transparent", fontWeight: 800 }}>{clickable ? "»" : ""}</span>
-              <span style={{ color: "var(--text-muted)" }}>{e.timestamp.slice(11, 19)}</span>
-              <span style={{ color: clickable ? "var(--text-muted)" : levelColor[e.level] ?? "var(--text-muted)", width: 42 }}>{e.event.split(".")[0]}</span>
-              <span style={{ color: clickable ? "var(--text-body)" : "var(--text-on-dark-accent)", width: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{e.role}</span>
-              <span style={{ color: clickable ? "var(--text-strong)" : "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{e.message}</span>
+              {/* Gutter is a fixed 16px so an emoji (wider than the `»` it replaces) fits without
+                  pushing the timestamp column out of alignment; `»` wins over 💭 on a clickable row
+                  so the at-rest click affordance is never lost. */}
+              <span style={{ width: 16, flexShrink: 0, textAlign: "center", overflow: "hidden", lineHeight: 1, color: clickable ? "var(--status-accent)" : reasonTint ? roleColor : "transparent", fontWeight: 800, fontSize: isReasoning ? "0.7rem" : undefined }}>{clickable ? "»" : isReasoning ? "💭" : ""}</span>
+              <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{e.timestamp.slice(11, 19)}</span>
+              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-muted)" : levelColor[e.level] ?? "var(--text-muted)", width: 42, flexShrink: 0 }}>{e.event.split(".")[0]}</span>
+              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-body)" : "var(--text-on-dark-accent)", width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{e.role}</span>
+              {/* Reasoning text is italic (it reads as narration, not a status line) and never
+                  clipped — the whole thought stays on screen. */}
+              <span
+                style={
+                  isReasoning
+                    ? { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-accent)", fontStyle: "italic", flex: 1, whiteSpace: "normal", wordBreak: "break-word" }
+                    : { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }
+                }
+              >
+                {e.message}
+              </span>
               {/* The trailing label names the action (open …), accent-coloured so it reads as the
                   button it is rather than metadata. Only rows that begin a recorded turn / name an
                   artifact are openable, so the affordance marks exactly where the drill-down is. */}
-              {openTurn ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8 }}>open turn {turn} ›</span> : null}
-              {artifactPath !== null ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8 }}>open file ›</span> : null}
+              {openTurn ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open turn {turn} ›</span> : null}
+              {artifactPath !== null ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open file ›</span> : null}
             </div>
           );
         })}
