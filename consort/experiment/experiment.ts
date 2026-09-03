@@ -190,28 +190,32 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
-  // FAIL-CLOSED on a dirty working tree. createPairedBranch git-switches to the new experiment
-  // branch; git refuses to switch on uncommitted changes (or a best-effort path silently skips the
-  // checkout, like the .env sync below), leaving the tree on the FEATURE branch WHILE the experiment
-  // is recorded , the next role then runs on the wrong branch, finds prior passes' files, and burns
-  // its budget into a PROTOCOL VIOLATION (the "cut refused but the Navigator ran anyway" report).
-  // Refuse BEFORE any mutation/record so the cut hard-fails: experimentCut stays false and the lane
-  // halts (or retries) instead of building on a branch that was never checked out. A clean tree
-  // (the normal path) passes untouched.
-  let dirty = "";
+  // FAIL-CLOSED on uncommitted TRACKED changes OUTSIDE .consort/ , the harmful case: a tracked-source
+  // edit silently rides onto the experiment fork (git checkout -b carries it), leaving the tree
+  // building on the feature branch's uncommitted state (the "cut refused but the Navigator ran anyway"
+  // PROTOCOL VIOLATION). But TOLERATE untracked files (a new design artifact, an unrelated tool's
+  // config like .isaac/) and .consort/ workflow-metadata churn (next.json, workflow-state.json, the
+  // design corpus mid-authoring): those do not corrupt the fork , this mirrors createPairedBranch's
+  // own tracked-source-only guard, so the normal design->build handoff is NOT blocked by a blanket
+  // dirty check. Refuse BEFORE any mutation/record so experimentCut stays false and the lane halts.
+  let dirtyTracked = "";
   try {
-    dirty = execFileSync("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+    dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" })
+      .split("\n")
+      .filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/"))
+      .join("\n")
+      .trim();
   } catch {
-    // Not a git repo / git unavailable: we can't assess cleanliness here, and the paired cut's own
-    // git operations will surface any real problem. Don't block on an inability to check (this also
-    // keeps hermetic tests that mock the fork without a real repo working).
-    dirty = "";
+    // Not a git repo / git unavailable: can't assess here, and the paired cut's own git operations
+    // surface any real problem. Don't block on an inability to check (keeps hermetic tests that mock
+    // the fork without a real repo working).
+    dirtyTracked = "";
   }
-  if (dirty) {
+  if (dirtyTracked) {
     throw new Error(
-      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, ` +
-        `which would block the paired-branch checkout and leave the tree on the feature branch. Commit or ` +
-        `stash them first. Changed paths:\n${dirty}`,
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: there are uncommitted changes to tracked ` +
+        `source files, which would silently ride onto the experiment fork and leave it building on the ` +
+        `feature branch's uncommitted state. Commit or stash them first. Changed paths:\n${dirtyTracked}`,
     );
   }
   // Re-cut re-fork (Finding 27): a discarded experiment's paired branch of this

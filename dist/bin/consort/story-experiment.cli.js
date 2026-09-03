@@ -6694,16 +6694,16 @@ async function cutExperiment(args, deps = {}) {
   const { consortDir, projectDir, featureId, storyId, experimentSlug, branch, parentBranch, ttl, notes, resetStaleBranch, ...lookup } = args;
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
-  let dirty = "";
+  let dirtyTracked = "";
   try {
-    dirty = execFileSync("git", ["status", "--porcelain"], { cwd: projectDir, encoding: "utf8" }).trim();
+    dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !l.slice(3).startsWith(".consort/")).join("\n").trim();
   } catch {
-    dirty = "";
+    dirtyTracked = "";
   }
-  if (dirty) {
+  if (dirtyTracked) {
     throw new Error(
-      `cannot cut experiment "${experimentSlug}" for ${storyId}: the working tree has uncommitted changes, which would block the paired-branch checkout and leave the tree on the feature branch. Commit or stash them first. Changed paths:
-${dirty}`
+      `cannot cut experiment "${experimentSlug}" for ${storyId}: there are uncommitted changes to tracked source files, which would silently ride onto the experiment fork and leave it building on the feature branch's uncommitted state. Commit or stash them first. Changed paths:
+${dirtyTracked}`
     );
   }
   if (resetStaleBranch) {

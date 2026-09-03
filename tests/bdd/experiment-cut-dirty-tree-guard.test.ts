@@ -40,9 +40,9 @@ const args = () => ({
   parentBranch: "feature/F1-x",
 });
 
-describe("cutExperiment is fail-closed on a dirty working tree (#3)", () => {
-  it("throws BEFORE forking when the tree has uncommitted changes (createPairedBranch never called)", async () => {
-    writeFileSync(join(dir, "README.md"), "uncommitted change\n"); // dirty the tree
+describe("cutExperiment is fail-closed on uncommitted TRACKED source, but tolerates untracked + .consort churn (#3)", () => {
+  it("throws BEFORE forking on an uncommitted TRACKED source change (createPairedBranch never called)", async () => {
+    writeFileSync(join(dir, "README.md"), "uncommitted change\n"); // modify a TRACKED file
     let forked = false;
     await expect(
       cutExperiment(args(), {
@@ -70,5 +70,24 @@ describe("cutExperiment is fail-closed on a dirty working tree (#3)", () => {
       }),
     ).rejects.toThrow(/REACHED_PAIRED_CUT/);
     expect(forked, "a clean tree reaches createPairedBranch").toBe(true);
+  });
+
+  it("TOLERATES untracked files (a new design artifact / unrelated tool config) , the normal design->build handoff is not blocked", async () => {
+    // Untracked files ride onto the fork harmlessly (the build's allow-list commit never stages
+    // them); only uncommitted TRACKED source is the fork-corrupting case. So an untracked file must
+    // NOT block the cut , this is the over-block the blanket check caused, now fixed.
+    writeFileSync(join(dir, "brand-new-untracked.txt"), "not committed, not tracked\n");
+    writeFileSync(join(dir, ".isaac-config.json"), "{}\n"); // an unrelated tool's untracked config
+    let forked = false;
+    await expect(
+      cutExperiment(args(), {
+        createPairedBranch: (async () => {
+          forked = true;
+          throw new Error("REACHED_PAIRED_CUT");
+        }) as never,
+        deletePairedBranch: (async () => {}) as never,
+      }),
+    ).rejects.toThrow(/REACHED_PAIRED_CUT/);
+    expect(forked, "untracked files are tolerated , the cut reaches createPairedBranch").toBe(true);
   });
 });
