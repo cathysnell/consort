@@ -411,8 +411,8 @@ describe("render — EventTicker turn affordance", () => {
     const reasoningCount = state.recentEvents.filter((e) => e.event === "reasoning").length;
     expect(reasoningCount).toBeGreaterThan(0); // fixture guard: the assertions below are vacuous otherwise
     const markup = renderToStaticMarkup(<EventTicker state={state} />);
-    // One 💭 per reasoning event, and only for reasoning events.
-    expect((markup.match(/💭/g) ?? []).length).toBe(reasoningCount);
+    // One 💭 per reasoning event, plus the single 💭 in the legend key.
+    expect((markup.match(/💭/g) ?? []).length).toBe(reasoningCount + 1);
     // Reasoning narration is italic and set to wrap (never clipped to one line).
     expect(markup).toContain("font-style:italic");
     // A reasoning event's full message survives into the markup (wrapping is CSS, not truncation).
@@ -575,6 +575,38 @@ describe("render — DrilldownPanel", () => {
     // The tool NAME is bolded (its own span) and the args are present but rendered muted.
     expect(markup).toMatch(/font-weight:700[^>]*>Read<\/span>/);
     expect(markup).toContain("app/models.py lines 1-40");
+  });
+
+  // T5 parity: the stream is scannable by category, with a legend that explains the colours.
+  it("colour-codes state-transition event kinds and renders a legend", () => {
+    // The count-based assertions below assume no correspondence rows (CorrRow also uses the gate
+    // colour), which holds for this fixture.
+    expect(state.source?.correspondence?.recent?.length ?? 0).toBe(0);
+    const markup = renderToStaticMarkup(<EventTicker state={state} />);
+    // The legend names each colour category plus the reasoning marker.
+    for (const label of ["gate", "escalation", "deploy / verify", "reasoning"]) {
+      expect(markup).toContain(label);
+    }
+    // Row colouring, not just the legend swatch: the legend emits exactly one of each colour, so a
+    // count > 1 proves at least one actual event row carries it. The fixture has info-level gate and
+    // deploy/verify events.
+    expect(state.recentEvents.some((e) => e.event.startsWith("gate") && e.level !== "warn" && e.level !== "error")).toBe(true);
+    expect((markup.match(/var\(--status-gate\)/g) ?? []).length).toBeGreaterThan(1);
+    expect(state.recentEvents.some((e) => (e.event.startsWith("deploy") || e.event.startsWith("verify")) && e.level !== "warn" && e.level !== "error")).toBe(true);
+    expect((markup.match(/var\(--status-good\)/g) ?? []).length).toBeGreaterThan(1);
+  });
+
+  it("does NOT paint a failed deploy/verify green — a warn/error row keeps its level colour", () => {
+    // The demo hazard: `deploy.failed` matches the deploy/verify rule, but painting it green reads
+    // as success. At error level the category colour is withheld, so the only --status-good in the
+    // markup is the legend swatch (count 1), and the row shows the error colour instead.
+    const failed = {
+      ...state,
+      recentEvents: [{ timestamp: "2026-08-05T00:00:00.000Z", level: "error", role: "release-engineer", event: "deploy.failed", message: "DEPLOY failed", metadata: {} }],
+    } as DashboardState;
+    const markup = renderToStaticMarkup(<EventTicker state={failed} />);
+    expect((markup.match(/var\(--status-good\)/g) ?? []).length).toBe(1); // legend only, no green row
+    expect(markup).toContain("var(--status-critical-text)"); // the failure reads as error
   });
 
   it("says a non-role step has no transcript rather than rendering an empty exchange", () => {
