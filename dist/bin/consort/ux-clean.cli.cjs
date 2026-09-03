@@ -171,4 +171,3 @@ ${UX_CLEAN_REMEDIATION}
 `);
 }
 process.exit(result.clean ? 0 : 1);
-//# sourceMappingURL=ux-clean.cli.cjs.map

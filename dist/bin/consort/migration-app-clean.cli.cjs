@@ -98,4 +98,3 @@ ${r.remediation}
 `);
 }
 process.exit(r.clean ? 0 : 1);
-//# sourceMappingURL=migration-app-clean.cli.cjs.map

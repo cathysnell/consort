@@ -82,7 +82,10 @@ export default defineConfig({
   // consumer installs (which ship pre-built dist/ and never rebuild) can read
   // them. Without this, schema-loader / scm-workflow-state hit ENOENT.
   onSuccess: "node scripts/copy-build-assets.mjs",
-  sourcemap: true,
+  // No sourcemaps in the SHIPPED build: the committed dist is what the plugin marketplace ships
+  // (a shallow git clone), and .map files were ~53MB of a 72MB dist , 3x the actual code , dragged
+  // into every install for zero runtime value. A dev debugging locally can build with --sourcemap.
+  sourcemap: false,
   splitting: false,
   // `shims: true` makes esbuild inject pathToFileURL(__filename).href for
   // `import.meta.url` in the CJS build (and the inverse for ESM). Without

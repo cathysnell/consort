@@ -29,4 +29,3 @@ function parseProjectDir(argv) {
 }
 var projectDir = parseProjectDir(process.argv.slice(2));
 process.stdout.write(resolveConsortDir(projectDir ?? process.cwd()) + "\n");
-//# sourceMappingURL=resolve-consort-dir.cli.js.map

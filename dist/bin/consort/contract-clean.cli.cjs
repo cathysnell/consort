@@ -208,4 +208,3 @@ ${r.remediation}
 `);
 }
 process.exit(r.clean ? 0 : 1);
-//# sourceMappingURL=contract-clean.cli.cjs.map

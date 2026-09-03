@@ -504,4 +504,3 @@ if ((0, import_util.isCliEntry)(importMetaUrl)) {
   runTelemetryBeacon,
   runTelemetryCli
 });
-//# sourceMappingURL=telemetry.cli.cjs.map

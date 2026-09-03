@@ -248,4 +248,3 @@ ${res.files.map((f) => `  ${f}`).join("\n")}
   return 0;
 }
 process.exit(main());
-//# sourceMappingURL=open.cli.cjs.map

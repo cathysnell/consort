@@ -1,7 +1,7 @@
 {
   "name": "consort",
   "description": "Consort: a Spec-First Branched-Database TDD agent framework for building transactional applications on Lakebase (Databricks' serverless Postgres/OLTP database, not the Delta Lakehouse). A deterministic orchestrator drives role agents through a spec-first design lane and a test-driven build lane whose every cycle runs against a live copy-on-write branch of a real Postgres database, with human-in-the-loop gates that fail closed. For application backends on Postgres, not ETL or analytics. Run /consort:start to launch the workflow.",
-  "version": "0.3.67",
+  "version": "0.3.68",
   "author": {
     "name": "Databricks"
   },
@@ -18,5 +18,17 @@
     "agentic-development",
     "human-in-the-loop"
   ],
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"${CLAUDE_PLUGIN_ROOT:-}\"; { [ -n \"$d\" ] && [ -f \"$d/package.json\" ] && [ ! -f \"$d/node_modules/.package-lock.json\" ]; } && { echo 'consort: finishing plugin dependency install (the cached npm ci was interrupted or timed out)...' >&2; ( cd \"$d\" && npm ci ) || echo 'consort: dependency install failed; run npm ci in the plugin dir manually.' >&2; }; true"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -544,4 +544,3 @@ if (isCliEntry(import.meta.url)) {
     }
   );
 }
-//# sourceMappingURL=upgrade.cli.js.map

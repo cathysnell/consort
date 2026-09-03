@@ -170,4 +170,3 @@ try {
 `);
   process.exit(1);
 }
-//# sourceMappingURL=update-agents.cli.cjs.map

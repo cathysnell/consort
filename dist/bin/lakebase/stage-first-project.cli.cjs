@@ -152,4 +152,3 @@ Next: run /plan (the Spec Author proposes a sprint from the staged intake), or /
   bundledSeedDir,
   stageFirstProject
 });
-//# sourceMappingURL=stage-first-project.cli.cjs.map

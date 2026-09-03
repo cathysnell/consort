@@ -78,4 +78,3 @@ roles: ${ALL_AGENT_ROLES.join(", ")}
   return 0;
 }
 process.exit(main());
-//# sourceMappingURL=agent-models.cli.cjs.map

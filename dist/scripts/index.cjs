@@ -22,4 +22,3 @@ __reExport(scripts_exports, require("@databricks-solutions/lakebase-scm-utils"),
 0 && (module.exports = {
   ...require("@databricks-solutions/lakebase-scm-utils")
 });
-//# sourceMappingURL=index.cjs.map

@@ -138,4 +138,3 @@ if (isCliEntry(import.meta.url)) {
 export {
   runCheckUpdate
 };
-//# sourceMappingURL=check-update.cli.js.map

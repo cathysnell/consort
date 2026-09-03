@@ -23,4 +23,3 @@ async function main() {
   }
 }
 void main().finally(() => process.exit(0));
-//# sourceMappingURL=telemetry-send.cli.js.map

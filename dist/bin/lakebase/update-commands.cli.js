@@ -241,4 +241,3 @@ main().then(
     process.exit(1);
   }
 );
-//# sourceMappingURL=update-commands.cli.js.map

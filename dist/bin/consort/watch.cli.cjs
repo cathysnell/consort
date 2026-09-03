@@ -673,4 +673,3 @@ if ((0, import_util.isCliEntry)(importMetaUrl)) {
   reportRoleOpen,
   scanLastStop
 });
-//# sourceMappingURL=watch.cli.cjs.map

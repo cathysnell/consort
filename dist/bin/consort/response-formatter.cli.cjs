@@ -7387,4 +7387,3 @@ function main() {
   return 1;
 }
 process.exit(main());
-//# sourceMappingURL=response-formatter.cli.cjs.map

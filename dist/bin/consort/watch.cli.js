@@ -629,4 +629,3 @@ export {
   reportRoleOpen,
   scanLastStop
 };
-//# sourceMappingURL=watch.cli.js.map

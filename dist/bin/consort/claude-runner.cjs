@@ -9221,4 +9221,3 @@ function composeOnAction(...hooks) {
   takeLastAgentTranscript,
   takeLastTurnMeta
 });
-//# sourceMappingURL=claude-runner.cjs.map

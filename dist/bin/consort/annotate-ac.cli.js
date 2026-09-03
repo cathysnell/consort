@@ -143,4 +143,3 @@ export {
   mergeAcAnnotation,
   parseArgs
 };
-//# sourceMappingURL=annotate-ac.cli.js.map

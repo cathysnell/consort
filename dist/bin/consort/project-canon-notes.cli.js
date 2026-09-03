@@ -6994,4 +6994,3 @@ var n = projectStoryNotes(consortDir, p.feature, p.story);
 process.stdout.write(`canon-notes: projected architectural_notes onto ${n} AC(s) for ${p.feature}/${p.story}
 `);
 process.exit(0);
-//# sourceMappingURL=project-canon-notes.cli.js.map

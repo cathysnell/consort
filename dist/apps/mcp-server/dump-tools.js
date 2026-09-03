@@ -8308,4 +8308,3 @@ var dump = TOOLS.map((t) => ({
   inputSchema: t.inputSchema
 }));
 process.stdout.write(JSON.stringify(dump, null, 2) + "\n");
-//# sourceMappingURL=dump-tools.js.map

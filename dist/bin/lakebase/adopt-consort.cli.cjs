@@ -240,4 +240,3 @@ main().then(
     process.exit(1);
   }
 );
-//# sourceMappingURL=adopt-consort.cli.cjs.map

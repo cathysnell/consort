@@ -228,4 +228,3 @@ try {
 `);
   process.exit(1);
 }
-//# sourceMappingURL=test-list.cli.js.map

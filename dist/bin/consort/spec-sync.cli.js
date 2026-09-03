@@ -6810,4 +6810,3 @@ try {
 `);
   process.exit(1);
 }
-//# sourceMappingURL=spec-sync.cli.js.map

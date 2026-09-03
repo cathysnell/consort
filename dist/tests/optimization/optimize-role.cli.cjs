@@ -20107,4 +20107,3 @@ if ((0, import_util4.isCliEntry)(importMetaUrl)) {
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
-//# sourceMappingURL=optimize-role.cli.cjs.map

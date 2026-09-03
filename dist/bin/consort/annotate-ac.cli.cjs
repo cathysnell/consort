@@ -184,4 +184,3 @@ if ((0, import_util.isCliEntry)(importMetaUrl)) {
   mergeAcAnnotation,
   parseArgs
 });
-//# sourceMappingURL=annotate-ac.cli.cjs.map

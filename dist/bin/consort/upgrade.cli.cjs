@@ -564,4 +564,3 @@ if ((0, import_util.isCliEntry)(importMetaUrl)) {
     }
   );
 }
-//# sourceMappingURL=upgrade.cli.cjs.map
