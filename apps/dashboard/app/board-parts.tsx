@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from "react";
 import type { DashboardState } from "@/lib/types";
-import { font, radius } from "@/lib/theme";
+import { colorForRole, font, radius } from "@/lib/theme";
 
 /**
  * `?mode=live|replay` from the page URL, so a mode is linkable.
@@ -72,6 +72,30 @@ function artifactPathOf(e: DashboardState["recentEvents"][number]): string | nul
   return typeof p === "string" && p ? p : null;
 }
 
+// Colour the STATE-TRANSITION event kinds so the stream is scannable by category — Kevin's
+// original colour-coded its timeline, which is how a demo viewer spots "a gate surfaced" or "a
+// deploy verified" at a glance instead of reading every grey line. Kept to the board's existing
+// semantic palette (each token is already used as text ON the dark terminal, so it's readable in
+// both themes) and to the kinds that carry meaning; the structural rows (handoff/artifact/phase/
+// intake/usage) stay neutral so the colour actually means something. `reasoning` is handled
+// separately (its own role colour + 💭). The `label` doubles as the legend caption.
+//
+// Two deliberate exclusions: (1) these colours are used ONLY at info/debug level — a warn/error
+// row (e.g. `deploy.failed`, `verify.failed`, a rejected gate) keeps its level colour so a FAILURE
+// never renders in the green/purple a viewer would read as success (see eventAccent's caller). (2)
+// no TDD-cycle colour: `--status-accent` is reserved for the "openable" signal (the » gutter + open
+// links + the clickable rail), so tinting cycle rows with it would make inert rows read as clickable.
+const EVENT_LEGEND: { match: (event: string) => boolean; color: string; label: string }[] = [
+  { match: (e) => e.startsWith("gate"), color: "var(--status-gate)", label: "gate" },
+  { match: (e) => e.startsWith("escalation"), color: "var(--status-critical-text)", label: "escalation" },
+  { match: (e) => e.startsWith("deploy") || e.startsWith("verify"), color: "var(--status-good)", label: "deploy / verify" },
+];
+
+/** The categorical colour for a state-transition event kind, or null to fall back to the level colour. */
+function eventAccent(event: string): string | null {
+  return EVENT_LEGEND.find((k) => k.match(event))?.color ?? null;
+}
+
 export function EventTicker({
   state,
   onOpenTurn,
@@ -128,6 +152,21 @@ export function EventTicker({
         .consort-open { border-left: 2px solid var(--status-accent); background: var(--surface-inset); }
         .consort-open:hover { background: var(--surface-card); }
       `}</style>
+      {/* A colour key for the stream: names what the state-transition colours mean plus the 💭
+          reasoning marker, so a viewer reads the timeline at a glance (Kevin's legend). Sits above
+          the log on the page ground, so its labels use the theme-safe muted token. */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 6, fontSize: "0.64rem", color: "var(--text-muted)" }}>
+        {EVENT_LEGEND.map((k) => (
+          <span key={k.label} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: k.color, flexShrink: 0 }} />
+            {k.label}
+          </span>
+        ))}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontSize: "0.7rem" }}>💭</span>
+          reasoning
+        </span>
+      </div>
       <div ref={scrollRef} onScroll={onScroll} style={{ background: "var(--surface-terminal)", borderRadius: radius.panel, padding: "12px 14px", maxHeight: 240, overflowY: "auto", fontFamily: font.mono, fontSize: "0.72rem" }}>
         {merged.map((row, i) => {
           if (row.kind === "corr") return <CorrRow key={i} c={row.c} onOpenTurn={onOpenTurn} />;
@@ -138,21 +177,43 @@ export function EventTicker({
           const artifactPath = openTurn ? null : onOpenArtifact ? artifactPathOf(e) : null;
           const clickable = openTurn || artifactPath !== null;
           const onClick = openTurn ? () => onOpenTurn!(turn!) : artifactPath !== null ? () => onOpenArtifact!(artifactPath) : undefined;
+          // A `reasoning` event is the agent narrating its own thinking ("established the layer
+          // canon …") — the single most demo-worthy line in the stream, and the thing Kevin's
+          // original surfaced inline. Every other row is a machine event clipped to one column-
+          // aligned line; a reasoning row instead WRAPS (so the whole thought is legible without a
+          // drill-down) and is tied to its agent by the role colour + a 💭 marker. This is the
+          // "you see what's passed back and forth" parity fix.
+          const isReasoning = e.event === "reasoning";
+          const roleColor = e.role ? colorForRole(e.role) : "var(--text-on-dark-accent)";
+          // Role-tint the marker/columns only on a NON-clickable reasoning row. A clickable row sits
+          // on the light `.consort-open` highlight, where a saturated role hue (e.g. amber dba) is
+          // unreadable in light mode — clickable rows must keep the semantic tokens the affordance
+          // comment below relies on. In practice reasoning events don't begin a turn, so this is a
+          // guard, not a common case.
+          const reasonTint = isReasoning && !clickable;
+          // Categorical colour for a state-transition kind (gate/escalation/deploy·verify), used on
+          // the kind label of a non-clickable, non-reasoning row. Withheld at warn/error level so a
+          // FAILED deploy/verify or a rejected gate keeps its red/amber level colour instead of the
+          // green/purple that would read as success. Clickable rows keep the semantic tokens the
+          // highlight needs; reasoning rows already carry their role colour.
+          const kindAccent = !isReasoning && !clickable && e.level !== "warn" && e.level !== "error" ? eventAccent(e.event) : null;
           return (
             <div
               key={i}
               onClick={onClick}
               className={clickable ? "consort-open" : undefined}
-              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : undefined}
+              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : isReasoning ? e.message : undefined}
               style={{
                 display: "flex",
                 gap: 10,
-                alignItems: "center",
+                // A wrapping reasoning row aligns its columns to the first line, not centre.
+                alignItems: isReasoning ? "flex-start" : "center",
                 // Clickable rows carry the accent rail (via the class), so pull their padding in by
                 // the 2px border to keep every row's text on the same left edge.
                 padding: clickable ? "2px 0 2px 4px" : "2px 0 2px 6px",
                 color: "var(--border-default)",
-                whiteSpace: "nowrap",
+                // Reasoning wraps to full text; all other rows stay single-line.
+                whiteSpace: isReasoning ? "normal" : "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 cursor: clickable ? "pointer" : undefined,
@@ -160,22 +221,36 @@ export function EventTicker({
             >
               {/* A fixed-width left gutter carrying a bold `»` on openable rows (blank otherwise, so
                   columns stay aligned). This is the marker Kevin remembers — leading the row, not a
-                  faint trailing span, so it survives the auto-scroll and reads at a glance. */}
+                  faint trailing span, so it survives the auto-scroll and reads at a glance. A
+                  reasoning row shows 💭 in its agent's colour instead. */}
               {/* A clickable row carries the `surface.inset` highlight (via .consort-open), so its
                   text must switch to the SEMANTIC tokens — the always-light onDark* colors used on
                   the dark-terminal rows are unreadable on that highlight in light mode (light-on-
                   white). Using strong/body/muted (not hardcoded black) makes it correct in both
                   palettes: light row + dark text in light mode, dark row + light text in dark. */}
-              <span style={{ width: 10, color: clickable ? "var(--status-accent)" : "transparent", fontWeight: 800 }}>{clickable ? "»" : ""}</span>
-              <span style={{ color: "var(--text-muted)" }}>{e.timestamp.slice(11, 19)}</span>
-              <span style={{ color: clickable ? "var(--text-muted)" : levelColor[e.level] ?? "var(--text-muted)", width: 42 }}>{e.event.split(".")[0]}</span>
-              <span style={{ color: clickable ? "var(--text-body)" : "var(--text-on-dark-accent)", width: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{e.role}</span>
-              <span style={{ color: clickable ? "var(--text-strong)" : "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{e.message}</span>
+              {/* Gutter is a fixed 16px so an emoji (wider than the `»` it replaces) fits without
+                  pushing the timestamp column out of alignment; `»` wins over 💭 on a clickable row
+                  so the at-rest click affordance is never lost. */}
+              <span style={{ width: 16, flexShrink: 0, textAlign: "center", overflow: "hidden", lineHeight: 1, color: clickable ? "var(--status-accent)" : reasonTint ? roleColor : "transparent", fontWeight: 800, fontSize: isReasoning ? "0.7rem" : undefined }}>{clickable ? "»" : isReasoning ? "💭" : ""}</span>
+              <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{e.timestamp.slice(11, 19)}</span>
+              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-muted)" : kindAccent ?? levelColor[e.level] ?? "var(--text-muted)", fontWeight: kindAccent ? 700 : undefined, width: 42, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{e.event.split(".")[0]}</span>
+              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-body)" : "var(--text-on-dark-accent)", width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{e.role}</span>
+              {/* Reasoning text is italic (it reads as narration, not a status line) and never
+                  clipped — the whole thought stays on screen. */}
+              <span
+                style={
+                  isReasoning
+                    ? { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-accent)", fontStyle: "italic", flex: 1, whiteSpace: "normal", wordBreak: "break-word" }
+                    : { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }
+                }
+              >
+                {e.message}
+              </span>
               {/* The trailing label names the action (open …), accent-coloured so it reads as the
                   button it is rather than metadata. Only rows that begin a recorded turn / name an
                   artifact are openable, so the affordance marks exactly where the drill-down is. */}
-              {openTurn ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8 }}>open turn {turn} ›</span> : null}
-              {artifactPath !== null ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8 }}>open file ›</span> : null}
+              {openTurn ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open turn {turn} ›</span> : null}
+              {artifactPath !== null ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open file ›</span> : null}
             </div>
           );
         })}
