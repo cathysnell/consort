@@ -1155,3 +1155,35 @@ describe.skipIf(!existsSync(REAL_LOG))("fold — golden, real stockflow log", ()
     expect(s.agents.filter((a) => a.cost > 0).length).toBeGreaterThan(1);
   });
 });
+
+describe("fold — an open gate lights its surfacer even when deploy/verify follow it", () => {
+  // The live stockflow-3-68 case: the acceptance gate is surfaced by the orchestrator, THEN the
+  // release-engineer's deploy/verify events fire while the gate stays open. findPendingGate returns
+  // null (the gate.surfaced is no longer the last event), so before this fix NO bubble lit even
+  // though next.json still lists open_gates:["acceptance"]. The orchestrator (the surfacer) must be
+  // highlighted "waiting on you".
+  const gateEvents: AgentLogEvent[] = [
+    ev("phase.start", { phase: "refactor" }, { role: "driver" }),
+    ev("turn.usage", { cost_usd: 0 }, { role: "driver" }),
+    ev("cycle.refactored", {}, { role: "driver", message: "structure improved" }),
+    ev("phase.start", { phase: "deploy" }, { role: "release-engineer" }),
+    ev("gate.surfaced", { gate: "acceptance", story: "S3" }, { role: "orchestrator" }),
+    ev("deploy.start", { story: "S3" }, { role: "release-engineer" }),
+    ev("verify.passed", { story: "S3" }, { role: "release-engineer" }),
+    ev("deploy.verified", { story: "S3" }, { role: "release-engineer" }),
+    ev("phase.end", { phase: "deploy" }, { role: "release-engineer" }),
+  ];
+  const gateNext = {
+    generated_at: "2026-09-03T17:18:50.048Z",
+    state: { open_gates: ["acceptance"] },
+    options: [{ id: "acceptance.accept", title: "Accept story S3", kind: "gate" }],
+  };
+
+  it("highlights the orchestrator bubble as waiting, not nothing", () => {
+    // Assert on the AGENT BUBBLE (deriveWaiting mutates agent.status regardless of the
+    // ENABLE_WAITING_BANNER flag that gates the separate banner field) , that bubble highlight is
+    // exactly what was missing at an open gate.
+    const s = fold(gateEvents, snap({ next: gateNext }));
+    expect(s.agents.find((a) => a.role === "orchestrator")!.status).toBe("waiting");
+  });
+});

@@ -565,6 +565,15 @@ export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; o
       // open turns here too. See closeOtherTurns for why this matters mostly, but not only, to
       // replays.
       closeOtherTurns(e.role);
+      // The lane ADVANCING to a new phase proves the run moved on from every OTHER role too, so
+      // clear their issues: a NON-blocking smell a prior role flagged (one it then refactored or
+      // accepted-deferred, review refactor_requested=false) is resolved the moment the lane
+      // advanced. A genuinely BLOCKING issue HALTS the lane, so no later phase.start ever reaches
+      // here and it stays red; and a live, still-open escalation is re-surfaced from next.json's
+      // blockers regardless. Without this, a smell flagged on the LAST story a role touches pins
+      // that role red forever , its OWN next phase.start (the only other clear, below) never comes,
+      // even after the lane deployed + verified. Widens the per-role clear below to the whole lane.
+      for (const r of ROLES) if (r !== e.role && agents[r]) agents[r].issues = [];
       openTurns[e.role] = true;
       a.status = "working";
       a.phase = (md.phase as string) ?? null;

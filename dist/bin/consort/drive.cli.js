@@ -13492,6 +13492,11 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
     const layout = conventions.layers.map((l) => `${l.role}=${l.module}${l.renders_via ? ` (${l.renders_via})` : ""}`).join(" | ");
     parts.push(` LAYOUT (place/judge code at THESE paths, do not scan for them) :: ${layout}.`);
   }
+  {
+    const language = projectLanguage(dirname22(consortDir));
+    const runHint = language === "nodejs" ? ` RUN/REACHABILITY :: node project , source under src/ (there is NO app/). To confirm the app boots or is reachable, run the project's OWN start (the package.json start/dev script, e.g. \`node src/index.js\`) and GET the health path over HTTP , do NOT assume Python or run \`python -c "import app.main"\` (it will false-fail here).` : language === "java" || language === "kotlin" ? ` RUN/REACHABILITY :: ${language} project. To confirm the app boots or is reachable, run \`./mvnw spring-boot:run\` and GET the health path over HTTP , do NOT assume Python (\`python -c "import app.main"\` false-fails here).` : ` RUN/REACHABILITY :: python project , source under app/. To confirm the app boots or is reachable, run \`uv run uvicorn app.main:app\` and GET the health path over HTTP. Reachability is an HTTP response, never just an import succeeding.`;
+    parts.push(runHint);
+  }
   if (!opts.skipTestLoop) {
     parts.push(
       ` TESTS :: this story's tests are under tests/step_defs/ (behavior, one file per story) and tests/architecture/ (fitness: layering, persistence invariants, migration reversibility). Read those named paths directly; do NOT find/grep/ls to locate them. Iterate against the single failing test while fixing; the honest-GREEN verify is the authoritative full run.`

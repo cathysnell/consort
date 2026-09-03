@@ -253,6 +253,30 @@ function buildContextPack(
     parts.push(` LAYOUT (place/judge code at THESE paths, do not scan for them) :: ${layout}.`);
   }
 
+  // Language-aware RUN/REACHABILITY hint: how THIS app boots + how to confirm it is reachable, so a
+  // turn that must check the app came up (especially a Navigator ASSESS of an "app not reachable"
+  // verify failure) uses the project's OWN run command instead of improvising a Python check
+  // (`python -c "import app.main"`), which FALSE-fails on a node/java project , there is no app/,
+  // source is src/, and the app boots a different way. Reachability is always an HTTP response on the
+  // health path (the deploy gate's base_url+health_path probe), never a language-specific import.
+  {
+    const language = projectLanguage(dirname(consortDir));
+    const runHint =
+      language === "nodejs"
+        ? ` RUN/REACHABILITY :: node project , source under src/ (there is NO app/). To confirm the app` +
+          ` boots or is reachable, run the project's OWN start (the package.json start/dev script, e.g.` +
+          ` \`node src/index.js\`) and GET the health path over HTTP , do NOT assume Python or run` +
+          ` \`python -c "import app.main"\` (it will false-fail here).`
+        : language === "java" || language === "kotlin"
+          ? ` RUN/REACHABILITY :: ${language} project. To confirm the app boots or is reachable, run` +
+            ` \`./mvnw spring-boot:run\` and GET the health path over HTTP , do NOT assume Python` +
+            ` (\`python -c "import app.main"\` false-fails here).`
+          : ` RUN/REACHABILITY :: python project , source under app/. To confirm the app boots or is` +
+            ` reachable, run \`uv run uvicorn app.main:app\` and GET the health path over HTTP.` +
+            ` Reachability is an HTTP response, never just an import succeeding.`;
+    parts.push(runHint);
+  }
+
   // Test locations: the scaffold fixes these dirs, so a build turn never needs
   // to `find`/`ls` for the story's tests. Behavior + fitness live in known dirs;
   // e2e is owned by the deploy gate, never re-run per cycle here.
