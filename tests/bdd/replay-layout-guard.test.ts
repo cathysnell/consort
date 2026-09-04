@@ -58,14 +58,38 @@ describe("replay launchers resolve the scaffold lk via the shared helper (anti-d
     );
   });
 
+  it("kit_lk_path fails loud (returns non-zero) when no scaffold lk exists", () => {
+    // Rather than silently returning a dead path and letting a later `bash \"$KIT_LK\"`
+    // die with an opaque \"No such file or directory\", the helper must error + return 1.
+    const lib = fs.readFileSync(LIB, "utf8");
+    expect(lib, "kit_lk_path returns 1 when neither lk path exists").toMatch(/return 1/);
+  });
+
   for (const f of LAUNCHERS) {
-    it(`${f} resolves KIT_LK via kit_lk_path, not the removed in-repo path`, () => {
+    it(`${f} resolves KIT_LK via kit_lk_path and honors its failure`, () => {
       const src = fs.readFileSync(path.join(REPLAY_DIR, f), "utf8");
-      expect(src, `${f} uses the kit_lk_path helper`).toMatch(/KIT_LK="?\$\(kit_lk_path /);
+      // Uses the helper AND bails (|| exit/return) when it fails, so a missing lk
+      // stops the run loudly instead of proceeding with an empty KIT_LK.
+      expect(src, `${f} uses kit_lk_path and bails on failure`).toMatch(
+        /KIT_LK="?\$\(kit_lk_path [^\n]*\)"?\s*\|\|\s*(exit|return)\s+1/,
+      );
       expect(
         src.includes(REMOVED_INREPO_LK),
         `${f} must not hardcode KIT_LK at the removed in-repo lk path`,
       ).toBe(false);
     });
   }
+});
+
+// The resume path (alreadyClaimed) leaves HEAD on the parent tier with dirty tracked
+// .consort/.lakebase run metadata; a plain `git checkout <feature>` aborts and wedges
+// the resume. The checkout must force past that disposable churn (the feature branch
+// carries its own committed state), mirroring the orchestrator's done-phase force.
+describe("replay resume forces past dirty run-metadata on the feature checkout", () => {
+  it("_replay-smoke.sh checks out the claimed feature branch with -f", () => {
+    const src = fs.readFileSync(path.join(REPLAY_DIR, "_replay-smoke.sh"), "utf8");
+    expect(src, "feature-branch checkout uses -f").toMatch(
+      /checkout -f "\$_FEATURE_BRANCH"/,
+    );
+  });
 });

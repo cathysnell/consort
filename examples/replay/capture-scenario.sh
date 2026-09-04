@@ -175,7 +175,7 @@ KIT_ROOT="$KIT_SINGLE_ROOT"
 #    the FULL LIVE design lane (no replay) so the design roles + the pre-build
 #    reflection gate all run live and are recorded. ─────────────────────────────
 if [[ -n "$CREATE" ]]; then
-  KIT_LK="$(kit_lk_path "$KIT_ROOT")"
+  KIT_LK="$(kit_lk_path "$KIT_ROOT")" || exit 1
   HOST="${DATABRICKS_HOST_ARG:-${DATABRICKS_HOST:?--databricks-host or DATABRICKS_HOST required}}"
   OWNER="${GITHUB_OWNER_ARG:-${GITHUB_OWNER:?--github-owner or GITHUB_OWNER required}}"
   PROJECT_NAME="${PROJECT_NAME:-${SCENARIO}-cap-$(date +%Y%m%d-%H%M%S)}"
@@ -202,7 +202,13 @@ if [[ -n "$CREATE" ]]; then
   # stockflow-optimize first live run provisioned Spring Boot/Java, not python+UI).
   SCENARIO_MANIFEST="${INPUTS}/scenario.json"
   [[ -f "$SCENARIO_MANIFEST" ]] || SCENARIO_MANIFEST="${INPUTS}/scenario.json.pending"
-  sc() { node "${KIT_ROOT}/dist/bin/consort/scenario-conditions.cli.js" --manifest "$SCENARIO_MANIFEST" --field "$1" 2>/dev/null || true; }
+  # Warn LOUD when the conditions reader is missing (unbuilt/stale dist): sc() then
+  # returns empty for every field and the run silently scaffolds the WRONG stack
+  # (java, no UI, wrong tiers) instead of the manifest's , the exact silent-default
+  # failure the comment above records. Non-fatal (we still degrade to the --ui flag).
+  SC_CLI="${KIT_ROOT}/dist/bin/consort/scenario-conditions.cli.js"
+  [[ -f "$SC_CLI" ]] || echo "capture-scenario: WARNING , conditions reader missing (${SC_CLI}); scenario conditions will DEFAULT (run 'npm run build' in the kit). Scaffolding may use the wrong language/UI/tiers." >&2
+  sc() { node "$SC_CLI" --manifest "$SCENARIO_MANIFEST" --field "$1" 2>/dev/null || true; }
   SC_UI="$(sc uiTrack)"; SC_LANG="$(sc language)"; SC_RUNNER="$(sc runner)"; SC_TIERS="$(sc tiers)"
   create_flags=(--tiers "${SC_TIERS:-$TIERS}")
   [[ "$SC_UI" == "true" || -n "$UI" ]] && create_flags+=(--ui-track)
