@@ -53,6 +53,7 @@ export interface LaneStep {
   sub: string; // one-line description of what happens here
   gate?: boolean;
   branch?: boolean; // a fail/side path rather than the happy path
+  escalation?: boolean; // a terminal raise-to-HIL node (critical, no single owner)
   match: StepMatch | null; // null = never lit from an event (human-decided gates)
 }
 
@@ -250,13 +251,22 @@ const PLAN_LANE: Lane = {
       gate: true,
       match: null,
     },
+    {
+      id: "p-hil",
+      role: null,
+      label: "Raise to HIL",
+      sub: "escalate to human",
+      escalation: true,
+      match: null,
+    },
   ],
   edges: [
     ["p-propose", "p-size"],
     ["p-size", "p-req"],
     ["p-req", "p-gate"],
   ] as const,
-  backEdges: [] as const,
+  // any planning step can stall to the human before the gate
+  backEdges: [["p-req", "p-hil", "escalate"]] as const,
 };
 
 const DESIGN_LANE: Lane = {
@@ -301,6 +311,14 @@ const DESIGN_LANE: Lane = {
       match: { role: "navigator", buildMode: "reflect", phase: "reflect" },
     },
     { id: "d-gate", role: null, label: "Spec gate", sub: "human approves", gate: true, match: null },
+    {
+      id: "d-hil",
+      role: null,
+      label: "Raise to HIL",
+      sub: "escalate to human",
+      escalation: true,
+      match: null,
+    },
   ],
   edges: [
     ["d-ux", "d-spec"],
@@ -310,8 +328,12 @@ const DESIGN_LANE: Lane = {
     ["d-ts", "d-nav"],
     ["d-nav", "d-gate"],
   ] as const,
-  // reflect findings route back to the owning author (bounded revise)
-  backEdges: [["d-nav", "d-spec", "revise on findings"]] as const,
+  // reflect findings route back to the owning author (bounded revise), or , when a
+  // spec defect can't be auto-resolved , escalate to the human
+  backEdges: [
+    ["d-nav", "d-spec", "revise on findings"],
+    ["d-nav", "d-hil", "escalate"],
+  ] as const,
 };
 
 const BUILD_LANE: Lane = {
@@ -350,8 +372,15 @@ const BUILD_LANE: Lane = {
       id: "b-review",
       role: "navigator",
       label: "Navigator",
-      sub: "review / refactor",
+      sub: "review",
       match: { role: "navigator", buildMode: "review" },
+    },
+    {
+      id: "b-refactor",
+      role: "driver",
+      label: "Driver",
+      sub: "refactor (structure)",
+      match: { role: "driver", buildModeAny: ["refactor"] },
     },
     {
       id: "b-assess",
@@ -375,7 +404,15 @@ const BUILD_LANE: Lane = {
       label: "Driver",
       sub: "permissive-green (superseded only)",
       branch: true,
-      match: { role: "driver", buildModeAny: ["refactor-superseded", "refactor", "refactor-deploy"] },
+      match: { role: "driver", buildModeAny: ["green-superseded", "refactor-superseded"] },
+    },
+    {
+      id: "b-hil",
+      role: null,
+      label: "Raise to HIL",
+      sub: "genuine regression → escalate",
+      escalation: true,
+      match: null,
     },
     {
       id: "b-accept",
@@ -390,15 +427,15 @@ const BUILD_LANE: Lane = {
     ["b-red", "b-green"],
     ["b-green", "b-verify"],
     ["b-verify", "b-review"],
-    ["b-review", "b-red"],
-    ["b-review", "b-accept"],
+    ["b-review", "b-refactor"],
+    ["b-refactor", "b-red"],
+    ["b-refactor", "b-accept"],
   ] as const,
   backEdges: [
     ["b-verify", "b-assess", "verify fails"],
     ["b-assess", "b-repair", "regression"],
     ["b-assess", "b-perm", "supersession"],
-    ["b-repair", "b-green", "re-verify"],
-    ["b-perm", "b-green", "re-verify"],
+    ["b-assess", "b-hil", "genuine"],
   ] as const,
 };
 

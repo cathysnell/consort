@@ -124,22 +124,26 @@ describe("topology — lane integrity", () => {
     }
   });
 
-  it("only gates may have a null match (nothing else is unlightable)", () => {
+  it("only gates + raise-to-HIL terminals may have a null match (nothing else is unlightable)", () => {
     for (const lane of LANE_IDS) {
       for (const s of WORKFLOW.lanes[lane].steps) {
-        if (s.match === null) expect(s.gate, s.id).toBe(true);
+        // Human gates and the per-lane raise-to-HIL escalation terminals are the only steps that
+        // never light from an event (match:null) , their state comes from the human / an escalation.
+        if (s.match === null) expect(s.gate === true || s.escalation === true, s.id).toBe(true);
       }
     }
   });
 
-  it("keeps the honest-GREEN branch structure: assess routes to repair and permissive", () => {
+  it("keeps the honest-GREEN branch structure: assess fans out to repair / permissive / HIL", () => {
     const back = WORKFLOW.lanes.build.backEdges.map(([a, b]) => `${a}->${b}`);
-    expect(back).toContain("b-verify->b-assess");
-    expect(back).toContain("b-assess->b-repair");
-    expect(back).toContain("b-assess->b-perm");
-    // both recovery paths must re-enter GREEN so the cycle closes
-    expect(back).toContain("b-repair->b-green");
-    expect(back).toContain("b-perm->b-green");
+    expect(back).toContain("b-verify->b-assess"); // verify fails
+    expect(back).toContain("b-assess->b-repair"); // regression
+    expect(back).toContain("b-assess->b-perm"); // supersession
+    expect(back).toContain("b-assess->b-hil"); // genuine → escalate
+    // The repair/perm → GREEN re-verify lines are intentionally NOT drawn (removed from the graph);
+    // the recovery paths' re-verify is left implicit rather than cluttering the lane with risers.
+    expect(back).not.toContain("b-repair->b-green");
+    expect(back).not.toContain("b-perm->b-green");
   });
 
   it("marks the fail/side paths as branches, not happy path", () => {
@@ -148,8 +152,11 @@ describe("topology — lane integrity", () => {
     for (const id of ["b-red", "b-green", "b-review"]) expect(byId.get(id)?.branch, id).toBeUndefined();
   });
 
-  it("design lane reflect loops back to the spec author", () => {
-    expect(WORKFLOW.lanes.design.backEdges).toEqual([["d-nav", "d-spec", "revise on findings"]]);
+  it("design lane reflect loops back to the spec author (and can escalate to HIL)", () => {
+    expect(WORKFLOW.lanes.design.backEdges).toEqual([
+      ["d-nav", "d-spec", "revise on findings"],
+      ["d-nav", "d-hil", "escalate"],
+    ]);
   });
 });
 

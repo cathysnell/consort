@@ -163,7 +163,7 @@
   },
   "lanes": {
     "plan": {
-      "title": "Plan  \u00b7  sprint planning",
+      "title": "Plan  ·  sprint planning",
       "steps": [
         {
           "id": "p-propose",
@@ -208,6 +208,14 @@
           "sub": "human approves backlog",
           "gate": true,
           "match": null
+        },
+        {
+          "id": "p-hil",
+          "role": null,
+          "label": "Raise to HIL",
+          "sub": "escalate to human",
+          "escalation": true,
+          "match": null
         }
       ],
       "edges": [
@@ -224,10 +232,16 @@
           "p-gate"
         ]
       ],
-      "backEdges": []
+      "backEdges": [
+        [
+          "p-req",
+          "p-hil",
+          "escalate"
+        ]
+      ]
     },
     "design": {
-      "title": "Design lane  \u00b7  spec-first (per story)",
+      "title": "Design lane  ·  spec-first (per story)",
       "steps": [
         {
           "id": "d-ux",
@@ -301,6 +315,14 @@
           "sub": "human approves",
           "gate": true,
           "match": null
+        },
+        {
+          "id": "d-hil",
+          "role": null,
+          "label": "Raise to HIL",
+          "sub": "escalate to human",
+          "escalation": true,
+          "match": null
         }
       ],
       "edges": [
@@ -334,11 +356,16 @@
           "d-nav",
           "d-spec",
           "revise on findings"
+        ],
+        [
+          "d-nav",
+          "d-hil",
+          "escalate"
         ]
       ]
     },
     "build": {
-      "title": "Build lane  \u00b7  honest-GREEN cycle (Branched-Database TDD)",
+      "title": "Build lane  ·  honest-GREEN cycle (Branched-Database TDD)",
       "steps": [
         {
           "id": "b-red",
@@ -386,10 +413,22 @@
           "id": "b-review",
           "role": "navigator",
           "label": "Navigator",
-          "sub": "review / refactor",
+          "sub": "review",
           "match": {
             "role": "navigator",
             "buildMode": "review"
+          }
+        },
+        {
+          "id": "b-refactor",
+          "role": "driver",
+          "label": "Driver",
+          "sub": "refactor (structure)",
+          "match": {
+            "role": "driver",
+            "buildModeAny": [
+              "refactor"
+            ]
           }
         },
         {
@@ -429,11 +468,18 @@
           "match": {
             "role": "driver",
             "buildModeAny": [
-              "refactor-superseded",
-              "refactor",
-              "refactor-deploy"
+              "green-superseded",
+              "refactor-superseded"
             ]
           }
+        },
+        {
+          "id": "b-hil",
+          "role": null,
+          "label": "Raise to HIL",
+          "sub": "genuine regression → escalate",
+          "escalation": true,
+          "match": null
         },
         {
           "id": "b-accept",
@@ -459,10 +505,14 @@
         ],
         [
           "b-review",
+          "b-refactor"
+        ],
+        [
+          "b-refactor",
           "b-red"
         ],
         [
-          "b-review",
+          "b-refactor",
           "b-accept"
         ]
       ],
@@ -483,14 +533,9 @@
           "supersession"
         ],
         [
-          "b-repair",
-          "b-green",
-          "re-verify"
-        ],
-        [
-          "b-perm",
-          "b-green",
-          "re-verify"
+          "b-assess",
+          "b-hil",
+          "genuine"
         ]
       ]
     }

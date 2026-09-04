@@ -198,7 +198,7 @@ describe("render — LaneGraph", () => {
     expect(build).toContain("in progress");
     expect(build).not.toContain("complete");
     // ...and while it's in progress the ratio is actionable, so it stays.
-    expect(build).toContain("1/7 steps");
+    expect(build).toContain("1/8 steps");
   });
 
   it("renders every lane even when laneCurrent names an unknown one", () => {
@@ -244,8 +244,8 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(
       <LaneGraph state={withTopology({ passedNodes: [], activeNode: null, laneCurrent: null })} />,
     );
-    expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate excluded)
-    expect(markup).toContain("7/7 steps"); // build: all 7 lit on this run
+    expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
+    expect(markup).toContain("7/8 steps"); // build: 8 lightable now (b-refactor added); this pre-remodel corpus lit 7 (no b-refactor event)
     // Plan reads 2/3, not 3/3: `p-req` never lights on the live stockflow log, because its
     // product-owner emits only gate.approved and never the author-requests phase. That is a
     // property of this run, not a bug — the corpus log does light it.
@@ -272,13 +272,14 @@ describe("render — LaneGraph", () => {
   });
 
   it("draws back-edges as labelled branches, not happy path", () => {
-    // The build lane's five back-edges are the honest-GREEN recovery paths; they must be
-    // visually distinct (dashed + amber + labelled) or the cycle reads as linear.
+    // The build lane's assess fan-out back-edges are the honest-GREEN recovery paths; they must be
+    // visually distinct (dashed + amber + labelled) or the cycle reads as linear. (The repair/perm
+    // → GREEN re-verify risers were intentionally dropped, so their label no longer appears.)
     const markup = renderToStaticMarkup(<LaneGraph state={state} />);
     expect(markup).toContain("verify fails");
     expect(markup).toContain("regression");
     expect(markup).toContain("supersession");
-    expect(markup).toContain("re-verify");
+    expect(markup).toContain("genuine"); // assess → raise-to-HIL
   });
 
   it("survives an empty board without throwing", () => {

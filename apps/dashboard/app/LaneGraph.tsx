@@ -237,19 +237,42 @@ function LaneSvg({
   currentStep: string | null;
   state: DashboardState;
 }) {
-  // The BUILD lane wraps into TWO rows so its 8-wide cycle stops sprawling: row 0 = the happy path
-  // (the non-branch steps RED→GREEN→VERIFY→REVIEW + the acceptance gate), row 1 = the failure arm
-  // (the branch:true steps ASSESS/REPAIR/PERM). Every other lane stays a single row. Positions are
-  // by (row, col); a generic router below draws each edge from the two endpoints' boxes.
-  const rows: LaneStep[][] =
-    laneId === "build" ? [lane.steps.filter((s) => !s.branch), lane.steps.filter((s) => s.branch)] : [lane.steps];
+  // The BUILD lane is a fixed 3-row grid (col = grid slot, so steps ALIGN across rows): row 0 is
+  // the happy path, row 1 is ASSESS placed directly under VERIFY (col 2), row 2 is the fan-out
+  // (repair/perm/hil) centred under assess. Every other lane is a single row in declared order.
   const pos = new Map<string, { x: number; y: number; row: number; col: number }>();
-  rows.forEach((rowSteps, r) =>
-    rowSteps.forEach((s, c) => pos.set(s.id, { x: PAD + c * (STEP_W + GAP), y: PAD + TOP_LANE + r * (STEP_H + ROW_GAP), row: r, col: c })),
-  );
-  const cols = Math.max(1, ...rows.map((r) => r.length));
-  const width = PAD * 2 + cols * STEP_W + (cols - 1) * GAP;
-  const height = PAD * 2 + TOP_LANE + rows.length * STEP_H + (rows.length - 1) * ROW_GAP + BACK_LANE_H;
+  const place = (id: string, row: number, col: number) =>
+    pos.set(id, { x: PAD + col * (STEP_W + GAP), y: PAD + TOP_LANE + row * (STEP_H + ROW_GAP), row, col });
+  let nRows: number;
+  if (laneId === "build") {
+    const grid: Record<string, [number, number]> = {
+      "b-red": [0, 0], "b-green": [0, 1], "b-verify": [0, 2], "b-review": [0, 3], "b-refactor": [0, 4], "b-accept": [0, 5],
+      "b-assess": [1, 2],
+      "b-repair": [2, 1], "b-perm": [2, 2], "b-hil": [2, 3],
+    };
+    lane.steps.forEach((s) => place(s.id, ...(grid[s.id] ?? [0, 0])));
+    nRows = 3;
+  } else {
+    // Every other lane: the main steps run along row 0 in declared order; a raise-to-HIL escalation
+    // terminal DROPS to row 1, aligned to the COLUMN of the node that raises it (its backEdge
+    // source), so it sits directly under that node (p-hil under author-requests, d-hil under the
+    // Navigator reflect). A lane with no escalation stays a single row.
+    const mainSteps = lane.steps.filter((s) => !s.escalation);
+    const colOf = new Map<string, number>();
+    mainSteps.forEach((s, c) => {
+      place(s.id, 0, c);
+      colOf.set(s.id, c);
+    });
+    const escalations = lane.steps.filter((s) => s.escalation);
+    escalations.forEach((s) => {
+      const raiser = lane.backEdges.find(([, to]) => to === s.id)?.[0];
+      place(s.id, 1, raiser !== undefined ? (colOf.get(raiser) ?? 0) : 0);
+    });
+    nRows = escalations.length > 0 ? 2 : 1;
+  }
+  const maxCol = Math.max(0, ...[...pos.values()].map((p) => p.col));
+  const width = PAD * 2 + (maxCol + 1) * STEP_W + maxCol * GAP;
+  const height = PAD * 2 + TOP_LANE + nRows * STEP_H + (nRows - 1) * ROW_GAP + BACK_LANE_H;
   const cx = (id: string) => pos.get(id)!.x + STEP_W / 2;
   const cy = (id: string) => pos.get(id)!.y + STEP_H / 2;
 
@@ -286,7 +309,7 @@ function LaneSvg({
       // TOP_LANE headroom (never crossing the row below); a single-row lane's loop (design's
       // navigator→spec-author revise) arcs BELOW, into the reserved BACK_LANE_H. Either way it stays
       // inside the viewBox , the crop was a backward arc routed to a negative y.
-      const above = p.row === 0 && rows.length > 1;
+      const above = p.row === 0 && nRows > 1;
       const yy = above ? p.y - 16 : p.y + STEP_H + 16;
       d = `M ${cx(from)} ${above ? p.y : p.y + STEP_H} V ${yy} H ${cx(to)} V ${above ? q.y : q.y + STEP_H}`;
       lx = (cx(from) + cx(to)) / 2;
@@ -442,11 +465,13 @@ function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; 
     ? step.role
       ? colorForRole(step.role)
       : "var(--status-accent)"
-    : isHumanGate
-      ? state === "gate-approved"
-        ? "var(--status-good)"
-        : "var(--status-gate)"
-      : "var(--border-default)";
+    : step.escalation
+      ? "var(--status-critical)" // a raise-to-HIL terminal reads CRITICAL (red), distinct from amber branches + purple gates
+      : isHumanGate
+        ? state === "gate-approved"
+          ? "var(--status-good)"
+          : "var(--status-gate)"
+        : "var(--border-default)";
 
   const fill = highlighted ? "var(--status-accent-tint)" : "var(--surface-inset)";
 
