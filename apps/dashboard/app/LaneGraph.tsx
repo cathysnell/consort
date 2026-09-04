@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   LANE_IDS,
   WORKFLOW,
@@ -51,45 +50,30 @@ const LANE_NODE: Record<LaneId, { own: string; after: string[] }> = {
 const LANE_STEP_GATE: Record<string, string> = {
   "p-gate": "plan",
   "d-gate": "spec",
+  "b-accept": "acceptance",
 };
 
 type StepState = "done" | "current" | "pending" | "gate-open" | "gate-approved";
 
 export function LaneGraph({ state }: { state: DashboardState }) {
   const current = state.topology.laneCurrent;
-  // The lane to expand by default: where the playhead is, else the furthest lane the run has
-  // entered, so a paused or finished run still shows something substantive rather than Plan.
-  const reached = LANE_IDS.filter((l) => (state.topology.laneSteps[l] ?? []).length > 0);
-  // `laneCurrent.lane` is typed `string` (DashboardState is the wire format, and a replay
-  // source in Phase 2 may not share this vocabulary), so validate rather than cast: an
-  // unrecognised name used to match no panel and silently collapse all three lanes.
+  // `laneCurrent.lane` is typed `string` (DashboardState is the wire format, and a replay source
+  // may not share this vocabulary), so validate rather than cast to find the ACTIVE lane.
   const currentLane = LANE_IDS.find((l) => l === current?.lane) ?? null;
-  const defaultOpen = currentLane ?? reached[reached.length - 1] ?? "plan";
-  const [open, setOpen] = useState<LaneId | null>(null);
-  // `open` is an explicit user choice; until they make one, follow the playhead. This means
-  // the expanded lane tracks the run while it moves, but stops fighting the user once they
-  // have clicked — a controlled-with-a-default pattern, not a stale copy of derived state.
-  const expanded = open ?? defaultOpen;
-
+  // ALL lanes stay expanded , no accordion , so clicking one never collapses the others. The
+  // active lane is highlighted (LanePanel's accent border + header tint); the rest render quietly.
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {LANE_IDS.map((laneId) => {
-        const lane = WORKFLOW.lanes[laneId];
-        const done = new Set(state.topology.laneSteps[laneId] ?? []);
-        const isExpanded = laneId === expanded;
-        return (
-          <LanePanel
-            key={laneId}
-            laneId={laneId}
-            lane={lane}
-            done={done}
-            currentStep={currentLane === laneId ? current!.step : null}
-            expanded={isExpanded}
-            onToggle={() => setOpen(isExpanded ? null : laneId)}
-            state={state}
-          />
-        );
-      })}
+      {LANE_IDS.map((laneId) => (
+        <LanePanel
+          key={laneId}
+          laneId={laneId}
+          lane={WORKFLOW.lanes[laneId]}
+          done={new Set(state.topology.laneSteps[laneId] ?? [])}
+          currentStep={currentLane === laneId ? current!.step : null}
+          state={state}
+        />
+      ))}
     </div>
   );
 }
@@ -99,16 +83,12 @@ function LanePanel({
   lane,
   done,
   currentStep,
-  expanded,
-  onToggle,
   state,
 }: {
   laneId: LaneId;
   lane: Lane;
   done: Set<string>;
   currentStep: string | null;
-  expanded: boolean;
-  onToggle: () => void;
   state: DashboardState;
 }) {
   // Gates are excluded from the ratio: they never light from events, so counting them would
@@ -161,9 +141,7 @@ function LanePanel({
         overflow: "hidden",
       }}
     >
-      <button
-        onClick={onToggle}
-        aria-expanded={expanded}
+      <div
         style={{
           width: "100%",
           display: "flex",
@@ -171,13 +149,9 @@ function LanePanel({
           gap: 10,
           padding: "9px 12px",
           background: active ? "var(--status-accent-tint-soft)" : "transparent",
-          border: "none",
-          cursor: "pointer",
           textAlign: "left",
-          font: "inherit",
         }}
       >
-        <span style={{ fontSize: "0.6rem", color: "var(--text-faint)", width: 8 }}>{expanded ? "▾" : "▸"}</span>
         <span
           style={{
             fontSize: "0.72rem",
@@ -227,14 +201,12 @@ function LanePanel({
             />
           ))}
         </span>
-      </button>
+      </div>
 
-      {expanded ? (
-        <div style={{ borderTop: `1px solid var(--border-default)`, padding: "4px 12px 10px" }}>
-          <div style={{ fontSize: "0.66rem", color: "var(--text-faint)", margin: "6px 0 2px" }}>{lane.title}</div>
-          <LaneSvg lane={lane} done={done} currentStep={currentStep} state={state} />
-        </div>
-      ) : null}
+      <div style={{ borderTop: `1px solid var(--border-default)`, padding: "4px 12px 10px" }}>
+        <div style={{ fontSize: "0.66rem", color: "var(--text-faint)", margin: "6px 0 2px" }}>{lane.title}</div>
+        <LaneSvg laneId={laneId} lane={lane} done={done} currentStep={currentStep} state={state} />
+      </div>
     </div>
   );
 }
@@ -249,25 +221,114 @@ function gateTintFor(step: LaneStep, state: DashboardState): string {
 
 // --------------------------------------------------------------------------- the graph
 
+const ROW_GAP = 54; // vertical room between the build lane's two rows, for the connecting arrows + labels
+const TOP_LANE = 24; // headroom ABOVE row 0 so a backward loop arc (REVIEW→RED) is not cropped
+
 function LaneSvg({
+  laneId,
   lane,
   done,
   currentStep,
   state,
 }: {
+  laneId: LaneId;
   lane: Lane;
   done: Set<string>;
   currentStep: string | null;
   state: DashboardState;
 }) {
-  // One row, left to right, in declared order. Back-edges arc underneath.
-  const xs = new Map<string, number>();
-  lane.steps.forEach((s, i) => xs.set(s.id, PAD + i * (STEP_W + GAP)));
-  const width = PAD * 2 + lane.steps.length * STEP_W + (lane.steps.length - 1) * GAP;
-  const hasBack = lane.backEdges.length > 0;
-  const height = PAD * 2 + STEP_H + (hasBack ? BACK_LANE_H + lane.backEdges.length * 9 : 0);
-  const rowY = PAD;
-  const midY = rowY + STEP_H / 2;
+  // The BUILD lane wraps into TWO rows so its 8-wide cycle stops sprawling: row 0 = the happy path
+  // (the non-branch steps RED→GREEN→VERIFY→REVIEW + the acceptance gate), row 1 = the failure arm
+  // (the branch:true steps ASSESS/REPAIR/PERM). Every other lane stays a single row. Positions are
+  // by (row, col); a generic router below draws each edge from the two endpoints' boxes.
+  const rows: LaneStep[][] =
+    laneId === "build" ? [lane.steps.filter((s) => !s.branch), lane.steps.filter((s) => s.branch)] : [lane.steps];
+  const pos = new Map<string, { x: number; y: number; row: number; col: number }>();
+  rows.forEach((rowSteps, r) =>
+    rowSteps.forEach((s, c) => pos.set(s.id, { x: PAD + c * (STEP_W + GAP), y: PAD + TOP_LANE + r * (STEP_H + ROW_GAP), row: r, col: c })),
+  );
+  const cols = Math.max(1, ...rows.map((r) => r.length));
+  const width = PAD * 2 + cols * STEP_W + (cols - 1) * GAP;
+  const height = PAD * 2 + TOP_LANE + rows.length * STEP_H + (rows.length - 1) * ROW_GAP + BACK_LANE_H;
+  const cx = (id: string) => pos.get(id)!.x + STEP_W / 2;
+  const cy = (id: string) => pos.get(id)!.y + STEP_H / 2;
+
+  // Route ONE edge from its two endpoint boxes: same-row forward = a straight line; same-row
+  // backward (REVIEW→RED, the next dev loop) = an arc ABOVE the row so it never crosses the row
+  // below; cross-row = an elbow that drops/rises between the two rows. Branch (failure-arm) edges
+  // are amber + dashed and carry their label; happy-path edges go green once traversed.
+  const edge = (from: string, to: string, o: { branch?: boolean; label?: string }) => {
+    const p = pos.get(from);
+    const q = pos.get(to);
+    if (!p || !q) return null;
+    const isDone = !o.branch && done.has(from) && (done.has(to) || to === currentStep);
+    const stroke = o.branch ? "var(--status-warning)" : isDone ? "var(--status-good)" : "var(--border-strong)";
+    const marker = o.branch ? "url(#lg-arrow-branch)" : isDone ? "url(#lg-arrow-done)" : "url(#lg-arrow)";
+    const sameRow = p.row === q.row;
+    let d: string;
+    let lx = 0;
+    let ly = 0;
+    if (sameRow && q.col === p.col + 1) {
+      // adjacent forward: straight line
+      d = `M ${p.x + STEP_W} ${cy(from)} H ${q.x - 4}`;
+      lx = (p.x + STEP_W + q.x) / 2;
+      ly = cy(from) - 4;
+    } else if (sameRow && q.col > p.col) {
+      // forward but SKIPS an intervening step (assess→perm over repair): arc BELOW the row so the
+      // line clearly emanates from `from` and never crosses the box in between (which read as a
+      // phantom repair→perm edge).
+      const yy = p.y + STEP_H + 14;
+      d = `M ${cx(from)} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y + STEP_H}`;
+      lx = (cx(from) + cx(to)) / 2;
+      ly = yy + 9;
+    } else if (sameRow) {
+      // Backward same-row loop. In a multi-row lane, row 0's loop (REVIEW→RED) arcs ABOVE, into the
+      // TOP_LANE headroom (never crossing the row below); a single-row lane's loop (design's
+      // navigator→spec-author revise) arcs BELOW, into the reserved BACK_LANE_H. Either way it stays
+      // inside the viewBox , the crop was a backward arc routed to a negative y.
+      const above = p.row === 0 && rows.length > 1;
+      const yy = above ? p.y - 16 : p.y + STEP_H + 16;
+      d = `M ${cx(from)} ${above ? p.y : p.y + STEP_H} V ${yy} H ${cx(to)} V ${above ? q.y : q.y + STEP_H}`;
+      lx = (cx(from) + cx(to)) / 2;
+      ly = above ? yy - 3 : yy + 9;
+    } else if (q.row > p.row) {
+      const yy = (p.y + STEP_H + q.y) / 2; // drop into the lower row
+      d = `M ${cx(from)} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y - 4}`;
+      lx = (cx(from) + cx(to)) / 2;
+      ly = yy - 3;
+    } else {
+      const yy = (q.y + STEP_H + p.y) / 2; // rise into the upper row
+      d = `M ${cx(from)} ${p.y} V ${yy} H ${cx(to)} V ${q.y + STEP_H + 4}`;
+      lx = (cx(from) + cx(to)) / 2;
+      ly = yy - 3;
+    }
+    const dashed = o.branch || (sameRow && q.col < p.col);
+    // A happy-path same-row backward edge is the cycle loop (build's REVIEW→RED) , label it
+    // "next cycle" so the green line reads as the next dev loop, not a re-verify. Branch labels
+    // (verify fails / regression / re-verify) stay amber; the cycle-loop label is neutral.
+    const labelText = o.label ?? (sameRow && q.col < p.col && !o.branch ? "next cycle" : undefined);
+    // Branch labels (verify fails / regression / re-verify) are amber; the happy-path "next cycle"
+    // label reads green to match its loop line , not muted.
+    const labelFill = o.branch ? "var(--status-warning-text)" : "var(--status-good-text)";
+    return (
+      <g key={`${from}->${to}`}>
+        <path
+          d={d}
+          fill="none"
+          style={{ stroke }}
+          strokeWidth={isDone ? 2 : 1.4}
+          strokeDasharray={dashed ? "4 3" : undefined}
+          markerEnd={marker}
+          opacity={o.branch ? 0.85 : 1}
+        />
+        {labelText ? (
+          <text x={lx} y={ly} textAnchor="middle" style={{ fontSize: 7.5, fill: labelFill, fontFamily: font.sans }}>
+            {labelText}
+          </text>
+        ) : null}
+      </g>
+    );
+  };
 
   return (
     <div style={{ overflowX: "auto" }}>
@@ -290,53 +351,11 @@ function LaneSvg({
           </marker>
         </defs>
 
-        {lane.edges.map(([from, to]) => {
-          const a = xs.get(from);
-          const b = xs.get(to);
-          if (a === undefined || b === undefined) return null;
-          const isDone = done.has(from) && (done.has(to) || to === currentStep);
-          // A backward happy-path edge (build's review → red closes the cycle) arcs under.
-          if (b < a) {
-            const y = midY + STEP_H / 2 + 12;
-            return (
-              <path
-                key={`${from}->${to}`}
-                d={`M ${a + STEP_W / 2} ${midY + STEP_H / 2} V ${y} H ${b + STEP_W / 2} V ${midY + STEP_H / 2}`}
-                fill="none"
-                style={{ stroke: isDone ? "var(--status-good)" : "var(--border-strong)" }}
-                strokeWidth={1.4}
-                strokeDasharray="4 3"
-                markerEnd={isDone ? "url(#lg-arrow-done)" : "url(#lg-arrow)"}
-                opacity={0.8}
-              />
-            );
-          }
-          return (
-            <line
-              key={`${from}->${to}`}
-              x1={a + STEP_W}
-              y1={midY}
-              x2={b - 4}
-              y2={midY}
-              style={{ stroke: isDone ? "var(--status-good)" : "var(--border-strong)" }}
-              strokeWidth={isDone ? 2 : 1.4}
-              markerEnd={isDone ? "url(#lg-arrow-done)" : "url(#lg-arrow)"}
-            />
-          );
-        })}
-
-        {lane.backEdges.map((be, i) => (
-          <BackEdgeArc key={be.join("->")} be={be} xs={xs} midY={midY} depth={i} />
-        ))}
+        {lane.edges.map(([from, to]) => edge(from, to, {}))}
+        {lane.backEdges.map((be) => edge(be[0], be[1], { branch: true, label: be[2] }))}
 
         {lane.steps.map((s) => (
-          <StepBox
-            key={s.id}
-            step={s}
-            x={xs.get(s.id)!}
-            y={rowY}
-            state={stepState(s, done, currentStep, state)}
-          />
+          <StepBox key={s.id} step={s} x={pos.get(s.id)!.x} y={pos.get(s.id)!.y} state={stepState(s, done, currentStep, state)} />
         ))}
       </svg>
     </div>
@@ -408,34 +427,34 @@ function BackEdgeArc({
 function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; state: StepState }) {
   const isGate = step.gate === true;
 
-  const stroke =
-    state === "current"
-      ? step.role
-        ? colorForRole(step.role)
-        : "var(--status-accent)"
-      : state === "done" || state === "gate-approved"
+  // ONLY the active step is highlighted (accent fill + role-coloured border + pulse). Every other
+  // state stays quiet , done steps are readable but not highlighted, so the one active agent is the
+  // sole thing that pops. Each step still carries its agent's colour via the role stripe below. A
+  // pending human GATE keeps a thin gate-coloured border so it stays legible, but no fill.
+  // A HUMAN gate (plan / spec / acceptance) is `gate:true` AND never lights from events
+  // (match === null) , its status comes from the human's decision. The automated VERIFY checkpoint
+  // is also `gate:true` but DOES light from events (match: verify), so it is NOT a human gate and
+  // must not wear the purple gate colour. Only human gates get purple/green; everything else is
+  // quiet unless it's the active step.
+  const isHumanGate = isGate && step.match === null;
+  const highlighted = state === "current";
+  const stroke = highlighted
+    ? step.role
+      ? colorForRole(step.role)
+      : "var(--status-accent)"
+    : isHumanGate
+      ? state === "gate-approved"
         ? "var(--status-good)"
-        : state === "gate-open"
-          ? "var(--status-gate)"
-          : step.branch
-            ? "var(--status-warning-soft)"
-            : "var(--border-default)";
+        : "var(--status-gate)"
+      : "var(--border-default)";
 
-  const fill =
-    state === "current"
-      ? "var(--status-accent-tint)"
-      : state === "done" || state === "gate-approved"
-        ? "var(--status-good-tint)"
-        : state === "gate-open"
-          ? "var(--status-gate-tint)"
-          : "var(--surface-inset)";
+  const fill = highlighted ? "var(--status-accent-tint)" : "var(--surface-inset)";
 
-  const labelColor =
-    state === "current"
-      ? "var(--status-accent-text)"
-      : state === "done" || state === "gate-approved"
-        ? "var(--status-good-text)"
-        : "var(--text-faint)";
+  const labelColor = highlighted
+    ? "var(--status-accent-text)"
+    : state === "done" || state === "gate-approved"
+      ? "var(--text-muted)"
+      : "var(--text-faint)";
 
   const title = `${step.label} — ${step.sub}${isGate ? " (human gate)" : ""}${
     step.branch ? " (branch: only on failure)" : ""
@@ -454,9 +473,11 @@ function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; 
         strokeWidth={state === "current" ? 2.5 : 1.4}
         strokeDasharray={step.branch ? "5 3" : undefined}
       />
-      {/* Role stripe: ties a step to its agent bubble by colour. Gates have no owner. */}
+      {/* Role stripe: ties a step to its agent bubble by colour. Full strength in EVERY state so
+          each agent's colour always reads (the active step is set apart by fill + pulse, not by
+          dimming the others' colours). Gates have no owner. */}
       {step.role ? (
-        <rect x={x} y={y} width={3.5} height={STEP_H} rx={1.5} style={{ fill: colorForRole(step.role) }} opacity={state === "pending" ? 0.4 : 1} />
+        <rect x={x} y={y} width={3.5} height={STEP_H} rx={1.5} style={{ fill: colorForRole(step.role) }} />
       ) : null}
       <text
         x={x + STEP_W / 2}

@@ -201,39 +201,35 @@ describe("render — LaneGraph", () => {
     expect(build).toContain("1/7 steps");
   });
 
-  it("falls back to a real lane when laneCurrent names an unknown one", () => {
-    // topology.laneCurrent.lane is typed `string`, not LaneId, so an unrecognised value used
-    // to become the expanded lane, match no panel, and collapse all three — zero graphs, no
-    // error. A Phase 2 replay source emitting a different vocabulary is the realistic trigger.
+  it("renders every lane even when laneCurrent names an unknown one", () => {
+    // topology.laneCurrent.lane is typed `string`, not LaneId; an unrecognised value must not
+    // mark any lane active, but ALL lanes still render (all-open, no accordion). A Phase 2 replay
+    // source emitting a different vocabulary is the realistic trigger.
     const markup = renderToStaticMarkup(
       renderLane(withTopology({ laneCurrent: { lane: "nonexistent", step: "x" } })),
     );
-    expect((markup.match(/aria-expanded/g) ?? []).length).toBe(3);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(1); // still shows a lane
+    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all three lanes render
     // ...and no lane claims to be active on the strength of a bogus name
     expect(markup).not.toContain("· active");
   });
 
-  it("renders all three lanes, with only the playhead's lane expanded", () => {
-    // The scrubbed fixture has laneCurrent = design/d-spec, so design expands and the other
-    // two collapse to summary rows.
+  it("renders all three lanes expanded, with the playhead's lane marked active", () => {
+    // No accordion: every lane's graph renders; the playhead's lane (design) is the one
+    // highlighted active.
     expect(scrubbed.topology.laneCurrent).toEqual({ lane: "design", step: "d-spec" });
     const markup = renderToStaticMarkup(<LaneGraph state={scrubbed} />);
-    // three headers, one <svg>
-    expect((markup.match(/aria-expanded/g) ?? []).length).toBe(3);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(1);
+    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes expanded
+    expect(markup).toContain("· active"); // design is highlighted active
     expect(markup).toMatchSnapshot();
   });
 
-  it("expands the furthest lane reached when nothing is active", () => {
-    // The finished-run fixture has laneCurrent = null (the log ends on phase.end). Falling
-    // back to "plan" would show the least interesting lane on a completed run; the furthest
-    // lane entered is the useful default.
+  it("renders all lanes even when nothing is active (finished run)", () => {
+    // The finished-run fixture has laneCurrent = null (the log ends on phase.end). With no
+    // accordion, every lane still renders — nothing is marked active.
     expect(state.topology.laneCurrent).toBeNull();
     const markup = renderToStaticMarkup(<LaneGraph state={state} />);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(1);
-    // build is the furthest lane with steps in this fixture
-    expect(markup).toContain("honest-GREEN");
+    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes render
+    expect(markup).toContain("honest-GREEN"); // build lane content present
     expect(markup).toMatchSnapshot();
   });
 
@@ -260,16 +256,19 @@ describe("render — LaneGraph", () => {
     // A lane gate can never light from laneSteps, so its only honest source is state.gates.
     // Assert on a COLLAPSED lane's gate dot: the expanded lane in this fixture is build,
     // whose only gate (b-verify) has a real match predicate and is already lit.
+    // Assert on the SPEC gate's OWN node stroke (title → rect), not the whole markup: now that all
+    // lanes are expanded, other lanes' pending human gates (plan, acceptance) legitimately render
+    // purple too, so a blanket "no purple" check would spuriously fail. This isolates the spec gate.
+    const specStroke = (m: string): string | null =>
+      m.match(/Spec gate[\s\S]*?<rect[^>]*?stroke:(var\(--status-[a-z]+\))/)?.[1] ?? null;
+
     const open = renderToStaticMarkup(<LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }] }} />);
-    // the design lane's gate dot picks up the HITL purple for a surfaced-but-unapproved gate.
-    // The trailing ")" keeps this from matching var(--status-gate-tint).
-    expect(open).toContain("var(--status-gate)");
+    expect(specStroke(open)).toBe("var(--status-gate)"); // surfaced-but-unapproved → HITL purple
 
     const approved = renderToStaticMarkup(
       <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }] }} />,
     );
-    // ...and green once cleared, without any step data changing
-    expect(approved).not.toContain("var(--status-gate)");
+    expect(specStroke(approved)).toBe("var(--status-good)"); // cleared → green, no step data changed
   });
 
   it("draws back-edges as labelled branches, not happy path", () => {
@@ -290,7 +289,7 @@ describe("render — LaneGraph", () => {
       topology: { ...state.topology, passedNodes: [], laneSteps: { plan: [], design: [], build: [] }, laneCurrent: null },
     };
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
-    expect((markup.match(/aria-expanded/g) ?? []).length).toBe(3);
+    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes render even when empty
     expect(markup).toContain("not started");
     expect(markup).toContain("0/3 steps");
   });

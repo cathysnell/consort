@@ -189,30 +189,24 @@ function Node({
 }) {
   const isGate = node.type === "gate";
 
-  // Active beats passed: the accent means "here, now", matching DesignLane's current phase.
+  // ONLY the active node is highlighted (accent fill + role-coloured border + pulse), matching the
+  // lanes' only-highlight-the-active-step treatment. Reached/approved nodes stay READABLE but quiet
+  // so the one active phase is what pops; a pending human gate keeps a thin gate-coloured border.
   const stroke = active
     ? activeRole
       ? colorForRole(activeRole)
       : "var(--status-accent)"
-    : gateStatus === "approved"
-      ? "var(--status-good)"
-      : gateStatus === "surfaced"
-        ? "var(--status-gate)"
-        : passed
-          ? "var(--status-good)"
-          : "var(--border-default)";
+    : gateStatus === "surfaced"
+      ? "var(--status-gate)"
+      : "var(--border-default)";
 
-  const fill = active
-    ? "var(--status-accent-tint)"
-    : gateStatus === "approved"
-      ? "var(--status-good-tint)"
-      : gateStatus === "surfaced"
-        ? "var(--status-gate-tint)"
-        : passed
-          ? "var(--status-good-tint)"
-          : "var(--surface-inset)";
+  const fill = active ? "var(--status-accent-tint)" : "var(--surface-inset)";
 
-  const label = active ? "var(--status-accent-text)" : passed || gateStatus === "approved" ? "var(--status-good-text)" : "var(--text-faint)";
+  const label = active
+    ? "var(--status-accent-text)"
+    : passed || gateStatus === "approved"
+      ? "var(--text-muted)"
+      : "var(--text-faint)";
 
   const title = `${node.label}${isGate ? ` · gate${gateStatus ? `: ${gateStatus}` : ""}` : ""}${
     active ? " · active now" : passed ? " · reached" : " · not reached"

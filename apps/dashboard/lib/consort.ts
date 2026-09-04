@@ -83,7 +83,17 @@ export function projectDir(): string {
 // agent-log-only live board and the FidelityBanner explains what isn't captured.
 export function recordDir(): string | null {
   const d = process.env.CONSORT_RECORD_DIR || process.env.LAKEBASE_CONSORT_RECORD_DIR;
-  return d && d.trim() ? d.trim() : null;
+  if (d && d.trim()) return d.trim();
+  // No explicit override: AUTO-DETECT the drive's in-project record lane at `<artifact-root>/record`
+  // so a live board lights up its drill-down with zero extra wiring. This is a SUBDIR of `.consort/`,
+  // NOT the watched root — its mirrored agent-log lives at `.consort/record/agent-log.jsonl`, while
+  // the live log the observer reads is `.consort/agent-log.jsonl` by exact path (see readLog), so the
+  // two never collide (the double-append the "separate dir" warning above is about). Returned only
+  // when it EXISTS, so a plain live run with no recording stays null (agent-log-only board); once the
+  // drive begins writing it, the companion's own available() guard still gates the drill-down until
+  // the first turn lands. An explicit CONSORT_RECORD_DIR always wins.
+  const auto = join(consortDir(), "record");
+  return existsSync(auto) ? auto : null;
 }
 
 // The artifact-root directory names Consort has used, in resolution priority. v0.3.7 renamed

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fold, emptyState } from "./reducer";
-import { blockersFromLog, storiesFromLog, storyKey } from "./derive";
+import { blockersFromLog, storiesFromLog, storyKey, latestTurnOrdinalForRole } from "./derive";
 import type { AgentLogEvent, SnapshotInputs } from "./types";
 
 function ev(
@@ -1185,5 +1185,31 @@ describe("fold — an open gate lights its surfacer even when deploy/verify foll
     // exactly what was missing at an open gate.
     const s = fold(gateEvents, snap({ next: gateNext }));
     expect(s.agents.find((a) => a.role === "orchestrator")!.status).toBe("waiting");
+  });
+});
+
+describe("latestTurnOrdinalForRole — role bubble → its most recent turn", () => {
+  // recentEvents ↔ recentTurns are positionally aligned; recentTurns[i] is null unless event i
+  // begins a turn. Clicking a role opens the LAST such turn for that role.
+  const events = [
+    ev("phase.start", { phase: "green" }, { role: "driver" }),
+    ev("phase.start", { phase: "review" }, { role: "navigator" }),
+    ev("turn.usage", {}, { role: "driver" }),
+    ev("phase.start", { phase: "refactor" }, { role: "driver" }),
+  ];
+  const turns = [5, 6, null, 8];
+
+  it("returns the role's most recent turn ordinal (scanning from the end)", () => {
+    expect(latestTurnOrdinalForRole(events, turns, "driver")).toBe(8);
+    expect(latestTurnOrdinalForRole(events, turns, "navigator")).toBe(6);
+  });
+
+  it("returns null for a role with no turn in the tail (never opens a wrong turn)", () => {
+    expect(latestTurnOrdinalForRole(events, turns, "orchestrator")).toBeNull();
+  });
+
+  it("ignores an event of the role that begins no turn (null ordinal)", () => {
+    // driver's turn.usage at index 2 has a null ordinal; the last driver TURN is index 3 (ord 8).
+    expect(latestTurnOrdinalForRole(events.slice(0, 3), [5, 6, null], "driver")).toBe(5);
   });
 });

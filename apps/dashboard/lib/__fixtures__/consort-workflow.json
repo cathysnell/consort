@@ -434,6 +434,14 @@
               "refactor-deploy"
             ]
           }
+        },
+        {
+          "id": "b-accept",
+          "role": null,
+          "label": "Acceptance gate",
+          "sub": "human accepts the story",
+          "gate": true,
+          "match": null
         }
       ],
       "edges": [
@@ -452,6 +460,10 @@
         [
           "b-review",
           "b-red"
+        ],
+        [
+          "b-review",
+          "b-accept"
         ]
       ],
       "backEdges": [

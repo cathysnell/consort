@@ -12,6 +12,7 @@ import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-p
 import { useTheme } from "./useTheme";
 import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
+import { latestTurnOrdinalForRole } from "@/lib/derive";
 
 type CostMode = "show" | "hidden";
 
@@ -122,7 +123,7 @@ export default function Home() {
               turning a silently-missing drill-down into an actionable message. Null in replay. */}
           <FidelityBanner source={state.source} />
 
-          <SectionHeader>Lifecycle</SectionHeader>
+          <SectionHeader>Current sprint</SectionHeader>
           <WorkflowGraph
             state={state}
             // Clicking a node opens its step deliverables in the ONE drill-down panel (below the
@@ -152,7 +153,7 @@ export default function Home() {
             />
           </div>
 
-          <SectionHeader>Lanes · inter-agent sub-workflows</SectionHeader>
+          <SectionHeader>Lanes</SectionHeader>
           <LaneGraph state={state} />
 
           <SectionHeader>Status</SectionHeader>
@@ -169,9 +170,22 @@ export default function Home() {
 
           <SectionHeader>Current State</SectionHeader>
           <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            {state.agents.map((a) => (
-              <AgentBubble key={a.role} agent={a} showCost={showCost} />
-            ))}
+            {state.agents.map((a) => {
+              // Clicking a role ALWAYS opens the panel , never a dead click. If the role has a
+              // recorded turn in the aligned recentEvents/recentTurns tail, open its MOST RECENT
+              // turn (the full transcript/artifacts/code drill-down); otherwise open the role panel,
+              // which renders the shell + an honest "nothing recorded yet" body. NOT gated on
+              // canDrillDown: even with no record corpus, the bubble opens something.
+              const ord = latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], a.role);
+              return (
+                <AgentBubble
+                  key={a.role}
+                  agent={a}
+                  showCost={showCost}
+                  onOpen={() => setDrilldown(ord != null ? { kind: "turn", ord } : { kind: "role", role: a.role })}
+                />
+              );
+            })}
           </section>
 
           {state.blockers.length > 0 ? <Blockers state={state} /> : null}

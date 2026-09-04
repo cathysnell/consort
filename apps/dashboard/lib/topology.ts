@@ -377,12 +377,21 @@ const BUILD_LANE: Lane = {
       branch: true,
       match: { role: "driver", buildModeAny: ["refactor-superseded", "refactor", "refactor-deploy"] },
     },
+    {
+      id: "b-accept",
+      role: null,
+      label: "Acceptance gate",
+      sub: "human accepts the story",
+      gate: true,
+      match: null,
+    },
   ],
   edges: [
     ["b-red", "b-green"],
     ["b-green", "b-verify"],
     ["b-verify", "b-review"],
     ["b-review", "b-red"],
+    ["b-review", "b-accept"],
   ] as const,
   backEdges: [
     ["b-verify", "b-assess", "verify fails"],

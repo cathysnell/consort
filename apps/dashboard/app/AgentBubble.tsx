@@ -37,10 +37,11 @@ function fmtElapsed(ms: number): string {
   return s % 60 >= 30 && m < 10 ? `${m}m${s % 60}s` : `${m}m`;
 }
 
-export function AgentBubble({ agent, showCost }: { agent: AgentState; showCost: boolean }) {
+export function AgentBubble({ agent, showCost, onOpen }: { agent: AgentState; showCost: boolean; onOpen?: () => void }) {
   const cfg = CFG[agent.status];
   const active = agent.status === "working";
   const pulse = agent.status === "waiting" || agent.status === "issue";
+  const clickable = !!onOpen;
 
   // Consort only logs at turn boundaries, so a long open turn looks frozen. Show how long the
   // turn's been running + a liveness dot: green "live" = a session is writing (working, just a
@@ -51,6 +52,11 @@ export function AgentBubble({ agent, showCost }: { agent: AgentState; showCost: 
 
   return (
     <div
+      onClick={onOpen}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen!(); } } : undefined}
+      title={clickable ? `Open ${agent.role}'s most recent turn` : undefined}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -63,6 +69,7 @@ export function AgentBubble({ agent, showCost }: { agent: AgentState; showCost: 
         transition: "all 0.4s ease",
         minHeight: 118,
         animation: pulse ? "softpulse 1.8s ease-in-out infinite" : undefined,
+        cursor: clickable ? "pointer" : undefined,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

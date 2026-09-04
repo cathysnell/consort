@@ -44,6 +44,25 @@ export function resolverFor(source: string): Role | null {
   return null;
 }
 
+/**
+ * The most recent turn ordinal for a role, from the aligned `recentEvents` / `recentTurns` tail
+ * (positionally 1:1; `recentTurns[i]` is null where event i begins no turn). Scans from the end for
+ * the last event of `role` that begins a turn, so clicking a role bubble opens its latest turn.
+ * Returns null when the role owns no turn within the tail (older than the ~40-event window) — the
+ * caller treats that as "no drill-down", never opening a wrong turn.
+ */
+export function latestTurnOrdinalForRole(
+  recentEvents: AgentLogEvent[],
+  recentTurns: (number | null)[],
+  role: string,
+): number | null {
+  for (let i = recentEvents.length - 1; i >= 0; i--) {
+    const ord = recentTurns[i];
+    if (recentEvents[i]?.role === role && ord != null) return ord;
+  }
+  return null;
+}
+
 // Scan the log for a HITL stop that is still pending: the last gate.surfaced /
 // escalation.raised with no matching resolution after it. Returns null if the run
 // is actively proceeding (any turn started after the surface counts as "not waiting").

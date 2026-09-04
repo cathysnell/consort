@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { nodeById } from "@/lib/topology";
 import { colorForRole, font, radius } from "@/lib/theme";
 import type { ArtifactContent, StepOutputAsset, StepOutputs } from "@/lib/types";
+import { buildFileTree, type FileTreeRow } from "@/lib/filetree";
 
 // The ONE drill-down surface. Everything the board lets you click — an event-stream row that begins
 // a recorded turn, an event row that names a produced artifact, or a lifecycle node on the graph —
@@ -20,6 +21,11 @@ import type { ArtifactContent, StepOutputAsset, StepOutputs } from "@/lib/types"
 
 export type DrilldownTarget =
   | { kind: "turn"; ord: number }
+  // A role bubble with NO recorded turn yet (a plain live run, or a role that hasn't taken a turn
+  // in the event tail). Clicking a bubble ALWAYS opens the panel , this target just renders the
+  // shell + an honest "nothing recorded yet" body instead of a turn, so the panel is never a dead
+  // click even when there's nothing to show.
+  | { kind: "role"; role: string }
   // Live's shallower drill-down: a produced file, read at the project's current HEAD.
   | { kind: "artifact"; path: string }
   // A lifecycle step's deliverables. Timeline-independent (a recorded artifact is the same at every
@@ -82,11 +88,36 @@ export function DrilldownPanel({
   switch (target.kind) {
     case "turn":
       return <TurnBody ord={target.ord} mode={mode} onClose={onClose} />;
+    case "role":
+      return <RoleBody role={target.role} onClose={onClose} />;
     case "artifact":
       return <ArtifactBody path={target.path} mode={mode} onClose={onClose} />;
     case "step":
       return <StepBody node={target.node} feature={feature} mode={mode} onClose={onClose} />;
   }
+}
+
+// A role bubble clicked when there's no recorded turn to open (plain live run / role not in the
+// event tail). Opens the panel anyway , the shell + an honest empty body , so a bubble is never a
+// dead click. Once the role takes a turn WITH recording on, the bubble opens the full turn instead.
+function RoleBody({ role, onClose }: { role: string; onClose: () => void }) {
+  const header = (
+    <>
+      <span style={HEAD_LABEL}>ROLE</span>
+      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-strong)" }}>{role}</span>
+    </>
+  );
+  return (
+    <PanelShell accent={colorForRole(role)} header={header} onClose={onClose}>
+      <div style={{ fontSize: "0.78rem", color: "var(--text-faint)", lineHeight: 1.55 }}>
+        Nothing recorded for <strong style={{ color: "var(--text-muted)" }}>{role}</strong> yet.
+        <div style={{ marginTop: 8 }}>
+          Its transcript (prompt · tools · reasoning), the artifacts it produced, and the code it wrote
+          appear here once it takes a turn with recording on.
+        </div>
+      </div>
+    </PanelShell>
+  );
 }
 
 // --- shared shell + primitives ---------------------------------------------------------------
@@ -271,16 +302,19 @@ interface FilePayload {
   reason: string | null;
 }
 
-type Tab = "transcript" | "files";
+type Tab = "correspondence" | "artifacts" | "code";
 
-function fileCount(t: TurnPayload): number {
-  return t.produced.length + t.deleted.length;
+// `produced` files carry a kind; `deleted` files don't, so bucket a deleted path by extension —
+// clear code extensions go to the Code tab, everything else (md/json/txt/…) to Artifacts.
+const CODE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|java|kt|kts|go|rb|rs|sql|sh|css|scss|c|h|cpp|php|swift)$/i;
+function isCodePath(p: string): boolean {
+  return CODE_EXT.test(p);
 }
 
 function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay" | null; onClose: () => void }) {
   const [turn, setTurn] = useState<TurnPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("transcript");
+  const [tab, setTab] = useState<Tab>("correspondence");
   const [selected, setSelected] = useState<string | null>(null);
   const [file, setFile] = useState<FilePayload | null>(null);
 
@@ -305,7 +339,9 @@ function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay"
         setTurn(t);
         // Land on whichever tab has something: a gate turn has no transcript, several produce
         // nothing. Opening on an empty pane reads as broken.
-        setTab(t.transcript ? "transcript" : fileCount(t) > 0 ? "files" : "transcript");
+        const artCount = t.produced.filter((p) => p.kind === "artifact").length + t.deleted.filter((d) => !isCodePath(d)).length;
+        const codeCount = t.produced.filter((p) => p.kind === "code").length + t.deleted.filter((d) => isCodePath(d)).length;
+        setTab(t.transcript ? "correspondence" : artCount > 0 ? "artifacts" : codeCount > 0 ? "code" : "correspondence");
       } catch (e) {
         if (live) setError(e instanceof Error ? e.message : String(e));
       }
@@ -366,41 +402,80 @@ function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay"
         <div style={{ fontSize: "0.78rem", color: "var(--text-faint)" }}>Loading turn {ord}…</div>
       ) : (
         <>
-          <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
-            <TabButton active={tab === "transcript"} onClick={() => setTab("transcript")} disabled={!turn.transcript}>
-              Transcript
-            </TabButton>
-            <TabButton active={tab === "files"} onClick={() => setTab("files")} disabled={fileCount(turn) === 0}>
-              Files {fileCount(turn) > 0 ? `(${fileCount(turn)})` : ""}
-            </TabButton>
-          </div>
+          {(() => {
+            // Split the turn's files into the two panes: artifacts vs code. `produced` carries a
+            // kind; deleted files are bucketed by extension. Correspondence is the transcript.
+            const artifacts = turn.produced.filter((p) => p.kind === "artifact");
+            const codeFiles = turn.produced.filter((p) => p.kind === "code");
+            const delArts = turn.deleted.filter((d) => !isCodePath(d));
+            const delCode = turn.deleted.filter((d) => isCodePath(d));
+            const artCount = artifacts.length + delArts.length;
+            const codeCount = codeFiles.length + delCode.length;
+            const codeRows = buildFileTree(codeFiles.map((p) => p.path));
+            const selectFile = (p: string) => setSelected(p === selected ? null : p);
+            // One viewer serves both split panes: a path header + the existing per-file content view.
+            const viewer = (
+              <>
+                {selected ? (
+                  <div style={{ fontFamily: font.mono, fontSize: "0.64rem", color: "var(--text-faint)", marginBottom: 6, paddingBottom: 5, borderBottom: `1px solid var(--border-default)`, wordBreak: "break-all" }}>{selected}</div>
+                ) : null}
+                <ContentView file={selected === null ? undefined : file} idle="Select a file to view its snapshot." loadingName={selected} />
+              </>
+            );
+            return (
+              <>
+                <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
+                  <TabButton active={tab === "correspondence"} onClick={() => setTab("correspondence")} disabled={!turn.transcript}>
+                    Correspondence
+                  </TabButton>
+                  <TabButton active={tab === "artifacts"} onClick={() => { setTab("artifacts"); setSelected(null); }} disabled={artCount === 0}>
+                    Artifacts{artCount > 0 ? ` (${artCount})` : ""}
+                  </TabButton>
+                  <TabButton active={tab === "code"} onClick={() => { setTab("code"); setSelected(null); }} disabled={codeCount === 0}>
+                    Code{codeCount > 0 ? ` (${codeCount})` : ""}
+                  </TabButton>
+                </div>
 
-          {tab === "transcript" ? (
-            <TranscriptView turn={turn} />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {turn.produced.map((p) => (
-                  <FileRow
-                    key={p.path}
-                    badge={p.kind === "code" ? "CODE" : "ARTIFACT"}
-                    badgeColor={p.kind === "code" ? "var(--status-good-text)" : "var(--text-faint)"}
-                    label={p.path}
-                    selected={p.path === selected}
-                    onSelect={() => setSelected(p.path === selected ? null : p.path)}
+                {tab === "correspondence" ? (
+                  <TranscriptView turn={turn} />
+                ) : tab === "artifacts" ? (
+                  <SplitPane
+                    list={
+                      artCount === 0 ? (
+                        <Empty>No artifacts this turn.</Empty>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          {artifacts.map((p) => (
+                            <FileRow key={p.path} badge="ARTIFACT" badgeColor="var(--text-faint)" label={p.path} selected={p.path === selected} onSelect={() => selectFile(p.path)} />
+                          ))}
+                          {delArts.map((d) => (
+                            <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
+                          ))}
+                        </div>
+                      )
+                    }
+                    viewer={viewer}
                   />
-                ))}
-                {turn.deleted.map((d) => (
-                  <FileRow key={d} badge="DELETED" badgeColor={"var(--status-critical-text)"} label={d} strike />
-                ))}
-              </div>
-              <ContentView
-                file={selected === null ? undefined : file}
-                idle="Select a file to see the snapshot this turn captured."
-                loadingName={selected}
-              />
-            </div>
-          )}
+                ) : (
+                  <SplitPane
+                    list={
+                      codeCount === 0 ? (
+                        <Empty>No code this turn.</Empty>
+                      ) : (
+                        <>
+                          <CodeTree rows={codeRows} selected={selected} onSelect={selectFile} />
+                          {delCode.map((d) => (
+                            <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
+                          ))}
+                        </>
+                      )
+                    }
+                    viewer={viewer}
+                  />
+                )}
+              </>
+            );
+          })()}
         </>
       )}
     </PanelShell>
@@ -427,6 +502,62 @@ function TabButton({ active, onClick, disabled, children }: { active: boolean; o
       {children}
     </button>
   );
+}
+
+// Master-detail split: a scrolling list/tree on the left, the selected file's content on the right —
+// the template's `.pane.split` (230px + flexible viewer), in the app's tokens.
+function SplitPane({ list, viewer }: { list: React.ReactNode; viewer: React.ReactNode }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(140px, 230px) 1fr", border: `1px solid var(--border-default)`, borderRadius: 5, overflow: "hidden", minHeight: 220 }}>
+      <div style={{ borderRight: `1px solid var(--border-default)`, background: "var(--surface-muted)", overflowY: "auto", maxHeight: 460, padding: "6px 0" }}>{list}</div>
+      <div style={{ overflow: "auto", maxHeight: 460, padding: "8px 10px" }}>{viewer}</div>
+    </div>
+  );
+}
+
+// The Code pane's left rail: a directory tree (dirs as indented headers, files as indented,
+// selectable rows) built by buildFileTree — the template's `.tree-dir` / `.tree-file`.
+function CodeTree({ rows, selected, onSelect }: { rows: FileTreeRow[]; selected: string | null; onSelect: (p: string) => void }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {rows.map((r) =>
+        r.kind === "dir" ? (
+          <div key={`d:${r.path}`} style={{ fontFamily: font.mono, fontSize: "0.66rem", fontWeight: 700, color: "var(--text-muted)", padding: "3px 8px", paddingLeft: 8 + r.depth * 12, whiteSpace: "nowrap" }}>
+            {r.name}/
+          </div>
+        ) : (
+          <button
+            key={`f:${r.path}`}
+            onClick={() => onSelect(r.path)}
+            title={r.path}
+            style={{
+              display: "block",
+              textAlign: "left",
+              width: "100%",
+              background: r.path === selected ? "var(--surface-inset)" : "transparent",
+              border: "none",
+              borderLeft: `2px solid ${r.path === selected ? "var(--status-good-text)" : "transparent"}`,
+              padding: "3px 8px",
+              paddingLeft: 8 + r.depth * 12,
+              fontFamily: font.mono,
+              fontSize: "0.66rem",
+              color: r.path === selected ? "var(--text-strong)" : "var(--text-body)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {r.name}
+          </button>
+        ),
+      )}
+    </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", padding: "8px 10px" }}>{children}</div>;
 }
 
 export function TranscriptView({ turn }: { turn: TurnPayload }) {
