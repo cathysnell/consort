@@ -92,7 +92,7 @@ replay_smoke() {
   source "${REPLAY_DIR}/lib/pin-local-kit.sh"
   resolve_kit_single_source "${REPLAY_DIR}" "${KIT_REF}" || return 1
   KIT_ROOT="${KIT_SINGLE_ROOT}"
-  KIT_LK="$(kit_lk_path "$KIT_ROOT")"
+  KIT_LK="$(kit_lk_path "$KIT_ROOT")" || return 1
 
   # UI track is a PROJECT setting (project.uiTrack, set at create by --ui-track
   # below), not an env door. Only the run-mode Human Proxy is env here.
@@ -298,7 +298,16 @@ replay_smoke() {
   local _FEATURE_BRANCH
   _FEATURE_BRANCH="$(printf '%s' "$_CLAIM_JSON" | sed -n 's/.*"branch":"\([^"]*\)".*/\1/p' | head -1)"
   [[ -n "$_FEATURE_BRANCH" ]] || { err "could not parse claimed feature branch from claim JSON"; return 2; }
-  git -C "$PROJECT_DIR" checkout "$_FEATURE_BRANCH" >/dev/null 2>&1 \
+  # Force the checkout. On a RESUME (alreadyClaimed) HEAD is on the parent tier and
+  # the per-run .consort/.lakebase metadata (workflow-state.json, pipeline.json,
+  # smells.json, ...) is dirty + tracked, so a plain `git checkout` ABORTS ("local
+  # changes would be overwritten") and wedges the whole resume. That churn is
+  # disposable here , the feature branch carries its OWN committed state, and landing
+  # on it is the whole point , so -f discards the parent-tier churn and switches.
+  # Mirrors the deterministic force-checkout the orchestrator's `done` phase uses for
+  # the identical condition (orchestrator-effects.ts) and the fork-guard's tolerance
+  # of the same metadata.
+  git -C "$PROJECT_DIR" checkout -f "$_FEATURE_BRANCH" >/dev/null 2>&1 \
     || { err "could not checkout claimed feature branch ${_FEATURE_BRANCH}"; return 2; }
   lk lakebase-branch checkout-paired --project-dir "$PROJECT_DIR" >/dev/null 2>&1 \
     || log "  (warn: checkout-paired .env sync for ${_FEATURE_BRANCH} reported an issue; continuing)"

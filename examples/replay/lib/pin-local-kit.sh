@@ -33,9 +33,19 @@ local_kit_cache_link() {
 # kit's node_modules). Return the installed path; fall back to the legacy in-repo
 # location for older checkouts that still ship it.
 kit_lk_path() {
-  local kit_root="$1" p
+  local kit_root="$1" p legacy
   p="${kit_root}/node_modules/@databricks-solutions/lakebase-scm-utils/templates/project/common/scripts/lk"
-  [ -f "$p" ] || p="${kit_root}/templates/project/common/scripts/lk"
+  legacy="${kit_root}/templates/project/common/scripts/lk"
+  if [ ! -f "$p" ] && [ ! -f "$legacy" ]; then
+    # Neither the substrate-package shim nor the legacy in-repo path exists. The
+    # usual cause is that `npm install` has not been run in the kit (the substrate
+    # package, which ships the shim, is not installed). Fail LOUD here rather than
+    # returning a dead path and letting a later `bash "$KIT_LK" ...` die with an
+    # opaque "No such file or directory".
+    echo "kit_lk_path: no scaffold lk found under ${kit_root} , run 'npm install' in the kit first (expected ${p})." >&2
+    return 1
+  fi
+  [ -f "$p" ] || p="$legacy"
   printf '%s\n' "$p"
 }
 

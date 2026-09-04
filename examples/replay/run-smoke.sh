@@ -194,7 +194,7 @@ export LAKEBASE_KIT_NPX="$KIT_NPX"
 source "${ORCHESTRATOR_DIR}/lib/pin-local-kit.sh"
 resolve_kit_single_source "${ORCHESTRATOR_DIR}" "${KIT_REF}" || exit 1
 KIT_ROOT="${KIT_SINGLE_ROOT}"
-KIT_LK="$(kit_lk_path "$KIT_ROOT")"
+KIT_LK="$(kit_lk_path "$KIT_ROOT")" || exit 1
 
 # Headless run: the human reviewer at each HITL gate is performed by
 # human-proxy, which validates the gate's artifacts exist + carry their
