@@ -38,3 +38,34 @@ describe("replay layout: one machinery dir + corpora/ subdir (anti-drift)", () =
     ).toBe(false);
   });
 });
+
+// The scaffold `lk` shim was moved out of this repo (templates/project/common/scripts/lk)
+// into the @databricks-solutions/lakebase-scm-utils substrate package, and made generic
+// (it needs LAKEBASE_KIT_PACKAGE to know which kit to load). A launcher that still points
+// KIT_LK at the removed in-repo path hard-fails EVERY capture/replay/smoke at the first
+// pre-project `lk` call ("No such file or directory"). This guard keeps the resolution on
+// the shared helper so that regression cannot silently return.
+describe("replay launchers resolve the scaffold lk via the shared helper (anti-drift)", () => {
+  const LIB = path.join(REPLAY_DIR, "lib", "pin-local-kit.sh");
+  const LAUNCHERS = ["capture-scenario.sh", "_replay-smoke.sh", "run-smoke.sh"];
+  const REMOVED_INREPO_LK = 'KIT_LK="${KIT_ROOT}/templates/project/common/scripts/lk"';
+
+  it("pin-local-kit.sh provides kit_lk_path() and exports LAKEBASE_KIT_PACKAGE", () => {
+    const lib = fs.readFileSync(LIB, "utf8");
+    expect(lib, "kit_lk_path() helper defined").toMatch(/kit_lk_path\(\)\s*\{/);
+    expect(lib, "resolve_kit_single_source exports LAKEBASE_KIT_PACKAGE").toMatch(
+      /export\s+LAKEBASE_KIT_PACKAGE=/,
+    );
+  });
+
+  for (const f of LAUNCHERS) {
+    it(`${f} resolves KIT_LK via kit_lk_path, not the removed in-repo path`, () => {
+      const src = fs.readFileSync(path.join(REPLAY_DIR, f), "utf8");
+      expect(src, `${f} uses the kit_lk_path helper`).toMatch(/KIT_LK="?\$\(kit_lk_path /);
+      expect(
+        src.includes(REMOVED_INREPO_LK),
+        `${f} must not hardcode KIT_LK at the removed in-repo lk path`,
+      ).toBe(false);
+    });
+  }
+});
