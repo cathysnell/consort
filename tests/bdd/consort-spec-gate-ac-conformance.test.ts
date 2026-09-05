@@ -6,7 +6,7 @@
 // trusts, so the defect fails at approve time, where it is produced. Hermetic.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -78,6 +78,20 @@ describe("approveStoryGateFromDisk refuses a malformed AC at the spec gate (Find
     writeFileSync(join(acsDir(), "AC1-row-unchanged.json"), JSON.stringify(CONFORMANT_AC));
     const r = approveStoryGateFromDisk(tdd, F, S, { approver: APPROVER });
     expect(r.ok).toBe(true);
+  });
+
+  it("logs a story-scoped gate.approved on approval (G4b: the per-story spec gate is no longer silent)", () => {
+    surfaced();
+    writeFileSync(join(acsDir(), "AC1-row-unchanged.json"), JSON.stringify(CONFORMANT_AC));
+    approveStoryGateFromDisk(tdd, F, S, { approver: APPROVER });
+    const log = join(tdd, "agent-log.jsonl");
+    expect(existsSync(log)).toBe(true);
+    const events = readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const approved = events.filter((e) => e.event === "gate.approved");
+    expect(approved).toHaveLength(1);
+    expect(approved[0].metadata.gate).toBe("spec");
+    expect(approved[0].metadata.story).toBe(S);
+    expect(approved[0].metadata.feature_id).toBe(F);
   });
 
   it("REFUSES to approve when an AC is truncated (the deploy-gate defect, caught early)", () => {

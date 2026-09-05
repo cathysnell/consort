@@ -48,6 +48,7 @@ import { approveGate } from "../../consort/gates/approve-gate.js";
 import { readGates, GATE_NAMES, type GateName, type GatesState } from "../../consort/gates/gates.js";
 import { checkArtifactConformance, canonicalArtifactName } from "../../consort/orchestrator/validators/conformance/artifact-conformance.js";
 import { emitAgentLogEvent } from "../../consort/logging/agent-log.js";
+import { logGateApproved, logGateRejected } from "../../consort/logging/gate-decision-log.js";
 import { featureRequestMd, resolveConsortDir, writeRequested, featureProposalsMd, planningDir } from "../../consort/config/consort-paths.js";
 // The gate CONDITION (what makes a gate advanceable) is a state-machine property,
 // not a proxy decision; it lives in the guard and is enforced on the advance path.
@@ -67,32 +68,12 @@ function logHitlDecision(
     | { kind: "approved"; gate: GateName; artifacts: string[] }
     | { kind: "refused"; gate: GateName; reason: string },
 ): void {
-  try {
-    if (decision.kind === "approved") {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "info",
-          event: "gate.approved",
-          feature_id: featureId,
-          slots: { gate: decision.gate, artifacts: decision.artifacts, approver, validated: true },
-        },
-        { consortDir },
-      );
-    } else {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "warn",
-          event: "gate.rejected",
-          feature_id: featureId,
-          slots: { gate: decision.gate, reason: decision.reason, approver, validated: false },
-        },
-        { consortDir },
-      );
-    }
-  } catch {
-    // Logging is observability, not a gate. Never let it break approval.
+  // Delegate to the shared gate-decision emitter (logging/gate-decision-log.ts) so every gate door
+  // — this proxy, the sprint plan gate, the per-story spec gate — logs an approval identically.
+  if (decision.kind === "approved") {
+    logGateApproved({ consortDir, featureId, approver, gate: decision.gate, artifacts: decision.artifacts });
+  } else {
+    logGateRejected({ consortDir, featureId, approver, gate: decision.gate, reason: decision.reason });
   }
 }
 

@@ -17,6 +17,7 @@ import type { GateRecord } from "./gates.js";
 import { hashArtifact } from "./gate-hash.js";
 import { checkArtifactConformance } from "../../consort/orchestrator/validators/conformance/artifact-conformance.js";
 import { resolveConsortDir, sprintDir, sprintGatesJson, featureProposalsMd } from "../../consort/config/consort-paths.js";
+import { logGateApproved } from "../../consort/logging/gate-decision-log.js";
 
 // sprintDir lives in consort-paths now (single source of truth); re-exported for
 // the existing public API.
@@ -148,5 +149,8 @@ export function approveSprintPlanGate(args: ApproveSprintPlanArgs): ApproveSprin
     },
   };
   writeSprintGates(updated, { consortDir });
+  // Log the approval to the shared agent-log trail (G4b): the plan gate is sprint-level (no
+  // story/feature), so the dashboard can now show it PASSED instead of inferring it. Best-effort.
+  logGateApproved({ consortDir, gate: "plan", approver: args.approver });
   return { ok: true, state: updated, alreadyApproved: false };
 }

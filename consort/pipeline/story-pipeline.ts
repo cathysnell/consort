@@ -14,6 +14,7 @@ import {
   featureSpecMd,
 } from "../../consort/config/consort-paths.js";
 import { featureDir, storyAcsConformanceReason, storyIndependenceForStoryReason, storyRequiresE2eReason } from "../../consort/gates/gate-conformance-guard.js";
+import { logGateApproved } from "../../consort/logging/gate-decision-log.js";
 
 export const STORY_STATUSES = [
   "designing",
@@ -456,6 +457,10 @@ export function approveStoryGateFromDisk(
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
   writePipeline(consortDir, pipeline);
+  // Log the approval to the shared agent-log trail (G4b): the per-story spec gate lives in
+  // pipeline.json, so before this it cleared silently and the dashboard had to infer it. Now it
+  // logs a story-scoped gate.approved. Best-effort — observability never blocks the approval.
+  logGateApproved({ consortDir, gate: "spec", story, featureId: feature, approver: opts.approver });
   return { ok: true, queue: pipeline.build_queue };
 }
 
