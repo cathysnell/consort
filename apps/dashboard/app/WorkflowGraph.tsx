@@ -65,16 +65,31 @@ export function WorkflowGraph({
   const activeRole = state.agents.find((a) => a.status === "working")?.role ?? null;
   const gateState = new Map(state.gates.map((g: GateInfo) => [g.name, g.status]));
 
+  // The current sprint's FEATURE + its current state, shown in the panel's header band — mirroring a
+  // lane panel's "lane · status" heading. The active story (if any) is the sharpest state; otherwise
+  // the phase. Kept in the header so the section reads like the lanes below it.
+  const feature = state.features?.find((f) => f.active)?.id ?? state.feature ?? state.pinnedFeature;
+  const activeStory = state.stories?.find((s) => s.active) ?? null;
+  const stateLabel = activeStory ? `▸ ${activeStory.id}` : state.phase ?? "in progress";
+
   return (
     <div
       style={{
-        background: "var(--surface-card)",
+        // Body carries the subtle panel tint; the header band below is the distinct card surface —
+        // the same tinted-header/clear-body pattern as the lane panels.
+        background: "var(--surface-panel)",
         border: `1px solid var(--border-default)`,
-        borderRadius: radius.card,
-        padding: "14px 16px",
-        overflowX: "auto",
+        borderRadius: radius.panel,
+        overflow: "hidden",
       }}
     >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "var(--surface-card)", borderBottom: `1px solid var(--border-default)` }}>
+        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-strong)", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 62 }}>
+          {feature ?? "sprint"}
+        </span>
+        <span style={{ fontSize: "0.7rem", fontWeight: activeStory ? 700 : 500, color: activeStory ? "var(--status-accent-text)" : "var(--text-muted)" }}>· {stateLabel}</span>
+      </div>
+      <div style={{ padding: "14px 16px", overflowX: "auto" }}>
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         width="100%"
@@ -86,18 +101,10 @@ export function WorkflowGraph({
           <marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--border-strong)" }} />
           </marker>
-          <marker id="wf-arrow-done" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-good)" }} />
-          </marker>
         </defs>
 
         {WORKFLOW.edges.map(([from, to]) => (
-          <Edge
-            key={`${from}->${to}`}
-            from={from}
-            to={to}
-            done={passed.has(from) && (passed.has(to) || to === activeNode)}
-          />
+          <Edge key={`${from}->${to}`} from={from} to={to} />
         ))}
 
         {PLACED.map(({ node, x, w }) => (
@@ -117,6 +124,7 @@ export function WorkflowGraph({
           />
         ))}
       </svg>
+      </div>
     </div>
   );
 }
@@ -129,13 +137,15 @@ function gateStatusFor(node: WorkflowNode, gateState: Map<string, string>): stri
 
 // `shipped → plan` closes the sprint loop, so it runs back under the spine rather than
 // through every intervening node.
-function Edge({ from, to, done }: { from: string; to: string; done: boolean }) {
+function Edge({ from, to }: { from: string; to: string }) {
   const a = POS.get(from);
   const b = POS.get(to);
   if (!a || !b) return null;
 
-  const stroke = done ? "var(--status-good)" : "var(--border-strong)";
-  const marker = done ? "url(#wf-arrow-done)" : "url(#wf-arrow)";
+  // Uniform grey edges: progress reads from the pulsing ACTIVE node, not from coloured/"traversed"
+  // edges — consistent with the lane graph (no green done-edges, e.g. build→deploy).
+  const stroke = "var(--border-strong)";
+  const marker = "url(#wf-arrow)";
 
   if (b.x < a.x) {
     const y = CENTER_Y + NODE_H / 2 + 14;
@@ -160,7 +170,7 @@ function Edge({ from, to, done }: { from: string; to: string; done: boolean }) {
       x2={b.x - 4}
       y2={CENTER_Y}
       style={{ stroke }}
-      strokeWidth={done ? 2 : 1.5}
+      strokeWidth={1.5}
       markerEnd={marker}
     />
   );

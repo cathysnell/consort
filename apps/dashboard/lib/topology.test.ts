@@ -721,7 +721,7 @@ describe("topology — the deploy lane (dashboard-native)", () => {
     expect(deploy.steps.map((s) => s.id)).toEqual([
       "dp-deploy", "dp-verify", "dp-gate",
       "dp-pr", "dp-ci", "dp-promgate", "dp-merge",
-      "dp-assess", "dp-refactor", "dp-hil",
+      "dp-assess", "dp-refactor", "dp-hil", "dp-promote-hil",
     ]);
   });
 
@@ -730,17 +730,19 @@ describe("topology — the deploy lane (dashboard-native)", () => {
     for (const id of ["dp-deploy", "dp-verify", "dp-pr", "dp-ci", "dp-merge"]) {
       expect(byId.get(id)?.role, id).toBe("release-engineer");
     }
-    for (const id of ["dp-gate", "dp-promgate", "dp-hil"]) expect(byId.get(id)?.role, id).toBeNull();
+    for (const id of ["dp-gate", "dp-promgate", "dp-hil", "dp-promote-hil"]) expect(byId.get(id)?.role, id).toBeNull();
   });
 
-  it("keeps the two human gates unlightable (→ purple) and the escalation terminal", () => {
+  it("keeps the two human gates unlightable (→ purple) and both escalation terminals", () => {
     const byId = new Map(deploy.steps.map((s) => [s.id, s]));
     for (const id of ["dp-gate", "dp-promgate"]) {
       expect(byId.get(id)?.gate, id).toBe(true);
       expect(byId.get(id)?.match, id).toBeNull(); // match:null → isHumanGate → purple
     }
-    expect(byId.get("dp-hil")?.escalation).toBe(true);
-    expect(byId.get("dp-hil")?.match).toBeNull();
+    for (const id of ["dp-hil", "dp-promote-hil"]) {
+      expect(byId.get(id)?.escalation, id).toBe(true);
+      expect(byId.get(id)?.match, id).toBeNull();
+    }
   });
 
   it("lights deploy/verify from deploy.* events and the promote steps from the promote phase", () => {
@@ -776,6 +778,10 @@ describe("topology — the deploy lane (dashboard-native)", () => {
     expect(back).toContain("dp-verify->dp-assess"); // verify fails
     expect(back).toContain("dp-refactor->dp-deploy"); // re-deploy after scoping
     expect(back).toContain("dp-assess->dp-hil"); // genuine failure → escalate
+    // The promote SCM steps have no self-heal — a non-zero exit escalates straight to the HIL.
+    expect(back).toContain("dp-pr->dp-promote-hil"); // prepare-pr fails
+    expect(back).toContain("dp-ci->dp-promote-hil"); // CI red
+    expect(back).toContain("dp-merge->dp-promote-hil"); // merge conflict
   });
 });
 

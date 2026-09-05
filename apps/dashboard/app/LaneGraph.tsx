@@ -150,7 +150,9 @@ function LanePanel({
   return (
     <div
       style={{
-        background: "var(--surface-card)",
+        // Body carries a subtle tint (surface-panel); only the header band below is the more
+        // distinct card surface.
+        background: "var(--surface-panel)",
         border: `1px solid ${active ? "var(--status-accent)" : "var(--border-default)"}`,
         borderRadius: radius.panel,
         overflow: "hidden",
@@ -163,7 +165,9 @@ function LanePanel({
           alignItems: "center",
           gap: 10,
           padding: "9px 12px",
-          background: active ? "var(--status-accent-tint-soft)" : "transparent",
+          // Consistent pane pattern: a distinct header band (card surface) over a flat page body,
+          // turning to the in-progress accent when the lane is active.
+          background: active ? "var(--status-accent-tint-soft)" : "var(--surface-card)",
           textAlign: "left",
         }}
       >
@@ -195,26 +199,27 @@ function LanePanel({
         {/* Dot strip: the whole lane's shape at a glance, so a collapsed lane still says
             something more specific than a fraction. */}
         <span style={{ display: "flex", gap: 3, marginLeft: "auto" }}>
-          {lane.steps.map((s) => (
-            <span
-              key={s.id}
-              title={`${s.label} — ${s.sub}`}
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: s.gate ? 1 : "50%",
-                background:
-                  s.id === currentStep
-                    ? "var(--status-accent)"
-                    : done.has(s.id)
-                      ? "var(--status-good)"
-                      : s.gate
-                        ? gateTintFor(s, state)
-                        : "var(--border-strong)",
-                transform: s.gate ? "rotate(45deg)" : undefined,
-              }}
-            />
-          ))}
+          {lane.steps.map((s) => {
+            // Each dot carries its step's ROLE-AGENT colour (a gate its gate colour, a roleless
+            // terminal a neutral), so the strip previews the lane's cast. A dot is dim until its
+            // step is REACHED (done or current), then lights up to full colour.
+            const reached = done.has(s.id) || s.id === currentStep;
+            const dotColor = s.role ? colorForRole(s.role) : s.gate ? gateTintFor(s, state) : "var(--border-strong)";
+            return (
+              <span
+                key={s.id}
+                title={`${s.label} — ${s.sub}`}
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: s.gate ? 1 : "50%",
+                  background: dotColor,
+                  opacity: reached ? 1 : 0.28,
+                  transform: s.gate ? "rotate(45deg)" : undefined,
+                }}
+              />
+            );
+          })}
         </span>
       </div>
 
@@ -274,16 +279,17 @@ function LaneSvg({
     // (col 3) between the Deploy section (dp-deploy…dp-gate) and the Promote section (dp-pr…
     // dp-merge) — LaneGraph draws a divider + section labels there so the single lane reads as two
     // phases. dp-gate→dp-pr therefore skips the empty gap column (arc-below, handled by `edge`).
-    // Row 1 is the deploy-verify self-heal (dp-assess under dp-verify, dp-refactor beside it);
-    // row 2 is the raise-to-HIL terminal under dp-assess.
+    // Row 1 is the deploy-verify self-heal: dp-assess under dp-verify, dp-refactor to its left, and
+    // the raise-to-HIL terminal (dp-hil) to the RIGHT of dp-assess (so assess→HIL reads as a straight
+    // same-row edge). Two rows total.
     const grid: Record<string, [number, number]> = {
       "dp-deploy": [0, 0], "dp-verify": [0, 1], "dp-gate": [0, 2],
       "dp-pr": [0, 4], "dp-ci": [0, 5], "dp-promgate": [0, 6], "dp-merge": [0, 7],
-      "dp-refactor": [1, 0], "dp-assess": [1, 1],
-      "dp-hil": [2, 1],
+      "dp-refactor": [1, 0], "dp-assess": [1, 1], "dp-hil": [1, 2],
+      "dp-promote-hil": [1, 5],
     };
     lane.steps.forEach((s) => place(s.id, ...(grid[s.id] ?? [0, 0])));
-    nRows = 3;
+    nRows = 2;
   } else {
     // Every other lane: the main steps run along row 0 in declared order; a raise-to-HIL escalation
     // terminal DROPS to row 1, aligned to the COLUMN of the node that raises it (its backEdge
@@ -319,7 +325,8 @@ function LaneSvg({
           return {
             x: (gate.x + STEP_W + pr.x) / 2,
             top: PAD + TOP_LANE - 3,
-            bottom: PAD + TOP_LANE + STEP_H + 8,
+            // Through the last row (self-heal / HIL), not just row 0, so the divider spans the lane.
+            bottom: PAD + TOP_LANE + nRows * STEP_H + (nRows - 1) * ROW_GAP + 8,
             labelY: PAD + TOP_LANE - 9,
             deployMid: (pos.get("dp-deploy")!.x + gate.x + STEP_W) / 2,
             promoteMid: (pr.x + pos.get("dp-merge")!.x + STEP_W) / 2,
@@ -331,15 +338,23 @@ function LaneSvg({
   // backward (REVIEW→RED, the next dev loop) = an arc ABOVE the row so it never crosses the row
   // below; cross-row = an elbow that drops/rises between the two rows. Branch (failure-arm) edges
   // are amber + dashed and carry their label; happy-path edges go green once traversed.
-  const edge = (from: string, to: string, o: { branch?: boolean; label?: string }) => {
+  const edge = (
+    from: string,
+    to: string,
+    o: { branch?: boolean; label?: string; enterSide?: "left" | "right"; dropFrac?: number; labelBelow?: boolean },
+  ) => {
     const p = pos.get(from);
     const q = pos.get(to);
     if (!p || !q) return null;
     // Happy-path edges are all uniform grey (no traversed-vs-not distinction); only branch/failure
     // edges stand out in amber. Progress reads from the pulsing active step, not the edges.
-    const stroke = o.branch ? "var(--status-warning)" : "var(--border-strong)";
-    const marker = o.branch ? "url(#lg-arrow-branch)" : "url(#lg-arrow)";
     const sameRow = p.row === q.row;
+    // The build dev-loop back-edge (REVIEW/refactor → RED, a same-row backward hop) reads GREEN so
+    // its dashed line matches its "next cycle" label; branch/failure edges are amber; every other
+    // happy-path edge is grey.
+    const nextCycle = sameRow && q.col < p.col && !o.branch;
+    const stroke = o.branch ? "var(--status-warning)" : nextCycle ? "var(--status-good-text)" : "var(--border-strong)";
+    const marker = o.branch ? "url(#lg-arrow-branch)" : nextCycle ? "url(#lg-arrow-cycle)" : "url(#lg-arrow)";
     let d: string;
     let lx = 0;
     let ly = 0;
@@ -349,13 +364,20 @@ function LaneSvg({
       lx = (p.x + STEP_W + q.x) / 2;
       ly = cy(from) - 4;
     } else if (sameRow && q.col > p.col) {
-      // forward but SKIPS an intervening step (assess→perm over repair): arc BELOW the row so the
-      // line clearly emanates from `from` and never crosses the box in between (which read as a
-      // phantom repair→perm edge).
-      const yy = p.y + STEP_H + 14;
-      d = `M ${cx(from)} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y + STEP_H}`;
-      lx = (cx(from) + cx(to)) / 2;
-      ly = yy + 9;
+      // Forward but skips column(s). If a BOX sits in between (assess→perm over repair) arc BELOW so
+      // the line never crosses it (a phantom edge); if the skipped column is EMPTY (the deploy→promote
+      // gap) draw a straight HORIZONTAL line across it, through the section divider.
+      const intervening = [...pos.values()].some((v) => v.row === p.row && v.col > p.col && v.col < q.col);
+      if (!intervening) {
+        d = `M ${p.x + STEP_W} ${cy(from)} H ${q.x - 4}`;
+        lx = (p.x + STEP_W + q.x) / 2;
+        ly = cy(from) - 4;
+      } else {
+        const yy = p.y + STEP_H + 14;
+        d = `M ${cx(from)} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y + STEP_H}`;
+        lx = (cx(from) + cx(to)) / 2;
+        ly = yy + 9;
+      }
     } else if (sameRow) {
       // Backward same-row loop. In a multi-row lane, row 0's loop (REVIEW→RED) arcs ABOVE, into the
       // TOP_LANE headroom (never crossing the row below); a single-row lane's loop (design's
@@ -366,11 +388,25 @@ function LaneSvg({
       d = `M ${cx(from)} ${above ? p.y : p.y + STEP_H} V ${yy} H ${cx(to)} V ${above ? q.y : q.y + STEP_H}`;
       lx = (cx(from) + cx(to)) / 2;
       ly = above ? yy - 3 : yy + 9;
+    } else if (q.row > p.row && o.enterSide) {
+      // Drop into the lower row, then run horizontally into the target's LEFT or RIGHT edge. The
+      // promote fail lines converge on the promote-side raise-to-HIL from both sides , prepare-pr
+      // enters the left edge, merge the right , so the two arrows don't stack on one face.
+      const endX = o.enterSide === "right" ? q.x + STEP_W + 4 : q.x - 4;
+      d = `M ${cx(from)} ${p.y + STEP_H} V ${cy(to)} H ${endX}`;
+      lx = (cx(from) + endX) / 2;
+      ly = cy(to) - 4;
     } else if (q.row > p.row) {
       const yy = (p.y + STEP_H + q.y) / 2; // drop into the lower row
-      d = `M ${cx(from)} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y - 4}`;
-      lx = (cx(from) + cx(to)) / 2;
-      ly = yy - 3;
+      // The vertical drop leaves the box at `dropFrac` across its bottom edge (default centre). The
+      // build fan-out spreads its drops — regression at 1/3, genuine at 2/3 — so the arrows have
+      // room between them instead of stacking on one centre column.
+      const dropX = p.x + STEP_W * (o.dropFrac ?? 0.5);
+      d = `M ${dropX} ${p.y + STEP_H} V ${yy} H ${cx(to)} V ${q.y - 4}`;
+      lx = (dropX + cx(to)) / 2;
+      // Labels sit above the horizontal run by default; supersession's centred drop sits its label
+      // BELOW so it clears the regression/genuine labels above the fan-out lines.
+      ly = o.labelBelow ? yy + 11 : yy - 3;
     } else {
       const yy = (q.y + STEP_H + p.y) / 2; // rise into the upper row
       d = `M ${cx(from)} ${p.y} V ${yy} H ${cx(to)} V ${q.y + STEP_H + 4}`;
@@ -421,6 +457,9 @@ function LaneSvg({
           <marker id="lg-arrow-branch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-warning)" }} />
           </marker>
+          <marker id="lg-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-good-text)" }} />
+          </marker>
         </defs>
 
         {deploySep ? (
@@ -456,7 +495,33 @@ function LaneSvg({
         ) : null}
 
         {lane.edges.map(([from, to]) => edge(from, to, {}))}
-        {lane.backEdges.map((be) => edge(be[0], be[1], { branch: true, label: be[2] }))}
+        {lane.backEdges.map((be) =>
+          edge(be[0], be[1], {
+            branch: true,
+            label: be[2],
+            // Promote fail lines converge on the promote-side raise-to-HIL: prepare-pr enters its
+            // LEFT edge, merge its RIGHT edge; wait-ci (directly above) drops into the top.
+            enterSide:
+              be[1] === "dp-promote-hil"
+                ? be[0] === "dp-merge"
+                  ? "right"
+                  : be[0] === "dp-pr"
+                    ? "left"
+                    : undefined
+                : undefined,
+            // Spread the build assess→ fan-out: regression drops at 1/3 across the box, genuine at
+            // 2/3, so their down-lines (and arrows) sit apart from supersession's centred drop.
+            dropFrac:
+              be[0] === "b-assess" && be[1] === "b-repair"
+                ? 1 / 3
+                : be[0] === "b-assess" && be[1] === "b-hil"
+                  ? 2 / 3
+                  : undefined,
+            // Supersession's centred drop sits its label BELOW the horizontal fan-out lines so it
+            // doesn't collide with the regression/genuine labels above.
+            labelBelow: be[0] === "b-assess" && be[1] === "b-perm",
+          }),
+        )}
 
         {lane.steps.map((s) => {
           // For the CURRENT step, surface its agent's live turn state: a spinner while the session is

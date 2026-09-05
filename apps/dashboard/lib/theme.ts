@@ -27,6 +27,7 @@ import { ROLES, type Role } from "./types";
 export const surface = {
   page: "#F3F4F6", // app background
   card: "#fff", // cards, chips, buttons
+  panel: "#F8F9FB", // pane BODY — a subtle tint, between page and card (not flush with the board)
   muted: "#FAFAFA", // idle agent bubble
   inset: "#F3F4F6", // progress-bar troughs, not-started steps
   terminal: "#111827", // event ticker — reads as a terminal, intentionally dark
@@ -141,6 +142,7 @@ type Tokens<T> = Record<keyof T, string>;
 export const surfaceDark: Tokens<typeof surface> = {
   page: "#0d0d0d",
   card: "#1a1a19",
+  panel: "#131312", // pane BODY — a subtle lift between page and card (not flush with the board)
   muted: "#222220", // idle agent bubble
   inset: "#222220", // progress troughs, not-started steps
   terminal: "#121110", // event ticker — a touch below card so it still reads as a terminal

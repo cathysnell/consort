@@ -100,6 +100,7 @@ export function EventTicker({
   state,
   onOpenTurn,
   onOpenArtifact,
+  variant = "block",
 }: {
   state: DashboardState;
   // Replay: open a recorded turn (transcript + per-turn snapshot) by ordinal.
@@ -108,6 +109,11 @@ export function EventTicker({
   // replay rows carry a turn ordinal, live rows carry an artifact path — so a row offers at most
   // one affordance and there is no ambiguity about what a click does.
   onOpenArtifact?: (path: string) => void;
+  // "block" (default): the self-contained card the page used to stack inline — a legend above a
+  // capped-height (240px) rounded terminal box. "pane": the log fills a collapsible right-side
+  // pane — no legend, no cap, no radius; the scroll list flexes to the pane's full height (the
+  // reference's `#logpane` model).
+  variant?: "block" | "pane";
 }) {
   const levelColor: Record<string, string> = { debug: "var(--text-faint)", info: "var(--text-muted)", warn: "var(--status-warning-ticker)", error: "var(--status-critical-text)" };
   // Turn ordinals arrive positionally aligned to `recentEvents` (server-side, so the client
@@ -142,32 +148,40 @@ export function EventTicker({
     const el = scrollRef.current;
     if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
   };
+  // The scroll list: a capped rounded card in "block" mode, or a flex-filling, square, un-capped
+  // list that takes the whole pane height in "pane" mode.
+  const listStyle: React.CSSProperties =
+    variant === "pane"
+      ? { flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 10px", background: "transparent", fontFamily: font.mono, fontSize: "0.72rem" }
+      : { background: "var(--surface-card)", border: `1px solid var(--border-default)`, borderRadius: radius.panel, padding: "12px 14px", maxHeight: 240, overflowY: "auto", fontFamily: font.mono, fontSize: "0.72rem" };
   return (
-    <div>
-      {/* A drill-down row must LOOK clickable at rest, not only reward a hover — Kevin lost the
-          `»` affordance in the merge because it was a faint tail span the auto-scroll buried. The
-          `.consort-open` class carries a left accent rail + a hover lift so an openable row reads
-          as a button in a log of inert lines. Interpolating theme tokens keeps it themed. */}
+    <div style={variant === "pane" ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
+      {/* A drill-down (turn-starting / artifact) row must LOOK clickable at rest, not only reward a
+          hover. The `.consort-open` class adds a left accent rail + a subtle inset tint so an
+          openable row reads as a button in a log of inert lines — the reference's `.turnstart`
+          affordance — on the clear (card) surface the log now shares with the other panes. */}
       <style>{`
         .consort-open { border-left: 2px solid var(--status-accent); background: var(--surface-inset); }
-        .consort-open:hover { background: var(--surface-card); }
+        .consort-open:hover { background: var(--surface-muted); }
       `}</style>
       {/* A colour key for the stream: names what the state-transition colours mean plus the 💭
           reasoning marker, so a viewer reads the timeline at a glance (Kevin's legend). Sits above
           the log on the page ground, so its labels use the theme-safe muted token. */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 6, fontSize: "0.64rem", color: "var(--text-muted)" }}>
-        {EVENT_LEGEND.map((k) => (
-          <span key={k.label} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: k.color, flexShrink: 0 }} />
-            {k.label}
+      {variant === "block" ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 6, fontSize: "0.64rem", color: "var(--text-muted)" }}>
+          {EVENT_LEGEND.map((k) => (
+            <span key={k.label} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: k.color, flexShrink: 0 }} />
+              {k.label}
+            </span>
+          ))}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: "0.7rem" }}>💭</span>
+            reasoning
           </span>
-        ))}
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontSize: "0.7rem" }}>💭</span>
-          reasoning
-        </span>
-      </div>
-      <div ref={scrollRef} onScroll={onScroll} style={{ background: "var(--surface-terminal)", borderRadius: radius.panel, padding: "12px 14px", maxHeight: 240, overflowY: "auto", fontFamily: font.mono, fontSize: "0.72rem" }}>
+        </div>
+      ) : null}
+      <div ref={scrollRef} onScroll={onScroll} style={listStyle}>
         {merged.map((row, i) => {
           if (row.kind === "corr") return <CorrRow key={i} c={row.c} onOpenTurn={onOpenTurn} />;
           const { e, turn } = row;
@@ -177,83 +191,136 @@ export function EventTicker({
           const artifactPath = openTurn ? null : onOpenArtifact ? artifactPathOf(e) : null;
           const clickable = openTurn || artifactPath !== null;
           const onClick = openTurn ? () => onOpenTurn!(turn!) : artifactPath !== null ? () => onOpenArtifact!(artifactPath) : undefined;
-          // A `reasoning` event is the agent narrating its own thinking ("established the layer
-          // canon …") — the single most demo-worthy line in the stream, and the thing Kevin's
-          // original surfaced inline. Every other row is a machine event clipped to one column-
-          // aligned line; a reasoning row instead WRAPS (so the whole thought is legible without a
-          // drill-down) and is tied to its agent by the role colour + a 💭 marker. This is the
-          // "you see what's passed back and forth" parity fix.
+          // The event token is bold and coloured by KIND (handoff/gate/deploy/intake/…), matching
+          // the reference's `.ev` + `.k-*`. A warn/error row keeps its LEVEL colour instead, so a
+          // failed deploy/verify or rejected gate stays red/amber (never the green/purple that would
+          // read as success), and a `reasoning` row takes its agent's role colour.
           const isReasoning = e.event === "reasoning";
-          const roleColor = e.role ? colorForRole(e.role) : "var(--text-on-dark-accent)";
-          // Role-tint the marker/columns only on a NON-clickable reasoning row. A clickable row sits
-          // on the light `.consort-open` highlight, where a saturated role hue (e.g. amber dba) is
-          // unreadable in light mode — clickable rows must keep the semantic tokens the affordance
-          // comment below relies on. In practice reasoning events don't begin a turn, so this is a
-          // guard, not a common case.
-          const reasonTint = isReasoning && !clickable;
-          // Categorical colour for a state-transition kind (gate/escalation/deploy·verify), used on
-          // the kind label of a non-clickable, non-reasoning row. Withheld at warn/error level so a
-          // FAILED deploy/verify or a rejected gate keeps its red/amber level colour instead of the
-          // green/purple that would read as success. Clickable rows keep the semantic tokens the
-          // highlight needs; reasoning rows already carry their role colour.
-          const kindAccent = !isReasoning && !clickable && e.level !== "warn" && e.level !== "error" ? eventAccent(e.event) : null;
+          const eventColor = isReasoning
+            ? e.role
+              ? colorForRole(e.role)
+              : "var(--text-body)"
+            : e.level === "warn" || e.level === "error"
+              ? levelColor[e.level] ?? "var(--text-body)"
+              : eventAccent(e.event) ?? "var(--text-body)";
           return (
+            // Reference `.row`: a [time | message] grid. The message column carries the whole line —
+            // #ordinal (blue, on a turn-starting row) · event (bold, kind-coloured) · [role] (muted) ·
+            // message — and wraps (pre-wrap) so nothing is clipped. Openable rows get the accent rail
+            // + pointer via `.consort-open`.
             <div
               key={i}
               onClick={onClick}
               className={clickable ? "consort-open" : undefined}
-              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : isReasoning ? e.message : undefined}
+              title={openTurn ? `Open turn ${turn} — transcript and produced files` : artifactPath !== null ? `Open ${artifactPath} — content at HEAD` : undefined}
               style={{
-                display: "flex",
-                gap: 10,
-                // A wrapping reasoning row aligns its columns to the first line, not centre.
-                alignItems: isReasoning ? "flex-start" : "center",
-                // Clickable rows carry the accent rail (via the class), so pull their padding in by
-                // the 2px border to keep every row's text on the same left edge.
-                padding: clickable ? "2px 0 2px 4px" : "2px 0 2px 6px",
-                color: "var(--border-default)",
-                // Reasoning wraps to full text; all other rows stay single-line.
-                whiteSpace: isReasoning ? "normal" : "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                display: "grid",
+                gridTemplateColumns: "54px 1fr",
+                gap: 8,
+                // Clickable rows carry the 2px accent rail (via the class); pull their left padding
+                // in by 2px so every row's text stays on the same left edge.
+                padding: clickable ? "3px 4px" : "3px 4px 3px 6px",
                 cursor: clickable ? "pointer" : undefined,
               }}
             >
-              {/* A fixed-width left gutter carrying a bold `»` on openable rows (blank otherwise, so
-                  columns stay aligned). This is the marker Kevin remembers — leading the row, not a
-                  faint trailing span, so it survives the auto-scroll and reads at a glance. A
-                  reasoning row shows 💭 in its agent's colour instead. */}
-              {/* A clickable row carries the `surface.inset` highlight (via .consort-open), so its
-                  text must switch to the SEMANTIC tokens — the always-light onDark* colors used on
-                  the dark-terminal rows are unreadable on that highlight in light mode (light-on-
-                  white). Using strong/body/muted (not hardcoded black) makes it correct in both
-                  palettes: light row + dark text in light mode, dark row + light text in dark. */}
-              {/* Gutter is a fixed 16px so an emoji (wider than the `»` it replaces) fits without
-                  pushing the timestamp column out of alignment; `»` wins over 💭 on a clickable row
-                  so the at-rest click affordance is never lost. */}
-              <span style={{ width: 16, flexShrink: 0, textAlign: "center", overflow: "hidden", lineHeight: 1, color: clickable ? "var(--status-accent)" : reasonTint ? roleColor : "transparent", fontWeight: 800, fontSize: isReasoning ? "0.7rem" : undefined }}>{clickable ? "»" : isReasoning ? "💭" : ""}</span>
-              <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{e.timestamp.slice(11, 19)}</span>
-              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-muted)" : kindAccent ?? levelColor[e.level] ?? "var(--text-muted)", fontWeight: kindAccent ? 700 : undefined, width: 42, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{e.event.split(".")[0]}</span>
-              <span style={{ color: reasonTint ? roleColor : clickable ? "var(--text-body)" : "var(--text-on-dark-accent)", width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{e.role}</span>
-              {/* Reasoning text is italic (it reads as narration, not a status line) and never
-                  clipped — the whole thought stays on screen. */}
-              <span
-                style={
-                  isReasoning
-                    ? { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-accent)", fontStyle: "italic", flex: 1, whiteSpace: "normal", wordBreak: "break-word" }
-                    : { color: clickable ? "var(--text-strong)" : "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }
-                }
-              >
-                {e.message}
+              {/* Time column (reference `.t`): muted, tabular figures. */}
+              <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{e.timestamp.slice(11, 19)}</span>
+              {/* Message column (reference `.m`): #ord · event · [role] · message, wrapping. */}
+              <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {openTurn ? <span style={{ color: "var(--status-accent)", fontWeight: 700 }}>#{turn} </span> : null}
+                <span style={{ fontWeight: 700, color: eventColor }}>{e.event}</span>{" "}
+                <span style={{ color: "var(--text-muted)" }}>[{e.role ?? "?"}]</span>{" "}
+                <span style={{ color: "var(--text-body)" }}>{e.message}</span>
               </span>
-              {/* The trailing label names the action (open …), accent-coloured so it reads as the
-                  button it is rather than metadata. Only rows that begin a recorded turn / name an
-                  artifact are openable, so the affordance marks exactly where the drill-down is. */}
-              {openTurn ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open turn {turn} ›</span> : null}
-              {artifactPath !== null ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", fontWeight: 700, paddingLeft: 8, whiteSpace: "nowrap" }}>open file ›</span> : null}
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// The event log as a COLLAPSIBLE RIGHT-SIDE PANE (the reference's `#logpane`), not an overlay: it's
+// a flex sibling of the main column, so expanding it makes the board share horizontal space rather
+// than covering it. It matches the board column's height exactly — the flex row's
+// `align-items:stretch` stretches it to the main column, so it ends level with the last section on
+// the left (no viewport floor overshooting past it) — and its list scrolls internally (a scrollbar)
+// when the log is longer than that. Collapsed, it shrinks to a thin rail with a vertical label +
+// expand button, handing the width back to the board.
+const LOG_PANE_WIDTH = 380;
+export function LogPane({
+  state,
+  open,
+  onToggle,
+  onOpenTurn,
+  onOpenArtifact,
+}: {
+  state: DashboardState;
+  open: boolean;
+  onToggle: () => void;
+  onOpenTurn?: (ord: number) => void;
+  onOpenArtifact?: (path: string) => void;
+}) {
+  // The pane's OUTER box: it stretches to the board column's height (row `align-items:stretch`) and
+  // stops there. `position:relative` + an absolutely-filled inner column is what keeps it honest —
+  // the inner content (a 277-row log) is taken out of flow, so it can NEVER drive the row taller
+  // than the board (the bug where the log extended the page below the last left section). The inner
+  // list then scrolls within the fixed box.
+  const frame: React.CSSProperties = {
+    flex: "none",
+    alignSelf: "stretch",
+    position: "relative",
+    // Body carries a SUBTLE tint (surface-panel) — off the board background, but far less lifted
+    // than the card-surface header band (see headBand), so it doesn't read as a raised card.
+    background: "var(--surface-panel)",
+    border: `1px solid var(--border-default)`,
+    borderRadius: radius.panel,
+    overflow: "hidden",
+    marginLeft: 16,
+  };
+  const fill: React.CSSProperties = { position: "absolute", inset: 0, display: "flex", flexDirection: "column" };
+  const toggleBtn: React.CSSProperties = {
+    background: "none",
+    border: `1px solid var(--border-default)`,
+    borderRadius: radius.chip,
+    color: "var(--text-muted)",
+    cursor: "pointer",
+    width: 24,
+    height: 24,
+    lineHeight: 1,
+    fontSize: "0.8rem",
+  };
+  // The header is the pane's TINTED top band (surface-muted); the content below it stays clear
+  // (the card surface), consistent with the other panes.
+  const headBand: React.CSSProperties = { background: "var(--surface-card)", borderBottom: `1px solid var(--border-default)`, flex: "none" };
+  if (!open) {
+    // Collapsed rail: a slim always-visible strip so the log is one click away and the board gets
+    // the width back. The vertical "EVENT LOG" label reads top-to-bottom.
+    return (
+      <div style={{ ...frame, width: 34 }}>
+        <div style={{ ...fill, alignItems: "center", padding: "8px 0" }}>
+          <button onClick={onToggle} title="Show the event log" aria-label="Show the event log" style={toggleBtn}>
+            ‹
+          </button>
+          <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", marginTop: 12, fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 700 }}>
+            Event log
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...frame, width: LOG_PANE_WIDTH }}>
+      <div style={fill}>
+        <div style={{ ...headBand, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px" }}>
+          <span style={{ fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--text-muted)", fontWeight: 700 }}>
+            Event log · {state.eventCount}
+          </span>
+          <button onClick={onToggle} title="Collapse the event log" aria-label="Collapse the event log" style={toggleBtn}>
+            ›
+          </button>
+        </div>
+        <EventTicker state={state} onOpenTurn={onOpenTurn} onOpenArtifact={onOpenArtifact} variant="pane" />
       </div>
     </div>
   );
@@ -335,9 +402,10 @@ export function FidelityBanner({ source }: { source: DashboardState["source"] })
   );
 }
 
-/** How many merged rows the ticker keeps in view. Larger than the 40-event tail because two
- *  interleaved streams share the window. */
-const MERGED_TAIL = 60;
+/** How many merged rows the ticker keeps in view. `Infinity` = no cap: with the fold now shipping
+ *  the full event stream up to the playhead (RECENT_EVENT_TAIL), the pane renders every merged
+ *  event + correspondence row, not a trailing window. */
+const MERGED_TAIL = Number.POSITIVE_INFINITY;
 
 type CorrItem = NonNullable<NonNullable<DashboardState["source"]>["correspondence"]>["recent"][number];
 type MergedRow =
@@ -358,7 +426,7 @@ function CorrRow({ c, onOpenTurn }: { c: CorrItem; onOpenTurn?: (ord: number) =>
   // aligned with the event rows; the full direction is in the row title.
   const arrow = c.direction === "hil-to-orch" ? "you→" : c.direction === "orch-to-hil" ? "→you" : c.direction;
   const badge = c.outcome === "approved" ? "✓ approved" : c.outcome === "validated" ? "✓ done" : null;
-  const badgeColor = c.outcome === "approved" ? "var(--status-good)" : "var(--text-on-dark-muted)";
+  const badgeColor = c.outcome === "approved" ? "var(--status-good)" : "var(--text-muted)";
   return (
     <div
       onClick={openTurn ? () => onOpenTurn!(c.ordinal!) : undefined}
@@ -380,10 +448,10 @@ function CorrRow({ c, onOpenTurn }: { c: CorrItem; onOpenTurn?: (ord: number) =>
       <span style={{ color: "var(--text-muted)" }}>{c.at.slice(11, 19)}</span>
       {/* the "lane" column slot, reused to carry the direction glyph so columns align with events */}
       <span style={{ color: "var(--status-gate)", width: 42, overflow: "hidden", textOverflow: "ellipsis" }} title={arrow}>{arrow}</span>
-      <span style={{ color: "var(--text-on-dark-accent)", width: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{c.kind ?? "message"}</span>
-      <span style={{ color: "var(--text-on-dark-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{c.text}</span>
+      <span style={{ color: "var(--text-body)", width: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{c.kind ?? "message"}</span>
+      <span style={{ color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{c.text}</span>
       {badge ? <span style={{ marginLeft: "auto", color: badgeColor, paddingLeft: 8 }}>{badge}</span> : null}
-      {openTurn && !badge ? <span style={{ marginLeft: "auto", color: "var(--text-on-dark-accent)", paddingLeft: 8 }}>turn {c.ordinal} ›</span> : null}
+      {openTurn && !badge ? <span style={{ marginLeft: "auto", color: "var(--status-accent)", paddingLeft: 8 }}>turn {c.ordinal} ›</span> : null}
     </div>
   );
 }

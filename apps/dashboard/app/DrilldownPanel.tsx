@@ -101,15 +101,17 @@ export function DrilldownPanel({
 // event tail). Opens the panel anyway , the shell + an honest empty body , so a bubble is never a
 // dead click. Once the role takes a turn WITH recording on, the bubble opens the full turn instead.
 function RoleBody({ role, onClose }: { role: string; onClose: () => void }) {
-  const header = (
-    <>
-      <span style={HEAD_LABEL}>ROLE</span>
-      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-strong)" }}>{role}</span>
-    </>
-  );
+  // Same chrome as a loaded turn: "#— <role>" title and the three tabs. A role with no recorded
+  // turn has nothing to fill the meta line or the Artifacts/Code panes, so those tabs are inert and
+  // the meta is omitted — but the header + tab structure reads identically to a loaded turn.
   return (
-    <PanelShell accent={colorForRole(role)} header={header} onClose={onClose}>
-      <div style={{ fontSize: "0.78rem", color: "var(--text-faint)", lineHeight: 1.55 }}>
+    <PanelShell accent={colorForRole(role)} title={turnTitle(null, role)} onClose={onClose} bodyScroll={false}>
+      <TabRow>
+        <TabButton active onClick={() => {}}>Correspondence</TabButton>
+        <TabButton active={false} onClick={() => {}} disabled>Artifacts</TabButton>
+        <TabButton active={false} onClick={() => {}} disabled>Code</TabButton>
+      </TabRow>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-faint)", lineHeight: 1.55 }}>
         Nothing recorded for <strong style={{ color: "var(--text-muted)" }}>{role}</strong> yet.
         <div style={{ marginTop: 8 }}>
           Its transcript (prompt · tools · reasoning), the artifacts it produced, and the code it wrote
@@ -122,47 +124,108 @@ function RoleBody({ role, onClose }: { role: string; onClose: () => void }) {
 
 // --- shared shell + primitives ---------------------------------------------------------------
 
-// The card + left accent rail + a header row (caller-supplied content, left of an always-present
-// close button) + a padded body. One shell for every kind, so the surface is visually one thing.
+// The panel's INNER chrome (the sliding fixed container is the page's drawer): a header row — a
+// role-coloured badge square, then a stacked title + meta line, then an always-present close button
+// — over the body, which fills the remaining height. One shell for every kind, so the surface is
+// visually one thing. Matches the reference dashboard's `.phead` (badge + `.ttl` + `.meta`) + `.pbody`.
 function PanelShell({
   accent,
-  header,
+  title,
+  meta,
   onClose,
   children,
+  // Single-pane bodies (role / artifact / step) want the body to scroll and pad itself. The turn
+  // body manages its own full-width tabs + full-height panes, so it opts out and lays out the body.
+  bodyScroll = true,
 }: {
   accent: string;
-  header: React.ReactNode;
+  title: React.ReactNode;
+  meta?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
+  bodyScroll?: boolean;
 }) {
   return (
-    <div
-      style={{
-        background: "var(--surface-card)",
-        border: `1px solid var(--border-default)`,
-        borderLeft: `3px solid ${accent}`,
-        borderRadius: radius.panel,
-        marginTop: 12,
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderBottom: `1px solid var(--border-default)` }}>
-        {header}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, background: "var(--surface-panel)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "14px 16px", borderBottom: `1px solid var(--border-default)`, background: "var(--surface-card)", flex: "none" }}>
+        <span aria-hidden style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: accent, marginTop: 5, flex: "none" }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-strong)", fontFamily: font.sans, wordBreak: "break-word" }}>{title}</div>
+          {meta ? <div style={{ fontSize: 11.5, color: "var(--text-muted)", fontFamily: font.sans, marginTop: 3, lineHeight: 1.55 }}>{meta}</div> : null}
+        </div>
         <button
           onClick={onClose}
           aria-label="Close drill-down panel"
-          style={{ marginLeft: "auto", background: "none", border: `1px solid var(--border-default)`, borderRadius: radius.chip, color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem", lineHeight: 1, padding: "3px 7px", font: "inherit" }}
+          style={{ flex: "none", background: "none", border: `1px solid var(--border-default)`, borderRadius: radius.chip, color: "var(--text-muted)", cursor: "pointer", fontFamily: font.sans, fontSize: 16, lineHeight: 1, width: 30, height: 30 }}
         >
           ✕
         </button>
       </div>
-      <div style={{ padding: "10px 13px 13px" }}>{children}</div>
+      {bodyScroll ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px" }}>{children}</div>
+      ) : (
+        <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>{children}</div>
+      )}
     </div>
   );
 }
 
-const HEAD_LABEL: React.CSSProperties = { fontSize: "0.68rem", fontWeight: 700, color: "var(--text-faint)", letterSpacing: "0.05em" };
-const CHIP: React.CSSProperties = { fontSize: "0.68rem", color: "var(--text-muted)", background: "var(--surface-inset)", border: `1px solid var(--border-default)`, borderRadius: radius.chip, padding: "1px 6px" };
+// The meta line's inline separator/token styling, reused across the bodies so every panel's meta
+// row reads the same. A leading eyebrow label (TURN 16 / ARTIFACT / STEP OUTPUTS / ROLE) then dot-
+// separated tokens.
+function MetaChips({ items }: { items: React.ReactNode[] }) {
+  const kept = items.filter((x) => x !== null && x !== undefined && x !== false && x !== "");
+  return <MetaSlots slots={kept} />;
+}
+
+// A dot-separated meta line. Unlike MetaChips it renders EVERY slot it's given (the caller has
+// already substituted an em-dash for a blank), so the turn/role header keeps a fixed shape whether
+// the turn is loaded, still loading, or has never run.
+function MetaSlots({ slots }: { slots: React.ReactNode[] }) {
+  return (
+    <>
+      {slots.map((x, i) => (
+        <span key={i}>
+          {i > 0 ? <span style={{ color: "var(--border-strong)", margin: "0 6px" }}>·</span> : null}
+          {x}
+        </span>
+      ))}
+    </>
+  );
+}
+
+// The turn/role panel's always-present tab row. `disabled` (a role with no recorded turn) renders
+// the three tabs as inert placeholders so the chrome is identical to a loaded turn's.
+function TabRow({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "flex", gap: 2, padding: "6px 12px 0", borderBottom: `1px solid var(--border-default)`, flex: "none" }}>{children}</div>;
+}
+
+// "#<ordinal> <role>" title, the ordinal muted and zero-padded to two digits (#02) like the
+// reference; a role with no turn passes ord=null → "#— <role>".
+function turnTitle(ord: number | null, roleText: string): React.ReactNode {
+  const ordStr = ord === null ? "—" : String(ord).padStart(2, "0");
+  return (
+    <>
+      <span style={{ color: "var(--text-faint)", fontWeight: 600 }}>#{ordStr}</span> {roleText}
+    </>
+  );
+}
+
+// The turn header's meta fields, in order: mode (or the step kind), the work item (story, then the
+// ac if present), the model, and the tool count — each INCLUDED ONLY WHEN PRESENT (like the
+// reference). A dispatch/gate turn with only a mode renders just "author-requests"; a fully-recorded
+// turn renders all four, e.g. "review · S3-sku-detail-view · sonnet · 11 tools". Pure + exported so
+// the exact format is unit-tested rather than only visible behind a live fetch.
+export function turnMetaFields(turn: TurnPayload | null): string[] {
+  if (!turn) return [];
+  const workItem = [turn.story, turn.ac].filter(Boolean).join(" · ");
+  const toolCount = turn.transcript?.tools.length ?? turn.transcriptSummary?.toolCount ?? null;
+  return [turn.mode || turn.kind || "", workItem, turn.transcriptSummary?.model || "", toolCount != null ? `${toolCount} tools` : ""].filter((x) => x !== "");
+}
+
+// The meta-line eyebrow (TURN 16 / ARTIFACT / STEP OUTPUTS / ROLE): a small bold uppercase-weight
+// token that leads the meta line, distinguishing the panel's KIND from its title.
+const HEAD_LABEL: React.CSSProperties = { fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.05em" };
 
 // A file/asset row: a code/artifact (or deleted) badge + a path, optionally with a trailing muted
 // sub-path. Clickable when `onSelect` is given (a deleted file has no content to open, so it
@@ -337,11 +400,10 @@ function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay"
         }
         const t = body as TurnPayload;
         setTurn(t);
-        // Land on whichever tab has something: a gate turn has no transcript, several produce
-        // nothing. Opening on an empty pane reads as broken.
-        const artCount = t.produced.filter((p) => p.kind === "artifact").length + t.deleted.filter((d) => !isCodePath(d)).length;
-        const codeCount = t.produced.filter((p) => p.kind === "code").length + t.deleted.filter((d) => isCodePath(d)).length;
-        setTab(t.transcript ? "correspondence" : artCount > 0 ? "artifacts" : codeCount > 0 ? "code" : "correspondence");
+        // Always land on Correspondence (like the reference's showTab("corr")); the tabs stay
+        // clickable, so a no-transcript turn shows its "no transcript" note and you click over to
+        // Artifacts / Code from there.
+        setTab("correspondence");
       } catch (e) {
         if (live) setError(e instanceof Error ? e.message : String(e));
       }
@@ -375,108 +437,93 @@ function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay"
 
   const roleColor = turn?.role ? colorForRole(turn.role) : "var(--border-strong)";
 
-  const header = (
+  // Header: "#<ordinal> <role>" title, then a meta line of "<mode> · <story> · <model> · <N tools>"
+  // where each field is APPENDED ONLY WHEN PRESENT (like the reference) — a dispatch/gate turn with
+  // only a mode shows just the mode, no empty separators. The tabs + panes below are the always-
+  // present structure that keeps the panel's shape stable across turns.
+  const roleText = turn?.role ?? turn?.label ?? (error ? "unavailable" : "loading…");
+  const title = turnTitle(ord, roleText);
+  const meta = <MetaChips items={turnMetaFields(turn)} />;
+
+  // File buckets for the two split panes, null-safe so the tabs + their counts render even before
+  // the turn loads. `produced` carries a kind; deleted files are bucketed by extension.
+  const artifacts = turn?.produced.filter((p) => p.kind === "artifact") ?? [];
+  const codeFiles = turn?.produced.filter((p) => p.kind === "code") ?? [];
+  const delArts = turn?.deleted.filter((d) => !isCodePath(d)) ?? [];
+  const delCode = turn?.deleted.filter((d) => isCodePath(d)) ?? [];
+  const artCount = artifacts.length + delArts.length;
+  const codeCount = codeFiles.length + delCode.length;
+  const codeRows = buildFileTree(codeFiles.map((p) => p.path));
+  const selectFile = (p: string) => setSelected(p === selected ? null : p);
+  // One viewer serves both split panes: a path header + the existing per-file content view.
+  const viewer = (
     <>
-      <span style={HEAD_LABEL}>TURN {ord}</span>
-      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-strong)" }}>{turn?.role ?? turn?.label ?? (error ? "—" : "loading…")}</span>
-      {/* mode/story are alternatives (most turns carry one), ac narrows a story turn further. */}
-      {[turn?.mode, turn?.story, turn?.ac].filter(Boolean).map((chip) => (
-        <span key={chip as string} style={CHIP}>
-          {chip}
-        </span>
-      ))}
-      {turn && turn.kind !== "invoke-role" ? (
-        <span title="A workflow step, not a role invocation — so it has no transcript." style={{ fontSize: "0.66rem", color: "var(--text-faint)" }}>
-          {turn.kind}
-        </span>
+      {selected ? (
+        <div style={{ fontFamily: font.mono, fontSize: "0.64rem", color: "var(--text-faint)", marginBottom: 6, paddingBottom: 5, borderBottom: `1px solid var(--border-default)`, wordBreak: "break-all" }}>{selected}</div>
       ) : null}
-      {turn?.transcriptSummary?.model ? <span style={{ fontSize: "0.66rem", color: "var(--text-faint)" }}>· {turn.transcriptSummary.model}</span> : null}
+      <ContentView file={selected === null ? undefined : file} idle="Select a file to view its snapshot." loadingName={selected} />
     </>
   );
 
   return (
-    <PanelShell accent={roleColor} header={header} onClose={onClose}>
-      {error ? (
-        <div style={{ fontSize: "0.78rem", color: "var(--status-critical-text)" }}>{error}</div>
-      ) : !turn ? (
-        <div style={{ fontSize: "0.78rem", color: "var(--text-faint)" }}>Loading turn {ord}…</div>
-      ) : (
-        <>
-          {(() => {
-            // Split the turn's files into the two panes: artifacts vs code. `produced` carries a
-            // kind; deleted files are bucketed by extension. Correspondence is the transcript.
-            const artifacts = turn.produced.filter((p) => p.kind === "artifact");
-            const codeFiles = turn.produced.filter((p) => p.kind === "code");
-            const delArts = turn.deleted.filter((d) => !isCodePath(d));
-            const delCode = turn.deleted.filter((d) => isCodePath(d));
-            const artCount = artifacts.length + delArts.length;
-            const codeCount = codeFiles.length + delCode.length;
-            const codeRows = buildFileTree(codeFiles.map((p) => p.path));
-            const selectFile = (p: string) => setSelected(p === selected ? null : p);
-            // One viewer serves both split panes: a path header + the existing per-file content view.
-            const viewer = (
-              <>
-                {selected ? (
-                  <div style={{ fontFamily: font.mono, fontSize: "0.64rem", color: "var(--text-faint)", marginBottom: 6, paddingBottom: 5, borderBottom: `1px solid var(--border-default)`, wordBreak: "break-all" }}>{selected}</div>
-                ) : null}
-                <ContentView file={selected === null ? undefined : file} idle="Select a file to view its snapshot." loadingName={selected} />
-              </>
-            );
-            return (
-              <>
-                <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
-                  <TabButton active={tab === "correspondence"} onClick={() => setTab("correspondence")} disabled={!turn.transcript}>
-                    Correspondence
-                  </TabButton>
-                  <TabButton active={tab === "artifacts"} onClick={() => { setTab("artifacts"); setSelected(null); }} disabled={artCount === 0}>
-                    Artifacts{artCount > 0 ? ` (${artCount})` : ""}
-                  </TabButton>
-                  <TabButton active={tab === "code"} onClick={() => { setTab("code"); setSelected(null); }} disabled={codeCount === 0}>
-                    Code{codeCount > 0 ? ` (${codeCount})` : ""}
-                  </TabButton>
-                </div>
+    <PanelShell accent={roleColor} title={title} meta={meta} onClose={onClose} bodyScroll={false}>
+      {/* All three tabs stay clickable (like the reference) — an empty tab shows an empty pane
+          rather than being disabled — so the panel always lands on Correspondence and you can click
+          across to Artifacts / Code even when a turn has no transcript. */}
+      <TabRow>
+        <TabButton active={tab === "correspondence"} onClick={() => setTab("correspondence")}>
+          Correspondence
+        </TabButton>
+        <TabButton active={tab === "artifacts"} onClick={() => { setTab("artifacts"); setSelected(null); }}>
+          Artifacts{artCount > 0 ? ` (${artCount})` : ""}
+        </TabButton>
+        <TabButton active={tab === "code"} onClick={() => { setTab("code"); setSelected(null); }}>
+          Code{codeCount > 0 ? ` (${codeCount})` : ""}
+        </TabButton>
+      </TabRow>
 
-                {tab === "correspondence" ? (
-                  <TranscriptView turn={turn} />
-                ) : tab === "artifacts" ? (
-                  <SplitPane
-                    list={
-                      artCount === 0 ? (
-                        <Empty>No artifacts this turn.</Empty>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                          {artifacts.map((p) => (
-                            <FileRow key={p.path} badge="ARTIFACT" badgeColor="var(--text-faint)" label={p.path} selected={p.path === selected} onSelect={() => selectFile(p.path)} />
-                          ))}
-                          {delArts.map((d) => (
-                            <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
-                          ))}
-                        </div>
-                      )
-                    }
-                    viewer={viewer}
-                  />
-                ) : (
-                  <SplitPane
-                    list={
-                      codeCount === 0 ? (
-                        <Empty>No code this turn.</Empty>
-                      ) : (
-                        <>
-                          <CodeTree rows={codeRows} selected={selected} onSelect={selectFile} />
-                          {delCode.map((d) => (
-                            <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
-                          ))}
-                        </>
-                      )
-                    }
-                    viewer={viewer}
-                  />
-                )}
+      {error ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--status-critical-text)" }}>{error}</div>
+      ) : !turn ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-faint)" }}>Loading turn {ord}…</div>
+      ) : tab === "correspondence" ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px" }}>
+          <TranscriptView turn={turn} />
+        </div>
+      ) : tab === "artifacts" ? (
+        <SplitPane
+          list={
+            artCount === 0 ? (
+              <Empty>No artifacts this turn.</Empty>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {artifacts.map((p) => (
+                  <FileRow key={p.path} badge="ARTIFACT" badgeColor="var(--text-faint)" label={p.path} selected={p.path === selected} onSelect={() => selectFile(p.path)} />
+                ))}
+                {delArts.map((d) => (
+                  <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
+                ))}
+              </div>
+            )
+          }
+          viewer={viewer}
+        />
+      ) : (
+        <SplitPane
+          list={
+            codeCount === 0 ? (
+              <Empty>No code this turn.</Empty>
+            ) : (
+              <>
+                <CodeTree rows={codeRows} selected={selected} onSelect={selectFile} />
+                {delCode.map((d) => (
+                  <FileRow key={d} badge="DELETED" badgeColor="var(--status-critical-text)" label={d} strike />
+                ))}
               </>
-            );
-          })()}
-        </>
+            )
+          }
+          viewer={viewer}
+        />
       )}
     </PanelShell>
   );
@@ -488,15 +535,18 @@ function TabButton({ active, onClick, disabled, children }: { active: boolean; o
       onClick={onClick}
       disabled={disabled}
       style={{
-        fontSize: "0.72rem",
-        fontWeight: 700,
+        fontSize: 12.5,
+        fontFamily: font.sans,
+        fontWeight: 600,
         color: disabled ? "var(--border-strong)" : active ? "var(--text-strong)" : "var(--text-muted)",
         background: "none",
         border: "none",
+        // Sits ON the tabs-row bottom border, so pull it down 1px to overlap and read as the
+        // reference's active-tab underline rather than a second line above the divider.
         borderBottom: `2px solid ${active && !disabled ? "var(--status-accent)" : "transparent"}`,
-        padding: "5px 9px",
+        marginBottom: -1,
+        padding: "7px 14px",
         cursor: disabled ? "default" : "pointer",
-        font: "inherit",
       }}
     >
       {children}
@@ -504,13 +554,14 @@ function TabButton({ active, onClick, disabled, children }: { active: boolean; o
   );
 }
 
-// Master-detail split: a scrolling list/tree on the left, the selected file's content on the right —
-// the template's `.pane.split` (230px + flexible viewer), in the app's tokens.
+// Master-detail split that FILLS the panel body: a scrolling file list/tree on the left (230px), the
+// selected file's content on the right — the reference's full-height `.pane.split.show` (230px 1fr),
+// in the app's tokens. Each side scrolls independently; the split itself takes all remaining height.
 function SplitPane({ list, viewer }: { list: React.ReactNode; viewer: React.ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(140px, 230px) 1fr", border: `1px solid var(--border-default)`, borderRadius: 5, overflow: "hidden", minHeight: 220 }}>
-      <div style={{ borderRight: `1px solid var(--border-default)`, background: "var(--surface-muted)", overflowY: "auto", maxHeight: 460, padding: "6px 0" }}>{list}</div>
-      <div style={{ overflow: "auto", maxHeight: 460, padding: "8px 10px" }}>{viewer}</div>
+    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(140px, 230px) 1fr", overflow: "hidden" }}>
+      <div style={{ borderRight: `1px solid var(--border-default)`, overflowY: "auto", padding: "8px 0" }}>{list}</div>
+      <div style={{ overflowY: "auto", padding: "12px 14px" }}>{viewer}</div>
     </div>
   );
 }
@@ -562,11 +613,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 export function TranscriptView({ turn }: { turn: TurnPayload }) {
   if (!turn.transcript) {
-    return (
-      <div style={{ fontSize: "0.76rem", color: "var(--text-faint)" }}>
-        {turn.kind === "invoke-role" ? "This turn recorded no transcript." : `A ${turn.kind} step — the orchestrator's own action, so there is no agent transcript.`}
-      </div>
-    );
+    return <div style={{ fontSize: "0.76rem", color: "var(--text-faint)" }}>No transcript recorded for this turn (gate / dispatch / orchestrator step).</div>;
   }
   const { prompt, tools, reasoning } = turn.transcript;
   // Frame the turn as the EXCHANGE Kevin's original made obvious: an inbound prompt sent TO the
@@ -637,26 +684,27 @@ function ArtifactBody({ path, mode, onClose }: { path: string; mode: "live" | "r
     };
   }, [path, mode]);
 
-  const header = (
-    <>
-      <span style={HEAD_LABEL}>ARTIFACT</span>
-      <span title={path} style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-strong)", fontFamily: font.mono, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {path}
-      </span>
-      {artifact ? <span style={{ fontSize: "0.66rem", color: "var(--text-faint)" }}>{artifact.kind}</span> : null}
-      {/* The honesty label: this is HEAD, and there is no transcript here. Said up front, so a
-          viewer never mistakes a live artifact view for replay's per-turn snapshot. */}
-      <span
-        title="A live project has no per-turn corpus. This is the file as it is at the project's current HEAD, not a snapshot of the turn that wrote it — and there is no transcript. Both are replay-only."
-        style={{ fontSize: "0.64rem", color: "var(--text-muted)", background: "var(--surface-inset)", border: `1px solid var(--border-default)`, borderRadius: radius.chip, padding: "1px 7px" }}
-      >
-        content at HEAD · transcripts are replay-only
-      </span>
-    </>
+  const title = (
+    <span title={path} style={{ fontFamily: font.mono, wordBreak: "break-all" }}>
+      {path}
+    </span>
+  );
+  const meta = (
+    <MetaChips
+      items={[
+        <span style={HEAD_LABEL}>ARTIFACT</span>,
+        artifact?.kind,
+        // The honesty label: this is HEAD, and there is no transcript here. Said up front, so a
+        // viewer never mistakes a live artifact view for replay's per-turn snapshot.
+        <span title="A live project has no per-turn corpus. This is the file as it is at the project's current HEAD, not a snapshot of the turn that wrote it — and there is no transcript. Both are replay-only.">
+          content at HEAD · transcripts are replay-only
+        </span>,
+      ]}
+    />
   );
 
   return (
-    <PanelShell accent={"var(--status-accent)"} header={header} onClose={onClose}>
+    <PanelShell accent={"var(--status-accent)"} title={title} meta={meta} onClose={onClose}>
       {error ? (
         <div style={{ fontSize: "0.78rem", color: "var(--status-critical-text)" }}>{error}</div>
       ) : !artifact ? (
@@ -732,16 +780,10 @@ function StepBody({ node, feature, mode, onClose }: { node: string; feature: str
 
   const assets: StepOutputAsset[] = outputs?.assets ?? [];
 
-  const header = (
-    <>
-      <span style={HEAD_LABEL}>STEP OUTPUTS</span>
-      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-strong)" }}>{label}</span>
-      {outputs?.feature ? <span style={CHIP}>{outputs.feature}</span> : null}
-    </>
-  );
+  const meta = <MetaChips items={[<span style={HEAD_LABEL}>STEP OUTPUTS</span>, outputs?.feature]} />;
 
   return (
-    <PanelShell accent={"var(--status-accent)"} header={header} onClose={onClose}>
+    <PanelShell accent={"var(--status-accent)"} title={label} meta={meta} onClose={onClose}>
       {error ? (
         <div style={{ fontSize: "0.78rem", color: "var(--status-critical-text)" }}>{error}</div>
       ) : !outputs ? (

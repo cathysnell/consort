@@ -22,7 +22,7 @@ import { AgentBubble } from "./AgentBubble";
 import { WorkflowGraph } from "./WorkflowGraph";
 import { Transport } from "./Transport";
 import { LaneGraph } from "./LaneGraph";
-import { DrilldownPanel, TranscriptView, turnUrl, type TurnPayload } from "./DrilldownPanel";
+import { DrilldownPanel, TranscriptView, turnMetaFields, turnUrl, type TurnPayload } from "./DrilldownPanel";
 import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-parts";
 import type { DashboardState } from "@/lib/types";
 
@@ -425,9 +425,10 @@ describe("render — EventTicker turn affordance", () => {
       correlation: health({ recentTurns: state.recentEvents.map((_, i) => (i === 1 ? 7 : null)) }),
     });
     const markup = renderToStaticMarkup(<EventTicker state={s} onOpenTurn={() => {}} />);
-    expect((markup.match(/turn 7 ›/g) ?? []).length).toBe(1);
+    // A turn-starting row leads with a blue "#<ord>" prefix (the reference's `.tnum`).
+    expect(markup).toContain(">#7 </span>");
     // ...and no other row claims a turn.
-    expect((markup.match(/turn \d+ ›/g) ?? []).length).toBe(1);
+    expect((markup.match(/>#\d+ <\/span>/g) ?? []).length).toBe(1);
   });
 
   it("shows no affordance when the source cannot drill down", () => {
@@ -441,26 +442,23 @@ describe("render — EventTicker turn affordance", () => {
     // Belt and braces: the capability gate lives in page.tsx, so the ticker must not render an
     // affordance it cannot honour.
     const s = withSource({ correlation: health({ recentTurns: state.recentEvents.map(() => 3) }) });
-    expect(renderToStaticMarkup(<EventTicker state={s} />)).not.toContain("turn 3 ›");
+    expect(renderToStaticMarkup(<EventTicker state={s} />)).not.toContain(">#3 </span>");
   });
 
   // Kevin's parity ask: the agent's own reasoning must be visible in the stream, not buried in a
-  // drill-down. A reasoning event renders distinctly — a 💭 marker and italic narration that
-  // WRAPS instead of ellipsis-clipping — so the "what's passed back and forth" reads at a glance.
-  it("renders reasoning events distinctly (💭 marker, italic, wrapping)", () => {
+  // drill-down. In the reference row format every message WRAPS (pre-wrap) instead of ellipsis-
+  // clipping, so a reasoning event's full narration reads at a glance like any other row.
+  it("renders a reasoning event's full narration inline, wrapping rather than clipping", () => {
     // EventTicker renders only the last MERGED_TAIL (60) rows of the merged events+correspondence
-    // stream. Pin the two premises that make the 💭 count exact for THIS fixture — no correspondence
-    // and ≤ 60 events, so every reasoning event is actually rendered — rather than silently counting
-    // events the component never drew.
+    // stream. Pin the premises that make this exact for THIS fixture — no correspondence and ≤ 60
+    // events — so the reasoning event is actually drawn.
     expect(state.source?.correspondence?.recent?.length ?? 0).toBe(0);
     expect(state.recentEvents.length).toBeLessThanOrEqual(60);
     const reasoningCount = state.recentEvents.filter((e) => e.event === "reasoning").length;
     expect(reasoningCount).toBeGreaterThan(0); // fixture guard: the assertions below are vacuous otherwise
     const markup = renderToStaticMarkup(<EventTicker state={state} />);
-    // One 💭 per reasoning event, plus the single 💭 in the legend key.
-    expect((markup.match(/💭/g) ?? []).length).toBe(reasoningCount + 1);
-    // Reasoning narration is italic and set to wrap (never clipped to one line).
-    expect(markup).toContain("font-style:italic");
+    // Messages wrap (pre-wrap), never clipped to one line.
+    expect(markup).toContain("white-space:pre-wrap");
     // A reasoning event's full message survives into the markup (wrapping is CSS, not truncation).
     // Escape as React does for text nodes, so a message with &/</> in a future corpus still matches.
     const firstReasoning = state.recentEvents.find((e) => e.event === "reasoning")!;
@@ -579,9 +577,14 @@ describe("render — DrilldownPanel", () => {
     // pins the shell a viewer sees for one frame, and proves the component doesn't throw
     // when its data is absent.
     const markup = renderToStaticMarkup(<DrilldownPanel target={{ kind: "turn", ord: 16 }} mode="replay" feature={null} onClose={() => {}} />);
-    expect(markup).toContain("TURN 16");
+    expect(markup).toContain("#16"); // the turn identity, in the always-present header title
     expect(markup).toContain("Loading turn 16…");
     expect(markup).toContain("Close drill-down panel"); // always escapable
+    // The tabs are always-present chrome: all three render (and stay clickable) even before the
+    // turn resolves, so a viewer can move between Correspondence / Artifacts / Code immediately.
+    expect(markup).toContain("Correspondence");
+    expect(markup).toContain("Artifacts");
+    expect(markup).toContain("Code");
   });
 
   it("renders a loading shell for an artifact target with the HEAD honesty label", () => {
@@ -655,10 +658,29 @@ describe("render — DrilldownPanel", () => {
     expect(markup).toContain("var(--status-critical-text)"); // the failure reads as error
   });
 
+  it("builds the turn meta line as mode · story · model · N tools, omitting absent fields", () => {
+    // The reference's example: a fully-recorded navigator turn shows all four fields.
+    const full = {
+      ordinal: 54, step: 54, label: "navigator", kind: "invoke-role", role: "navigator",
+      mode: "review", story: "S3-sku-detail-view",
+      produced: [], deleted: [],
+      transcript: { prompt: "", tools: new Array(11).fill("Read x"), reasoning: "" },
+      transcriptSummary: { model: "sonnet", toolCount: 11 },
+    } as TurnPayload;
+    expect(turnMetaFields(full).join(" · ")).toBe("review · S3-sku-detail-view · sonnet · 11 tools");
+
+    // A dispatch turn carries only a mode → just that, no empty separators (the #02 case).
+    const dispatch = {
+      ordinal: 2, step: 2, label: "product-owner", kind: "invoke-role", role: "product-owner",
+      mode: "author-requests", produced: [], deleted: [], transcript: null, transcriptSummary: null,
+    } as TurnPayload;
+    expect(turnMetaFields(dispatch).join(" · ")).toBe("author-requests");
+  });
+
   it("says a non-role step has no transcript rather than rendering an empty exchange", () => {
     const turn = { ordinal: 5, step: 5, label: "cut", kind: "experiment-cut", produced: [], deleted: [], transcript: null, transcriptSummary: null } as TurnPayload;
     const markup = renderToStaticMarkup(<TranscriptView turn={turn} />);
-    expect(markup).toContain("no agent transcript");
+    expect(markup).toContain("No transcript recorded for this turn (gate / dispatch / orchestrator step).");
     expect(markup).not.toContain("Prompt →");
   });
 

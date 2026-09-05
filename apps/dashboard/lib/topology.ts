@@ -470,7 +470,7 @@ const BUILD_LANE: Lane = {
 // this lane in LANE_IDS and therefore claims the event — so `dp-assess` is structural (it renders,
 // but never lights). `refactor-deploy` has no build-lane claimant, so `dp-refactor` does light.
 const DEPLOY_LANE: Lane = {
-  title: "Deploy  ·  deploy + promote (release-engineer)",
+  title: "DEPLOY / PROMOTE",
   steps: [
     {
       id: "dp-deploy",
@@ -533,6 +533,18 @@ const DEPLOY_LANE: Lane = {
       escalation: true,
       match: null,
     },
+    {
+      // The promote-side raise-to-HIL. The deterministic SCM steps (prepare-pr / wait-ci / merge)
+      // have no self-heal: a non-zero exit (CI red, a merge conflict/ETIMEDOUT, a PR-prep error)
+      // throws a CliEffectError and the drive's top-level catch records a resumable escalation +
+      // a "RAISED TO HIL" halt naming the failing step.
+      id: "dp-promote-hil",
+      role: null,
+      label: "Raise to HIL",
+      sub: "SCM step fails",
+      escalation: true,
+      match: null,
+    },
   ],
   edges: [
     ["dp-deploy", "dp-verify"],
@@ -547,6 +559,9 @@ const DEPLOY_LANE: Lane = {
     ["dp-assess", "dp-refactor", ""],
     ["dp-refactor", "dp-deploy", "re-deploy"],
     ["dp-assess", "dp-hil", "genuine"],
+    ["dp-pr", "dp-promote-hil", "fails"],
+    ["dp-ci", "dp-promote-hil", "CI red"],
+    ["dp-merge", "dp-promote-hil", "conflict"],
   ] as const,
 };
 

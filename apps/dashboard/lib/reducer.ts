@@ -47,11 +47,18 @@ export const SESSION_ACTIVE_MS = 15_000;
 /**
  * How many trailing events the board ships as `recentEvents`.
  *
- * Exported because a source aligning per-event data to that tail (replay's `recentTurns`) must
- * use the SAME length — a mismatch would shift every row's turn ordinal by the difference, and
- * a wrong ordinal silently shows the wrong transcript and the wrong code.
+ * `Infinity` = NO cap: the board ships the FULL event stream up to the playhead, so the log pane
+ * shows every event that has happened (and scrubbing the transport re-folds up to the new
+ * playhead, growing/shrinking the log to match). The event log used to be a small bottom ticker
+ * where a 40-event tail was plenty; it is now a full-height right-side pane meant to show the
+ * whole run.
+ *
+ * Exported because a source aligning per-event data to this window (replay's/live's `recentTurns`)
+ * derives its start index from the SAME constant — `start = max(0, at - RECENT_EVENT_TAIL)`, which
+ * is 0 here — so events and their turn ordinals stay index-aligned. A mismatch would shift every
+ * row's turn ordinal and silently show the wrong transcript, so they MUST move together.
  */
-export const RECENT_EVENT_TAIL = 40;
+export const RECENT_EVENT_TAIL = Number.POSITIVE_INFINITY;
 
 // Transcript-based permission detection proved too flaky to ship; the gate and escalation
 // banners stay on and reliable. Flip to re-enable.

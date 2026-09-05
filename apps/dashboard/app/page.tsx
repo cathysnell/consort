@@ -9,7 +9,7 @@ import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, type DrilldownTarget } from "./DrilldownPanel";
 import { BacklogPanel } from "./BacklogPanel";
 import { OrchestratorLane } from "./OrchestratorLane";
-import { DriftBanner, EventTicker, modeFromUrl } from "./board-parts";
+import { DriftBanner, LogPane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
 import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
@@ -45,6 +45,18 @@ export default function Home() {
   // are mutually exclusive now: opening any closes the others, which is the "one surface" the merge
   // was missing (before, a step panel and a turn panel could be open at once, in two places).
   const [drilldown, setDrilldown] = useState<DrilldownTarget | null>(null);
+  // The drawer is ALWAYS mounted (offscreen when closed) so it can slide in on transform, matching
+  // the reference dashboard's `#panel` → `.open`. `shownTarget` trails `drilldown` so the panel's
+  // content stays rendered THROUGH the slide-out animation instead of vanishing the instant it's
+  // closed — it only clears when a new target replaces it.
+  const [shownTarget, setShownTarget] = useState<DrilldownTarget | null>(null);
+  useEffect(() => {
+    if (drilldown) setShownTarget(drilldown);
+  }, [drilldown]);
+  // The event-log pane (right side) is collapsible: open = shares space with the board (the main
+  // column flexes narrower), collapsed = a slim rail so the board reclaims the width. Never an
+  // overlay — it's a flex sibling of the board, not a floating layer.
+  const [logOpen, setLogOpen] = useState(true);
   // The single panel is a FIXED right-side drawer (see its render below), so it's already in the
   // viewport wherever you are — clicking a lifecycle node up top or a ticker row far down both
   // answer in place, next to what you clicked. No scroll-into-view: that used to yank the page to a
@@ -133,6 +145,12 @@ export default function Home() {
         <Placeholder message={state.error || "No Consort run found."} error />
       ) : (
         <>
+          {/* Board + event-log share one flex row: the main column (flex:1) shrinks when the log
+              pane is open, so the log is never an overlay — it takes real horizontal space.
+              `stretch` makes the log pane run the FULL length of the board column, not a viewport
+              slice. */}
+          <div style={{ display: "flex", alignItems: "stretch" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
           {state.waiting ? <WaitingBanner waiting={state.waiting} /> : null}
           <DriftBanner correlation={state.source?.correlation ?? null} />
           {/* The scrum-master / orchestrator coordination status — its latest dispatch + recent gate
@@ -140,7 +158,8 @@ export default function Home() {
           <OrchestratorLane state={state} />
 
           <SectionHeader>Current sprint</SectionHeader>
-          <SprintPosition state={state} />
+          {/* The lifecycle graph now carries the sprint's feature + current state in its own header
+              band (see WorkflowGraph), mirroring the lane panels below. */}
           <WorkflowGraph
             state={state}
             // Clicking a node opens its step deliverables in the ONE drill-down panel (below the
@@ -185,13 +204,20 @@ export default function Home() {
           </section>
 
           {state.blockers.length > 0 ? <Blockers state={state} /> : null}
+            </div>
 
-          <SectionHeader>Event Stream · {state.eventCount} events</SectionHeader>
-          <EventTicker
-            state={state}
-            onOpenTurn={canDrillDown ? (ord) => setDrilldown({ kind: "turn", ord }) : undefined}
-            onOpenArtifact={canOpenArtifact ? (path) => setDrilldown({ kind: "artifact", path }) : undefined}
-          />
+            {/* The event log lives here now: a collapsible right-side pane that SHARES space with
+                the board (the main column above flexes narrower when it's open) rather than sitting
+                as an overlay — the reference's `#logpane`. Collapsed, it's a slim rail and the board
+                reclaims the width. */}
+            <LogPane
+              state={state}
+              open={logOpen}
+              onToggle={() => setLogOpen((o) => !o)}
+              onOpenTurn={canDrillDown ? (ord) => setDrilldown({ kind: "turn", ord }) : undefined}
+              onOpenArtifact={canOpenArtifact ? (path) => setDrilldown({ kind: "artifact", path }) : undefined}
+            />
+          </div>
           {/* The ONE drill-down surface: whatever you clicked — a ticker row (turn or artifact) or
               a WorkflowGraph node (step) — opens here. It sits under the stream and scrolls itself
               into view (see the effect above) so a graph click up top still lands somewhere visible.
@@ -204,34 +230,40 @@ export default function Home() {
               only ever SET through the capability-gated openers above, and the sole capability-
               changing action — a mode switch — clears it (see onMode). So an open target's source
               can always still satisfy it. */}
-          {drilldown ? (
-            // A FIXED right-side drawer: it floats over the right of the page and stays in view as
-            // you scroll, so whatever you clicked (a lifecycle node at the top, a ticker row at the
-            // bottom) is answered right where you are — no jump to a panel docked below the fold.
-            // Caps its own height to the viewport and scrolls internally for a long transcript; on a
-            // narrow screen it becomes near-full-width. z-index over the board; the shadow lifts it
-            // off the content it overlays. The ✕ (and any scrub, per scrubTo) closes it.
-            <div
-              style={{
-                position: "fixed",
-                top: 12,
-                right: 12,
-                zIndex: 60,
-                width: "min(460px, calc(100vw - 24px))",
-                maxHeight: "calc(100dvh - 104px)",
-                overflowY: "auto",
-                borderRadius: radius.panel,
-                boxShadow: "0 10px 40px rgba(0,0,0,0.28)",
-              }}
-            >
+          {/* A FIXED, full-height right-edge drawer that SLIDES in — flush to the top/right, ending
+              just above the play band — exactly like the reference dashboard's `#panel`. It's always
+              mounted and parked offscreen at translateX(105%) (105% so its own left shadow is hidden
+              too); opening a target animates it to translateX(0) over .28s. z-index over the board;
+              the left shadow lifts it off the content it overlays. The ✕ (and any scrub, per scrubTo)
+              closes it, sliding it back out. `shownTarget` keeps the content up through the slide-out. */}
+          <div
+            aria-hidden={drilldown === null}
+            style={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 72,
+              zIndex: 60,
+              width: "min(760px, 64vw)",
+              background: "var(--surface-panel)",
+              borderLeft: "1px solid var(--border-default)",
+              boxShadow: "-12px 0 40px rgba(0,0,0,0.35)",
+              transform: drilldown ? "translateX(0)" : "translateX(105%)",
+              transition: "transform 0.28s ease",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {shownTarget ? (
               <DrilldownPanel
-                target={drilldown}
+                target={shownTarget}
                 mode={state.source?.mode ?? null}
                 feature={state.feature ?? null}
                 onClose={() => setDrilldown(null)}
               />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           {/* The play band: an always-on transport pinned to the bottom of the page, full width,
               like the reference dashboard. Scrub + playback stay reachable no matter how far the
@@ -751,25 +783,6 @@ function StoryRow({ s }: { s: StoryProgress }) {
 // feature and, when a story is being worked, that story (emphasized). With no active story — still
 // designing/planning the feature — it falls back to the feature + coarse phase, so the line is
 // never empty while a feature is in flight, and renders nothing at all before the first feature.
-function SprintPosition({ state }: { state: DashboardState }) {
-  const feature = state.features.find((f) => f.active)?.id ?? state.feature ?? state.pinnedFeature;
-  const story = state.stories.find((s) => s.active) ?? null;
-  if (!feature && !story) return null;
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "2px 0 10px", fontSize: "0.8rem", fontFamily: font.mono }}>
-      {feature ? (
-        <span style={{ color: story ? "var(--text-muted)" : "var(--text-strong)", fontWeight: story ? 500 : 700 }}>{feature}</span>
-      ) : null}
-      {feature && story ? <span style={{ color: "var(--text-faint)" }}>·</span> : null}
-      {story ? (
-        <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>▸ {story.id}</span>
-      ) : (
-        <span style={{ color: "var(--text-muted)" }}>{state.phase ?? "in progress"}</span>
-      )}
-    </div>
-  );
-}
-
 function WaitingBanner({ waiting }: { waiting: NonNullable<DashboardState["waiting"]> }) {
   const isPerm = waiting.kind === "permission";
   const isEsc = waiting.kind === "escalation";
