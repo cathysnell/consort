@@ -899,10 +899,12 @@ describe("fold — multi-feature run (stockflow-rerecord corpus)", () => {
     const f1 = fold(events, snap(), 20);
     expect(f1.feature).toBe("F1-stock-visibility");
     // The pre-naming propose/estimate/author-requests are excluded (they ran before F1 was named),
-    // but an `intake.supplied` carries F1 forward, so the intake step lights under F1's scope.
-    expect(f1.topology.laneSteps.plan).toEqual(["p-intake"]);
-    // F6 picks up an intake.supplied and the estimate-committed that ran under it late in the run.
-    expect(fold(events, snap()).topology.laneSteps.plan).toEqual(["p-intake", "p-size"]);
+    // but an `intake.supplied` carries F1 forward (→ p-intake) and the `breakdown` at event 13 is
+    // where F1 is first named (→ p-breakdown), so both light under F1's scope.
+    expect(f1.topology.laneSteps.plan).toEqual(["p-intake", "p-breakdown"]);
+    // F6 picks up an intake.supplied, a breakdown, and the estimate-committed that ran under it late
+    // in the run (in event order: intake → breakdown → estimate-committed).
+    expect(fold(events, snap()).topology.laneSteps.plan).toEqual(["p-intake", "p-breakdown", "p-size"]);
   });
 
   it("story counts stay monotonic WITHIN a feature across the whole corpus", () => {

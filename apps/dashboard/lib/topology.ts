@@ -257,6 +257,18 @@ const PLAN_LANE: Lane = {
       match: { role: "product-owner", phaseAny: ["author-requests", "feature"] },
     },
     {
+      // Dashboard-native step (declared in topology.test.ts ADDED_STEPS): Kevin's Python routes the
+      // `breakdown` phase to the Plan node (PHASE_TO_NODE.breakdown === "plan") but gave it no
+      // sub-step, so while the spec author breaks the committed features into stories the plan LANE
+      // lit but no STEP did. This makes breakdown light both the lane and a step, in lifecycle order
+      // (choose features → break them into stories → plan gate).
+      id: "p-breakdown",
+      role: "spec-author",
+      label: "Spec author",
+      sub: "backlog breakdown",
+      match: { role: "spec-author", phase: "breakdown" },
+    },
+    {
       id: "p-gate",
       role: null,
       label: "Plan gate",
@@ -269,7 +281,8 @@ const PLAN_LANE: Lane = {
     ["p-intake", "p-propose"],
     ["p-propose", "p-size"],
     ["p-size", "p-req"],
-    ["p-req", "p-gate"],
+    ["p-req", "p-breakdown"],
+    ["p-breakdown", "p-gate"],
   ] as const,
   // No raise-to-HIL: the escalate outcome fires only on a failed run, a build-level smell, or a
   // spec smell with its revise budget spent (step.ts route()) — all of which live in build/design,
@@ -714,26 +727,39 @@ export function laneStepMeta(events: AgentLogEvent[]): Record<string, LaneStepMe
 // --------------------------------------------------------------------------- progress
 
 /**
- * Walk events[0..upTo), reporting which feature each one belongs to.
+ * Walk events[0..upTo), reporting which feature AND which phase each one belongs to.
  *
- * A feature_id is carried forward: not every event stamps one (5 `phase.start`s in the corpus
- * carry `""`), so the feature in force is the last one seen. `featureIdOf` skips `reasoning`
- * events, whose feature_id is unreliable — see its docstring.
+ * Both are carried forward: not every event stamps a feature_id (5 `phase.start`s in the corpus
+ * carry `""`) or a phase (a role's `turn.usage` / `artifact.written` / `reasoning` events carry
+ * NONE — only the preceding `handoff` / `phase.start` names the phase), so the value in force is
+ * the last one seen. `featureIdOf` skips `reasoning` events, whose feature_id is unreliable — see
+ * its docstring. Carrying the phase forward is what stops a spec-author breakdown artifact (phase
+ * absent) from looking identical to a design spec-author turn and lighting the DESIGN lane during
+ * PLANNING: with the enclosing `breakdown` phase attached it maps to plan's p-breakdown, not d-spec.
  *
- * Shared by `passedNodes` and `laneProgress` so the two cannot disagree about which feature an
- * event belongs to, which would light a node in one view and not the other.
+ * Shared by `passedNodes` and `laneProgress` so the two cannot disagree about which feature/phase
+ * an event belongs to, which would light a node in one view and not the other.
  */
 function* eventsWithFeature(
   events: AgentLogEvent[],
   upTo?: number,
-): Generator<{ e: AgentLogEvent; feature: string | null }> {
+): Generator<{ e: AgentLogEvent; feature: string | null; phase: string | null }> {
   const end = upTo === undefined ? events.length : Math.max(0, Math.min(upTo, events.length));
   let feature: string | null = null;
+  let phase: string | null = null;
   for (let i = 0; i < end; i++) {
     const f = featureIdOf(events[i]);
     if (f) feature = f;
-    yield { e: events[i], feature };
+    const p = phaseOf(events[i]);
+    if (p) phase = p;
+    yield { e: events[i], feature, phase };
   }
+}
+
+/** The event as seen with its effective (carried-forward) phase attached, so a phase-less event is
+ *  disambiguated by the phase the run is actually in. A no-op when the event already carries one. */
+function withPhase(e: AgentLogEvent, phase: string | null): AgentLogEvent {
+  return phase && phaseOf(e) !== phase ? { ...e, metadata: { ...(e.metadata ?? {}), phase } } : e;
 }
 
 /**
@@ -747,9 +773,9 @@ function* eventsWithFeature(
  */
 export function passedNodes(events: AgentLogEvent[], upTo?: number, feature?: string): Set<string> {
   const seen = new Set<string>();
-  for (const { e, feature: f } of eventsWithFeature(events, upTo)) {
+  for (const { e, feature: f, phase } of eventsWithFeature(events, upTo)) {
     if (feature !== undefined && f !== feature) continue;
-    const node = nodeForPhase(phaseOf(e));
+    const node = nodeForPhase(phase);
     if (node) seen.add(node);
     if (e.event === "intake.supplied") seen.add("intake");
   }
@@ -773,23 +799,29 @@ export interface LaneProgress {
  *   designing, yet all seven build sub-steps read as reached because sprint 1 lit them.
  */
 export function laneProgress(events: AgentLogEvent[], upTo?: number, feature?: string): LaneProgress {
-  const end = upTo === undefined ? events.length : Math.max(0, Math.min(upTo, events.length));
   const done: Record<LaneId, Set<string>> = { plan: new Set(), design: new Set(), build: new Set(), deploy: new Set() };
   const last: Record<LaneId, string | null> = { plan: null, design: null, build: null, deploy: null };
 
-  for (const { e, feature: f } of eventsWithFeature(events, upTo)) {
+  // The playhead event with its effective phase — tracked here (before the feature filter) because
+  // `current` is deliberately NOT feature-filtered, while the done-set below is.
+  let playhead: AgentLogEvent | null = null;
+  for (const { e, feature: f, phase } of eventsWithFeature(events, upTo)) {
+    playhead = withPhase(e, phase);
     if (feature !== undefined && f !== feature) continue;
-    const hit = laneStepForEvent(e);
+    // Match with the carried phase attached, so a phase-less breakdown artifact maps to plan's
+    // p-breakdown (not design's d-spec) and a phase-less design artifact still maps into design.
+    const hit = laneStepForEvent(withPhase(e, phase));
     if (!hit) continue;
     done[hit.lane].add(hit.step);
     last[hit.lane] = hit.step;
   }
 
-  // `current` reflects the event AT the playhead, not the last event that happened to
-  // match something — otherwise a stale step stays lit across unmatched events. It is
-  // deliberately NOT feature-filtered: the playhead event is where the run actually is, and
-  // suppressing it when scoped to another feature would claim nothing is happening.
-  const current = end > 0 ? laneStepForEvent(events[end - 1]) : null;
+  // `current` reflects the event AT the playhead, not the last event that happened to match
+  // something — otherwise a stale step stays lit across unmatched events. It reads the SAME
+  // carried-phase event as the done-set (via `eventsWithFeature` → `withPhase`), so the two views
+  // agree; a gate.surfaced/handoff still maps to no role step (wrong role), so a gate park stays
+  // step-less.
+  const current: LaneHit | null = playhead ? laneStepForEvent(playhead) : null;
 
   return { done, last, current };
 }

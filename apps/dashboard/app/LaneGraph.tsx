@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   LANE_IDS,
   WORKFLOW,
@@ -55,6 +56,10 @@ const LANE_NODE: Record<LaneId, { own: string; after: string[] }> = {
 
 // The gate each lane's terminal gate step reflects. Lane gates are human-decided and never
 // appear in laneSteps, so their status comes from state.gates.
+// The deploy lane is a combined deploy+promote lane; these are its PROMOTE-section steps, so the
+// header dot strip can group promote lights apart from the deploy lights (with a divider between).
+const PROMOTE_STEP_IDS = new Set(["dp-pr", "dp-ci", "dp-promgate", "dp-merge", "dp-promote-hil"]);
+
 const LANE_STEP_GATE: Record<string, string> = {
   "p-gate": "plan",
   "d-gate": "spec",
@@ -66,10 +71,10 @@ const LANE_STEP_GATE: Record<string, string> = {
 type StepState = "done" | "current" | "pending" | "gate-open" | "gate-current" | "gate-approved";
 
 export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpenRole?: (role: string) => void }) {
-  const current = state.topology.laneCurrent;
-  // `laneCurrent.lane` is typed `string` (DashboardState is the wire format, and a replay source
-  // may not share this vocabulary), so validate rather than cast to find the ACTIVE lane.
-  const currentLane = LANE_IDS.find((l) => l === current?.lane) ?? null;
+  // The run's active step, from the ONE focus observation. Step ids are unique across lanes, so a
+  // single value passed to every lane only matches (lights) in its owning lane. Gate/escalation/idle
+  // focus means no step is running (currentStep null); a parked gate is read from state.focus.
+  const currentStep = state.focus.kind === "step" ? state.focus.step : null;
   // ALL lanes stay expanded , no accordion , so clicking one never collapses the others. The
   // active lane is highlighted (LanePanel's accent border + header tint); the rest render quietly.
   return (
@@ -80,7 +85,7 @@ export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpen
           laneId={laneId}
           lane={WORKFLOW.lanes[laneId]}
           done={new Set(state.topology.laneSteps[laneId] ?? [])}
-          currentStep={currentLane === laneId ? current!.step : null}
+          currentStep={currentStep}
           state={state}
           onOpenRole={onOpenRole}
         />
@@ -104,11 +109,16 @@ function LanePanel({
   state: DashboardState;
   onOpenRole?: (role: string) => void;
 }) {
+  // Each lane card collapses to just its header (name · status · dot strip) on a header click.
+  const [collapsed, setCollapsed] = useState(false);
   // Gates are excluded from the ratio: they never light from events, so counting them would
   // cap every lane below 100% forever.
   const lightable = lane.steps.filter((s) => s.match !== null);
   const reached = lightable.filter((s) => done.has(s.id)).length;
-  const active = currentStep !== null;
+  // Active = the focus step belongs to THIS lane. currentStep is the run's single active step (from
+  // focus), passed to every lane; step ids are unique per lane, so only the owning lane matches — an
+  // unknown/other-lane step (or a gate park, where currentStep is null) marks no lane active.
+  const active = currentStep !== null && lane.steps.some((s) => s.id === currentStep);
 
   // Lane status takes the LIFECYCLE as its sole authority. The lane's own lit-step count is
   // NOT evidence about completion in either direction, and both directions were shipped bugs:
@@ -159,6 +169,8 @@ function LanePanel({
       }}
     >
       <div
+        onClick={() => setCollapsed((c) => !c)}
+        title={collapsed ? "Expand lane" : "Collapse lane"}
         style={{
           width: "100%",
           display: "flex",
@@ -169,6 +181,7 @@ function LanePanel({
           // turning to the in-progress accent when the lane is active.
           background: active ? "var(--status-accent-tint-soft)" : "var(--surface-card)",
           textAlign: "left",
+          cursor: "pointer",
         }}
       >
         <span
@@ -181,7 +194,8 @@ function LanePanel({
             minWidth: 62,
           }}
         >
-          {laneId}
+          {/* The combined ship lane spans two lifecycle nodes, so its heading names both. */}
+          {laneId === "deploy" ? "deploy / promote" : laneId}
         </span>
         {/* The ratio is suppressed once a lane is complete. "1/7 steps · complete" contradicts
             itself, and the ratio is the half that's misleading: steps that never light are
@@ -197,36 +211,62 @@ function LanePanel({
           · {statusLabel}
         </span>
         {/* Dot strip: the whole lane's shape at a glance, so a collapsed lane still says
-            something more specific than a fraction. */}
-        <span style={{ display: "flex", gap: 3, marginLeft: "auto" }}>
-          {lane.steps.map((s) => {
-            // Each dot carries its step's ROLE-AGENT colour (a gate its gate colour, a roleless
-            // terminal a neutral), so the strip previews the lane's cast. A dot is dim until its
-            // step is REACHED (done or current), then lights up to full colour.
-            const reached = done.has(s.id) || s.id === currentStep;
-            const dotColor = s.role ? colorForRole(s.role) : s.gate ? gateTintFor(s, state) : "var(--border-strong)";
-            return (
-              <span
-                key={s.id}
-                title={`${s.label} — ${s.sub}`}
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: s.gate ? 1 : "50%",
-                  background: dotColor,
-                  opacity: reached ? 1 : 0.28,
-                  transform: s.gate ? "rotate(45deg)" : undefined,
-                }}
-              />
-            );
-          })}
+            something more specific than a fraction. Each dot carries its step's ROLE-AGENT colour
+            (a gate its gate colour, a roleless terminal a neutral); dim until its step is REACHED
+            (done or current), then lit; the CURRENT step's dot FLASHES (a glow pulse in its colour).
+            The combined deploy lane splits its dots into the deploy vs promote sections. */}
+        <span style={{ display: "flex", alignItems: "center", gap: 3, marginLeft: "auto" }}>
+          {(() => {
+            const dot = (s: LaneStep) => {
+              // Active from the ONE focus: the running step, OR the gate the run is parked at.
+              // focus is mutually exclusive (step XOR gate XOR …), so a lingering gate never flashes
+              // while a step runs — no per-surface laneCurrent/pendingGate juggling.
+              const active = s.id === currentStep || (state.focus.kind === "gate" && !!s.gate && LANE_STEP_GATE[s.id] === state.focus.gate);
+              const reached = done.has(s.id) || active;
+              const dotColor = s.role ? colorForRole(s.role) : s.gate ? gateTintFor(s, state) : "var(--border-strong)";
+              return (
+                <span
+                  key={s.id}
+                  title={`${s.label} — ${s.sub}`}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: s.gate ? 1 : "50%",
+                    background: dotColor,
+                    opacity: reached ? 1 : 0.28,
+                    transform: s.gate ? "rotate(45deg)" : undefined,
+                    // The active light FLASHES (opacity pulse — a box-shadow glow would be clipped
+                    // by the card's overflow:hidden).
+                    ...(active ? { animation: "lightflash 1.1s ease-in-out infinite" } : {}),
+                  }}
+                />
+              );
+            };
+            // Raise-to-HIL steps are escalation terminals, not part of the lane's normal cast — no dot.
+            const steps = lane.steps.filter((s) => !s.escalation);
+            if (laneId === "deploy") {
+              const deploySteps = steps.filter((s) => !PROMOTE_STEP_IDS.has(s.id));
+              const promoteSteps = steps.filter((s) => PROMOTE_STEP_IDS.has(s.id));
+              return (
+                <>
+                  {deploySteps.map(dot)}
+                  <span aria-hidden title="deploy · promote" style={{ width: 1, height: 9, background: "var(--border-strong)", margin: "0 3px", flex: "none" }} />
+                  {promoteSteps.map(dot)}
+                </>
+              );
+            }
+            return steps.map(dot);
+          })()}
         </span>
+        {/* Collapse affordance at the far right of the header band. */}
+        <span aria-hidden style={{ fontSize: "0.7rem", color: "var(--text-faint)", marginLeft: 2, width: 10, textAlign: "center" }}>{collapsed ? "▸" : "▾"}</span>
       </div>
 
-      <div style={{ borderTop: `1px solid var(--border-default)`, padding: "4px 12px 10px" }}>
-        <div style={{ fontSize: "0.66rem", color: "var(--text-faint)", margin: "6px 0 2px" }}>{lane.title}</div>
-        <LaneSvg laneId={laneId} lane={lane} done={done} currentStep={currentStep} state={state} onOpenRole={onOpenRole} />
-      </div>
+      {collapsed ? null : (
+        <div style={{ borderTop: `1px solid var(--border-default)`, padding: "10px 12px" }}>
+          <LaneSvg laneId={laneId} lane={lane} done={done} currentStep={currentStep} state={state} onOpenRole={onOpenRole} />
+        </div>
+      )}
     </div>
   );
 }
@@ -234,6 +274,10 @@ function LanePanel({
 function gateTintFor(step: LaneStep, state: DashboardState): string {
   const gateName = LANE_STEP_GATE[step.id];
   if (!gateName) return "var(--border-strong)";
+  // The gate the run is PARKED at reads purple even when it's not a snapshot gate (acceptance is
+  // log-derived, never in state.gates). `focus.kind === "gate"` already means the run is parked (no
+  // active step), so no separate laneCurrent guard is needed.
+  if (state.focus.kind === "gate" && gateName === state.focus.gate) return "var(--status-gate)";
   const g = state.gates.find((x) => x.name === gateName);
   if (!g) return "var(--border-strong)";
   return g.status === "approved" ? "var(--status-good)" : "var(--status-gate)";
@@ -263,8 +307,9 @@ function LaneSvg({
   // the happy path, row 1 is ASSESS placed directly under VERIFY (col 2), row 2 is the fan-out
   // (repair/perm/hil) centred under assess. Every other lane is a single row in declared order.
   const pos = new Map<string, { x: number; y: number; row: number; col: number }>();
+  // y is filled in AFTER we know how much top headroom this lane actually needs (see topLane below).
   const place = (id: string, row: number, col: number) =>
-    pos.set(id, { x: PAD + col * (STEP_W + GAP), y: PAD + TOP_LANE + row * (STEP_H + ROW_GAP), row, col });
+    pos.set(id, { x: PAD + col * (STEP_W + GAP), y: 0, row, col });
   let nRows: number;
   if (laneId === "build") {
     const grid: Record<string, [number, number]> = {
@@ -309,8 +354,40 @@ function LaneSvg({
     nRows = escalations.length > 0 ? 2 : 1;
   }
   const maxCol = Math.max(0, ...[...pos.values()].map((p) => p.col));
+
+  // Reserve top/bottom headroom ONLY for the arcs a lane actually draws, so a lane with no loops
+  // (e.g. plan) doesn't carry dead space above and below its single row. An ABOVE arc is a same-row
+  // backward loop on row 0 of a multi-row lane (build's next-cycle); a BELOW arc is any other
+  // same-row backward loop, or a forward skip that has to arc under an intervening box.
+  let hasAbove = false;
+  let hasBelow = false;
+  let belowLabeled = false; // a below arc that carries a text label needs extra room for it
+  const considerArc = (from: string, to: string, label?: string) => {
+    const p = pos.get(from);
+    const q = pos.get(to);
+    if (!p || !q || p.row !== q.row) return;
+    if (q.col < p.col) {
+      if (p.row === 0 && nRows > 1) hasAbove = true;
+      else {
+        hasBelow = true;
+        if (label) belowLabeled = true;
+      }
+    } else if (q.col > p.col && [...pos.values()].some((v) => v.row === p.row && v.col > p.col && v.col < q.col)) {
+      hasBelow = true;
+      if (label) belowLabeled = true;
+    }
+  };
+  lane.edges.forEach(([f, t]) => considerArc(f, t));
+  lane.backEdges.forEach(([f, t, label]) => considerArc(f, t, label));
+  const topLane = hasAbove ? TOP_LANE : 8;
+  // A labeled below arc (design's "revise on findings") needs the full band; an unlabeled one
+  // (deploy's assess→refactor) only needs room for the ~16px dip — so deploy doesn't carry the
+  // label's dead space; a lane with no below arc reserves almost nothing.
+  const backLaneH = hasBelow ? (belowLabeled ? BACK_LANE_H : 20) : 8;
+  for (const p of pos.values()) p.y = PAD + topLane + p.row * (STEP_H + ROW_GAP);
+
   const width = PAD * 2 + (maxCol + 1) * STEP_W + maxCol * GAP;
-  const height = PAD * 2 + TOP_LANE + nRows * STEP_H + (nRows - 1) * ROW_GAP + BACK_LANE_H;
+  const height = PAD * 2 + topLane + nRows * STEP_H + (nRows - 1) * ROW_GAP + backLaneH;
   const cx = (id: string) => pos.get(id)!.x + STEP_W / 2;
   const cy = (id: string) => pos.get(id)!.y + STEP_H / 2;
 
@@ -324,10 +401,10 @@ function LaneSvg({
           const pr = pos.get("dp-pr")!;
           return {
             x: (gate.x + STEP_W + pr.x) / 2,
-            top: PAD + TOP_LANE - 3,
+            top: PAD + topLane - 3,
             // Through the last row (self-heal / HIL), not just row 0, so the divider spans the lane.
-            bottom: PAD + TOP_LANE + nRows * STEP_H + (nRows - 1) * ROW_GAP + 8,
-            labelY: PAD + TOP_LANE - 9,
+            bottom: PAD + topLane + nRows * STEP_H + (nRows - 1) * ROW_GAP + 8,
+            labelY: PAD + topLane - 9,
             deployMid: (pos.get("dp-deploy")!.x + gate.x + STEP_W) / 2,
             promoteMid: (pr.x + pos.get("dp-merge")!.x + STEP_W) / 2,
           };
@@ -563,10 +640,10 @@ function stepState(
     const gateName = LANE_STEP_GATE[s.id];
     const g = gateName ? state.gates.find((x) => x.name === gateName) : undefined;
     if (g?.status === "approved") return "gate-approved";
-    // The ONE gate the drive is parked at right now pulses ("gate-current"); every other still-open
-    // gate keeps its purple border but stays quiet. A gate stays `open` until an explicit
-    // gate.approved, so several past gates read open at once — only `pendingGate` is the live wait.
-    if (gateName && gateName === state.pendingGate) return "gate-current";
+    // The gate the run is parked at pulses ("gate-current") — read from the ONE focus. `focus.kind
+    // === "gate"` already implies no step is running, so a lingering gate from an earlier phase
+    // reads as a quiet "gate-open" (below), never a pulse, while a step is active.
+    if (gateName && state.focus.kind === "gate" && gateName === state.focus.gate) return "gate-current";
     if (g) return "gate-open";
   }
   return "pending";

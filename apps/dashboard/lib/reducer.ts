@@ -18,6 +18,7 @@ import {
   AgentLogEvent,
   DashboardState,
   DESIGN_PHASE_NAMES,
+  Focus,
   GateInfo,
   Role,
   ROLES,
@@ -65,6 +66,16 @@ export const RECENT_EVENT_TAIL = Number.POSITIVE_INFINITY;
 export const ENABLE_PERMISSION_BANNER = false;
 export const ENABLE_WAITING_BANNER = false;
 
+// The SINGLE derivation of the run's focus (see DashboardState.focus). Mutually exclusive and
+// ordered: an actively-running step wins (so a lingering pendingGate from an earlier phase never
+// also reads as "waiting" while a step runs); then the gate the run is parked at; else idle. Every
+// surface reads state.focus rather than recombining laneCurrent/pendingGate itself.
+export function focusOf(s: Pick<DashboardState, "topology" | "pendingGate">): Focus {
+  if (s.topology.laneCurrent) return { kind: "step", lane: s.topology.laneCurrent.lane, step: s.topology.laneCurrent.step };
+  if (s.pendingGate) return { kind: "gate", gate: s.pendingGate };
+  return { kind: "idle" };
+}
+
 // An empty board, used for the error paths and as the shape reference.
 export function emptyState(projectDir: string, generatedAt: string): DashboardState {
   return {
@@ -110,6 +121,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
     stories: [],
     orchestratorActivity: null,
     pendingGate: null,
+    focus: { kind: "idle" },
     laneStepMeta: {},
     lane: "design" as const,
     totalCost: 0,
@@ -537,6 +549,8 @@ export function fold(
     // behind the gate you're waiting at, so a tail lookup would go stale.
     orchestratorActivity: latestOrchestratorActivity(slice),
     pendingGate,
+    // The one focus observation, derived once here; every surface reads it (see focusOf).
+    focus: focusOf({ topology, pendingGate }),
     // Per-step model/effort/cost/turns for the step cards, folded over the full slice.
     laneStepMeta: laneStepMeta(slice),
     lane,

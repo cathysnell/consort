@@ -63,8 +63,41 @@ export function orchestratorStatus(
   return { current, coord, gateRows, chips };
 }
 
+// The HIL gates the run passes, in lifecycle order. test_list is a design SUB-gate, not one of the
+// human decision points shown here.
+const GATE_ORDER = ["plan", "spec", "acceptance", "deploy", "promote"] as const;
+
+// Each gate's status FOR THE CURRENT STORY, derived from the log so the bubbles reset when the story
+// changes instead of showing every gate ever opened. `plan` is sprint-level (not story-scoped); the
+// rest reset per story — a gate the current story hasn't reached yet is absent (→ "upcoming").
+export function storyGateStatus(events: DashboardState["recentEvents"], story: string | null): Record<string, "approved" | "pending"> {
+  // Raw signal from the log: a gate is "pending" once it surfaces, "approved" if an approval is
+  // logged. Scoped to the current story (plan is sprint-level, so never story-filtered).
+  const raw: Record<string, "approved" | "pending"> = {};
+  for (const e of events) {
+    if (e.event !== "gate.surfaced" && e.event !== "gate.approved") continue;
+    const md = (e.metadata ?? {}) as Record<string, unknown>;
+    const gate = typeof md.gate === "string" ? md.gate : null;
+    if (!gate) continue;
+    const evStory = typeof md.story === "string" ? md.story : typeof md.subject === "string" ? md.subject : null;
+    if (gate !== "plan" && story && evStory && evStory !== story) continue;
+    raw[gate] = e.event === "gate.approved" ? "approved" : raw[gate] === "approved" ? "approved" : "pending";
+  }
+  // INTERIM inference: the kit rarely logs `gate.approved` (see docs/design/kit-gaps-repair-plan.md),
+  // so a gate that surfaced would read "pending" forever. But reaching a LATER-lifecycle gate proves
+  // the earlier ones were approved — so mark a gate approved once ANY later gate has been reached.
+  // The last-reached gate stays "pending" (the run is at it); gates never reached stay "upcoming".
+  const out: Record<string, "approved" | "pending"> = {};
+  GATE_ORDER.forEach((g, i) => {
+    const laterReached = GATE_ORDER.slice(i + 1).some((gj) => raw[gj]);
+    if (raw[g] === "approved" || laterReached) out[g] = "approved";
+    else if (raw[g] === "pending") out[g] = "pending";
+  });
+  return out;
+}
+
 export function OrchestratorLane({ state }: { state: DashboardState }) {
-  const { gateRows, chips } = orchestratorStatus(state.recentEvents, state.gates, state.blockers);
+  const { gateRows } = orchestratorStatus(state.recentEvents, state.gates, state.blockers);
   // The orchestrator runs the drive session itself, so its card carries the run's own vitals: the
   // dispatch it is on now ("orchestrator START <phase>" + the story it's driving), the running
   // tally of turns it has driven, and the session's cumulative cost. Both totals are RUN-level
@@ -78,8 +111,29 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
   // it's WAITING on a human (an open gate/escalation). It pulses while active or waiting and goes
   // quiet once the run completes. `softpulse` glows in `currentColor`, so `accent` (set as the card
   // colour below) is what tints the pulse; children set their own explicit colours.
-  const waiting = chips.length > 0;
-  const running = activity !== null && state.lane !== "complete";
+  // Read the ONE focus observation instead of re-deriving from laneCurrent/gates/blockers: the run
+  // is "waiting on you" when parked at a gate, "coordinating" when a step is actively running. (This
+  // is the single source; the lane dots + step cards read the same focus.)
+  const focus = state.focus;
+  const waiting = focus.kind === "gate";
+  const running = focus.kind === "step";
+  // The gate bubbles: the five HIL gates in lifecycle order, scoped to (and resetting with) the
+  // current story. When PARKED at a gate, scope to THAT gate's story — `activity.story` can lag onto
+  // a later story that began designing while this one awaits its gate, which would hide the parked
+  // story's own passed gates. Otherwise use the active step's story.
+  const bubbleStory =
+    focus.kind === "gate"
+      ? (() => {
+          for (let i = state.recentEvents.length - 1; i >= 0; i--) {
+            const e = state.recentEvents[i];
+            if (e.event !== "gate.surfaced") continue;
+            const md = (e.metadata ?? {}) as Record<string, unknown>;
+            if (md.gate === focus.gate) return typeof md.story === "string" ? md.story : story;
+          }
+          return story;
+        })()
+      : story;
+  const gateStatus = storyGateStatus(state.recentEvents, bubbleStory);
   const flashing = waiting || running;
   const accent = waiting ? "var(--status-gate)" : "var(--role-orchestrator)";
   const status = waiting ? "waiting on you" : running ? "coordinating" : "idle";
@@ -132,26 +186,36 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
         </div>
       ) : null}
 
-      {chips.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-          {chips.map((c, i) => (
+      {/* The five HIL gates in lifecycle order, scoped to the current story: approved (green),
+          the one the run is parked at (focus) pulses purple, still-to-come are dim. Resets when the
+          story changes because storyGateStatus only counts the current story's gate events. */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        {GATE_ORDER.map((g) => {
+          const st = gateStatus[g];
+          const isFocus = focus.kind === "gate" && focus.gate === g;
+          const border = st === "approved" ? "var(--status-good)" : st === "pending" || isFocus ? "var(--status-gate)" : "var(--border-default)";
+          const color = st === "approved" ? "var(--status-good)" : st === "pending" || isFocus ? "var(--status-gate-text)" : "var(--text-faint)";
+          return (
             <span
-              key={`${c.kind}-${c.label}-${i}`}
+              key={g}
+              title={`${g} gate — ${st ?? "not yet reached"}${g === "plan" ? " (sprint)" : ""}`}
               style={{
                 fontSize: "0.64rem",
                 padding: "2px 8px",
                 borderRadius: radius.chip,
-                border: `1px solid ${c.kind === "esc" ? "var(--status-critical)" : "var(--status-gate)"}`,
-                color: c.kind === "esc" ? "var(--status-critical-text)" : "var(--status-gate-text)",
+                border: `1px solid ${border}`,
+                color,
                 textTransform: "uppercase",
                 letterSpacing: "0.03em",
+                opacity: st || isFocus ? 1 : 0.5,
+                ...(isFocus ? { animation: "lightflash 1.1s ease-in-out infinite" } : {}),
               }}
             >
-              {c.label}
+              {g}
             </span>
-          ))}
-        </div>
-      ) : null}
+          );
+        })}
+      </div>
     </div>
   );
 }

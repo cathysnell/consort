@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { STEP_OUTPUTS, WORKFLOW, gateForNode, type WorkflowNode } from "@/lib/topology";
 import { colorForRole, font, radius } from "@/lib/theme";
 import type { DashboardState, GateInfo } from "@/lib/types";
@@ -71,6 +72,8 @@ export function WorkflowGraph({
   const feature = state.features?.find((f) => f.active)?.id ?? state.feature ?? state.pinnedFeature;
   const activeStory = state.stories?.find((s) => s.active) ?? null;
   const stateLabel = activeStory ? `▸ ${activeStory.id}` : state.phase ?? "in progress";
+  // Collapses to just the header (feature · state) on a header click, like the lane cards.
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
@@ -83,12 +86,18 @@ export function WorkflowGraph({
         overflow: "hidden",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "var(--surface-card)", borderBottom: `1px solid var(--border-default)` }}>
+      <div
+        onClick={() => setCollapsed((c) => !c)}
+        title={collapsed ? "Expand current sprint" : "Collapse current sprint"}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "var(--surface-card)", borderBottom: `1px solid var(--border-default)`, cursor: "pointer" }}
+      >
         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-strong)", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 62 }}>
           {feature ?? "sprint"}
         </span>
         <span style={{ fontSize: "0.7rem", fontWeight: activeStory ? 700 : 500, color: activeStory ? "var(--status-accent-text)" : "var(--text-muted)" }}>· {stateLabel}</span>
+        <span aria-hidden style={{ marginLeft: "auto", fontSize: "0.7rem", color: "var(--text-faint)", width: 10, textAlign: "center" }}>{collapsed ? "▸" : "▾"}</span>
       </div>
+      {collapsed ? null : (
       <div style={{ padding: "14px 16px", overflowX: "auto" }}>
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -125,6 +134,7 @@ export function WorkflowGraph({
         ))}
       </svg>
       </div>
+      )}
     </div>
   );
 }

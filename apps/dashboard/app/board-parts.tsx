@@ -247,36 +247,42 @@ export function EventTicker({
 // the left (no viewport floor overshooting past it) — and its list scrolls internally (a scrollbar)
 // when the log is longer than that. Collapsed, it shrinks to a thin rail with a vertical label +
 // expand button, handing the width back to the board.
-const LOG_PANE_WIDTH = 380;
-export function LogPane({
-  state,
+const SIDE_PANE_WIDTH = 380;
+
+// The shared chrome for a collapsible SIDE pane — the event log (right) and the planning backlog
+// (left) are the same component mirrored. It stretches to the board column's height (the flex row's
+// `align-items:stretch`) and stops there; `position:relative` + an absolutely-filled inner column
+// keeps its (possibly long) content out of flow so it can NEVER drive the row taller than the board
+// — the content then scrolls inside the fixed box. Collapsed, it shrinks to a thin rail with a
+// vertical label + an expand button, handing the width back to the board. Not an overlay: it's a
+// real flex sibling, so opening it makes the board share horizontal space.
+export function SidePane({
+  side,
+  title,
   open,
   onToggle,
-  onOpenTurn,
-  onOpenArtifact,
+  width = SIDE_PANE_WIDTH,
+  children,
 }: {
-  state: DashboardState;
+  side: "left" | "right";
+  title: string;
   open: boolean;
   onToggle: () => void;
-  onOpenTurn?: (ord: number) => void;
-  onOpenArtifact?: (path: string) => void;
+  width?: number;
+  children: React.ReactNode;
 }) {
-  // The pane's OUTER box: it stretches to the board column's height (row `align-items:stretch`) and
-  // stops there. `position:relative` + an absolutely-filled inner column is what keeps it honest —
-  // the inner content (a 277-row log) is taken out of flow, so it can NEVER drive the row taller
-  // than the board (the bug where the log extended the page below the last left section). The inner
-  // list then scrolls within the fixed box.
   const frame: React.CSSProperties = {
     flex: "none",
     alignSelf: "stretch",
     position: "relative",
     // Body carries a SUBTLE tint (surface-panel) — off the board background, but far less lifted
-    // than the card-surface header band (see headBand), so it doesn't read as a raised card.
+    // than the card-surface header band, so it doesn't read as a raised card.
     background: "var(--surface-panel)",
     border: `1px solid var(--border-default)`,
     borderRadius: radius.panel,
     overflow: "hidden",
-    marginLeft: 16,
+    // Gap goes on the side that faces the board.
+    ...(side === "left" ? { marginRight: 16 } : { marginLeft: 16 }),
   };
   const fill: React.CSSProperties = { position: "absolute", inset: 0, display: "flex", flexDirection: "column" };
   const toggleBtn: React.CSSProperties = {
@@ -290,39 +296,58 @@ export function LogPane({
     lineHeight: 1,
     fontSize: "0.8rem",
   };
-  // The header is the pane's TINTED top band (surface-muted); the content below it stays clear
-  // (the card surface), consistent with the other panes.
+  // Distinct card-surface header band over the subtly-tinted body.
   const headBand: React.CSSProperties = { background: "var(--surface-card)", borderBottom: `1px solid var(--border-default)`, flex: "none" };
+  // The chevron points toward the edge the pane tucks into: a right pane collapses with ›, a left ‹.
+  const collapseGlyph = side === "left" ? "‹" : "›";
+  const expandGlyph = side === "left" ? "›" : "‹";
   if (!open) {
-    // Collapsed rail: a slim always-visible strip so the log is one click away and the board gets
-    // the width back. The vertical "EVENT LOG" label reads top-to-bottom.
     return (
       <div style={{ ...frame, width: 34 }}>
         <div style={{ ...fill, alignItems: "center", padding: "8px 0" }}>
-          <button onClick={onToggle} title="Show the event log" aria-label="Show the event log" style={toggleBtn}>
-            ‹
+          <button onClick={onToggle} title={`Show ${title}`} aria-label={`Show ${title}`} style={toggleBtn}>
+            {expandGlyph}
           </button>
-          <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", marginTop: 12, fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 700 }}>
-            Event log
+          <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", marginTop: 12, fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>
+            {title}
           </div>
         </div>
       </div>
     );
   }
   return (
-    <div style={{ ...frame, width: LOG_PANE_WIDTH }}>
+    <div style={{ ...frame, width }}>
       <div style={fill}>
         <div style={{ ...headBand, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px" }}>
-          <span style={{ fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--text-muted)", fontWeight: 700 }}>
-            Event log · {state.eventCount}
-          </span>
-          <button onClick={onToggle} title="Collapse the event log" aria-label="Collapse the event log" style={toggleBtn}>
-            ›
+          <span style={{ fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--text-muted)", fontWeight: 700 }}>{title}</span>
+          <button onClick={onToggle} title={`Collapse ${title}`} aria-label={`Collapse ${title}`} style={toggleBtn}>
+            {collapseGlyph}
           </button>
         </div>
-        <EventTicker state={state} onOpenTurn={onOpenTurn} onOpenArtifact={onOpenArtifact} variant="pane" />
+        {children}
       </div>
     </div>
+  );
+}
+
+// The event log as the RIGHT-side collapsible pane.
+export function LogPane({
+  state,
+  open,
+  onToggle,
+  onOpenTurn,
+  onOpenArtifact,
+}: {
+  state: DashboardState;
+  open: boolean;
+  onToggle: () => void;
+  onOpenTurn?: (ord: number) => void;
+  onOpenArtifact?: (path: string) => void;
+}) {
+  return (
+    <SidePane side="right" title={`Event log · ${state.eventCount}`} open={open} onToggle={onToggle}>
+      <EventTicker state={state} onOpenTurn={onOpenTurn} onOpenArtifact={onOpenArtifact} variant="pane" />
+    </SidePane>
   );
 }
 

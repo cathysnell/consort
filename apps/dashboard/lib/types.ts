@@ -313,6 +313,16 @@ export interface SnapshotInputs {
   statusIsHistorical?: boolean;
 }
 
+// Where the run is RIGHT NOW — a single, mutually-exclusive locus. `step`: a role turn is running.
+// `gate`: parked at a human gate awaiting a decision. `idle`: nothing active (complete / not
+// started, or between). Every surface listens to this instead of re-deriving. (Blockers like a
+// failed verify are auto-heal agent issues, not a run locus, so they don't appear here — they drive
+// the agent-bubble "issue" state, not the run's focus.)
+export type Focus =
+  | { kind: "step"; lane: string; step: string }
+  | { kind: "gate"; gate: string }
+  | { kind: "idle" };
+
 export interface DashboardState {
   ok: boolean;
   error: string | null;
@@ -368,6 +378,11 @@ export interface DashboardState {
   // "open" until an explicit gate.approved, so several past gates can read open at once; only this
   // one is the active wait). Null when the run is proceeding, not stopped at a gate.
   pendingGate: string | null;
+  // The ONE observation of WHERE the run is right now — the single source every surface (orchestrator
+  // card, lane header dots, step cards) reads to decide what is "active". Derived once (focusOf) from
+  // laneCurrent + pendingGate + blockers, so a step running, a gate parked-at, an escalation, or idle
+  // is decided in one place instead of each surface recombining the raw fields (and disagreeing).
+  focus: Focus;
   lane: "design" | "build" | "complete"; // which top bar to emphasize
   totalCost: number;
   eventCount: number;

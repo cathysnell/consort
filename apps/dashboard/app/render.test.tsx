@@ -25,9 +25,14 @@ import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, TranscriptView, turnMetaFields, turnUrl, type TurnPayload } from "./DrilldownPanel";
 import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-parts";
 import type { DashboardState } from "@/lib/types";
+import { focusOf } from "@/lib/reducer";
+
+// Fixtures predate the `focus` field; derive it the same way the fold does so components that read
+// state.focus work, and so a test that overrides topology gets a focus matching that override.
+const withFocus = (s: DashboardState): DashboardState => ({ ...s, focus: focusOf(s) });
 
 const fixture = (name: string): DashboardState =>
-  JSON.parse(readFileSync(join(__dirname, "..", "lib", "__fixtures__", name), "utf8"));
+  withFocus(JSON.parse(readFileSync(join(__dirname, "..", "lib", "__fixtures__", name), "utf8")));
 
 // React escapes &, <, > in text nodes; renderToStaticMarkup emits the escaped form. Mirror that so
 // a `toContain` on raw corpus text stays correct if the text ever carries an HTML-special char.
@@ -143,7 +148,7 @@ describe("render — LaneGraph", () => {
   // Corpus-shaped states, which is where the single-feature fixtures above can't reach. All
   // three of these are real playhead positions in stockflow-rerecord (see reducer.test.ts).
   const withTopology = (over: Partial<DashboardState["topology"]>, rest: Partial<DashboardState> = {}) =>
-    ({ ...state, ...rest, topology: { ...state.topology, ...over } }) as DashboardState;
+    withFocus({ ...state, ...rest, topology: { ...state.topology, ...over } } as DashboardState);
 
   it("does not claim a lane is not-started when the lifecycle has passed it", () => {
     // Reported: at corpus events 20/90/230/260, passedNodes contains "plan" — the lifecycle
@@ -246,10 +251,11 @@ describe("render — LaneGraph", () => {
     );
     expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
     expect(markup).toContain("7/8 steps"); // build: 8 lightable now (b-refactor added); this pre-remodel corpus lit 7 (no b-refactor event)
-    // Plan reads 2/4: 4 lightable now (p-intake added), and this pre-p-intake render-state snapshot
-    // lit only p-propose + p-size (p-req never lights — its product-owner emits gate.approved, not the
-    // author-requests phase; p-intake wasn't in the topology when the snapshot was captured).
-    expect(markup).toContain("2/4 steps");
+    // Plan reads 2/5: 5 lightable now (p-intake + p-breakdown added), and this pre-p-intake
+    // render-state snapshot lit only p-propose + p-size (p-req never lights — its product-owner emits
+    // gate.approved, not the author-requests phase; p-intake/p-breakdown weren't in the topology when
+    // the snapshot was captured).
+    expect(markup).toContain("2/5 steps");
   });
 
   it("takes gate state from the run's gates, not from the step data", () => {
@@ -282,7 +288,7 @@ describe("render — LaneGraph", () => {
 
     // Parked at the spec gate: it pulses WHITE and wears a purple border.
     const parked = renderToStaticMarkup(
-      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "spec" }} />,
+      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "spec" })} />,
     );
     expect(backingRectFor(parked)).toContain("glowpulse"); // the live wait → pulses (SVG-visible glow)
     expect(backingRectFor(parked)).toContain("var(--text-strong)"); // glows WHITE, like the bubble cards
@@ -290,13 +296,13 @@ describe("render — LaneGraph", () => {
 
     // Spec gate still `open` but the drive is parked ELSEWHERE (acceptance): spec must NOT pulse.
     const elsewhere = renderToStaticMarkup(
-      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "acceptance" }} />,
+      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "acceptance" })} />,
     );
     expect(backingRectFor(elsewhere)).not.toContain("glowpulse"); // open but not the live wait → quiet
 
     // Cleared: no pulse.
     const approved = renderToStaticMarkup(
-      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }], pendingGate: null }} />,
+      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "approved" }], pendingGate: null })} />,
     );
     expect(backingRectFor(approved)).not.toContain("glowpulse"); // cleared → quiet, no pulse
   });
@@ -330,7 +336,7 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
     expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render even when empty
     expect(markup).toContain("not started");
-    expect(markup).toContain("0/4 steps"); // plan: 4 lightable steps (incl. p-intake), none reached
+    expect(markup).toContain("0/5 steps"); // plan: 5 lightable steps (incl. p-intake + p-breakdown), none reached
   });
 });
 

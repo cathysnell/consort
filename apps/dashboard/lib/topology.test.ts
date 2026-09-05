@@ -598,6 +598,26 @@ const STEP_DEVIATIONS: {
   },
 ];
 
+// Whole STEPS the dashboard ADDS to a ported lane that Kevin's Python omits — a declared departure
+// like STEP_DEVIATIONS, but for a sub-step rather than one of its fields. Each must correspond to a
+// phase the Python phaseToNode already routes to this lane yet gave no sub-step, so the lane could
+// light while no step did. Added steps are filtered off the topology side of the verbatim
+// comparison (so every OTHER step still matches the fixture byte-for-byte) and separately asserted
+// to exist, sit right after their declared predecessor, and carry a reason.
+const ADDED_STEPS: {
+  lane: (typeof PORTED_LANE_IDS)[number];
+  step: string;
+  after: string; // the existing step this one is inserted directly after
+  why: string;
+}[] = [
+  {
+    lane: "plan",
+    step: "p-breakdown",
+    after: "p-req",
+    why: "breakdown (spec-author) breaks the committed features into stories — a real plan-lane phase (PHASE_TO_NODE.breakdown === 'plan') that Kevin's Python routed to the Plan node but gave no sub-step; adding it lets the plan lane AND a step light while the backlog is broken down.",
+  },
+];
+
 describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
   it("the fixture is the literal we think it is", () => {
     expect(PY._source.line).toBe(384);
@@ -651,11 +671,27 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       expect(py, `fixture has no ${lane} lane`).toBeDefined();
 
       expect(ts.title).toBe(py.title);
-      expect(ts.edges.map((e) => [...e])).toEqual(py.edges);
       expect(ts.backEdges.map((e) => [...e])).toEqual(py.backEdges);
 
+      // Dashboard-native added steps are declared departures; filter them off the topology side so
+      // the rest of the lane is compared to the fixture verbatim. Their own shape is proven below.
+      const added = new Set(ADDED_STEPS.filter((a) => a.lane === lane).map((a) => a.step));
+      const tsSteps = ts.steps.filter((s) => !added.has(s.id));
+      // Edges through an added step collapse back to the fixture edge: drop any edge touching an
+      // added step, then re-add the predecessor→successor edge it stands in for. With no added
+      // steps this is exactly ts.edges.
+      const tsEdges = added.size
+        ? ts.edges.filter((e) => !added.has(e[0]) && !added.has(e[1])).map((e) => [...e])
+        : ts.edges.map((e) => [...e]);
+      for (const a of ADDED_STEPS.filter((x) => x.lane === lane)) {
+        const before = ts.edges.find((e) => e[1] === a.step);
+        const afterE = ts.edges.find((e) => e[0] === a.step);
+        if (before && afterE) tsEdges.push([before[0], afterE[1]]);
+      }
+      expect(tsEdges).toEqual(py.edges);
+
       // Step order matters: it is the order the lane renders in.
-      expect(ts.steps.map((s) => s.id)).toEqual(py.steps.map((s) => s.id));
+      expect(tsSteps.map((s) => s.id)).toEqual(py.steps.map((s) => s.id));
 
       // Apply the declared step deviations to the FIXTURE side, so the verbatim comparison reflects
       // "Kevin's Python + the dashboard's declared departures". The deviations are separately proven
@@ -678,7 +714,7 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
           ? Object.fromEntries(Object.entries(s.match).sort(([a], [b]) => a.localeCompare(b)))
           : null,
       });
-      expect(ts.steps.map(norm)).toEqual(py.steps.map((s) => norm(withDev(s))));
+      expect(tsSteps.map(norm)).toEqual(py.steps.map((s) => norm(withDev(s))));
     });
   }
 
@@ -700,6 +736,29 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       expect((ts![d.field] ?? null) as string | null, `${d.step} topology ${d.field}`).toBe(d.ts);
       expect(d.py, `${d.step} is a real difference`).not.toBe(d.ts);
       expect(d.why.length, `${d.step} needs a reason`).toBeGreaterThan(20);
+    }
+  });
+
+  it("declares every added step truthfully (absent from the fixture, present in topology, in order)", () => {
+    // Keeps ADDED_STEPS honest: each must be a genuine dashboard addition — not in Kevin's Python,
+    // present in the topology, sitting right after its declared predecessor, on a lane whose
+    // phaseToNode routes the step's phase here — with a reason. A step that's actually in the
+    // fixture (or mis-placed) is caught instead of silently masking a comparison.
+    for (const a of ADDED_STEPS) {
+      const py = PY.lanes[a.lane].steps.find((s) => s.id === a.step);
+      const steps = WORKFLOW.lanes[a.lane].steps;
+      const idx = steps.findIndex((s) => s.id === a.step);
+      const afterIdx = steps.findIndex((s) => s.id === a.after);
+      expect(py, `${a.step} must be absent from the fixture`).toBeUndefined();
+      expect(idx, `${a.step} must exist in topology`).toBeGreaterThanOrEqual(0);
+      expect(afterIdx, `${a.after} (predecessor of ${a.step}) must exist`).toBeGreaterThanOrEqual(0);
+      expect(idx, `${a.step} must sit directly after ${a.after}`).toBe(afterIdx + 1);
+      // The added step's phase must route to its own lane in phaseToNode (it's a real lane phase).
+      const step = steps[idx];
+      const phases = [step.match?.phase, ...(step.match?.phaseAny ?? [])].filter(Boolean) as string[];
+      expect(phases.length, `${a.step} needs a matching phase`).toBeGreaterThan(0);
+      for (const p of phases) expect(nodeForPhase(p), `${p} routes to lane ${a.lane}`).toBe(a.lane);
+      expect(a.why.length, `${a.step} needs a reason`).toBeGreaterThan(20);
     }
   });
 });

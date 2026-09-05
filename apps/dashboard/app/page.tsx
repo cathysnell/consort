@@ -9,7 +9,7 @@ import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, type DrilldownTarget } from "./DrilldownPanel";
 import { BacklogPanel } from "./BacklogPanel";
 import { OrchestratorLane } from "./OrchestratorLane";
-import { DriftBanner, LogPane, modeFromUrl } from "./board-parts";
+import { DriftBanner, LogPane, SidePane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
 import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
@@ -57,6 +57,9 @@ export default function Home() {
   // column flexes narrower), collapsed = a slim rail so the board reclaims the width. Never an
   // overlay — it's a flex sibling of the board, not a floating layer.
   const [logOpen, setLogOpen] = useState(true);
+  // The planning backlog is the LEFT-side collapsible pull-out (mirrors the event log on the right).
+  // Default collapsed — it's reference material you pull out when planning, not always-on like the log.
+  const [backlogOpen, setBacklogOpen] = useState(false);
   // The single panel is a FIXED right-side drawer (see its render below), so it's already in the
   // viewport wherever you are — clicking a lifecycle node up top or a ticker row far down both
   // answer in place, next to what you clicked. No scroll-into-view: that used to yank the page to a
@@ -105,6 +108,9 @@ export default function Home() {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes softpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } 50% { box-shadow: 0 0 18px 2px currentColor; opacity: 0.92; } }
+        /* A pure-opacity flash for the active lane-header dot — box-shadow glows get clipped by the
+           lane card's overflow:hidden, but opacity is never clipped, so the light actually blinks. */
+        @keyframes lightflash { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
         /* SVG elements ignore box-shadow, so the lane-step cards pulse via an animatable drop-shadow
            (glows in currentColor). Stacked drop-shadows at the peak make the glow read strongly; it
            is the ONLY cue for the active step, so it must be unmistakable. Visible on SVG. */
@@ -145,11 +151,18 @@ export default function Home() {
         <Placeholder message={state.error || "No Consort run found."} error />
       ) : (
         <>
-          {/* Board + event-log share one flex row: the main column (flex:1) shrinks when the log
-              pane is open, so the log is never an overlay — it takes real horizontal space.
-              `stretch` makes the log pane run the FULL length of the board column, not a viewport
-              slice. */}
+          {/* Three-column flex row: the planning-backlog pull-out (left), the board (centre, flex:1),
+              and the event-log pane (right). Both side panes are collapsible flex siblings — never
+              overlays — so opening either makes the board share horizontal space. `stretch` runs
+              each pane the full length of the board column. */}
           <div style={{ display: "flex", alignItems: "stretch" }}>
+            {canShowBacklog ? (
+              <SidePane side="left" title="Backlog · planning" open={backlogOpen} onToggle={() => setBacklogOpen((o) => !o)}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 12px" }}>
+                  <BacklogPanel mode={state.source?.mode ?? null} />
+                </div>
+              </SidePane>
+            ) : null}
             <div style={{ flex: 1, minWidth: 0 }}>
           {state.waiting ? <WaitingBanner waiting={state.waiting} /> : null}
           <DriftBanner correlation={state.source?.correlation ?? null} />
@@ -182,14 +195,7 @@ export default function Home() {
           <SectionHeader>Status</SectionHeader>
           <StatusBar state={state} showCost={showCost} />
 
-          {/* Planning / backlog — proposals, t-shirt sizes, sprint commit, plan gate. Fetched on
-              its own route (not folded), so it does not rewind with the transport. */}
-          {canShowBacklog ? (
-            <>
-              <SectionHeader>Planning · backlog</SectionHeader>
-              <BacklogPanel mode={state.source?.mode ?? null} />
-            </>
-          ) : null}
+          {/* Planning / backlog moved to the LEFT-side pull-out pane (see the flex row above). */}
 
           <SectionHeader>Current State</SectionHeader>
           <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>

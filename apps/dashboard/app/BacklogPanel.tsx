@@ -24,8 +24,28 @@ const SIZE_HELP: Record<string, string> = {
   XL: "extra large",
 };
 
+// t-shirt size → an effort-gradient tint: XS/S green, M blue, L amber, XL/XXL red (a bigger build
+// reads hotter). Unknown sizes fall back to a neutral chip.
+function sizeTint(size: string): { bg: string; fg: string } {
+  switch (size.toUpperCase()) {
+    case "XS":
+    case "S":
+      return { bg: "var(--status-good-tint-soft)", fg: "var(--status-good-text)" };
+    case "M":
+      return { bg: "rgba(57,135,229,0.16)", fg: "#2f6fbf" };
+    case "L":
+      return { bg: "var(--status-warning-tint)", fg: "var(--status-warning-text)" };
+    case "XL":
+    case "XXL":
+      return { bg: "var(--status-critical-tint)", fg: "var(--status-critical-text)" };
+    default:
+      return { bg: "var(--surface-inset)", fg: "var(--text-body)" };
+  }
+}
+
 function SizeChip({ size }: { size: string | null }) {
   if (!size) return null;
+  const t = sizeTint(size);
   return (
     <span
       title={`t-shirt estimate: ${SIZE_HELP[size] ?? size}`}
@@ -33,11 +53,13 @@ function SizeChip({ size }: { size: string | null }) {
         fontSize: "0.66rem",
         fontWeight: 700,
         letterSpacing: "0.04em",
-        color: "var(--text-body)",
-        background: "var(--surface-inset)",
-        border: `1px solid var(--border-default)`,
+        color: t.fg,
+        background: t.bg,
         borderRadius: radius.chip,
         padding: "1px 7px",
+        minWidth: 24,
+        textAlign: "center",
+        display: "inline-block",
         whiteSpace: "nowrap",
       }}
     >
@@ -46,7 +68,7 @@ function SizeChip({ size }: { size: string | null }) {
   );
 }
 
-function CommittedChip() {
+function CommittedChip({ sprint }: { sprint: string | null }) {
   return (
     <span
       title="carried into a sprint backlog"
@@ -62,7 +84,7 @@ function CommittedChip() {
         padding: "1px 6px",
       }}
     >
-      committed
+      {sprint ? `committed in ${sprint}` : "committed"}
     </span>
   );
 }
@@ -112,12 +134,40 @@ export function BacklogPanel({ mode }: { mode: "live" | "replay" | null }) {
   }
 
   return (
-    <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 18, fontFamily: font.sans }}>
-      {/* --- Sprints: what was committed, and the plan gate. --- */}
+    // No outer card: the panel lives inside the SidePane body (which supplies the surface + padding),
+    // so it renders as two bare sections — Feature backlog, then Sprint plan.
+    <div style={{ display: "flex", flexDirection: "column", gap: 18, fontFamily: font.sans }}>
+      {/* --- Feature backlog: every proposed feature, in proposal order, with its size + commit state. --- */}
+      {planning.candidates.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            {/* Count the committed CANDIDATES actually shown here, not planning.committed (which
+                counts sprint ids). A committed feature that isn't in estimates.json has no
+                candidate row and no chip, so using planning.committed.length would read
+                "2 of 7 committed" while only one chip appears. This number always matches the
+                chips below it. */}
+            Feature backlog <span style={{ color: "var(--text-faint)", textTransform: "none", letterSpacing: 0 }}>· {planning.candidates.filter((c) => c.committed).length} of {planning.candidates.length} committed</span>
+          </div>
+          {planning.candidates.map((c) => (
+            <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 3, paddingBottom: 8, borderBottom: `1px solid var(--surface-inset)` }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                <SizeChip size={c.size} />
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-strong)", fontFamily: font.mono }}>{c.id}</span>
+                {c.title ? <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-body)" }}>{c.title}</span> : null}
+                {c.committed ? <CommittedChip sprint={planning.sprints.find((sp) => sp.features.some((f) => f.id === c.id))?.sprint ?? null} /> : null}
+              </div>
+              {c.ask ? <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", lineHeight: 1.4 }}>{c.ask}</div> : null}
+              {c.rationale ? <div style={{ fontSize: "0.72rem", color: "var(--text-faint)", lineHeight: 1.4 }}>{c.rationale}</div> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* --- Sprint plan: each sprint with its committed features + the plan gate. --- */}
       {planning.sprints.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Sprints
+            Sprint plan
           </div>
           {planning.sprints.map((sp) => (
             <div key={sp.sprint} style={{ border: `1px solid var(--border-default)`, borderRadius: radius.panel, padding: "10px 12px" }}>
@@ -143,32 +193,6 @@ export function BacklogPanel({ mode }: { mode: "live" | "replay" | null }) {
                   {f.title ? <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{f.title}</span> : null}
                 </div>
               ))}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {/* --- Candidates: the proposal pool, in proposal order, with sizes and commit state. --- */}
-      {planning.candidates.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            {/* Count the committed CANDIDATES actually shown here, not planning.committed (which
-                counts sprint ids). A committed feature that isn't in estimates.json has no
-                candidate row and no chip, so using planning.committed.length would read
-                "2 of 7 committed" while only one chip appears. This number always matches the
-                chips below it. */}
-            Proposed features <span style={{ color: "var(--text-faint)", textTransform: "none", letterSpacing: 0 }}>· {planning.candidates.filter((c) => c.committed).length} of {planning.candidates.length} committed</span>
-          </div>
-          {planning.candidates.map((c) => (
-            <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 3, paddingBottom: 8, borderBottom: `1px solid var(--surface-inset)` }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                <SizeChip size={c.size} />
-                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-strong)", fontFamily: font.mono }}>{c.id}</span>
-                {c.title ? <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-body)" }}>{c.title}</span> : null}
-                {c.committed ? <CommittedChip /> : null}
-              </div>
-              {c.ask ? <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", lineHeight: 1.4 }}>{c.ask}</div> : null}
-              {c.rationale ? <div style={{ fontSize: "0.72rem", color: "var(--text-faint)", lineHeight: 1.4 }}>{c.rationale}</div> : null}
             </div>
           ))}
         </div>
