@@ -241,8 +241,19 @@ if [[ -n "$CREATE" ]]; then
   clk consort-human-proxy supply --from "${INTAKE_DIR}/product-overview.md" --to "${SFTDD_DIR}/product-overview.md" --artifact product-overview.md
   clk consort-human-proxy supply --from "${INTAKE_DIR}/nfrs.md" --to "${SFTDD_DIR}/nfrs.md" --artifact nfrs.md
   [[ -f "${INTAKE_DIR}/design-brief.md" ]] && clk consort-human-proxy supply --from "${INTAKE_DIR}/design-brief.md" --to "${SFTDD_DIR}/design/design-brief.md" --artifact design-brief.md
+  # Brand asset(s) (G5): the intake ships a design/assets/ (or assets/) dir with the product
+  # icon (warehouse.png), which drive.cli's intake correspondence beat reads from
+  # .consort/design/assets/. Stage it into the project like _replay-smoke.sh does, so a --create
+  # live capture carries the icon too (before this only the 3 .md's were staged, so the icon
+  # never reached the intake correspondence / the build).
+  _assets="${INTAKE_DIR}/design/assets"
+  [[ -d "$_assets" ]] || _assets="${INTAKE_DIR}/assets"
+  if [[ -d "$_assets" ]]; then
+    mkdir -p "${SFTDD_DIR}/design/assets"
+    cp -R "${_assets}/." "${SFTDD_DIR}/design/assets/" 2>/dev/null || true
+  fi
   git add "${SFTDD_REL}" >/dev/null 2>&1 || true
-  git commit -m "intake: project product-overview + nfrs + design-brief" >/dev/null 2>&1 || true
+  git commit -m "intake: project product-overview + nfrs + design-brief + brand assets" >/dev/null 2>&1 || true
   # PER-FEATURE mode: pre-seed each feature-request on the entry tier so the fork
   # inherits it. SPRINT mode does NOT pre-seed: the planning lane authors the
   # feature-requests LIVE (the proxy-as-PO author-requests step, fed by

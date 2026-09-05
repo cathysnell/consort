@@ -70,11 +70,14 @@ Root-cause fix shipped:
 Remaining (not in the hermetic commit): consistent drive-side `gate.surfaced("plan")` timing on a
 human-live run (G4 tail) needs a live run to validate.
 
-### Phase 3 — intake launcher/supply completeness (G5)
+### Phase 3 — intake launcher/supply completeness (G5) — DONE (live-proof pending)
 
-- Stage `intake/assets/` into the scaffolded project (and git-add it) so the icon reaches the build.
-- Emit an intake-supply correspondence record listing the supplied docs (same shape as
-  author-requests).
+**Re-verified — mostly already done.** G5(b) (intake-supply correspondence) is fully implemented in
+`bin/consort/drive.cli.ts` (kickoff beats 0/1/2: ask + submission, incl. a binary-safe `warehouse.png`
+copy into `<REC>/intake/`). G5(a) was only partial: `_replay-smoke.sh` staged the intake
+`design/assets/`, but the `--create` **live-capture** path in `capture-scenario.sh` staged only the 3
+`.md`s, so the icon never reached `.consort/design/assets/` on a live capture. Fixed by mirroring the
+asset-staging block there. See `kit-gaps-repair-worklog.md`.
 
 ### Phase 4 — feature-attribution decision (G2 tail)
 

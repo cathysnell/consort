@@ -70,4 +70,44 @@ human-live run (cannot be run unattended here).
 
 ### Commit
 
-`3ad4565d` on `kit-gaps-repair`.
+`990c552f` on `kit-gaps-repair`.
+
+---
+
+## Phase 3 — intake launcher / supply completeness (G5) — COMMITTED
+
+### Findings (verified against current source)
+
+Both halves of G5 were **largely already done** — the plan doc is stale again:
+
+- **G5(b) — intake-supply correspondence: DONE.** `bin/consort/drive.cli.ts` writes the intake
+  correspondence beats at kickoff: seq 0 kickoff, seq 1 orchestrator ASKS for intake (incl. brand
+  asset), seq 2 HIL SUBMITS — each on-disk intake artifact becomes a `submitted[]` entry, and the
+  bytes (incl. `warehouse.png`, binary-safe) are copied into `<REC>/intake/` so the corpus is
+  portable. Nothing to add.
+- **G5(a) — icon staged into the project: PARTIAL → fixed.** `_replay-smoke.sh` already stages the
+  intake `design/assets/` (or `assets/`) dir into the project. But the `--create` **live-capture**
+  path in `capture-scenario.sh` staged only the 3 `.md`s via `consort-human-proxy supply`, so on a
+  live capture the icon never reached `.consort/design/assets/` — and drive.cli's beat-2 read found
+  nothing. Real gap.
+
+### Changes
+
+- `examples/replay/capture-scenario.sh` (`--create`): after the 3 `.md` supplies, stage the intake
+  `design/assets/` (or `assets/`) into `${SFTDD_DIR}/design/assets/`, mirroring `_replay-smoke.sh`,
+  and widen the intake commit message to include brand assets. Now a `--create` capture carries the
+  icon too.
+
+### Tests
+
+- `bash -n examples/replay/capture-scenario.sh`: syntax OK. (Shell scaffolding — no hermetic unit
+  test; the block is a byte-parity copy of the proven `_replay-smoke.sh` staging.)
+
+### Live-proof status
+
+**LIVE-PROOF PENDING** — a `--create` capture of a scenario whose intake ships `design/assets/` should
+now show the icon in the intake correspondence submission + on disk at `.consort/design/assets/`.
+
+### Commit
+
+`<phase-3-commit-hash>` on `kit-gaps-repair`.
