@@ -110,4 +110,129 @@ now show the icon in the intake correspondence submission + on disk at `.consort
 
 ### Commit
 
-`<phase-3-commit-hash>` on `kit-gaps-repair`.
+`e9bc6c83` on `kit-gaps-repair`.
+
+---
+
+## Phase 4 — feature-attribution decision (G2 tail) — DECIDED (no code)
+
+Phase 4 is a decision, not code (per the plan). This is the "plan 1/5" question raised while working
+on the dashboard: during a feature, the plan lane lights only the steps the log attributes to that
+feature (e.g. just `p-breakdown`), because the pre-naming `propose`/`estimate` planning events carry
+`feature_id: ""` and are excluded from the feature's scope.
+
+**Decision: keep strict per-feature scoping. Do NOT flip to sprint-level or forward-attribute.**
+
+Rationale:
+- The reducer's per-feature scoping is intentional and tested (`lib/reducer.test.ts` — "attributes
+  sprint-1 planning to no feature"). It explicitly refuses to credit pre-feature planning to
+  "whichever feature happens to come next" because that is **a guess**.
+- Planning genuinely runs *before* a feature exists (it decides *what* the feature will be), so a
+  feature's plan lane honestly showing only its own post-naming planning is correct, not a bug.
+- The sprint-level view of the plan gate is already available: the orchestrator's gate bubbles treat
+  `plan` as sprint-level (never story-filtered), so "the sprint's plan gate passed" is legible there.
+- The "N/5" count is therefore honest. The `p-breakdown` step added earlier this session is what
+  makes a feature's own planning contribution (breakdown → stories) visible on the lane.
+
+**If sprint-level is later wanted** (a deliberate product choice, not a bug fix): it needs a
+sprint-boundary notion the dashboard does not currently track (so the plan lane could scope to the
+*sprint* rather than the feature without bleeding sprint-1's planning into sprint-2). That is a
+scoped follow-up to green-light, not an autonomous flip — flagged here rather than silently changed.
+
+No commit (documentation only; folded into the wrap commit).
+
+---
+
+## Phase 5 — channel-model live proof (G6) — NOT A GAP (stale doc)
+
+### Findings (verified against current source)
+
+The plan doc's premise ("`executorDispatched` allowlists only 3 actions; 8 design roles + build
+turns still take the legacy path") is **badly stale**. The current allowlist
+(`consort/orchestrator/drive/executor-dispatch.ts`) already routes **every agent turn** through the
+unified executor:
+
+- **Design:** spec-author `breakdown`/`propose`, architect `estimate`, per-story spec-author /
+  architect-reviewer / test-strategist, `dba` (story-scoped), `ux-designer` (feature-scoped).
+- **Build:** navigator RED + `assess`/`assess-deploy`/`assess-refactor`/`review`/`reflect`; driver
+  GREEN + `refactor`/`repair`/`refactor-deploy`/`refactor-superseded`/`green-superseded`.
+
+The only invoke-role actions NOT routed through the executor are `product-owner author-requests` and
+`architect-reviewer estimate-committed` — both **intentionally deterministic/agentless**
+(`deterministicAgentless` + `commandsForAction`): author-requests is a human-input step, and
+estimate-committed is a deterministic sync-backlog. They are not un-migrated legacy agent turns.
+
+### Disposition
+
+No code change. There is nothing safe or correct to "widen" — the executor path is already the one
+dispatch path for all agent turns, and the two deterministic exclusions are by design. The
+"live-prove the contained-root path across the full set" remains a live-run concern, but the CODE
+gap G6 describes is closed. Plan doc corrected.
+
+---
+
+## Phase 1 — PO intake production (G1) — DEFERRED to a supervised live session (with spec)
+
+### Findings (verified against current source)
+
+G1 is **real and remains open**. `skills/consort/agents/product-owner.md` is a full facilitator
+agent (`model: opus`) that "runs the intake interviews and drafts product-overview.md / nfrs.md /
+design-brief.md" and at `/plan` drafts the `feature-request.md` files. But the drive **never spawns
+it to draft**: intake is always human/Human-Proxy supplied, and `product-owner author-requests`
+(`orchestrator-drive.ts:213`) is deliberately `deterministicAgentless` (the proxy/human supplies the
+recorded requests). So the PO agent is defined but dormant.
+
+### Why this is NOT shipped autonomously
+
+Phase 1 is the plan's anchor and its "big one" — a **behavioral** change that spawns an LLM agent
+into the drive's intake/planning path, and the plan itself requires it to be **live-proven** before
+done. It cannot be responsibly completed unattended:
+
+- It changes the intake/planning behavior that **every corpus and the live flow depend on**. The
+  guardrail (seed supplied → keep today's deterministic path byte-identical; only spawn when no seed)
+  is essential and must be live-verified, not asserted.
+- Proving a PO **agent** produces valid, human-approvable intake is inherently a live-LLM concern;
+  no hermetic test can stand in for it.
+- Per the project rules (nothing done until live-tested; never break the live path; the human owns
+  risky behavioral changes), a blind, unproven agent-spawn wired into intake would be worse than a
+  precise, ready-to-execute spec.
+
+### Ready-to-execute spec (for the supervised session)
+
+1. **Intake, no seed** — at the intake step, when no `$LAKEBASE_CONSORT_RECORDED_INTAKE_DIR` seed is
+   present, dispatch `invoke-role product-owner` (intake) through the executor to run the interview
+   and draft `product-overview.md` / `nfrs.md` / `design-brief.md`; the human approves. When a seed
+   IS present (replay/demo), keep today's deterministic supply path (no spawn) — corpora stay
+   byte-identical. Add the PO intake action to `executorDispatched` (it becomes a real agent turn)
+   with a shipped manifest step + output paths.
+2. **author-requests co-pilot** — when no recorded `SPRINT_REQUESTS`, dispatch `product-owner`
+   (author-requests) to draft each `feature-request.md` from the architect's sized candidates; human
+   approves. Recorded pairs present → keep deterministic supply. Move author-requests off
+   `deterministicAgentless` ONLY for the no-seed branch.
+3. **Reconcile positioning** — README/positioning line: PO = the human's seat PLUS an optional
+   facilitator co-pilot.
+4. **Live proof** — one no-seed run (PO drafts intake + requests, human-approves) AND one seed run
+   (byte-identical to today). Regression: the full hermetic suite stays green throughout.
+
+### Disposition
+
+**LIVE-PROOF REQUIRED / SUPERVISED.** Documented, not implemented. This is the one remaining piece of
+real work; it needs a human-attended live run.
+
+---
+
+## Summary (for review)
+
+| Phase | Gap | Outcome | Commit |
+|---|---|---|---|
+| **2** | G3/G4/G4b — gate approvals not logged | **DONE (hermetic).** Shared `gate-decision-log.ts`; plan + per-story spec doors now log `gate.approved`. G3 a non-gap. Full suite 3919 pass. | `990c552f` |
+| **3** | G5 — intake supply completeness | **DONE.** G5(b) already implemented; fixed G5(a) — `--create` capture now stages brand assets. | `e9bc6c83` |
+| **4** | G2 — plan-lane feature attribution | **DECIDED: keep strict per-feature scoping** (forward-attribution is a guess the reducer refuses). No code. | (wrap) |
+| **5** | G6 — channel-model executor path | **NOT A GAP (stale doc).** Executor already routes all agent turns; the 2 exclusions are intentional. No code. | (wrap) |
+| **1** | G1 — PO intake production | **DEFERRED — LIVE-PROOF REQUIRED.** PO agent exists but dormant; spec written for a supervised live session. | — |
+
+**Net:** the plan doc was substantially stale — most observability/correspondence/executor work was
+already shipped. Two genuine hermetic fixes landed (Phase 2, Phase 3); Phase 4 decided; Phase 5 found
+closed; Phase 1 (the true remaining anchor) specced and deferred to a supervised live run. Every kit
+change is hermetically green (full suite 3919 pass, tsc clean); no pushes, no releases, no version
+bumps; the live `stockflow-3-68` run was never touched.

@@ -27,7 +27,14 @@ by the maintainer); each phase is independently shippable and must be live-prove
 
 ## Plan
 
-### Phase 1 — PO intake production (anchor; fixes G1, largely resolves G2)
+### Phase 1 — PO intake production (anchor; fixes G1) — DEFERRED: live-proof required (spec ready)
+
+**Status: real + open, but not shipped autonomously.** The `product-owner` agent exists (opus) but is
+never spawned to draft — intake/author-requests are human/proxy-supplied. Wiring an LLM agent into the
+drive's intake/planning path is a behavioral change that the plan itself requires to be live-proven,
+and it touches the path every corpus + the live flow depend on. A precise, ready-to-execute spec (with
+the seed-path-byte-identical guardrail) is in `kit-gaps-repair-worklog.md`; execute it in a supervised
+live session, not blind. Original design below.
 
 Wire the existing `product-owner` agent as an interactive **co-pilot** at the two touchpoints the
 drive currently no-ops:
@@ -79,7 +86,15 @@ copy into `<REC>/intake/`). G5(a) was only partial: `_replay-smoke.sh` staged th
 `.md`s, so the icon never reached `.consort/design/assets/` on a live capture. Fixed by mirroring the
 asset-staging block there. See `kit-gaps-repair-worklog.md`.
 
-### Phase 4 — feature-attribution decision (G2 tail)
+### Phase 4 — feature-attribution decision (G2 tail) — DECIDED: keep strict per-feature scoping
+
+**Decision made (see `kit-gaps-repair-worklog.md`): keep strict per-feature scoping.** Forward-
+attributing pre-naming planning to the next feature is a guess the reducer deliberately refuses; the
+"N/5" plan count is honest, and the sprint-level plan gate is already legible in the orchestrator
+bubbles. A true sprint-level plan LANE would need sprint-boundary tracking the dashboard lacks —
+flagged as a scoped follow-up to green-light, not an autonomous flip.
+
+Original framing:
 
 For genuinely pre-feature *sprint* planning (before any feature is named), decide the display
 contract: show the plan lane as **sprint-level** (lit regardless of the scoped feature) vs. keep
@@ -87,10 +102,13 @@ today's strict per-feature scoping (dark until a feature is named). This is a de
 point (the current strict scope is intentional and tested), so it's a one-line decision to make
 explicitly rather than silently flip in the dashboard.
 
-### Phase 5 (extend) — channel-model live proof (G6)
+### Phase 5 (extend) — channel-model live proof (G6) — NOT A GAP (stale doc)
 
-Widen `executorDispatched` to the remaining design turns + live-prove, then retire the legacy
-`commandsForAction` branches. Separate track; local commits already exist.
+**Re-verified: closed.** `executorDispatched` already routes EVERY agent turn through the unified
+executor (all design roles + all build turns, including the self-heal/assess/reflect variants). The
+only invoke-role actions still on the deterministic `commandsForAction` path — `author-requests` and
+`estimate-committed` — are **intentionally agentless** (`deterministicAgentless`), not un-migrated.
+Nothing to widen. See `kit-gaps-repair-worklog.md`.
 
 ---
 
