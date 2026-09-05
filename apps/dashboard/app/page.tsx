@@ -8,7 +8,8 @@ import { WorkflowGraph } from "./WorkflowGraph";
 import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, type DrilldownTarget } from "./DrilldownPanel";
 import { BacklogPanel } from "./BacklogPanel";
-import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-parts";
+import { OrchestratorLane } from "./OrchestratorLane";
+import { DriftBanner, EventTicker, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
 import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
@@ -78,12 +79,27 @@ export default function Home() {
   // Step-output drill-down on the WorkflowGraph. Capability-gated like the others, so a source
   // without recorded deliverables simply renders non-clickable nodes.
   const canShowStepOutputs = state?.source?.capabilities.includes("stepOutputs") ?? false;
+  // Opening an agent's turn drill-down BY ROLE — the shared behavior behind both a Current-State
+  // bubble and a role-bearing lane step. Falls back to a role target when the tail carries no turn
+  // ordinal for the role, mirroring the bubble's own fallback.
+  const onOpenRole = (role: string) => {
+    if (!state) return;
+    const ord = latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], role);
+    setDrilldown(ord != null ? { kind: "turn", ord } : { kind: "role", role });
+  };
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--surface-page)", padding: "24px 28px", fontFamily: font.sans }}>
+    <main style={{ minHeight: "100vh", background: "var(--surface-page)", padding: "24px 28px 96px", fontFamily: font.sans }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes softpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } 50% { box-shadow: 0 0 18px 2px currentColor; opacity: 0.92; } }
+        /* SVG elements ignore box-shadow, so the lane-step cards pulse via an animatable drop-shadow
+           (glows in currentColor). Stacked drop-shadows at the peak make the glow read strongly; it
+           is the ONLY cue for the active step, so it must be unmistakable. Visible on SVG. */
+        @keyframes glowpulse {
+          0%,100% { filter: drop-shadow(0 0 1px currentColor); }
+          50% { filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 5px currentColor); }
+        }
       `}</style>
 
       <Header
@@ -119,11 +135,12 @@ export default function Home() {
         <>
           {state.waiting ? <WaitingBanner waiting={state.waiting} /> : null}
           <DriftBanner correlation={state.source?.correlation ?? null} />
-          {/* A live build not capturing the full record-lane corpus says so, and how to fix it —
-              turning a silently-missing drill-down into an actionable message. Null in replay. */}
-          <FidelityBanner source={state.source} />
+          {/* The scrum-master / orchestrator coordination status — its latest dispatch + recent gate
+              activity — replacing the old fidelity ("not recording") banner. */}
+          <OrchestratorLane state={state} />
 
           <SectionHeader>Current sprint</SectionHeader>
+          <SprintPosition state={state} />
           <WorkflowGraph
             state={state}
             // Clicking a node opens its step deliverables in the ONE drill-down panel (below the
@@ -140,21 +157,8 @@ export default function Home() {
             selectedNode={drilldown?.kind === "step" ? drilldown.node : null}
           />
 
-          <div style={{ marginTop: 12 }}>
-            <Transport
-              at={at}
-              total={state.totalEventCount}
-              onChange={scrubTo}
-              playing={playing}
-              onPlayingChange={setPlaying}
-              speed={speed}
-              onSpeedChange={setSpeed}
-              atTimestamp={state.topology.atTimestamp}
-            />
-          </div>
-
           <SectionHeader>Lanes</SectionHeader>
-          <LaneGraph state={state} />
+          <LaneGraph state={state} onOpenRole={onOpenRole} />
 
           <SectionHeader>Status</SectionHeader>
           <StatusBar state={state} showCost={showCost} />
@@ -170,22 +174,14 @@ export default function Home() {
 
           <SectionHeader>Current State</SectionHeader>
           <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            {state.agents.map((a) => {
-              // Clicking a role ALWAYS opens the panel , never a dead click. If the role has a
-              // recorded turn in the aligned recentEvents/recentTurns tail, open its MOST RECENT
-              // turn (the full transcript/artifacts/code drill-down); otherwise open the role panel,
-              // which renders the shell + an honest "nothing recorded yet" body. NOT gated on
-              // canDrillDown: even with no record corpus, the bubble opens something.
-              const ord = latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], a.role);
-              return (
-                <AgentBubble
-                  key={a.role}
-                  agent={a}
-                  showCost={showCost}
-                  onOpen={() => setDrilldown(ord != null ? { kind: "turn", ord } : { kind: "role", role: a.role })}
-                />
-              );
-            })}
+            {state.agents.map((a) => (
+              // Clicking a role ALWAYS opens the panel , never a dead click: `onOpenRole` opens the
+              // role's MOST RECENT recorded turn when the aligned recentEvents/recentTurns tail has
+              // one, else the role panel (shell + honest "nothing recorded yet"). NOT gated on
+              // canDrillDown: even with no record corpus, the bubble opens something. The lane's
+              // role-bearing steps share this exact handler.
+              <AgentBubble key={a.role} agent={a} showCost={showCost} onOpen={() => onOpenRole(a.role)} />
+            ))}
           </section>
 
           {state.blockers.length > 0 ? <Blockers state={state} /> : null}
@@ -222,7 +218,7 @@ export default function Home() {
                 right: 12,
                 zIndex: 60,
                 width: "min(460px, calc(100vw - 24px))",
-                maxHeight: "calc(100dvh - 24px)",
+                maxHeight: "calc(100dvh - 104px)",
                 overflowY: "auto",
                 borderRadius: radius.panel,
                 boxShadow: "0 10px 40px rgba(0,0,0,0.28)",
@@ -236,6 +232,35 @@ export default function Home() {
               />
             </div>
           ) : null}
+
+          {/* The play band: an always-on transport pinned to the bottom of the page, full width,
+              like the reference dashboard. Scrub + playback stay reachable no matter how far the
+              board is scrolled; `<main>` carries matching bottom padding so nothing hides behind it. */}
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 40,
+              background: "var(--surface-card)",
+              borderTop: "1px solid var(--border-default)",
+              padding: "8px 28px",
+              boxShadow: "0 -4px 20px rgba(0,0,0,0.10)",
+            }}
+          >
+            <Transport
+              at={at}
+              total={state.totalEventCount}
+              onChange={scrubTo}
+              playing={playing}
+              onPlayingChange={setPlaying}
+              speed={speed}
+              onSpeedChange={setSpeed}
+              atTimestamp={state.topology.atTimestamp}
+              waiting={state.pendingGate !== null || state.blockers.length > 0}
+            />
+          </div>
         </>
       )}
     </main>
@@ -721,6 +746,29 @@ function StoryRow({ s }: { s: StoryProgress }) {
 // Renders NOTHING when healthy — including in live mode, where `correlation` is null because
 // there is no corpus to disagree with. A permanent "pairing OK" chip would train the eye to
 // ignore the one place it must not.
+
+// A compact one-liner under the sprint header: WHERE the run is right now. It surfaces the active
+// feature and, when a story is being worked, that story (emphasized). With no active story — still
+// designing/planning the feature — it falls back to the feature + coarse phase, so the line is
+// never empty while a feature is in flight, and renders nothing at all before the first feature.
+function SprintPosition({ state }: { state: DashboardState }) {
+  const feature = state.features.find((f) => f.active)?.id ?? state.feature ?? state.pinnedFeature;
+  const story = state.stories.find((s) => s.active) ?? null;
+  if (!feature && !story) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "2px 0 10px", fontSize: "0.8rem", fontFamily: font.mono }}>
+      {feature ? (
+        <span style={{ color: story ? "var(--text-muted)" : "var(--text-strong)", fontWeight: story ? 500 : 700 }}>{feature}</span>
+      ) : null}
+      {feature && story ? <span style={{ color: "var(--text-faint)" }}>·</span> : null}
+      {story ? (
+        <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>▸ {story.id}</span>
+      ) : (
+        <span style={{ color: "var(--text-muted)" }}>{state.phase ?? "in progress"}</span>
+      )}
+    </div>
+  );
+}
 
 function WaitingBanner({ waiting }: { waiting: NonNullable<DashboardState["waiting"]> }) {
   const isPerm = waiting.kind === "permission";

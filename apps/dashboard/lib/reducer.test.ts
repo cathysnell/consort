@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fold, emptyState } from "./reducer";
-import { blockersFromLog, storiesFromLog, storyKey, latestTurnOrdinalForRole } from "./derive";
+import {
+  blockersFromLog,
+  storiesFromLog,
+  storyKey,
+  latestTurnOrdinalForRole,
+  latestOrchestratorActivity,
+} from "./derive";
 import type { AgentLogEvent, SnapshotInputs } from "./types";
 
 function ev(
@@ -14,6 +20,8 @@ function ev(
     timestamp: extra.timestamp ?? "2026-07-31T20:00:00.000Z",
     level: "info",
     role: extra.role ?? "orchestrator",
+    ...(extra.model !== undefined ? { model: extra.model } : {}),
+    ...(extra.effort !== undefined ? { effort: extra.effort } : {}),
     event,
     message: extra.message ?? "",
     metadata,
@@ -70,7 +78,7 @@ describe("fold — topology", () => {
     expect(t.activeNode).toBeNull();
     expect(t.laneCurrent).toBeNull();
     expect(t.atTimestamp).toBeNull();
-    expect(t.laneSteps).toEqual({ plan: [], design: [], build: [] });
+    expect(t.laneSteps).toEqual({ plan: [], design: [], build: [], deploy: [] });
   });
 
   it("advances the active node as the run moves between lanes", () => {
@@ -119,7 +127,7 @@ describe("fold — topology", () => {
     expect(t.passedNodes).toEqual([]);
     expect(t.activeNode).toBeNull();
     expect(t.laneCurrent).toBeNull();
-    expect(t.laneSteps).toEqual({ plan: [], design: [], build: [] });
+    expect(t.laneSteps).toEqual({ plan: [], design: [], build: [], deploy: [] });
   });
 
   it("serializes over JSON without losing shape (Sets would not)", () => {
@@ -886,13 +894,15 @@ describe("fold — multi-feature run (stockflow-rerecord corpus)", () => {
     const events = readCorpus();
     // Early: planning is running but no feature is named yet.
     expect(fold(events, snap(), 11).feature).toBeNull();
-    expect(fold(events, snap(), 11).topology.laneSteps.plan).toEqual(["p-propose", "p-size", "p-req"]);
+    expect(fold(events, snap(), 11).topology.laneSteps.plan).toEqual(["p-intake", "p-propose", "p-size", "p-req"]);
     // Once F1 is named, its own scoped view excludes the pre-naming planning steps.
     const f1 = fold(events, snap(), 20);
     expect(f1.feature).toBe("F1-stock-visibility");
-    expect(f1.topology.laneSteps.plan).toEqual([]);
-    // F6 picks up the estimate-committed that ran under it late in the run.
-    expect(fold(events, snap()).topology.laneSteps.plan).toEqual(["p-size"]);
+    // The pre-naming propose/estimate/author-requests are excluded (they ran before F1 was named),
+    // but an `intake.supplied` carries F1 forward, so the intake step lights under F1's scope.
+    expect(f1.topology.laneSteps.plan).toEqual(["p-intake"]);
+    // F6 picks up an intake.supplied and the estimate-committed that ran under it late in the run.
+    expect(fold(events, snap()).topology.laneSteps.plan).toEqual(["p-intake", "p-size"]);
   });
 
   it("story counts stay monotonic WITHIN a feature across the whole corpus", () => {
@@ -1211,5 +1221,109 @@ describe("latestTurnOrdinalForRole — role bubble → its most recent turn", ()
   it("ignores an event of the role that begins no turn (null ordinal)", () => {
     // driver's turn.usage at index 2 has a null ordinal; the last driver TURN is index 3 (ord 8).
     expect(latestTurnOrdinalForRole(events.slice(0, 3), [5, 6, null], "driver")).toBe(5);
+  });
+});
+
+describe("fold — laneStepMeta credits each step its own model/effort/cost/turns", () => {
+  it("takes model+effort from the step's phase.start and cost+turns from its turn.usage, PER STEP", () => {
+    const run = [
+      ev("phase.start", { phase: "propose" }, { role: "spec-author", model: "opus", effort: "high" }),
+      ev("turn.usage", { cost_usd: 1.5 }, { role: "spec-author" }),
+      ev("phase.start", { phase: "estimate" }, { role: "architect-reviewer", model: "sonnet", effort: "low" }),
+      ev("turn.usage", { cost_usd: 0.25 }, { role: "architect-reviewer" }),
+    ];
+    const m = fold(run, snap()).laneStepMeta;
+    expect(m["p-propose"]).toEqual({ model: "opus", effort: "high", cost: 1.5, turns: 1 });
+    expect(m["p-size"]).toEqual({ model: "sonnet", effort: "low", cost: 0.25, turns: 1 });
+  });
+
+  it("accumulates turns and cost across repeated visits to the same step (a revise loop)", () => {
+    const run = [
+      ev("phase.start", { phase: "propose" }, { role: "spec-author", model: "opus" }),
+      ev("turn.usage", { cost_usd: 1.0 }, { role: "spec-author" }),
+      ev("phase.start", { phase: "propose" }, { role: "spec-author", model: "opus" }),
+      ev("turn.usage", { cost_usd: 0.5 }, { role: "spec-author" }),
+    ];
+    expect(fold(run, snap()).laneStepMeta["p-propose"]).toEqual({ model: "opus", effort: null, cost: 1.5, turns: 2 });
+  });
+
+  it("is empty for a step no turn has reached", () => {
+    expect(fold([ev("intake.supplied", {}, { role: "product-owner" })], snap()).laneStepMeta).toEqual({});
+  });
+});
+
+describe("fold — pendingGate is the ONE gate the drive is parked at, not every open gate", () => {
+  it("picks the most-recently-surfaced gate even when an EARLIER gate is still open (the spec-gate bug)", () => {
+    // spec is surfaced and never approved (so it stays open), then acceptance is surfaced — the live
+    // wait. Keying off the open SET would highlight spec; keying off the most-recent SURFACE is right.
+    const run = [
+      ev("gate.surfaced", { gate: "spec" }, { role: "orchestrator" }), // still open, never approved
+      ev("gate.surfaced", { gate: "acceptance", story: "S4" }, { role: "orchestrator" }),
+    ];
+    expect(fold(run, snap()).pendingGate).toBe("acceptance");
+  });
+
+  it("is null when the most-recent gate has been cleared by a later gate.approved", () => {
+    const run = [
+      ev("gate.surfaced", { gate: "spec" }, { role: "orchestrator" }),
+      ev("gate.approved", { gate: "spec" }, { role: "orchestrator" }), // cleared → run proceeding
+    ];
+    expect(fold(run, snap()).pendingGate).toBeNull();
+  });
+
+  it("survives a benign trailing event — the gate is still open, so it stays the live wait", () => {
+    // findPendingGate would blank here (a non-surface event is last); the open-gate rule does not.
+    const run = [
+      ev("gate.surfaced", { gate: "acceptance" }, { role: "orchestrator" }),
+      ev("reasoning", {}, { role: "orchestrator" }),
+      ev("turn.usage", { cost_usd: 0.1 }, { role: "driver" }),
+    ];
+    expect(fold(run, snap()).pendingGate).toBe("acceptance");
+  });
+
+  it("clears when the acceptance gate is accepted (experiment.accepted, not gate.approved)", () => {
+    const run = [
+      ev("gate.surfaced", { gate: "acceptance", story: "S1" }, { role: "orchestrator" }),
+      ev("experiment.accepted", { story: "S1" }, { role: "orchestrator" }), // the PO merge clears it
+    ];
+    expect(fold(run, snap()).pendingGate).toBeNull();
+  });
+
+  it("is null for an escalation (not a gate step to pulse)", () => {
+    const run = [ev("escalation.raised", { source: "verify" }, { role: "navigator" })];
+    expect(fold(run, snap()).pendingGate).toBeNull();
+  });
+});
+
+describe("latestOrchestratorActivity — the orchestrator's current narration, over the FULL stream", () => {
+  it("RECENCY wins across kinds: at a gate it's the gate, not the earlier build START", () => {
+    // The orchestrator STARTs the build, then later surfaces the acceptance gate. Its latest event
+    // is the gate — that is what the card must show, not the stale "START build".
+    const events = [
+      ev("phase.start", { phase: "build", story: "S4-app-shell-branding" }, { role: "orchestrator", message: "orchestrator START build" }),
+      ev("phase.start", { phase: "green" }, { role: "driver", message: "driver START green" }),
+      ev("gate.surfaced", { gate: "acceptance", subject: "S4-app-shell-branding" }, { role: "orchestrator", message: "GATE acceptance awaiting decision , story S4-app-shell-branding" }),
+    ];
+    expect(latestOrchestratorActivity(events)).toEqual({
+      action: "GATE acceptance awaiting decision , story S4-app-shell-branding",
+      story: "S4-app-shell-branding",
+    });
+  });
+
+  it("finds it even when far behind the tail (a long build's many turns), and takes story from metadata", () => {
+    const events: AgentLogEvent[] = [
+      ev("phase.start", { phase: "build", story: "S4-app-shell-branding" }, { role: "orchestrator", message: "orchestrator START build" }),
+      ...Array.from({ length: 60 }, () => ev("turn.usage", { cost_usd: 0.1 }, { role: "driver" })),
+    ];
+    expect(latestOrchestratorActivity(events)).toEqual({ action: "orchestrator START build", story: "S4-app-shell-branding" });
+  });
+
+  it("skips reasoning noise and messageless events, and returns null before any activity", () => {
+    expect(latestOrchestratorActivity([ev("phase.start", { phase: "propose" }, { role: "spec-author" })])).toBeNull();
+    const withNoise = [
+      ev("handoff", { to_role: "driver", story: "S1" }, { role: "orchestrator", message: "dispatch driver for green" }),
+      ev("reasoning", { story: "S1" }, { role: "orchestrator", message: "…internal narration…" }), // skipped
+    ];
+    expect(latestOrchestratorActivity(withNoise)).toEqual({ action: "dispatch driver for green", story: "S1" });
   });
 });

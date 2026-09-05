@@ -30,7 +30,7 @@ const ICON: Record<AgentStatus, string> = {
 };
 
 // "3m", "45s" — how long the current open turn has been running.
-function fmtElapsed(ms: number): string {
+export function fmtElapsed(ms: number): string {
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);

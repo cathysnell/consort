@@ -9,7 +9,8 @@ import {
   type LaneStep,
 } from "@/lib/topology";
 import { colorForRole, font, radius } from "@/lib/theme";
-import type { DashboardState } from "@/lib/types";
+import { fmtElapsed } from "./AgentBubble";
+import type { DashboardState, LaneStepMeta } from "@/lib/types";
 
 // The per-lane inter-agent sub-workflows (Kevin's Figure 2) — what happens *inside* each
 // lifecycle node the top-level WorkflowGraph shows as one box.
@@ -29,7 +30,7 @@ import type { DashboardState } from "@/lib/types";
 //      the lane still shows its reached steps, just with no pulsing one.
 
 const STEP_W = 104;
-const STEP_H = 46;
+const STEP_H = 68; // tall enough for the agent card: label + sub + model·effort + turns·cost
 const GAP = 30;
 const PAD = 14;
 const BACK_LANE_H = 34; // vertical room under the row for back-edges
@@ -43,6 +44,13 @@ const LANE_NODE: Record<LaneId, { own: string; after: string[] }> = {
   plan: { own: "plan", after: ["design", "build"] },
   design: { own: "design", after: ["build", "deploy"] },
   build: { own: "build", after: ["deploy"] },
+  // The combined deploy lane spans TWO lifecycle nodes (deploy + promote), so no single "after"
+  // node proves it finished — and `promote` being reached must NOT read as complete while promote
+  // is still running. Its only honest completion signal is the run itself ending, so `after` is
+  // empty and completion falls to the `state.lane === "complete"` clause in `movedOn` (as build
+  // already does). Until then it reads "active"/"in progress" whenever the playhead sits in either
+  // the deploy or promote node.
+  deploy: { own: "deploy", after: [] },
 };
 
 // The gate each lane's terminal gate step reflects. Lane gates are human-decided and never
@@ -51,11 +59,13 @@ const LANE_STEP_GATE: Record<string, string> = {
   "p-gate": "plan",
   "d-gate": "spec",
   "b-accept": "acceptance",
+  "dp-gate": "deploy",
+  "dp-promgate": "promote",
 };
 
-type StepState = "done" | "current" | "pending" | "gate-open" | "gate-approved";
+type StepState = "done" | "current" | "pending" | "gate-open" | "gate-current" | "gate-approved";
 
-export function LaneGraph({ state }: { state: DashboardState }) {
+export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpenRole?: (role: string) => void }) {
   const current = state.topology.laneCurrent;
   // `laneCurrent.lane` is typed `string` (DashboardState is the wire format, and a replay source
   // may not share this vocabulary), so validate rather than cast to find the ACTIVE lane.
@@ -72,6 +82,7 @@ export function LaneGraph({ state }: { state: DashboardState }) {
           done={new Set(state.topology.laneSteps[laneId] ?? [])}
           currentStep={currentLane === laneId ? current!.step : null}
           state={state}
+          onOpenRole={onOpenRole}
         />
       ))}
     </div>
@@ -84,12 +95,14 @@ function LanePanel({
   done,
   currentStep,
   state,
+  onOpenRole,
 }: {
   laneId: LaneId;
   lane: Lane;
   done: Set<string>;
   currentStep: string | null;
   state: DashboardState;
+  onOpenRole?: (role: string) => void;
 }) {
   // Gates are excluded from the ratio: they never light from events, so counting them would
   // cap every lane below 100% forever.
@@ -119,7 +132,9 @@ function LanePanel({
   const passed = new Set(state.topology.passedNodes);
   const nodes = LANE_NODE[laneId];
   const entered = done.size > 0 || passed.has(nodes.own) || nodes.after.some((n) => passed.has(n));
-  const movedOn = nodes.after.some((n) => passed.has(n)) || (laneId === "build" && state.lane === "complete");
+  const movedOn =
+    nodes.after.some((n) => passed.has(n)) ||
+    ((laneId === "build" || laneId === "deploy") && state.lane === "complete");
   const inOwnNode = state.topology.activeNode === nodes.own;
   const complete = !active && !inOwnNode && movedOn;
 
@@ -205,7 +220,7 @@ function LanePanel({
 
       <div style={{ borderTop: `1px solid var(--border-default)`, padding: "4px 12px 10px" }}>
         <div style={{ fontSize: "0.66rem", color: "var(--text-faint)", margin: "6px 0 2px" }}>{lane.title}</div>
-        <LaneSvg laneId={laneId} lane={lane} done={done} currentStep={currentStep} state={state} />
+        <LaneSvg laneId={laneId} lane={lane} done={done} currentStep={currentStep} state={state} onOpenRole={onOpenRole} />
       </div>
     </div>
   );
@@ -230,12 +245,14 @@ function LaneSvg({
   done,
   currentStep,
   state,
+  onOpenRole,
 }: {
   laneId: LaneId;
   lane: Lane;
   done: Set<string>;
   currentStep: string | null;
   state: DashboardState;
+  onOpenRole?: (role: string) => void;
 }) {
   // The BUILD lane is a fixed 3-row grid (col = grid slot, so steps ALIGN across rows): row 0 is
   // the happy path, row 1 is ASSESS placed directly under VERIFY (col 2), row 2 is the fan-out
@@ -249,6 +266,21 @@ function LaneSvg({
       "b-red": [0, 0], "b-green": [0, 1], "b-verify": [0, 2], "b-review": [0, 3], "b-refactor": [0, 4], "b-accept": [0, 5],
       "b-assess": [1, 2],
       "b-repair": [2, 1], "b-perm": [2, 2], "b-hil": [2, 3],
+    };
+    lane.steps.forEach((s) => place(s.id, ...(grid[s.id] ?? [0, 0])));
+    nRows = 3;
+  } else if (laneId === "deploy") {
+    // The combined ship lane, also a 3-row grid. Row 0 is the happy path with a one-column GAP
+    // (col 3) between the Deploy section (dp-deploy…dp-gate) and the Promote section (dp-pr…
+    // dp-merge) — LaneGraph draws a divider + section labels there so the single lane reads as two
+    // phases. dp-gate→dp-pr therefore skips the empty gap column (arc-below, handled by `edge`).
+    // Row 1 is the deploy-verify self-heal (dp-assess under dp-verify, dp-refactor beside it);
+    // row 2 is the raise-to-HIL terminal under dp-assess.
+    const grid: Record<string, [number, number]> = {
+      "dp-deploy": [0, 0], "dp-verify": [0, 1], "dp-gate": [0, 2],
+      "dp-pr": [0, 4], "dp-ci": [0, 5], "dp-promgate": [0, 6], "dp-merge": [0, 7],
+      "dp-refactor": [1, 0], "dp-assess": [1, 1],
+      "dp-hil": [2, 1],
     };
     lane.steps.forEach((s) => place(s.id, ...(grid[s.id] ?? [0, 0])));
     nRows = 3;
@@ -276,6 +308,25 @@ function LaneSvg({
   const cx = (id: string) => pos.get(id)!.x + STEP_W / 2;
   const cy = (id: string) => pos.get(id)!.y + STEP_H / 2;
 
+  // Deploy lane only: a subtle vertical divider + "deploy" / "promote" section labels in the gap
+  // column, so the one combined lane visibly reads as its two phases. Everything derives from the
+  // placed boxes, so it tracks the layout automatically.
+  const deploySep =
+    laneId === "deploy" && pos.has("dp-gate") && pos.has("dp-pr")
+      ? (() => {
+          const gate = pos.get("dp-gate")!;
+          const pr = pos.get("dp-pr")!;
+          return {
+            x: (gate.x + STEP_W + pr.x) / 2,
+            top: PAD + TOP_LANE - 3,
+            bottom: PAD + TOP_LANE + STEP_H + 8,
+            labelY: PAD + TOP_LANE - 9,
+            deployMid: (pos.get("dp-deploy")!.x + gate.x + STEP_W) / 2,
+            promoteMid: (pr.x + pos.get("dp-merge")!.x + STEP_W) / 2,
+          };
+        })()
+      : null;
+
   // Route ONE edge from its two endpoint boxes: same-row forward = a straight line; same-row
   // backward (REVIEW→RED, the next dev loop) = an arc ABOVE the row so it never crosses the row
   // below; cross-row = an elbow that drops/rises between the two rows. Branch (failure-arm) edges
@@ -284,9 +335,10 @@ function LaneSvg({
     const p = pos.get(from);
     const q = pos.get(to);
     if (!p || !q) return null;
-    const isDone = !o.branch && done.has(from) && (done.has(to) || to === currentStep);
-    const stroke = o.branch ? "var(--status-warning)" : isDone ? "var(--status-good)" : "var(--border-strong)";
-    const marker = o.branch ? "url(#lg-arrow-branch)" : isDone ? "url(#lg-arrow-done)" : "url(#lg-arrow)";
+    // Happy-path edges are all uniform grey (no traversed-vs-not distinction); only branch/failure
+    // edges stand out in amber. Progress reads from the pulsing active step, not the edges.
+    const stroke = o.branch ? "var(--status-warning)" : "var(--border-strong)";
+    const marker = o.branch ? "url(#lg-arrow-branch)" : "url(#lg-arrow)";
     const sameRow = p.row === q.row;
     let d: string;
     let lx = 0;
@@ -339,7 +391,7 @@ function LaneSvg({
           d={d}
           fill="none"
           style={{ stroke }}
-          strokeWidth={isDone ? 2 : 1.4}
+          strokeWidth={1.4}
           strokeDasharray={dashed ? "4 3" : undefined}
           markerEnd={marker}
           opacity={o.branch ? 0.85 : 1}
@@ -366,20 +418,67 @@ function LaneSvg({
           <marker id="lg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--border-strong)" }} />
           </marker>
-          <marker id="lg-arrow-done" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-good)" }} />
-          </marker>
           <marker id="lg-arrow-branch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-warning)" }} />
           </marker>
         </defs>
 
+        {deploySep ? (
+          <g>
+            <line
+              x1={deploySep.x}
+              y1={deploySep.top}
+              x2={deploySep.x}
+              y2={deploySep.bottom}
+              style={{ stroke: "var(--border-strong)" }}
+              strokeWidth={1}
+              strokeDasharray="3 4"
+              opacity={0.6}
+            />
+            {(["deploy", "promote"] as const).map((label) => (
+              <text
+                key={label}
+                x={label === "deploy" ? deploySep.deployMid : deploySep.promoteMid}
+                y={deploySep.labelY}
+                textAnchor="middle"
+                style={{
+                  fontSize: 7.5,
+                  fill: "var(--text-faint)",
+                  fontFamily: font.sans,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.09em",
+                }}
+              >
+                {label}
+              </text>
+            ))}
+          </g>
+        ) : null}
+
         {lane.edges.map(([from, to]) => edge(from, to, {}))}
         {lane.backEdges.map((be) => edge(be[0], be[1], { branch: true, label: be[2] }))}
 
-        {lane.steps.map((s) => (
-          <StepBox key={s.id} step={s} x={pos.get(s.id)!.x} y={pos.get(s.id)!.y} state={stepState(s, done, currentStep, state)} />
-        ))}
+        {lane.steps.map((s) => {
+          // For the CURRENT step, surface its agent's live turn state: a spinner while the session is
+          // writing, a pause glyph when it's gone quiet, and the elapsed working time. Only the
+          // current step needs it, so the lookup + Date.now() cost is paid once per lane.
+          const agent = s.id === currentStep && s.role ? state.agents.find((a) => a.role === s.role) : undefined;
+          const live = agent ? agent.sessionActive : null;
+          const elapsed = agent?.turnStartTs ? fmtElapsed(Math.max(0, Date.now() - Date.parse(agent.turnStartTs))) : null;
+          return (
+            <StepBox
+              key={s.id}
+              step={s}
+              x={pos.get(s.id)!.x}
+              y={pos.get(s.id)!.y}
+              state={stepState(s, done, currentStep, state)}
+              meta={state.laneStepMeta?.[s.id] ?? null}
+              live={live}
+              elapsed={elapsed}
+              onOpenRole={onOpenRole}
+            />
+          );
+        })}
       </svg>
     </div>
   );
@@ -399,6 +498,10 @@ function stepState(
     const gateName = LANE_STEP_GATE[s.id];
     const g = gateName ? state.gates.find((x) => x.name === gateName) : undefined;
     if (g?.status === "approved") return "gate-approved";
+    // The ONE gate the drive is parked at right now pulses ("gate-current"); every other still-open
+    // gate keeps its purple border but stays quiet. A gate stays `open` until an explicit
+    // gate.approved, so several past gates read open at once — only `pendingGate` is the live wait.
+    if (gateName && gateName === state.pendingGate) return "gate-current";
     if (g) return "gate-open";
   }
   return "pending";
@@ -447,21 +550,43 @@ function BackEdgeArc({
   );
 }
 
-function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; state: StepState }) {
+function StepBox({
+  step,
+  x,
+  y,
+  state,
+  meta,
+  live,
+  elapsed,
+  onOpenRole,
+}: {
+  step: LaneStep;
+  x: number;
+  y: number;
+  state: StepState;
+  meta?: LaneStepMeta | null;
+  live?: boolean | null; // current step only: session writing (true) / quiet (false) / unknown (null)
+  elapsed?: string | null; // current step only: formatted time since the turn started
+  onOpenRole?: (role: string) => void;
+}) {
   const isGate = step.gate === true;
 
-  // ONLY the active step is highlighted (accent fill + role-coloured border + pulse). Every other
-  // state stays quiet , done steps are readable but not highlighted, so the one active agent is the
-  // sole thing that pops. Each step still carries its agent's colour via the role stripe below. A
-  // pending human GATE keeps a thin gate-coloured border so it stays legible, but no fill.
-  // A HUMAN gate (plan / spec / acceptance) is `gate:true` AND never lights from events
-  // (match === null) , its status comes from the human's decision. The automated VERIFY checkpoint
-  // is also `gate:true` but DOES light from events (match: verify), so it is NOT a human gate and
-  // must not wear the purple gate colour. Only human gates get purple/green; everything else is
-  // quiet unless it's the active step.
+  // The active turn is set apart by its PULSE ALONE — no static accent fill or thick border. It
+  // otherwise looks like any other reached step; only the glowpulse (below) marks it. Each step
+  // carries its agent's colour via the role stripe regardless. Gates and escalation terminals DO
+  // keep a distinct colour: a HUMAN gate (gate:true AND never lit from an event, match === null) is
+  // purple (green once approved); a raise-to-HIL terminal is critical red; the automated VERIFY
+  // checkpoint (gate:true but match: verify) is NOT a human gate and stays neutral.
   const isHumanGate = isGate && step.match === null;
-  const highlighted = state === "current";
-  const stroke = highlighted
+  const active = state === "current"; // the current turn
+  // The ONE human gate the drive is parked at (state = "gate-current") is the active locus even
+  // though it never lights from an event; it pulses too, in PURPLE (its human-gate hue), and keeps
+  // its purple border. Other still-open gates ("gate-open") keep the border but stay quiet.
+  const gateWaiting = state === "gate-current";
+  // Like the Current-State bubble cards: the active turn / parked gate gets a THICK COLOURED border
+  // (the agent's colour for a turn, purple for a human gate) and a WHITE pulse. The border colour is
+  // the only static cue; there is no tint fill.
+  const stroke = active
     ? step.role
       ? colorForRole(step.role)
       : "var(--status-accent)"
@@ -473,21 +598,74 @@ function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; 
           : "var(--status-gate)"
         : "var(--border-default)";
 
-  const fill = highlighted ? "var(--status-accent-tint)" : "var(--surface-inset)";
+  // A LIGHT tint in the step's own colour on the active turn. color-mix is required because
+  // colorForRole returns a `var(--role-*)` and you cannot append an alpha to a var() (the old
+  // `${var()}26` was invalid CSS for every role-coloured step). Sits on TOP of the opaque backing
+  // rect, so the outside-only white glow is unaffected and nothing bleeds through the tint.
+  const fill = active
+    ? `color-mix(in srgb, ${step.role ? colorForRole(step.role) : "var(--status-accent)"} 7%, transparent)`
+    : gateWaiting
+      ? "color-mix(in srgb, var(--status-gate) 7%, transparent)"
+      : "var(--surface-inset)";
 
-  const labelColor = highlighted
-    ? "var(--status-accent-text)"
-    : state === "done" || state === "gate-approved"
-      ? "var(--text-muted)"
-      : "var(--text-faint)";
+  // The pulse glows WHITE, exactly like the bubble cards (their softpulse glows in currentColor,
+  // which is --text-strong — white on the dark theme). The border, not the glow, carries the colour.
+  const glowColor = "var(--text-strong)";
 
+  // A role-bearing step opens that agent's turn drill-down — the SAME behavior as clicking its
+  // Current-State bubble. Gate steps (b-accept / p-gate / d-gate / b-verify) and escalation
+  // terminals (b-hil / p-hil / d-hil) carry no role and stay inert. Not gate-controlled: opening a
+  // role panel is a safe fallback even with no recorded turn, exactly like the bubble.
+  const clickable = step.role != null && !!onOpenRole;
+  const open = clickable ? () => onOpenRole!(step.role!) : undefined;
   const title = `${step.label} — ${step.sub}${isGate ? " (human gate)" : ""}${
     step.branch ? " (branch: only on failure)" : ""
-  } · ${state.replace("gate-", "gate ")}`;
+  } · ${state.replace("gate-", "gate ")}${clickable ? ` · open ${step.role}'s turn` : ""}`;
+
+  // Per-step agent-card metrics. model·effort comes from the step's phase.start; turns·cost from the
+  // turns credited to it (0 on a replay corpus, so turns·cost is hidden there). Shown only for a step
+  // a turn has actually reached — a deterministic/not-yet-run step carries none.
+  const modelEffort = meta && (meta.model || meta.effort) ? [meta.model, meta.effort].filter(Boolean).join(" · ") : null;
+  const turnsCost =
+    meta && meta.turns > 0 ? `${meta.turns} turn${meta.turns === 1 ? "" : "s"} · $${meta.cost.toFixed(2)}` : null;
 
   return (
-    <g style={state === "current" ? { animation: "softpulse 2s ease-in-out infinite" } : undefined}>
+    <g
+      style={{
+        ...(clickable ? { cursor: "pointer" } : {}),
+      }}
+      onClick={open}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `Open ${step.role}'s turn` : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open!();
+              }
+            }
+          : undefined
+      }
+    >
       <title>{title}</title>
+      {/* The pulse glows OUTSIDE the box only. The drop-shadow rides on this OPAQUE backing rect
+          drawn BEHIND the real box (same geometry, filled with the panel's own colour), so its glow
+          extends past the edges but is hidden behind the box itself — the interior never pulses, even
+          when the box's own fill is a translucent tint (a parked gate's gate-tint). glowpulse animates
+          an SVG-honoured drop-shadow in currentColor: the agent's colour, or gate-purple for a parked
+          gate. This pulse is the ONLY cue for the active step. */}
+      {active || gateWaiting ? (
+        <rect
+          x={x}
+          y={y}
+          width={STEP_W}
+          height={STEP_H}
+          rx={isGate ? 4 : 8}
+          style={{ fill: "var(--surface-card)", animation: "glowpulse 2s ease-in-out infinite", color: glowColor }}
+        />
+      ) : null}
       <rect
         x={x}
         y={y}
@@ -495,23 +673,35 @@ function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; 
         height={STEP_H}
         rx={isGate ? 4 : 8}
         style={{ fill, stroke }}
-        strokeWidth={state === "current" ? 2.5 : 1.4}
+        strokeWidth={active || gateWaiting ? 2.5 : 1.4}
         strokeDasharray={step.branch ? "5 3" : undefined}
       />
-      {/* Role stripe: ties a step to its agent bubble by colour. Full strength in EVERY state so
-          each agent's colour always reads (the active step is set apart by fill + pulse, not by
-          dimming the others' colours). Gates have no owner. */}
+      {/* Role bar: the agent's colour as a bar along the TOP edge, tying the card to its bubble.
+          Clipped to the box so its top corners share the box's curvature (same rx) instead of
+          overhanging the rounded corner. Full strength in EVERY state. Gates have no owner. */}
       {step.role ? (
-        <rect x={x} y={y} width={3.5} height={STEP_H} rx={1.5} style={{ fill: colorForRole(step.role) }} />
+        <>
+          <clipPath id={`lg-clip-${step.id}`}>
+            <rect x={x} y={y} width={STEP_W} height={STEP_H} rx={isGate ? 4 : 8} />
+          </clipPath>
+          <rect
+            x={x}
+            y={y}
+            width={STEP_W}
+            height={4}
+            clipPath={`url(#lg-clip-${step.id})`}
+            style={{ fill: colorForRole(step.role) }}
+          />
+        </>
       ) : null}
       <text
         x={x + STEP_W / 2}
-        y={y + 18}
+        y={y + 15}
         textAnchor="middle"
         style={{
           fontSize: 9,
           fontWeight: 700,
-          fill: labelColor,
+          fill: "var(--text-strong)", // the card TITLE is always the strong text colour (white on dark)
           fontFamily: font.sans,
           textTransform: "uppercase",
           letterSpacing: "0.02em",
@@ -521,12 +711,71 @@ function StepBox({ step, x, y, state }: { step: LaneStep; x: number; y: number; 
       </text>
       <text
         x={x + STEP_W / 2}
-        y={y + 32}
+        y={y + 28}
         textAnchor="middle"
-        style={{ fontSize: 7.5, fill: state === "pending" ? "var(--text-faint)" : "var(--text-muted)", fontFamily: font.sans }}
+        style={{
+          fontSize: 7.5,
+          // On the active turn / parked gate the non-white text takes the border colour (the agent's
+          // colour for a turn, gate-purple for a parked gate).
+          fill: active || gateWaiting ? stroke : state === "pending" ? "var(--text-faint)" : "var(--text-muted)",
+          fontFamily: font.sans,
+        }}
       >
         {truncate(step.sub, 22)}
       </text>
+      {/* Agent card metrics: model·effort (from the step's phase.start) and turns·cost (from the
+          turns credited to it). Only for steps a turn has reached; a deterministic step or one not
+          yet run shows none. A divider rule sets the card's data half apart from its label. */}
+      {modelEffort || turnsCost ? (
+        <line x1={x + 8} y1={y + 36} x2={x + STEP_W - 8} y2={y + 36} style={{ stroke: "var(--border-default)" }} strokeWidth={0.5} />
+      ) : null}
+      {modelEffort ? (
+        <text
+          x={x + STEP_W / 2}
+          y={y + 49}
+          textAnchor="middle"
+          style={{ fontSize: 7.5, fill: active || gateWaiting ? stroke : "var(--text-muted)", fontFamily: font.mono }}
+        >
+          {modelEffort}
+        </text>
+      ) : null}
+      {turnsCost ? (
+        <text
+          x={x + STEP_W / 2}
+          y={y + 60}
+          textAnchor="middle"
+          style={{ fontSize: 7.5, fontWeight: 600, fill: active || gateWaiting ? stroke : "var(--text-body)", fontFamily: font.mono }}
+        >
+          {turnsCost}
+        </text>
+      ) : null}
+      {/* Current-step turn indicator (left of the title): a spinner while the session is writing, a
+          pause glyph when it's gone quiet — plus the elapsed working time at the top-right. Only the
+          active step carries live/elapsed. */}
+      {active && live === true ? (
+        <svg
+          x={x + 4}
+          y={y + 5}
+          width={11}
+          height={11}
+          viewBox="0 0 24 24"
+          style={{ animation: "spin 1.1s linear infinite", transformOrigin: "center", transformBox: "fill-box" }}
+        >
+          <path d="M12 3 a 9 9 0 0 1 9 9" fill="none" style={{ stroke }} strokeWidth={3} strokeLinecap="round" />
+          <path d="M12 21 a 9 9 0 0 1 -9 -9" fill="none" style={{ stroke }} strokeWidth={3} strokeLinecap="round" />
+        </svg>
+      ) : active && live === false ? (
+        // Session has gone quiet — the turn is open but not writing: a pause glyph.
+        <g>
+          <rect x={x + 5} y={y + 6} width={2.4} height={9} rx={1} style={{ fill: stroke }} />
+          <rect x={x + 9} y={y + 6} width={2.4} height={9} rx={1} style={{ fill: stroke }} />
+        </g>
+      ) : null}
+      {active && live !== null && elapsed ? (
+        <text x={x + STEP_W - 5} y={y + 14} textAnchor="end" style={{ fontSize: 7, fill: stroke, fontFamily: font.mono }}>
+          {elapsed}
+        </text>
+      ) : null}
     </g>
   );
 }

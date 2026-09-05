@@ -47,6 +47,14 @@ export interface GateInfo {
   status: string; // open | approved | ...
 }
 
+// Per-lane-step agent metrics for the step cards (keyed by LaneStep.id in DashboardState.laneStepMeta).
+export interface LaneStepMeta {
+  model: string | null; // the step's phase.start model (e.g. "opus" / "sonnet")
+  effort: string | null; // the step's phase.start reasoning effort (e.g. "low")
+  cost: number; // summed cost_usd of the turns credited to this step (0 on a replay corpus)
+  turns: number; // count of turn.usage events credited to this step
+}
+
 export interface Blocker {
   source: string;
   reason: string;
@@ -340,6 +348,26 @@ export interface DashboardState {
   };
   designPhases: DesignPhase[]; // the propose→…→reflect lane
   stories: StoryProgress[]; // per-story lifecycle for the sub-progress row
+  // The orchestrator's current activity — its LATEST event (with a message) over the FULL event
+  // stream, not the 40-event `recentEvents` tail. Recency wins across event kinds: at a gate it's
+  // the gate.surfaced ("GATE acceptance awaiting decision , story S4-…"), mid-build it's the last
+  // dispatch, at story start it's "orchestrator START build". A long build puts many turns between
+  // any of these and the gate you're waiting at, so a tail lookup would go stale; deriving it in
+  // the fold keeps the card showing what the orchestrator is on right now. Null before any activity.
+  orchestratorActivity: { action: string; story: string | null } | null;
+  // Per-lane-step agent metrics for the step cards: model + effort (from the step's phase.start),
+  // and the cost + turn count of the turns attributed to that step. Keyed by LaneStep.id. PER-STEP,
+  // not per-role: a role in several steps (navigator's review/assess) gets separate numbers for each.
+  // Derived over the FULL event stream in the fold (turn.usage carries cost but not buildMode, so a
+  // turn is credited to whichever step that role's most-recent phase.start matched). Empty {} for a
+  // step no turn has reached; cost/turns are 0 on a replay corpus (no turn.usage).
+  laneStepMeta: Record<string, LaneStepMeta>;
+  // The single human gate the run is PARKED at right now: the last gate.surfaced with nothing
+  // logged after it (a gate stops the drive, so any later event means it resumed). This is the ONE
+  // gate to highlight — distinct from every gate that merely sits `open` in `gates` (a gate stays
+  // "open" until an explicit gate.approved, so several past gates can read open at once; only this
+  // one is the active wait). Null when the run is proceeding, not stopped at a gate.
+  pendingGate: string | null;
   lane: "design" | "build" | "complete"; // which top bar to emphasize
   totalCost: number;
   eventCount: number;

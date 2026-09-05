@@ -208,17 +208,17 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(
       renderLane(withTopology({ laneCurrent: { lane: "nonexistent", step: "x" } })),
     );
-    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all three lanes render
+    expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all four lanes render
     // ...and no lane claims to be active on the strength of a bogus name
     expect(markup).not.toContain("· active");
   });
 
-  it("renders all three lanes expanded, with the playhead's lane marked active", () => {
+  it("renders all lanes expanded, with the playhead's lane marked active", () => {
     // No accordion: every lane's graph renders; the playhead's lane (design) is the one
     // highlighted active.
     expect(scrubbed.topology.laneCurrent).toEqual({ lane: "design", step: "d-spec" });
     const markup = renderToStaticMarkup(<LaneGraph state={scrubbed} />);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes expanded
+    expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes expanded
     expect(markup).toContain("· active"); // design is highlighted active
     expect(markup).toMatchSnapshot();
   });
@@ -228,7 +228,7 @@ describe("render — LaneGraph", () => {
     // accordion, every lane still renders — nothing is marked active.
     expect(state.topology.laneCurrent).toBeNull();
     const markup = renderToStaticMarkup(<LaneGraph state={state} />);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes render
+    expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render
     expect(markup).toContain("honest-GREEN"); // build lane content present
     expect(markup).toMatchSnapshot();
   });
@@ -246,10 +246,10 @@ describe("render — LaneGraph", () => {
     );
     expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
     expect(markup).toContain("7/8 steps"); // build: 8 lightable now (b-refactor added); this pre-remodel corpus lit 7 (no b-refactor event)
-    // Plan reads 2/3, not 3/3: `p-req` never lights on the live stockflow log, because its
-    // product-owner emits only gate.approved and never the author-requests phase. That is a
-    // property of this run, not a bug — the corpus log does light it.
-    expect(markup).toContain("2/3 steps");
+    // Plan reads 2/4: 4 lightable now (p-intake added), and this pre-p-intake render-state snapshot
+    // lit only p-propose + p-size (p-req never lights — its product-owner emits gate.approved, not the
+    // author-requests phase; p-intake wasn't in the topology when the snapshot was captured).
+    expect(markup).toContain("2/4 steps");
   });
 
   it("takes gate state from the run's gates, not from the step data", () => {
@@ -271,6 +271,44 @@ describe("render — LaneGraph", () => {
     expect(specStroke(approved)).toBe("var(--status-good)"); // cleared → green, no step data changed
   });
 
+  it("PULSES only the gate the run is PARKED at (pendingGate), glowing purple — not every open gate", () => {
+    // A human gate never lights from an event, so it is never the `current` step — but the ONE gate
+    // the drive is stopped at (`pendingGate`) IS the active locus. Like the bubble cards, it gets a
+    // thick purple border and a WHITE pulse. The pulse (glowpulse) rides on the OPAQUE backing rect
+    // (glow outside-only), which is the FIRST rect after the title; the purple border is on the box
+    // rect after it. Other gates that merely sit `open` stay quiet.
+    const backingRectFor = (m: string): string =>
+      m.match(/<title>Spec gate[\s\S]*?<rect[^>]*style="([^"]*)"/)?.[1] ?? "";
+
+    // Parked at the spec gate: it pulses WHITE and wears a purple border.
+    const parked = renderToStaticMarkup(
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "spec" }} />,
+    );
+    expect(backingRectFor(parked)).toContain("glowpulse"); // the live wait → pulses (SVG-visible glow)
+    expect(backingRectFor(parked)).toContain("var(--text-strong)"); // glows WHITE, like the bubble cards
+    expect(parked).toMatch(/<title>Spec gate[\s\S]*?stroke:var\(--status-gate\)/); // purple border retained
+
+    // Spec gate still `open` but the drive is parked ELSEWHERE (acceptance): spec must NOT pulse.
+    const elsewhere = renderToStaticMarkup(
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "acceptance" }} />,
+    );
+    expect(backingRectFor(elsewhere)).not.toContain("glowpulse"); // open but not the live wait → quiet
+
+    // Cleared: no pulse.
+    const approved = renderToStaticMarkup(
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }], pendingGate: null }} />,
+    );
+    expect(backingRectFor(approved)).not.toContain("glowpulse"); // cleared → quiet, no pulse
+  });
+
+  it("renders per-step agent-card metrics (model·effort and turns·cost) on the step it credits", () => {
+    const markup = renderToStaticMarkup(
+      <LaneGraph state={{ ...state, laneStepMeta: { "p-propose": { model: "opus", effort: "low", cost: 1.5, turns: 2 } } }} />,
+    );
+    expect(markup).toContain("opus · low"); // model · effort, from the step's phase.start
+    expect(markup).toContain("2 turns · $1.50"); // turns · cost, from the turns credited to it
+  });
+
   it("draws back-edges as labelled branches, not happy path", () => {
     // The build lane's assess fan-out back-edges are the honest-GREEN recovery paths; they must be
     // visually distinct (dashed + amber + labelled) or the cycle reads as linear. (The repair/perm
@@ -287,12 +325,12 @@ describe("render — LaneGraph", () => {
     const empty = {
       ...state,
       gates: [],
-      topology: { ...state.topology, passedNodes: [], laneSteps: { plan: [], design: [], build: [] }, laneCurrent: null },
+      topology: { ...state.topology, passedNodes: [], laneSteps: { plan: [], design: [], build: [], deploy: [] }, laneCurrent: null },
     };
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
-    expect((markup.match(/<svg/g) ?? []).length).toBe(3); // all lanes render even when empty
+    expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render even when empty
     expect(markup).toContain("not started");
-    expect(markup).toContain("0/3 steps");
+    expect(markup).toContain("0/4 steps"); // plan: 4 lightable steps (incl. p-intake), none reached
   });
 });
 
@@ -304,17 +342,25 @@ describe("render — Transport", () => {
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T15:09:36.000Z" />,
     );
     expect(markup).toContain("LIVE");
-    expect(markup).not.toContain("PINNED");
+    expect(markup).not.toContain("PAUSED");
     expect(markup).toMatchSnapshot();
   });
 
-  it("renders pinned at an event, and says so", () => {
+  it("renders PAUSED when scrubbed back off the live edge, and says so", () => {
     const markup = renderToStaticMarkup(
       <Transport at={40} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T19:39:11.000Z" />,
     );
-    expect(markup).toContain("PINNED");
+    expect(markup).toContain("PAUSED");
     expect(markup).not.toContain(">LIVE<");
     expect(markup).toMatchSnapshot();
+  });
+
+  it("shows WAITING at the live edge when parked on a human decision", () => {
+    const markup = renderToStaticMarkup(
+      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} waiting />,
+    );
+    expect(markup).toContain("WAITING");
+    expect(markup).not.toContain(">LIVE<");
   });
 
   it("disables step-back at the start and step-forward at the end", () => {

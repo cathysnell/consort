@@ -7,7 +7,7 @@
 
 **Consort keeps AI-written code clean and correct: spec-first and test-driven, driven by a deterministic state machine with human-approval gates and immutable tests. Engineering discipline is no longer left to chance at the whim of a model. Every green is a real test run on a live branch of a real Lakebase database, enforced by contract, not suggestions.**
 
-Consort takes its name from the field of music. A *consort* is an ensemble that plays in concert: each musician holds one part, and a conductor keeps them in time. Consort is that, applied to building software. A set of agents each take on one familiar role from the software lifecycle, a product owner, a spec author, an architect, a DBA, a test strategist, a UX designer, and a navigator/driver pair at the keyboard, while a deterministic conductor keeps them in sequence and a human approves every gate. No agent plays another's part.
+Consort takes its name from the field of music. A *consort* is an ensemble that plays in concert: each musician holds one part, and a conductor keeps them in time. Consort is that, applied to building software. A set of agents each take on one familiar role from the software lifecycle — a spec author, an architect, a DBA, a test strategist, a UX designer, and a navigator/driver pair at the keyboard — while the product owner is the human's own seat (you, or a Human Proxy standing in headless), a deterministic conductor keeps them in sequence, and the human approves every gate. No agent plays another's part.
 
 **What Consort builds.** Consort, an open-source framework from Databricks (`databricks-solutions/consort`), builds **transactional applications**: an application backend (and an optional web UI) whose system of record is a **Lakebase** database. [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless, Postgres-compatible **transactional (OLTP)** database, branchable in about a second. Each git branch is paired with its own Lakebase Postgres branch, so every branch has a real, isolated database and the schema evolves in lockstep with the code. It is not the Delta Lakehouse, and Consort is not an ETL, analytics, BI, or data-pipeline tool; it is a way to build and evolve application backends on Postgres. For what Consort is and is not, and how it compares to other spec-first tools, see [`docs/positioning.md`](docs/positioning.md).
 
@@ -162,7 +162,7 @@ When a new kit version ships, refresh what a scaffolded project runs against:
   claude plugin marketplace update databricks-solutions
   claude plugin update consort@databricks-solutions
   ```
-  The marketplace refresh matters , without it `plugin update` compares against a stale view of the repo and reports "up to date." The plugin version tracks each release (`.claude-plugin/plugin.json`), which is what `plugin update` uses to detect the new version. Note: `claude plugin install` on an already-installed plugin is a no-op , use `update`.
+  The marketplace refresh matters – without it `plugin update` compares against a stale view of the repo and reports "up to date." The plugin version tracks each release (`.claude-plugin/plugin.json`), which is what `plugin update` uses to detect the new version. Note: `claude plugin install` on an already-installed plugin is a no-op – use `update`.
 
 ## What's in this repo
 

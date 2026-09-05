@@ -10,7 +10,7 @@
 // (deriveDesignAction / deriveBuildAction) and papers/introducing-consort.md. Gates are
 // human-decided and fail closed.
 
-import type { AgentLogEvent, Role } from "./types";
+import type { AgentLogEvent, LaneStepMeta, Role } from "./types";
 // One definition of "which feature does this event belong to", shared with the story
 // derivation. derive.ts does not import this module, so there is no cycle.
 import { featureIdOf } from "./derive";
@@ -18,7 +18,7 @@ import { featureIdOf } from "./derive";
 // --------------------------------------------------------------------------- types
 
 export type NodeKind = "phase" | "gate";
-export type LaneId = "plan" | "design" | "build";
+export type LaneId = "plan" | "design" | "build" | "deploy";
 
 export interface WorkflowNode {
   id: string;
@@ -44,6 +44,10 @@ export interface StepMatch {
   buildModeAny?: string[];
   buildModeNot?: string[];
   eventPrefix?: string;
+  // Exact event-name equality (`e.event === m.event`), decided alone like `eventPrefix`. Used by
+  // the deploy lane, whose deterministic steps light off specific orchestrator events
+  // (deploy.start / deploy.verified) rather than a role+phase the way the LLM-agent lanes do.
+  event?: string;
 }
 
 export interface LaneStep {
@@ -73,7 +77,7 @@ export interface WorkflowTopology {
 
 // --------------------------------------------------------------------------- the graph
 
-export const LANE_IDS: readonly LaneId[] = ["plan", "design", "build"] as const;
+export const LANE_IDS: readonly LaneId[] = ["plan", "design", "build", "deploy"] as const;
 
 // Which lifecycle node each log phase (metadata.phase) belongs to.
 //
@@ -223,6 +227,15 @@ const PLAN_LANE: Lane = {
   title: "Plan  ·  sprint planning",
   steps: [
     {
+      id: "p-intake",
+      role: "product-owner",
+      label: "Product owner",
+      sub: "intake: overview/nfrs",
+      // Lights on the PO's intake events (intake.supplied / intake.refused). eventPrefix ignores
+      // role in matchesStep, but only the product-owner emits intake.*, so this is unambiguous.
+      match: { role: "product-owner", eventPrefix: "intake" },
+    },
+    {
       id: "p-propose",
       role: "spec-author",
       label: "Spec author",
@@ -240,7 +253,7 @@ const PLAN_LANE: Lane = {
       id: "p-req",
       role: "product-owner",
       label: "Product owner",
-      sub: "author requests",
+      sub: "choose features",
       match: { role: "product-owner", phaseAny: ["author-requests", "feature"] },
     },
     {
@@ -251,22 +264,18 @@ const PLAN_LANE: Lane = {
       gate: true,
       match: null,
     },
-    {
-      id: "p-hil",
-      role: null,
-      label: "Raise to HIL",
-      sub: "escalate to human",
-      escalation: true,
-      match: null,
-    },
   ],
   edges: [
+    ["p-intake", "p-propose"],
     ["p-propose", "p-size"],
     ["p-size", "p-req"],
     ["p-req", "p-gate"],
   ] as const,
-  // any planning step can stall to the human before the gate
-  backEdges: [["p-req", "p-hil", "escalate"]] as const,
+  // No raise-to-HIL: the escalate outcome fires only on a failed run, a build-level smell, or a
+  // spec smell with its revise budget spent (step.ts route()) — all of which live in build/design,
+  // not planning. A bad backlog surfaces as the human HOLDING at the plan gate, not a mid-lane
+  // escalation; and the product-owner IS the human, so it has no one to escalate to.
+  backEdges: [] as const,
 };
 
 const DESIGN_LANE: Lane = {
@@ -362,7 +371,12 @@ const BUILD_LANE: Lane = {
     },
     {
       id: "b-verify",
-      role: null,
+      // VERIFY (build-cycle AND deploy) is release work, so the dashboard attributes it to the
+      // release-engineer for lane colouring. Kevin's Python left it ownerless; this is a declared
+      // dashboard-side departure (see STEP_DEVIATIONS in topology.test.ts). It keeps its
+      // verify-prefix match, so it still lights from events and `isHumanGate` stays false — it
+      // takes the release-engineer's light-blue, not the purple human-gate colour.
+      role: "release-engineer",
       label: "Verify",
       sub: "run vs real branch",
       gate: true,
@@ -439,11 +453,108 @@ const BUILD_LANE: Lane = {
   ] as const,
 };
 
+// The combined ship lane. Unlike plan/design/build (ported verbatim from Kevin's Python
+// WORKFLOW), this lane is dashboard-native: deploy and promote are DETERMINISTIC CLI effects run
+// by the orchestrator, not an LLM agent, so they had no per-lane sub-workflow in the Python. The
+// dashboard attributes every deterministic step to the `release-engineer` role (light-blue) for
+// labelling; the two human gates carry `match: null` so `isHumanGate` keeps them purple.
+//
+// It reads as two phases — a Deploy section (deploy → verify → deploy gate) and a Promote section
+// (prepare-pr → wait-ci → promote gate → merge), which LaneGraph draws with a separator between
+// them. Deploy/verify light from the orchestrator's `deploy.start` / `deploy.verified` events; the
+// promote sub-steps emit no per-step events (only the promote phase.start + the promote gate), so
+// they share a `phaseAny:["promote"]` predicate — structural, faithful to what the kit logs.
+//
+// The self-heal arm (deploy-verify contamination) mirrors the build lane's assess fan-out. Note
+// the deliberate overlap: `assess-deploy` also matches the build lane's `b-assess`, which precedes
+// this lane in LANE_IDS and therefore claims the event — so `dp-assess` is structural (it renders,
+// but never lights). `refactor-deploy` has no build-lane claimant, so `dp-refactor` does light.
+const DEPLOY_LANE: Lane = {
+  title: "Deploy  ·  deploy + promote (release-engineer)",
+  steps: [
+    {
+      id: "dp-deploy",
+      role: "release-engineer",
+      label: "Deploy",
+      sub: "deploy to feature branch",
+      match: { event: "deploy.start" },
+    },
+    {
+      id: "dp-verify",
+      role: "release-engineer",
+      label: "Verify",
+      sub: "reachable + verify.passed",
+      match: { event: "deploy.verified" },
+    },
+    { id: "dp-gate", role: null, label: "deploy gate", sub: "human check", gate: true, match: null },
+    {
+      id: "dp-pr",
+      role: "release-engineer",
+      label: "Prepare PR",
+      sub: "open PR",
+      match: { phaseAny: ["promote"] },
+    },
+    {
+      id: "dp-ci",
+      role: "release-engineer",
+      label: "Wait CI",
+      sub: "CI green",
+      match: { phaseAny: ["promote"] },
+    },
+    { id: "dp-promgate", role: null, label: "promote gate", sub: "human check", gate: true, match: null },
+    {
+      id: "dp-merge",
+      role: "release-engineer",
+      label: "Merge",
+      sub: "release to parent tier",
+      match: { phaseAny: ["promote"] },
+    },
+    {
+      id: "dp-assess",
+      role: "navigator",
+      label: "Assess-deploy",
+      sub: "confirm fragile set",
+      branch: true,
+      match: { buildModeAny: ["assess-deploy"] },
+    },
+    {
+      id: "dp-refactor",
+      role: "driver",
+      label: "Scope-deploy",
+      sub: "tests own their state",
+      branch: true,
+      match: { buildModeAny: ["refactor-deploy"] },
+    },
+    {
+      id: "dp-hil",
+      role: null,
+      label: "Raise to HIL",
+      sub: "genuine failure",
+      escalation: true,
+      match: null,
+    },
+  ],
+  edges: [
+    ["dp-deploy", "dp-verify"],
+    ["dp-verify", "dp-gate"],
+    ["dp-gate", "dp-pr"],
+    ["dp-pr", "dp-ci"],
+    ["dp-ci", "dp-promgate"],
+    ["dp-promgate", "dp-merge"],
+  ] as const,
+  backEdges: [
+    ["dp-verify", "dp-assess", "verify fails"],
+    ["dp-assess", "dp-refactor", ""],
+    ["dp-refactor", "dp-deploy", "re-deploy"],
+    ["dp-assess", "dp-hil", "genuine"],
+  ] as const,
+};
+
 export const WORKFLOW: WorkflowTopology = {
   nodes: NODES,
   edges: EDGES,
   phaseToNode: PHASE_TO_NODE,
-  lanes: { plan: PLAN_LANE, design: DESIGN_LANE, build: BUILD_LANE },
+  lanes: { plan: PLAN_LANE, design: DESIGN_LANE, build: BUILD_LANE, deploy: DEPLOY_LANE },
 };
 
 // --------------------------------------------------------------------------- lookups
@@ -494,6 +605,8 @@ function buildModeOf(e: AgentLogEvent): string | null {
 // Field semantics, preserved from the template's evaluator:
 //   eventPrefix  — decided alone: the event name must start with it, and nothing else
 //                  is consulted (this is how `verify.*` lights b-verify regardless of role).
+//   event        — decided alone: the event name must equal it exactly (deploy.start /
+//                  deploy.verified light the deploy lane's deterministic steps).
 //   role         — must be equal.
 //   phaseAny     — phase must be a member. Decides on its own once role has passed.
 //   phaseNot     — excluded when the phase is present and listed. A missing phase does
@@ -509,6 +622,10 @@ export function matchesStep(m: StepMatch | null, e: AgentLogEvent): boolean {
   if (!m) return false;
 
   if (m.eventPrefix) return typeof e.event === "string" && e.event.startsWith(m.eventPrefix);
+
+  // Exact event-name match, decided alone like eventPrefix (the deploy lane lights dp-deploy /
+  // dp-verify off specific orchestrator events).
+  if (m.event) return e.event === m.event;
 
   if (m.role && e.role !== m.role) return false;
 
@@ -547,6 +664,36 @@ export function laneStepForEvent(e: AgentLogEvent | null | undefined): LaneHit |
     }
   }
   return null;
+}
+
+// Per-step agent metrics for the step cards, folded over the whole event stream: model + effort from
+// each step's phase.start, and the cost + turn count of the turns credited to it. A turn.usage carries
+// cost but not buildMode, so it cannot be matched to a build step directly — instead each role's
+// most-recent phase.start fixes the step its next turn.usage is credited to. First-match wins across
+// lanes (laneStepForEvent), so an event two steps share (assess-deploy lights both b-assess and
+// dp-assess) is counted once, on the build step, exactly as the lane lighting resolves it.
+export function laneStepMeta(events: AgentLogEvent[]): Record<string, LaneStepMeta> {
+  const meta: Record<string, LaneStepMeta> = {};
+  const lastStepForRole: Record<string, string> = {};
+  const ensure = (id: string): LaneStepMeta => (meta[id] ??= { model: null, effort: null, cost: 0, turns: 0 });
+  for (const e of events) {
+    if (e.event === "phase.start") {
+      const hit = laneStepForEvent(e);
+      if (!hit) continue;
+      lastStepForRole[e.role] = hit.step;
+      const m = ensure(hit.step);
+      if (e.model) m.model = e.model;
+      if (e.effort) m.effort = e.effort;
+    } else if (e.event === "turn.usage") {
+      const id = lastStepForRole[e.role];
+      if (!id) continue;
+      const m = ensure(id);
+      const md = (e.metadata || {}) as Record<string, unknown>;
+      m.cost += Number(md.cost_usd || 0);
+      m.turns += 1;
+    }
+  }
+  return meta;
 }
 
 // --------------------------------------------------------------------------- progress
@@ -612,8 +759,8 @@ export interface LaneProgress {
  */
 export function laneProgress(events: AgentLogEvent[], upTo?: number, feature?: string): LaneProgress {
   const end = upTo === undefined ? events.length : Math.max(0, Math.min(upTo, events.length));
-  const done: Record<LaneId, Set<string>> = { plan: new Set(), design: new Set(), build: new Set() };
-  const last: Record<LaneId, string | null> = { plan: null, design: null, build: null };
+  const done: Record<LaneId, Set<string>> = { plan: new Set(), design: new Set(), build: new Set(), deploy: new Set() };
+  const last: Record<LaneId, string | null> = { plan: null, design: null, build: null, deploy: null };
 
   for (const { e, feature: f } of eventsWithFeature(events, upTo)) {
     if (feature !== undefined && f !== feature) continue;

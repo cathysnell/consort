@@ -107,18 +107,18 @@ describe("theme — values are unchanged from the pre-refactor literals", () => 
     expect(status.onDeckTint).toBe("rgba(59, 130, 246, 0.08)");
   });
 
-  it("the role palette, exactly as AGENT_COLORS had it", () => {
+  it("the role palette: one distinct colour per role, aligned with the agent definitions", () => {
     expect(roleColor).toEqual({
-      orchestrator: "#6B7280",
+      orchestrator: "#64748B",
       "spec-author": "#3B82F6",
       "ux-designer": "#EC4899",
       "architect-reviewer": "#8B5CF6",
       dba: "#F59E0B",
-      "test-strategist": "#14B8A6",
+      "test-strategist": "#EAB308",
       navigator: "#FF7033",
       driver: "#10B981",
-      "product-owner": "#EF4444",
-      "release-engineer": "#0EA5E9",
+      "product-owner": "#06B6D4",
+      "release-engineer": "#2DD4BF",
     });
   });
 
@@ -181,7 +181,7 @@ describe("theme — dark theme (Kevin's palette)", () => {
   it("maps roles to Kevin's c1…c10 hues, keeping navigator orange and driver green", () => {
     expect(roleColorDark.navigator).toBe("#d95926"); // c6, orange like the light theme
     expect(roleColorDark.driver).toBe("#008300"); // c2, green like the light theme
-    expect(roleColorDark.orchestrator).toBe("#898781"); // warm grey
+    expect(roleColorDark.orchestrator).toBe("#94A3B8"); // slate (cool blue-grey)
   });
 
   it("gives every dark role a visually distinct color", () => {

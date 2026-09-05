@@ -109,16 +109,16 @@ export const status = {
 // Distinct, stable color per agent role. Used by the cost bar, and by the topology graph
 // to stroke a node with the color of the role that owns it.
 export const roleColor: Record<Role, string> = {
-  orchestrator: "#6B7280",
+  orchestrator: "#64748B", // slate , the deterministic conductor's identity
   "spec-author": "#3B82F6",
   "ux-designer": "#EC4899",
   "architect-reviewer": "#8B5CF6",
   dba: "#F59E0B",
-  "test-strategist": "#14B8A6",
+  "test-strategist": "#EAB308", // yellow , matches the agent color
   navigator: "#FF7033",
   driver: "#10B981",
-  "product-owner": "#EF4444",
-  "release-engineer": "#0EA5E9",
+  "product-owner": "#06B6D4", // cyan , matches the agent color
+  "release-engineer": "#2DD4BF", // mint (saturated) , blue-green, apart from driver green and PO cyan
 };
 
 // Any string, so an unknown role from a future kit degrades to grey instead of undefined.
@@ -214,16 +214,16 @@ export const statusDark: Tokens<typeof status> = {
 // Role hues from Kevin's c1…c10, mapped to preserve the light theme's semantics where it
 // matters (navigator stays orange, driver stays green). orchestrator → warm grey (his --muted).
 export const roleColorDark: Record<Role, string> = {
-  orchestrator: "#898781",
+  orchestrator: "#94A3B8", // slate (cool blue-grey), reads on dark
   "spec-author": "#3987e5", // c1
   "ux-designer": "#d55181", // c3
   "architect-reviewer": "#9085e9", // c7
   dba: "#c98500", // c4
-  "test-strategist": "#199e70", // c5
+  "test-strategist": "#FACC15", // yellow (matches agent), reads on dark
   navigator: "#d95926", // c6 (orange, as in light)
   driver: "#008300", // c2 (green, as in light)
-  "product-owner": "#e66767", // c8
-  "release-engineer": "#5ec8d8", // c9
+  "product-owner": "#22D3EE", // cyan (matches agent), reads on dark
+  "release-engineer": "#5EEAD4", // mint (saturated), reads on dark, apart from driver green + PO cyan
 };
 
 // --- shared non-color tokens ------------------------------------------------

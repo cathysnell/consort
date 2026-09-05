@@ -8,7 +8,7 @@ description: >-
   gate as the approver. Headless (LAKEBASE_CONSORT_HUMAN_PROXY=1), the Human Proxy plays you.
 tools: Read, Write, Edit, Bash
 model: opus
-color: yellow
+color: cyan
 ---
 
 # Product Owner

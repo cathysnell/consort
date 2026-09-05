@@ -63,6 +63,32 @@ export function latestTurnOrdinalForRole(
   return null;
 }
 
+/**
+ * The orchestrator's current activity: its LATEST event (carrying a message) over the full event
+ * stream. The orchestrator narrates what it's doing as it does it — "orchestrator START build",
+ * "dispatch driver for green", "GATE acceptance awaiting decision , story S4-…" — so its most
+ * recent such event is the honest "what is it on right now". RECENCY wins across event kinds: at a
+ * gate the last orchestrator event is the gate.surfaced, so the card shows the gate rather than the
+ * `START build` it logged many turns earlier. Scans the whole slice (not the 40-event tail) for the
+ * same reason — a long build separates the START from the gate by many turns. `reasoning` events
+ * are skipped (internal narration, not a coordination action). The story rides on the event's
+ * `story` or (for gates) `subject`. Returns null before the run logs any orchestrator activity.
+ */
+export function latestOrchestratorActivity(
+  events: AgentLogEvent[],
+): { action: string; story: string | null } | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.role !== "orchestrator" || e.event === "reasoning") continue;
+    const action = typeof e.message === "string" && e.message.trim() ? e.message.trim() : null;
+    if (!action) continue;
+    const md = (e.metadata ?? {}) as Record<string, unknown>;
+    const story = typeof md.story === "string" ? md.story : typeof md.subject === "string" ? md.subject : null;
+    return { action, story };
+  }
+  return null;
+}
+
 // Scan the log for a HITL stop that is still pending: the last gate.surfaced /
 // escalation.raised with no matching resolution after it. Returns null if the run
 // is actively proceeding (any turn started after the surface counts as "not waiting").
@@ -484,10 +510,18 @@ export function gatesFromLog(events: AgentLogEvent[], feature?: string): GateInf
     const f = featureIdOf(e);
     if (f) currentFeature = f;
     const md = (e.metadata || {}) as Record<string, unknown>;
+    // The acceptance gate is CLEARED by experiment.accepted (the PO merge), NOT a gate.approved ,
+    // so without this it would linger `open` forever after the story is accepted (and several past
+    // acceptance gates would read open at once). It carries no `gate` slot, so handle it before the
+    // gate-name guard below.
+    if (e.event === "experiment.accepted") {
+      if (feature === undefined || currentFeature === feature) state.set("acceptance", "approved");
+      continue;
+    }
     const gate = typeof md.gate === "string" ? md.gate : null;
     if (!gate) continue;
     if (feature !== undefined && currentFeature !== feature) continue; // out of scope
-    if (e.event === "gate.surfaced") state.set(gate, state.get(gate) === "approved" ? "approved" : "open");
+    if (e.event === "gate.surfaced") state.set(gate, "open");
     else if (e.event === "gate.approved") state.set(gate, "approved");
   }
   return [...state.entries()].map(([name, status]) => ({ name, status }));

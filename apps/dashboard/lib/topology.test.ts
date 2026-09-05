@@ -220,6 +220,16 @@ describe("matchesStep", () => {
     expect(matchesStep(m, ev("cycle.green", "driver"))).toBe(false);
   });
 
+  it("event decides alone on EXACT equality, distinct from a prefix", () => {
+    const m: StepMatch = { event: "deploy.verified" };
+    expect(matchesStep(m, ev("deploy.verified", "release-engineer", { phase: "deploy" }))).toBe(true);
+    // exact, not a prefix: a longer name that merely starts the same must not match
+    expect(matchesStep(m, ev("deploy.verified.extra", "release-engineer"))).toBe(false);
+    expect(matchesStep(m, ev("deploy.start", "release-engineer"))).toBe(false);
+    // role/phase are not consulted
+    expect(matchesStep(m, ev("deploy.verified", "orchestrator"))).toBe(true);
+  });
+
   it("requires role equality", () => {
     const m: StepMatch = { role: "dba" };
     expect(matchesStep(m, ev("phase.start", "dba"))).toBe(true);
@@ -334,7 +344,7 @@ describe("laneProgress / passedNodes", () => {
 
   it("accumulates reached steps and tracks the playhead step", () => {
     const p = laneProgress(events);
-    expect([...p.done.plan]).toEqual(["p-propose", "p-size"]);
+    expect([...p.done.plan]).toEqual(["p-intake", "p-propose", "p-size"]);
     expect([...p.done.design]).toEqual(["d-dba"]);
     expect([...p.done.build]).toEqual(["b-red", "b-green"]);
     expect(p.last.plan).toBe("p-size");
@@ -425,7 +435,7 @@ describe("laneProgress / passedNodes", () => {
 
   it("is a prefix fold: upTo windows the log", () => {
     const p = laneProgress(events, 3);
-    expect([...p.done.plan]).toEqual(["p-propose", "p-size"]);
+    expect([...p.done.plan]).toEqual(["p-intake", "p-propose", "p-size"]);
     expect(p.done.design.size).toBe(0);
     expect(p.done.build.size).toBe(0);
     expect(p.current).toEqual({ lane: "plan", step: "p-size" });
@@ -442,7 +452,7 @@ describe("laneProgress / passedNodes", () => {
   it("handles an empty log", () => {
     const p = laneProgress([]);
     expect(p.current).toBeNull();
-    expect(p.last).toEqual({ plan: null, design: null, build: null });
+    expect(p.last).toEqual({ plan: null, design: null, build: null, deploy: null });
     expect(passedNodes([]).size).toBe(0);
   });
 
@@ -551,6 +561,43 @@ const INTENTIONAL_DEVIATIONS: Record<string, { py: string | undefined; ts: strin
   },
 };
 
+// The lanes ported verbatim from Kevin's Python WORKFLOW; the fixture guards exactly these.
+// "deploy" is a dashboard-native lane (release-engineer's deploy + promote phases, which are
+// deterministic CLI effects with no LLM-agent sub-workflow in the Python) — it has no fixture
+// counterpart and is tested on its own terms below, not against the extraction.
+const PORTED_LANE_IDS = ["plan", "design", "build"] as const;
+
+// Declared dashboard-side departures from Kevin's Python at the STEP level. The fixture is a
+// verbatim extraction of the Python, so a value the dashboard intentionally changes would fail the
+// verbatim comparison; each such change is declared here (mirroring INTENTIONAL_DEVIATIONS for
+// phaseToNode), applied to the fixture side of the comparison, and separately asserted to still
+// describe reality so it can't rot.
+const STEP_DEVIATIONS: {
+  lane: (typeof PORTED_LANE_IDS)[number];
+  step: string;
+  field: "role" | "sub";
+  py: string | null;
+  ts: string | null;
+  why: string;
+}[] = [
+  {
+    lane: "build",
+    step: "b-verify",
+    field: "role",
+    py: null,
+    ts: "release-engineer",
+    why: "the dashboard attributes VERIFY (build-cycle and deploy) to the release-engineer for lane colouring; Kevin's Python left it ownerless. It keeps its verify-prefix match, so it still lights from events and is not a human gate.",
+  },
+  {
+    lane: "plan",
+    step: "p-req",
+    field: "sub",
+    py: "author requests",
+    ts: "choose features",
+    why: "author-requests is where the PO picks the sized candidates that fit the sprint (a feature-request.md per committed feature) — a selection, not prose authoring; 'choose features' describes what actually happens.",
+  },
+];
+
 describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
   it("the fixture is the literal we think it is", () => {
     expect(PY._source.line).toBe(384);
@@ -597,7 +644,7 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
     expect(notActuallyDifferent).toEqual([]);
   });
 
-  for (const lane of LANE_IDS) {
+  for (const lane of PORTED_LANE_IDS) {
     it(`ports the ${lane} lane verbatim: title, steps, predicates, edges`, () => {
       const py = PY.lanes[lane];
       const ts = WORKFLOW.lanes[lane];
@@ -609,6 +656,15 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
 
       // Step order matters: it is the order the lane renders in.
       expect(ts.steps.map((s) => s.id)).toEqual(py.steps.map((s) => s.id));
+
+      // Apply the declared step deviations to the FIXTURE side, so the verbatim comparison reflects
+      // "Kevin's Python + the dashboard's declared departures". The deviations are separately proven
+      // to describe reality by the test below, so this can't hide an undeclared drift.
+      const devs = STEP_DEVIATIONS.filter((d) => d.lane === lane);
+      const withDev = (s: PyStep): PyStep => {
+        const d = devs.find((x) => x.step === s.id);
+        return d ? { ...s, [d.field]: d.ts } : s;
+      };
 
       // Normalize absent-vs-false and key order so only real differences surface.
       const norm = (s: PyStep | LaneStep) => ({
@@ -622,12 +678,104 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
           ? Object.fromEntries(Object.entries(s.match).sort(([a], [b]) => a.localeCompare(b)))
           : null,
       });
-      expect(ts.steps.map(norm)).toEqual(py.steps.map(norm));
+      expect(ts.steps.map(norm)).toEqual(py.steps.map((s) => norm(withDev(s))));
     });
   }
 
-  it("covers every lane the fixture declares", () => {
-    expect([...LANE_IDS].sort()).toEqual(Object.keys(PY.lanes).sort());
+  it("the fixture declares exactly the ported lanes, all present in LANE_IDS", () => {
+    // The extraction covers the Python lanes and nothing else; each is a real dashboard lane.
+    expect(Object.keys(PY.lanes).sort()).toEqual([...PORTED_LANE_IDS].sort());
+    for (const l of PORTED_LANE_IDS) expect(LANE_IDS).toContain(l);
+  });
+
+  it("declares every step deviation truthfully (fixture keeps the old value, topology the new)", () => {
+    // Keeps STEP_DEVIATIONS honest: each must correspond to a real fixture-vs-topology difference,
+    // so a resolved or mis-stated one is caught rather than silently masking a comparison.
+    for (const d of STEP_DEVIATIONS) {
+      const py = PY.lanes[d.lane].steps.find((s) => s.id === d.step);
+      const ts = WORKFLOW.lanes[d.lane].steps.find((s) => s.id === d.step);
+      expect(py, `${d.step} in fixture`).toBeDefined();
+      expect(ts, `${d.step} in topology`).toBeDefined();
+      expect((py![d.field] ?? null) as string | null, `${d.step} fixture ${d.field}`).toBe(d.py);
+      expect((ts![d.field] ?? null) as string | null, `${d.step} topology ${d.field}`).toBe(d.ts);
+      expect(d.py, `${d.step} is a real difference`).not.toBe(d.ts);
+      expect(d.why.length, `${d.step} needs a reason`).toBeGreaterThan(20);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The deploy lane is dashboard-native (no Python counterpart), so it is asserted directly here
+// rather than against the fixture. It combines the deploy + promote phases, attributes every
+// deterministic step to the release-engineer, and keeps its two human gates unlightable.
+
+describe("topology — the deploy lane (dashboard-native)", () => {
+  const deploy = WORKFLOW.lanes.deploy;
+
+  it("exists and sits immediately after build in LANE_IDS", () => {
+    expect(deploy).toBeDefined();
+    expect(LANE_IDS.indexOf("deploy")).toBe(LANE_IDS.indexOf("build") + 1);
+  });
+
+  it("lays out the deploy + promote phases plus the self-heal arm, in order", () => {
+    expect(deploy.steps.map((s) => s.id)).toEqual([
+      "dp-deploy", "dp-verify", "dp-gate",
+      "dp-pr", "dp-ci", "dp-promgate", "dp-merge",
+      "dp-assess", "dp-refactor", "dp-hil",
+    ]);
+  });
+
+  it("attributes every deterministic step to the release-engineer, leaving gates ownerless", () => {
+    const byId = new Map(deploy.steps.map((s) => [s.id, s]));
+    for (const id of ["dp-deploy", "dp-verify", "dp-pr", "dp-ci", "dp-merge"]) {
+      expect(byId.get(id)?.role, id).toBe("release-engineer");
+    }
+    for (const id of ["dp-gate", "dp-promgate", "dp-hil"]) expect(byId.get(id)?.role, id).toBeNull();
+  });
+
+  it("keeps the two human gates unlightable (→ purple) and the escalation terminal", () => {
+    const byId = new Map(deploy.steps.map((s) => [s.id, s]));
+    for (const id of ["dp-gate", "dp-promgate"]) {
+      expect(byId.get(id)?.gate, id).toBe(true);
+      expect(byId.get(id)?.match, id).toBeNull(); // match:null → isHumanGate → purple
+    }
+    expect(byId.get("dp-hil")?.escalation).toBe(true);
+    expect(byId.get("dp-hil")?.match).toBeNull();
+  });
+
+  it("lights deploy/verify from deploy.* events and the promote steps from the promote phase", () => {
+    expect(laneStepForEvent(ev("deploy.start", "release-engineer"))).toEqual({ lane: "deploy", step: "dp-deploy" });
+    expect(laneStepForEvent(ev("deploy.verified", "release-engineer"))).toEqual({ lane: "deploy", step: "dp-verify" });
+    // The promote sub-steps emit no per-step events, so the promote phase.start lights the first
+    // of them (dp-pr) — the section is structural, faithful to what the kit actually logs.
+    expect(laneStepForEvent(ev("phase.start", "release-engineer", { phase: "promote" }))).toEqual({
+      lane: "deploy",
+      step: "dp-pr",
+    });
+  });
+
+  it("documents the assess-deploy overlap: build's b-assess claims it, dp-assess never lights", () => {
+    // dp-assess and b-assess both match buildMode assess-deploy; build precedes deploy in
+    // LANE_IDS, so the build lane wins. dp-assess renders (the recovery arm is drawn) but is never
+    // the lit step — a deliberate, documented overlap, not a bug.
+    expect(
+      laneStepForEvent(ev("phase.start", "navigator", { phase: "assess", buildMode: "assess-deploy" })),
+    ).toEqual({ lane: "build", step: "b-assess" });
+    // refactor-deploy, by contrast, has no build-lane claimant, so dp-refactor does light.
+    expect(
+      laneStepForEvent(ev("phase.start", "driver", { phase: "refactor", buildMode: "refactor-deploy" })),
+    ).toEqual({ lane: "deploy", step: "dp-refactor" });
+  });
+
+  it("wires the happy-path spine and the self-heal back-edges", () => {
+    expect(deploy.edges.map(([a, b]) => `${a}->${b}`)).toEqual([
+      "dp-deploy->dp-verify", "dp-verify->dp-gate", "dp-gate->dp-pr",
+      "dp-pr->dp-ci", "dp-ci->dp-promgate", "dp-promgate->dp-merge",
+    ]);
+    const back = deploy.backEdges.map(([a, b]) => `${a}->${b}`);
+    expect(back).toContain("dp-verify->dp-assess"); // verify fails
+    expect(back).toContain("dp-refactor->dp-deploy"); // re-deploy after scoping
+    expect(back).toContain("dp-assess->dp-hil"); // genuine failure → escalate
   });
 });
 
@@ -649,12 +797,18 @@ function originalLaneStepForEvent(e: AgentLogEvent): { lane: string | null; step
   const phase = md.phase as string | undefined;
   const bm = md.buildMode as string | undefined;
   const evName = e.event;
-  for (const laneId of ["plan", "design", "build"] as LaneId[]) {
+  // Iterate the same lane set laneStepForEvent does (LANE_IDS), so the two agree on the
+  // dashboard-native deploy lane too, not only the ported three.
+  for (const laneId of LANE_IDS) {
     for (const s of WORKFLOW.lanes[laneId].steps) {
       const m = s.match;
       if (!m) continue;
       if (m.eventPrefix) {
         if (evName && evName.startsWith(m.eventPrefix)) return { lane: laneId, step: s.id };
+        else continue;
+      }
+      if (m.event) {
+        if (evName === m.event) return { lane: laneId, step: s.id };
         else continue;
       }
       if (m.role && role !== m.role) continue;

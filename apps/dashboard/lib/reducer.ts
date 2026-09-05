@@ -36,8 +36,9 @@ import {
   blockersFromLog,
   featureIdOf,
   featuresFromLog,
+  latestOrchestratorActivity,
 } from "./derive";
-import { LANE_IDS, laneProgress, nodeForPhase, passedNodes } from "./topology";
+import { LANE_IDS, laneProgress, laneStepMeta, nodeForPhase, passedNodes } from "./topology";
 
 // A Claude session that wrote its transcript within this window counts as "actively
 // working" — Consort only logs at turn boundaries, so a long turn otherwise looks frozen.
@@ -100,6 +101,9 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
       looping: false,
     })),
     stories: [],
+    orchestratorActivity: null,
+    pendingGate: null,
+    laneStepMeta: {},
     lane: "design" as const,
     totalCost: 0,
     eventCount: 0,
@@ -112,7 +116,9 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
     topology: {
       passedNodes: [],
       activeNode: null,
-      laneSteps: { plan: [], design: [], build: [] },
+      // Derived from LANE_IDS (not a hand-written literal) so the empty shape can never drift from
+      // the fold path's laneSteps, which is also keyed by LANE_IDS.
+      laneSteps: Object.fromEntries(LANE_IDS.map((l) => [l, [] as string[]])),
       laneCurrent: null,
       atTimestamp: null,
     },
@@ -467,6 +473,29 @@ export function fold(
   const lane: DashboardState["lane"] =
     derived === "complete" ? "complete" : derived === "build" ? "build" : "design";
 
+  // The ONE gate the drive is parked at now: the MOST-RECENTLY-SURFACED gate that has not since been
+  // cleared. Derived from the LOG, not the gate SNAPSHOT — acceptance is not a next.json "gate" at all
+  // (the PO merge clears it via experiment.accepted, so it lives in story state, never status.gates),
+  // and keying off the snapshot's open set skipped acceptance and highlighted a stale spec gate. It's
+  // also more forgiving than findPendingGate's "the surface must be the very last event": a benign
+  // trailing log line must not blank the highlight. Cleared = a later gate.approved for the same gate,
+  // or (for acceptance only) a later experiment.accepted.
+  let pendingGate: string | null = null;
+  for (let i = slice.length - 1; i >= 0; i--) {
+    if (slice[i].event !== "gate.surfaced") continue;
+    const gname = (slice[i].metadata as Record<string, unknown> | undefined)?.gate;
+    if (typeof gname !== "string") break; // most-recent surface is malformed → no gate to pulse
+    let cleared = false;
+    for (let j = i + 1; j < slice.length; j++) {
+      const mj = (slice[j].metadata as Record<string, unknown> | undefined) ?? {};
+      if (slice[j].event === "gate.approved" && mj.gate === gname) cleared = true;
+      else if (gname === "acceptance" && slice[j].event === "experiment.accepted") cleared = true;
+      if (cleared) break;
+    }
+    pendingGate = cleared ? null : gname;
+    break; // only the most recent surface decides the live wait
+  }
+
   return {
     ...base,
     ok: true,
@@ -496,6 +525,13 @@ export function fold(
     // the design lane stops claiming "all complete" while the run is still designing.
     designPhases: computeDesignPhases(slice, lane),
     stories,
+    // Derived over the FULL slice, never the recentEvents tail: the orchestrator's latest
+    // narration (a gate, a dispatch, a build START) for the story in flight can sit many turns
+    // behind the gate you're waiting at, so a tail lookup would go stale.
+    orchestratorActivity: latestOrchestratorActivity(slice),
+    pendingGate,
+    // Per-step model/effort/cost/turns for the step cards, folded over the full slice.
+    laneStepMeta: laneStepMeta(slice),
     lane,
     totalCost,
     eventCount: slice.length,

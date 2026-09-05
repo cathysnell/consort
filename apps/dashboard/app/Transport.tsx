@@ -22,6 +22,9 @@ export interface TransportProps {
   onSpeedChange: (speed: number) => void;
   // Timestamp of the event at the playhead, for the clock readout.
   atTimestamp?: string | null;
+  // True when the run is parked on a human decision (a pending gate / escalation). At the live edge
+  // this shows WAITING rather than LIVE, since the board isn't advancing until you act.
+  waiting?: boolean;
 }
 
 const SPEEDS = [1, 2, 5, 20] as const;
@@ -35,6 +38,7 @@ export function Transport({
   speed,
   onSpeedChange,
   atTimestamp,
+  waiting = false,
 }: TransportProps) {
   const live = at === null;
   const pos = live ? total : Math.max(0, Math.min(at, total));
@@ -115,7 +119,7 @@ export function Transport({
           onChange(v >= total ? null : v);
         }}
         aria-label="scrub through the event log"
-        style={{ flex: 1, minWidth: 160, accentColor: "var(--status-accent)", cursor: "pointer" }}
+        style={{ flex: 1, minWidth: 160, accentColor: "#84CC16", cursor: "pointer" }}
       />
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.7rem", color: "var(--text-muted)" }}>
@@ -125,21 +129,21 @@ export function Transport({
         <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: font.mono, color: "var(--text-faint)" }}>
           {atTimestamp ? atTimestamp.slice(11, 19) : "--:--:--"}
         </span>
-        {live ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-good)", fontWeight: 700 }}>
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "var(--status-good)",
-                animation: "softpulse 1.6s ease-in-out infinite",
-              }}
-            />
-            LIVE
+        {!live ? (
+          // Scrubbed back / not following the live edge.
+          <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>PAUSED</span>
+        ) : waiting ? (
+          // At the live edge but parked on a human decision (gate / escalation).
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-gate-text)", fontWeight: 700 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-gate)", animation: "softpulse 1.6s ease-in-out infinite" }} />
+            WAITING
           </span>
         ) : (
-          <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>PINNED</span>
+          // Following the live edge, run advancing.
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-good)", fontWeight: 700 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-good)", animation: "softpulse 1.6s ease-in-out infinite" }} />
+            LIVE
+          </span>
         )}
       </div>
 
@@ -192,9 +196,11 @@ function TransportButton({
       title={title}
       aria-label={title}
       style={{
-        border: `1px solid ${active ? "var(--status-good)" : "var(--border-default)"}`,
-        background: primary ? "var(--status-accent)" : active ? "var(--status-good-tint-soft)" : "var(--surface-card)",
-        color: primary ? "var(--surface-card)" : active ? "var(--status-good-text)" : "var(--text-muted)",
+        border: `1px solid ${primary ? "#65A30D" : active ? "var(--status-good)" : "var(--border-default)"}`,
+        // The play/pause button is lime green (the only `primary` button), with a dark glyph so the
+        // ▶/❚❚ reads on the bright lime in both themes.
+        background: primary ? "#84CC16" : active ? "var(--status-good-tint-soft)" : "var(--surface-card)",
+        color: primary ? "#14290A" : active ? "var(--status-good-text)" : "var(--text-muted)",
         borderRadius: radius.chip,
         padding: "3px 9px",
         fontSize: "0.72rem",

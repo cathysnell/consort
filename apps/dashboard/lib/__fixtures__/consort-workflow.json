@@ -166,6 +166,16 @@
       "title": "Plan  ·  sprint planning",
       "steps": [
         {
+          "id": "p-intake",
+          "role": "product-owner",
+          "label": "Product owner",
+          "sub": "intake: overview/nfrs",
+          "match": {
+            "role": "product-owner",
+            "eventPrefix": "intake"
+          }
+        },
+        {
           "id": "p-propose",
           "role": "spec-author",
           "label": "Spec author",
@@ -208,17 +218,13 @@
           "sub": "human approves backlog",
           "gate": true,
           "match": null
-        },
-        {
-          "id": "p-hil",
-          "role": null,
-          "label": "Raise to HIL",
-          "sub": "escalate to human",
-          "escalation": true,
-          "match": null
         }
       ],
       "edges": [
+        [
+          "p-intake",
+          "p-propose"
+        ],
         [
           "p-propose",
           "p-size"
@@ -232,13 +238,7 @@
           "p-gate"
         ]
       ],
-      "backEdges": [
-        [
-          "p-req",
-          "p-hil",
-          "escalate"
-        ]
-      ]
+      "backEdges": []
     },
     "design": {
       "title": "Design lane  ·  spec-first (per story)",
