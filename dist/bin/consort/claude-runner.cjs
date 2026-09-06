@@ -7414,6 +7414,31 @@ init_cjs_shims();
 var import_node_fs2 = require("fs");
 var import_node_path3 = require("path");
 
+// consort/orchestrator/steps/manifests/product-owner-intake.json
+var product_owner_intake_default = {
+  id: "product-owner-intake",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "intake" },
+  inputs: [
+    { id: "answers", source: "feature:intake/answers.md", optional: true, description: "The human's interview answers, gathered by the coordinating session and written to intake/answers.md. OPTIONAL: the PO drafts from the stated intent + the canon; a fresh project may have thin answers, and never invents beyond them." }
+  ],
+  outputs: [
+    { id: "product-overview", filename: "product-overview.md", channel: "artifact", validator: "productOverviewConformant", description: "The PO's project overview (product-overview.md), drafted from the human's answers + @ui-ux-design-principles framing." },
+    { id: "nfrs", filename: "nfrs.md", channel: "artifact", validator: "nfrsConformant", description: "The NFR brief (nfrs.md): ## Required R<n> items across the @software-design-principles categories, plus ## Preferences / ## Out of bounds." },
+    { id: "design-brief", filename: "design/design-brief.md", channel: "artifact", optional: true, validator: "designBriefConformant", description: "The UX design brief (design/design-brief.md) , UI track only, so OPTIONAL (a backend-only project produces none)." }
+  ],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  }
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -8042,6 +8067,7 @@ var driver_green_superseded_default = {
 
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
+  product_owner_intake_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,

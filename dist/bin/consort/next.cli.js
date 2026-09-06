@@ -6943,6 +6943,31 @@ function formatSchemaErrors(validate) {
   });
 }
 
+// consort/orchestrator/steps/manifests/product-owner-intake.json
+var product_owner_intake_default = {
+  id: "product-owner-intake",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "intake" },
+  inputs: [
+    { id: "answers", source: "feature:intake/answers.md", optional: true, description: "The human's interview answers, gathered by the coordinating session and written to intake/answers.md. OPTIONAL: the PO drafts from the stated intent + the canon; a fresh project may have thin answers, and never invents beyond them." }
+  ],
+  outputs: [
+    { id: "product-overview", filename: "product-overview.md", channel: "artifact", validator: "productOverviewConformant", description: "The PO's project overview (product-overview.md), drafted from the human's answers + @ui-ux-design-principles framing." },
+    { id: "nfrs", filename: "nfrs.md", channel: "artifact", validator: "nfrsConformant", description: "The NFR brief (nfrs.md): ## Required R<n> items across the @software-design-principles categories, plus ## Preferences / ## Out of bounds." },
+    { id: "design-brief", filename: "design/design-brief.md", channel: "artifact", optional: true, validator: "designBriefConformant", description: "The UX design brief (design/design-brief.md) , UI track only, so OPTIONAL (a backend-only project produces none)." }
+  ],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  }
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -7571,6 +7596,7 @@ var driver_green_superseded_default = {
 
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
+  product_owner_intake_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,
@@ -8115,6 +8141,9 @@ var acConformant = conformsTo("ac.json");
 var architectureConformant = conformsTo("architecture.json");
 var dbDesignConformant = conformsTo("db-design.json");
 var testListConformant = conformsTo("test-list.json");
+var productOverviewConformant = conformsTo("product-overview.md");
+var nfrsConformant = conformsTo("nfrs.md");
+var designBriefConformant = conformsTo("design-brief.md");
 
 // consort/orchestrator/steps/turn-events.ts
 init_esm_shims();
@@ -9951,19 +9980,6 @@ function buildNextOptions(action, ctx) {
     approver: ctx.approver,
     featureBranch: ctx.featureBranch
   });
-  if (action.kind === "invoke-role" && "mode" in action && action.mode === "intake") {
-    return [
-      {
-        id: "intake.run",
-        title: "Author the project intake (Product Owner interview)",
-        hil_prompt: "This project has no intake yet. Run the Product Owner intake interview to author it WITH you: .consort/product-overview.md (who/why/how it grows), .consort/nfrs.md (Required R<n> across performance/scalability/security/observability/operability/resilience), and , for a UI product , .consort/design/design-brief.md (## References + brand/interaction/a11y). Then resume; the Spec Author proposes the sprint from it.",
-        kind: "manual",
-        enact: null,
-        note: 'No single CLI , the PO drafts FOR the human, who approves (never invent intent). Invoke the `product-owner` agent (.claude/agents/product-owner.md) and follow its intake Method (three short interviews). Commit the artifacts (`git add .consort && git commit -m "intake: product-overview + nfrs + design-brief"`), then resume the drive , it re-derives intakeReady=true and proceeds to propose.'
-      },
-      holdOption()
-    ];
-  }
   if (action.kind === "invoke-role" && "mode" in action && action.mode === "author-requests") {
     return [
       {
@@ -10174,9 +10190,7 @@ function buildNextSnapshot(scope, state, ctx, transition = nextTransition) {
   };
   const primary = { kind: action.kind, describe: describeAction(action, { featureId: ctx.featureId }) };
   const options = buildNextOptions(action, ctx);
-  const awaiting_human = options.some(
-    (o) => o.kind === "gate" || o.kind === "manual" || o.kind === "action" && o.id !== "resume"
-  );
+  const awaiting_human = options.some((o) => o.kind === "gate" || o.kind === "action" && o.id !== "resume");
   return {
     scope,
     ...ctx.featureId ? { feature: ctx.featureId } : {},

@@ -7855,6 +7855,31 @@ init_cjs_shims();
 var import_node_fs2 = require("fs");
 var import_node_path3 = require("path");
 
+// consort/orchestrator/steps/manifests/product-owner-intake.json
+var product_owner_intake_default = {
+  id: "product-owner-intake",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "intake" },
+  inputs: [
+    { id: "answers", source: "feature:intake/answers.md", optional: true, description: "The human's interview answers, gathered by the coordinating session and written to intake/answers.md. OPTIONAL: the PO drafts from the stated intent + the canon; a fresh project may have thin answers, and never invents beyond them." }
+  ],
+  outputs: [
+    { id: "product-overview", filename: "product-overview.md", channel: "artifact", validator: "productOverviewConformant", description: "The PO's project overview (product-overview.md), drafted from the human's answers + @ui-ux-design-principles framing." },
+    { id: "nfrs", filename: "nfrs.md", channel: "artifact", validator: "nfrsConformant", description: "The NFR brief (nfrs.md): ## Required R<n> items across the @software-design-principles categories, plus ## Preferences / ## Out of bounds." },
+    { id: "design-brief", filename: "design/design-brief.md", channel: "artifact", optional: true, validator: "designBriefConformant", description: "The UX design brief (design/design-brief.md) , UI track only, so OPTIONAL (a backend-only project produces none)." }
+  ],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  }
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -8483,6 +8508,7 @@ var driver_green_superseded_default = {
 
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
+  product_owner_intake_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,
@@ -10821,6 +10847,9 @@ var acConformant = conformsTo("ac.json");
 var architectureConformant = conformsTo("architecture.json");
 var dbDesignConformant = conformsTo("db-design.json");
 var testListConformant = conformsTo("test-list.json");
+var productOverviewConformant = conformsTo("product-overview.md");
+var nfrsConformant = conformsTo("nfrs.md");
+var designBriefConformant = conformsTo("design-brief.md");
 var VALIDATOR_REGISTRY = {
   featureSpecNonEmptyStories,
   agentLogHasRoleEvent: (p) => agentLogHasRoleEvent(p),
@@ -10856,7 +10885,12 @@ var VALIDATOR_REGISTRY = {
   acsDirConformant,
   architectureConformant,
   dbDesignConformant,
-  testListConformant
+  testListConformant,
+  // The PO intake turn's deliverables (product-overview.md / nfrs.md required; design-brief.md
+  // optional, UI-only).
+  productOverviewConformant,
+  nfrsConformant,
+  designBriefConformant
 };
 function resolveValidator(name) {
   const fn = VALIDATOR_REGISTRY[name];
@@ -11796,6 +11830,7 @@ function executorDispatched(action) {
   if ("mode" in action) {
     if (action.role === "spec-author" && (action.mode === "breakdown" || action.mode === "propose")) return true;
     if (action.role === "architect-reviewer" && action.mode === "estimate") return true;
+    if (action.role === "product-owner" && action.mode === "intake") return true;
     return false;
   }
   if (!("buildMode" in action)) {
@@ -11822,10 +11857,12 @@ function executorDispatched(action) {
 }
 function deterministicAgentless(action) {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
-  if (action.role === "product-owner" && action.mode === "intake") return true;
   if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;
+}
+function isPlanningMode(action) {
+  return action.kind === "invoke-role" && "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed" || action.mode === "intake");
 }
 function assertNotStrandedAgentTurn(action) {
   if (action.kind !== "invoke-role") return;
@@ -11873,6 +11910,9 @@ function outputPathsForAction(action, consortDir, featureId, projectDir) {
     }
     if (action.role === "architect-reviewer" && action.mode === "estimate") {
       return { estimates: rel(planningEstimatesJson(consortDir)) };
+    }
+    if (action.role === "product-owner" && action.mode === "intake") {
+      return { "product-overview": "product-overview.md", nfrs: "nfrs.md", "design-brief": "design/design-brief.md" };
     }
     return {};
   }
@@ -12020,8 +12060,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // reconcile with the SAME `!isPlanningMode` condition (commandsForAction / commandsFromManifest),
     // so skipping here keeps the executor byte-parallel to the legacy stream ([claude] only).
     materializeOutputs: async () => {
-      const isPlanningMode = "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-      if (isPlanningMode) return;
+      if (isPlanningMode(action)) return;
       await cfg.runner.run({ kind: "cli", bin: deps.logBin, args: ["--reconcile", "--feature", f, "--tdd-dir", cfg.consortDir] });
     },
     // Phase 6.5: the manifest's `after` CLIs , gated on clean validation by the executor. For
@@ -14630,7 +14669,11 @@ function roleTaskBody(action, featureId, uiTrack, consortDir, build, omit) {
       case "estimate-committed":
         return `Estimate the sprint's COMMITTED feature(s) with a t-shirt size (XS/S/M/L/XL). Read each committed feature's request at ${root}/features/<F>/feature-request.md, then ADD one entry per committed feature to ${root}/planning/estimates.json keyed by its REAL feature id (e.g. "F1-stock-visibility", not a "FP" candidate id), each {"feature_id":"<F>","size":"<XS|S|M|L|XL>","rationale":"<why>"}. KEEP every existing estimate already in the file (merge, do not overwrite the candidate sizes). This is the size sync-backlog stamps into the per-sprint backlog, so the committed backlog shows real sizing.`;
       case "intake":
-        return `Run the Product Owner intake interview: author ${root}/product-overview.md, ${root}/nfrs.md, and (UI only) ${root}/design/design-brief.md WITH the human, then resume so the Spec Author can propose.`;
+        return `Author the project intake for the Product Owner, DRAFTING each artifact FRESH from the human's answers at ${root}/intake/answers.md (the interview responses; if absent or thin, draft only what the stated intent supports , never invent). WRITE:
+  - ${root}/product-overview.md , who it's for, its purpose, how it grows, what to see after each sprint (H1 + body, no implementation detail).
+  - ${root}/nfrs.md , apply @software-design-principles: walk performance / scalability / security / observability / operability / resilience; record each as a '## Required' item with a stable R<n> id, plus '## Preferences' and '## Out of bounds'.
+  - ${root}/design/design-brief.md (UI track only) , apply @ui-ux-design-principles: 1-3 reference sites + what to take from each, brand / interaction / accessibility constraints, and a required '## References' section.
+Ground the shape in the canon above and the StockFlow worked example under the kit's examples/first-project/stockflow-seed/intake/ (learn the format + level of detail; never copy it verbatim). The human reviews + approves these before the Spec Author proposes the sprint from them.`;
       case "author-requests":
         return `Provide the sprint's feature-requests.`;
       case "breakdown":
@@ -14932,8 +14975,7 @@ function commandsFromManifest(action, cfg) {
     cmds.push({ kind: "verify-artifact", role: action.role, anyOf: expectArtifact.anyOf, label: expectArtifact.label });
   }
   cmds.push(...after);
-  const isPlanningMode = "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-  if (f && !isPlanningMode) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
+  if (f && !isPlanningMode(action)) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
   return cmds;
 }
 function commandsForAction(action, cfg) {
@@ -14976,8 +15018,7 @@ function commandsForAction(action, cfg) {
       if ("mode" in action && action.mode === "estimate-committed" && cfg.sprintName) {
         cmds.push({ kind: "sync-backlog", sprint: cfg.sprintName });
       }
-      const isPlanningMode = "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-      if (f && !isPlanningMode) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
+      if (f && !isPlanningMode(action)) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
       return cmds;
     }
     case "deploy-verify-heal": {
