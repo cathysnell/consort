@@ -58,8 +58,8 @@ export function WorkflowGraph({
   onSelectNode?: (nodeId: string) => void;
   selectedNode?: string | null;
 }) {
-  // Both folded server-side (see deriveTopology in lib/reducer.ts): the client only gets a
-  // 40-event tail, but this needs the whole prefix.
+  // Both folded server-side (see deriveTopology in lib/reducer.ts): the topology is authoritative
+  // there and needs the whole prefix, so it is derived once rather than recomputed on the client.
   const passed = new Set(state.topology.passedNodes);
   const activeNode = state.topology.activeNode;
   // Whichever agent is working drives the active node's stroke color, as in Kevin's version.

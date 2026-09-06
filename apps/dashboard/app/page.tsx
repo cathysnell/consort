@@ -72,7 +72,7 @@ export default function Home() {
   // exactly that: with turn 113 open, dragging to event 40 left the header reading "viewing event
   // 40 of 421" while the panel still showed turn 113's prompt and its 12 produced files. Closing on
   // ANY scrub rather than only when out of range: "still in range" is decidable only from the
-  // 40-event tail's pairings, empty at many playheads, so the precise rule would sometimes hide a
+  // recentTurns pairings, empty at many playheads, so the precise rule would sometimes hide a
   // turn legitimately in the past. Reopening is one click from a ticker row, offered only when honest.
   //
   // A STEP target is timeline-INDEPENDENT — a recorded deliverable is the same at every playhead —
@@ -100,7 +100,7 @@ export default function Home() {
   const onOpenRole = (role: string) => {
     if (!state) return;
     // Resolve the role's LATEST reached turn. Prefer the full-corpus map (finds the turn even when
-    // it scrolled out of the 40-event tail) and fall back to the tail scan; this is what makes EVERY
+    // it scrolled out of the recentTurns window) and fall back to the tail scan; this is what makes EVERY
     // clicked card , a Current-State bubble or a lane step , open that role's full turn drill-down
     // (step number + Correspondence / tools / reasoning + Artifacts + Code) rather than a bare shell.
     const ord =

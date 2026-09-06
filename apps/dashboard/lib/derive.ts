@@ -48,8 +48,9 @@ export function resolverFor(source: string): Role | null {
  * The most recent turn ordinal for a role, from the aligned `recentEvents` / `recentTurns` tail
  * (positionally 1:1; `recentTurns[i]` is null where event i begins no turn). Scans from the end for
  * the last event of `role` that begins a turn, so clicking a role bubble opens its latest turn.
- * Returns null when the role owns no turn within the tail (older than the ~40-event window) — the
- * caller treats that as "no drill-down", never opening a wrong turn.
+ * Returns null when the role owns no turn within the aligned `recentTurns` window — the caller
+ * treats that as "no drill-down" and falls back to the full-corpus `latestTurnByRole`, never
+ * opening a wrong turn.
  */
 export function latestTurnOrdinalForRole(
   recentEvents: AgentLogEvent[],
@@ -69,8 +70,8 @@ export function latestTurnOrdinalForRole(
  * "dispatch driver for green", "GATE acceptance awaiting decision , story S4-…" — so its most
  * recent such event is the honest "what is it on right now". RECENCY wins across event kinds: at a
  * gate the last orchestrator event is the gate.surfaced, so the card shows the gate rather than the
- * `START build` it logged many turns earlier. Scans the whole slice (not the 40-event tail) for the
- * same reason — a long build separates the START from the gate by many turns. `reasoning` events
+ * `START build` it logged many turns earlier. Scans the whole slice for the same reason — a long
+ * build separates the START from the gate by many turns. `reasoning` events
  * are skipped (internal narration, not a coordination action). The story rides on the event's
  * `story` or (for gates) `subject`. Returns null before the run logs any orchestrator activity.
  */

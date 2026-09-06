@@ -184,17 +184,17 @@ export interface SourceMeta {
      * Turn ordinal for each entry of `recentEvents`, positionally aligned, null where an event
      * begins no turn (most of them).
      *
-     * Aligned server-side on purpose. `recentEvents` is a 40-event tail of a window whose size
-     * the client doesn't own, so having the client derive absolute indices to look up pairings
-     * would be off-by-one bait — and a wrong turn ordinal shows the wrong transcript and the
-     * wrong code, which is the exact failure this module exists to prevent.
+     * Aligned server-side on purpose. `recentEvents` is a window (the full stream up to the
+     * playhead) whose bounds the client doesn't own, so having the client derive absolute indices
+     * to look up pairings would be off-by-one bait — and a wrong turn ordinal shows the wrong
+     * transcript and the wrong code, which is the exact failure this module exists to prevent.
      */
     recentTurns: (number | null)[];
     /**
      * Each role → its LATEST recorded turn ordinal, over the WHOLE corpus (not just the
      * `recentTurns` tail), scoped to the turns the playhead has reached. Lets a role/lane card open
      * that role's full turn drill-down (transcript + tools + produced files) even when its turn is
-     * older than the 40-event tail — so every clicked card resolves to its turn, not a bare shell.
+     * older than the `recentTurns` window — so every clicked card resolves to its turn, not a bare shell.
      * Aligned server-side for the same off-by-one reason as `recentTurns`.
      */
     latestTurnByRole?: Record<string, number>;
@@ -367,7 +367,7 @@ export interface DashboardState {
   designPhases: DesignPhase[]; // the propose→…→reflect lane
   stories: StoryProgress[]; // per-story lifecycle for the sub-progress row
   // The orchestrator's current activity — its LATEST event (with a message) over the FULL event
-  // stream, not the 40-event `recentEvents` tail. Recency wins across event kinds: at a gate it's
+  // stream. Recency wins across event kinds: at a gate it's
   // the gate.surfaced ("GATE acceptance awaiting decision , story S4-…"), mid-build it's the last
   // dispatch, at story start it's "orchestrator START build". A long build puts many turns between
   // any of these and the gate you're waiting at, so a tail lookup would go stale; deriving it in
@@ -422,9 +422,9 @@ export interface DashboardState {
   source?: SourceMeta;
 
   // --- workflow topology -------------------------------------------------
-  // Graph lighting, folded server-side. `recentEvents` is only a 40-event tail, but the
-  // graph needs the whole prefix to know which nodes a run has reached — so derive it here
-  // rather than shipping the full log to the client on every poll. Pure timeline data, so
+  // Graph lighting, folded server-side. The graph needs the whole prefix to know which nodes a run
+  // has reached, and the topology is authoritative here — so derive it once server-side rather than
+  // recomputing it on the client on every poll. Pure timeline data, so
   // it rewinds honestly when scrubbed back.
   topology: {
     passedNodes: string[]; // lifecycle nodes reached by atEventIndex

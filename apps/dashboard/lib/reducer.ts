@@ -51,8 +51,8 @@ export const SESSION_ACTIVE_MS = 15_000;
  * `Infinity` = NO cap: the board ships the FULL event stream up to the playhead, so the log pane
  * shows every event that has happened (and scrubbing the transport re-folds up to the new
  * playhead, growing/shrinking the log to match). The event log used to be a small bottom ticker
- * where a 40-event tail was plenty; it is now a full-height right-side pane meant to show the
- * whole run.
+ * where a short recent-events tail was plenty; it is now a full-height right-side pane meant to
+ * show the whole run.
  *
  * Exported because a source aligning per-event data to this window (replay's/live's `recentTurns`)
  * derives its start index from the SAME constant — `start = max(0, at - RECENT_EVENT_TAIL)`, which
@@ -146,7 +146,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
 
 // Graph lighting for the folded window: which lifecycle nodes were reached, which node the
 // playhead sits in, and the same for lane sub-steps. Derived here rather than on the client
-// because the client only receives a 40-event tail, while this needs the whole prefix.
+// server-side: the topology is authoritative here (folded once, not recomputed per client).
 function deriveTopology(
   slice: AgentLogEvent[],
   /**

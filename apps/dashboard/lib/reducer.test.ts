@@ -52,8 +52,8 @@ const RUN: AgentLogEvent[] = [
   ev("turn.usage", { cost_usd: 2.25, phase: "estimate" }, { role: "architect-reviewer" }),
 ];
 
-// The graph-lighting half of the fold. Derived server-side because `recentEvents` is only a
-// 40-event tail while the graph needs the whole prefix to know what a run has reached.
+// The graph-lighting half of the fold. Derived server-side because the topology is authoritative
+// there and needs the whole prefix to know what a run has reached.
 describe("fold — topology", () => {
   it("reports reached nodes, the active node, and lane sub-steps", () => {
     const t = fold(RUN, snap()).topology;

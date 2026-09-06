@@ -217,7 +217,7 @@ export function turnByEvent(report: CorrelationReport): Map<number, number> {
  * paired at/under the current position (from `report.pairings`), so scrubbing back narrows the map
  * to the role's latest turn AS OF the playhead. This is what lets a role/lane card open that role's
  * full turn drill-down (transcript + tools + produced files) even when its turn scrolled out of the
- * 40-event `recentTurns` tail — the whole point being that EVERY clicked card resolves to a turn,
+ * aligned `recentTurns` window — the whole point being that EVERY clicked card resolves to a turn,
  * not a bare shell, whenever the role has one. A turn with no `role` is skipped (nothing to key on).
  */
 export function latestTurnByRole(
