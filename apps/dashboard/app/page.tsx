@@ -606,10 +606,14 @@ const PHASE_CFG = {
 } as const;
 
 function DesignLane({ phases, active }: { phases: DashboardState["designPhases"]; active: boolean }) {
+  // Three honest states from the phases, not a binary: in progress when the lane is active; else
+  // complete ONLY if every phase completed; else not started (the run is still at intake / planning,
+  // before design begins , where a binary "active ? in progress : complete" wrongly read "complete").
+  const label = active ? "· in progress" : phases.every((p) => p.status === "complete") ? "· complete" : "· not started";
   return (
     <div style={{ opacity: active ? 1 : 0.55 }}>
       <div style={{ fontSize: "0.7rem", color: active ? "var(--text-strong)" : "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 700 }}>
-        Design {active ? "· in progress" : "· complete"}
+        Design {label}
       </div>
       <div style={{ display: "flex", gap: 4 }}>
         {phases.map((p) => {
