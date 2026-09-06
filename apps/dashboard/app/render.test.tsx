@@ -125,7 +125,7 @@ describe("render — WorkflowGraph", () => {
   it("marks gates as diamonds, not phases", () => {
     // A human decision point must never read as just another phase node.
     const markup = renderToStaticMarkup(<WorkflowGraph state={state} />);
-    expect((markup.match(/<polygon/g) ?? []).length).toBe(4); // plan/spec/deploy/promote gates
+    expect((markup.match(/<polygon/g) ?? []).length).toBe(6); // intake/plan/spec/acceptance/deploy/promote gates
   });
 });
 

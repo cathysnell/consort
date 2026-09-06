@@ -629,6 +629,19 @@ const ADDED_STEPS: {
   },
 ];
 
+// Declared dashboard-side departures from Kevin's Python at the MATCH-predicate level (a ported
+// step whose match the dashboard intentionally widened). Applied to the fixture side of the verbatim
+// comparison, and proven to be a real difference below.
+const MATCH_DEVIATIONS: { lane: (typeof PORTED_LANE_IDS)[number]; step: string; py: Record<string, unknown>; ts: Record<string, unknown>; why: string }[] = [
+  {
+    lane: "plan",
+    step: "p-intake",
+    py: { role: "product-owner", eventPrefix: "intake" },
+    ts: { role: "product-owner", eventPrefix: "intake", phaseAny: ["intake"] },
+    why: "p-intake must light from the metered PO intake turn (phase='intake' on phase.start/turn.usage), not only the seed's intake.supplied event. matchesStep ORs eventPrefix with role+phase, so p-intake gains phaseAny:['intake'] while still matching the seed event.",
+  },
+];
+
 describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
   it("the fixture is the literal we think it is", () => {
     expect(PY._source.line).toBe(384);
@@ -636,14 +649,70 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
     expect(PY._source.literal_sha256).toHaveLength(64);
   });
 
-  it("ports the lifecycle nodes verbatim, in order", () => {
-    expect(WORKFLOW.nodes.map((n) => ({ id: n.id, label: n.label, roles: n.roles, type: n.type }))).toEqual(
-      PY.nodes.map((n) => ({ id: n.id, label: n.label, roles: n.roles, type: n.type })),
-    );
+  // Dashboard-native lifecycle-graph additions (declared departures from Kevin's Python, like
+  // ADDED_STEPS for lanes): the two HITL gate diamonds the Python spine lacked but the gate model
+  // has (GATE_ORDER), plus the intake node gaining the product-owner role for its dot. Filtered off
+  // the verbatim node/edge comparison (every other node/edge still matches the fixture) and proven
+  // real below (a gate node, sitting between its declared neighbours).
+  const ADDED_NODES: { node: string; between: [string, string]; why: string }[] = [
+    { node: "intakegate", between: ["intake", "plan"], why: "the intake gate — HITL review of the drafted intake before planning; the Python spine had none." },
+    { node: "acceptancegate", between: ["build", "deploy"], why: "the acceptance gate — the PO accepts each story's experiment before deploy (one spine diamond, like specgate stands in for the per-story spec gates); the Python spine had none." },
+  ];
+  const NODE_ROLE_DEVIATIONS: { node: string; py: string[]; ts: string[]; why: string }[] = [
+    { node: "intake", py: [], ts: ["product-owner"], why: "intake carries the product-owner so the node shows a PO dot; the metered PO intake turn drafts the intake. Kevin's Python left it roleless." },
+  ];
+  const addedNodeIds = new Set(ADDED_NODES.map((a) => a.node));
+
+  it("ports the lifecycle nodes verbatim, in order (minus declared dashboard-native additions)", () => {
+    const tsNodes = WORKFLOW.nodes.filter((n) => !addedNodeIds.has(n.id)).map((n) => ({ id: n.id, label: n.label, roles: n.roles, type: n.type }));
+    // Apply each role deviation to the FIXTURE side, so the compare is "Kevin's Python + declared
+    // departures". The deviations are proven to be real differences in the test below.
+    const pyNodes = PY.nodes.map((n) => {
+      const d = NODE_ROLE_DEVIATIONS.find((x) => x.node === n.id);
+      return { id: n.id, label: n.label, roles: d ? d.ts : n.roles, type: n.type };
+    });
+    expect(tsNodes).toEqual(pyNodes);
   });
 
-  it("ports the lifecycle edges verbatim, in order", () => {
-    expect(WORKFLOW.edges.map((e) => [...e])).toEqual(PY.edges);
+  it("declares node-role deviations truthfully (fixture keeps the old roles, topology the new)", () => {
+    for (const d of NODE_ROLE_DEVIATIONS) {
+      const py = PY.nodes.find((n) => n.id === d.node);
+      const ts = WORKFLOW.nodes.find((n) => n.id === d.node);
+      expect(py?.roles ?? [], `${d.node} fixture roles`).toEqual(d.py);
+      expect(ts?.roles ?? [], `${d.node} topology roles`).toEqual(d.ts);
+      expect(d.py, `${d.node} is a real difference`).not.toEqual(d.ts);
+      expect(d.why.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("ports the lifecycle edges verbatim, in order (added-node edges collapse to the fixture spine)", () => {
+    let edges = WORKFLOW.edges.map((e) => [...e] as string[]);
+    for (const a of ADDED_NODES) {
+      const inIdx = edges.findIndex((e) => e[1] === a.node);
+      const outIdx = edges.findIndex((e) => e[0] === a.node);
+      expect(inIdx, `${a.node} needs an in-edge`).toBeGreaterThanOrEqual(0);
+      expect(outIdx, `${a.node} needs an out-edge`).toBeGreaterThanOrEqual(0);
+      const collapsed = [edges[inIdx][0], edges[outIdx][1]];
+      const rm = new Set([edges[inIdx], edges[outIdx]]);
+      const at = inIdx;
+      edges = edges.filter((e) => !rm.has(e));
+      edges.splice(at, 0, collapsed);
+    }
+    expect(edges).toEqual(PY.edges);
+  });
+
+  it("declares every added lifecycle node truthfully (absent from the fixture, a gate, between its neighbours)", () => {
+    for (const a of ADDED_NODES) {
+      const py = PY.nodes.find((n) => n.id === a.node);
+      const ts = WORKFLOW.nodes.find((n) => n.id === a.node);
+      expect(py, `${a.node} must be absent from the fixture`).toBeUndefined();
+      expect(ts?.type, `${a.node} must be a gate`).toBe("gate");
+      const inEdge = WORKFLOW.edges.find((e) => e[1] === a.node);
+      const outEdge = WORKFLOW.edges.find((e) => e[0] === a.node);
+      expect(inEdge?.[0], `${a.node} in-edge from ${a.between[0]}`).toBe(a.between[0]);
+      expect(outEdge?.[1], `${a.node} out-edge to ${a.between[1]}`).toBe(a.between[1]);
+      expect(a.why.length).toBeGreaterThan(20);
+    }
   });
 
   it("ports phaseToNode verbatim except for the declared deviations", () => {
@@ -704,9 +773,14 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       // "Kevin's Python + the dashboard's declared departures". The deviations are separately proven
       // to describe reality by the test below, so this can't hide an undeclared drift.
       const devs = STEP_DEVIATIONS.filter((d) => d.lane === lane);
+      const matchDevs = MATCH_DEVIATIONS.filter((d) => d.lane === lane);
       const withDev = (s: PyStep): PyStep => {
+        let out = s;
         const d = devs.find((x) => x.step === s.id);
-        return d ? { ...s, [d.field]: d.ts } : s;
+        if (d) out = { ...out, [d.field]: d.ts };
+        const md = matchDevs.find((x) => x.step === s.id);
+        if (md) out = { ...out, match: md.ts } as PyStep; // widen the fixture's match to the declared ts
+        return out;
       };
 
       // Normalize absent-vs-false and key order so only real differences surface.
@@ -742,6 +816,17 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       expect((py![d.field] ?? null) as string | null, `${d.step} fixture ${d.field}`).toBe(d.py);
       expect((ts![d.field] ?? null) as string | null, `${d.step} topology ${d.field}`).toBe(d.ts);
       expect(d.py, `${d.step} is a real difference`).not.toBe(d.ts);
+      expect(d.why.length, `${d.step} needs a reason`).toBeGreaterThan(20);
+    }
+  });
+
+  it("declares every MATCH deviation truthfully (fixture keeps the old match, topology the widened one)", () => {
+    for (const d of MATCH_DEVIATIONS) {
+      const py = PY.lanes[d.lane].steps.find((s) => s.id === d.step);
+      const ts = WORKFLOW.lanes[d.lane].steps.find((s) => s.id === d.step);
+      expect(py?.match, `${d.step} fixture match`).toEqual(d.py);
+      expect(ts?.match, `${d.step} topology match`).toEqual(d.ts);
+      expect(d.py, `${d.step} is a real difference`).not.toEqual(d.ts);
       expect(d.why.length, `${d.step} needs a reason`).toBeGreaterThan(20);
     }
   });

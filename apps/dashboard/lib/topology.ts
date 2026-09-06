@@ -126,8 +126,10 @@ export const PHASE_TO_NODE: Record<string, string> = {
 
 // Which gate node reflects which gate name in the run's gate state.
 export const GATE_NODE_TO_GATE: Record<string, string> = {
+  intakegate: "intake",
   plangate: "plan",
   specgate: "spec",
+  acceptancegate: "acceptance",
   deploygate: "deploy",
   promgate: "promote",
 };
@@ -196,7 +198,12 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
 };
 
 const NODES: WorkflowNode[] = [
-  { id: "intake", label: "Intake", roles: [], type: "phase" },
+  // intake carries the product-owner (its role dot): the metered PO intake turn drafts the intake.
+  // A dashboard-native departure from Kevin's Python (roleless there) , declared in topology.test.
+  { id: "intake", label: "Intake", roles: ["product-owner"], type: "phase" },
+  // The intake gate diamond, between intake and plan: the HITL review of the drafted intake before
+  // planning. Dashboard-native added node (declared in topology.test's ADDED_NODES).
+  { id: "intakegate", label: "intake gate", roles: [], type: "gate" },
   { id: "plan", label: "Plan", roles: ["spec-author", "architect-reviewer", "product-owner"], type: "phase" },
   { id: "plangate", label: "plan gate", roles: [], type: "gate" },
   {
@@ -207,6 +214,10 @@ const NODES: WorkflowNode[] = [
   },
   { id: "specgate", label: "spec + test-list gates", roles: [], type: "gate" },
   { id: "build", label: "Build lane", roles: ["navigator", "driver"], type: "phase" },
+  // The acceptance gate diamond, between build and deploy: the PO accepts each story's experiment
+  // (the per-story acceptance gate) before the feature deploys. Represented as one spine diamond the
+  // way specgate stands in for the per-story spec gates. Dashboard-native added node (topology.test).
+  { id: "acceptancegate", label: "acceptance gate", roles: [], type: "gate" },
   { id: "deploy", label: "Deploy", roles: ["release-engineer"], type: "phase" },
   { id: "deploygate", label: "deploy gate", roles: [], type: "gate" },
   { id: "promote", label: "Promote", roles: ["release-engineer"], type: "phase" },
@@ -216,12 +227,14 @@ const NODES: WorkflowNode[] = [
 
 // The lifecycle spine. `shipped → plan` closes the loop for the next sprint.
 const EDGES: readonly WorkflowEdge[] = [
-  ["intake", "plan"],
+  ["intake", "intakegate"],
+  ["intakegate", "plan"],
   ["plan", "plangate"],
   ["plangate", "design"],
   ["design", "specgate"],
   ["specgate", "build"],
-  ["build", "deploy"],
+  ["build", "acceptancegate"],
+  ["acceptancegate", "deploy"],
   ["deploy", "deploygate"],
   ["deploygate", "promote"],
   ["promote", "promgate"],
@@ -237,9 +250,10 @@ const PLAN_LANE: Lane = {
       role: "product-owner",
       label: "Product owner",
       sub: "intake: overview/nfrs",
-      // Lights on the PO's intake events (intake.supplied / intake.refused). eventPrefix ignores
-      // role in matchesStep, but only the product-owner emits intake.*, so this is unambiguous.
-      match: { role: "product-owner", eventPrefix: "intake" },
+      // Lights on EITHER the metered PO intake turn (phase="intake" on its phase.start/turn.usage)
+      // OR the seed's intake.supplied/refused events (eventPrefix). matchesStep ORs eventPrefix with
+      // role+phase, so both the live drafting turn AND the headless/replay seed light this step.
+      match: { role: "product-owner", eventPrefix: "intake", phaseAny: ["intake"] },
     },
     {
       // Dashboard-native gate step (declared in topology.test.ts ADDED_STEPS): the intake gate , the
@@ -668,11 +682,24 @@ function buildModeOf(e: AgentLogEvent): string | null {
 export function matchesStep(m: StepMatch | null, e: AgentLogEvent): boolean {
   if (!m) return false;
 
-  if (m.eventPrefix) return typeof e.event === "string" && e.event.startsWith(m.eventPrefix);
-
-  // Exact event-name match, decided alone like eventPrefix (the deploy lane lights dp-deploy /
-  // dp-verify off specific orchestrator events).
+  // Exact event-name match, decided alone (the deploy lane lights dp-deploy / dp-verify off specific
+  // orchestrator events).
   if (m.event) return e.event === m.event;
+
+  // eventPrefix: the event NAME starts with it. When the step ALSO declares a role/phase, treat the
+  // two as an OR , the step matches by event name (e.g. p-intake on the seed's `intake.supplied`) OR
+  // by role+phase (e.g. p-intake on the metered PO intake turn's `phase.start`/`turn.usage`, which
+  // carry phase="intake" but an event name that does not start with "intake"). An eventPrefix-ONLY
+  // step (e.g. b-verify, `eventPrefix:"verify"` with no role/phase) stays NAME-ALONE , a name miss is
+  // a miss, never a fall-through to the always-true tail.
+  if (m.eventPrefix) {
+    if (typeof e.event === "string" && e.event.startsWith(m.eventPrefix)) return true;
+    const hasRoleOrPhase =
+      m.role !== undefined || m.phase !== undefined || m.phaseAny !== undefined ||
+      m.buildMode !== undefined || m.buildModeAny !== undefined;
+    if (!hasRoleOrPhase) return false;
+    // else fall through to the role/phase checks below (the OR's second arm).
+  }
 
   if (m.role && e.role !== m.role) return false;
 
