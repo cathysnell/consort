@@ -1061,10 +1061,17 @@ function relaunchDetached(rawArgv: string[], consortDir: string): number | null 
 function teeStderrToDriveLog(consortDir: string): void {
   try {
     fs.mkdirSync(consortDir, { recursive: true });
-    const stream = fs.createWriteStream(path.join(consortDir, "drive-live.log"), { flags: "w" });
+    // SYNCHRONOUS fd, not createWriteStream. The CLI exits via process.exit(code) (see the entry
+    // point), which does NOT flush an async write stream's buffer , so the LAST narration lines
+    // (a turn's completion "[drive] <role> turn <N>s" emit + the gate-park line, written
+    // milliseconds before exit) were silently dropped from drive-live.log. That is why consort-watch
+    // never saw the turn-done line to open a finished role's artifacts, and why the log ended at the
+    // agent's output. writeSync lands every line on disk the instant it is written, so nothing is
+    // lost at exit. Fresh file per run (truncate via "w"); the fd is closed by the OS on exit.
+    const fd = fs.openSync(path.join(consortDir, "drive-live.log"), "w");
     const orig = process.stderr.write.bind(process.stderr);
     process.stderr.write = ((chunk: string | Uint8Array, enc?: unknown, cb?: unknown): boolean => {
-      try { stream.write(chunk as never); } catch { /* never break the run on a log write */ }
+      try { fs.writeSync(fd, chunk as never); } catch { /* never break the run on a log write */ }
       return (orig as (c: unknown, e?: unknown, cb?: unknown) => boolean)(chunk, enc, cb);
     }) as typeof process.stderr.write;
   } catch {
