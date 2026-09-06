@@ -14,7 +14,7 @@
 // .tdd/agent-log.jsonl; the orchestrator owns the skeleton, the roles add detail.
 
 import type { WorkflowAction } from "../../consort/orchestrator/workflow/workflow-vocabulary.js";
-import { emitAgentLogEvent, type AgentLogEventInput, type AgentLogIoOpts } from "./agent-log.js";
+import { emitAgentLogEvent, type AgentLogEvent, type AgentLogEventInput, type AgentLogIoOpts } from "./agent-log.js";
 import { renderEventMessage } from "./agent-log-events.js";
 
 export interface OrchestratorLogContext {
@@ -153,6 +153,96 @@ export function orchestratorLogEvents(
       return [{ ...base, event: "reasoning", slots: { note: `orchestrator: ${k}` } }];
     }
   }
+}
+
+/** The HITL gate name a parked approve-* action awaits (intake/plan/spec/deploy/
+ *  promote/acceptance), or null for a non-gate action. Shared by
+ *  parkedGateSurfacedEvent + the idempotency guard so the two never drift on which
+ *  actions are gates. The `subject` slot is computed by the caller (it needs the
+ *  sprint/feature scope), so this stays a pure name lookup. */
+function parkedGateName(gate: WorkflowAction): string | null {
+  switch (gate.kind) {
+    case "approve-intake-gate":
+      return "intake";
+    case "approve-plan-gate":
+      return "plan";
+    case "approve-gate":
+      return "spec";
+    case "approve-deploy-gate":
+      return "deploy";
+    case "approve-promote-gate":
+      return "promote";
+    case "accept":
+      return "acceptance";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The `gate.surfaced` event for a HITL gate the drive PARKED at in interactive mode,
+ * or null for a non-gate action. Distinct from orchestratorLogEvents' approve-*
+ * cases, which emit gate.APPROVED , the outcome of PERFORMING a gate (the Human
+ * Proxy approves headless). When the driver instead STOPS before a gate for a live
+ * human, `onAction` never fires (orchestrator-run halts at stopWhen, before the
+ * perform), so the gate is never surfaced to the log , the dashboard can't show
+ * "waiting on you" and the gate never flashes. The spec gate (surface-gate) +
+ * acceptance (await-acceptance) pre-surface via a preceding NON-HITL action, but the
+ * intake / plan / deploy / promote gates park directly and had no surfacing at all.
+ * This is the SINGLE surfacing for a parked gate, its slots mirroring surface-gate's
+ * (gate + subject + story). Emitted at the interactive park (drive.cli reportGate),
+ * guarded by `gateAlreadySurfaced` so a re-run at the same park , and the two gates
+ * that already pre-surface , never double-log.
+ */
+export function parkedGateSurfacedEvent(
+  gate: WorkflowAction,
+  ctx: OrchestratorLogContext & { sprint?: string } = {},
+): AgentLogEventInput | null {
+  const name = parkedGateName(gate);
+  if (!name) return null;
+  const story = storyOf(gate);
+  // gate.surfaced REQUIRES a non-empty `subject` (the template renders it). Story-
+  // scoped gates (spec/acceptance) name their story; the sprint gates (intake/plan)
+  // name the sprint; the feature gates (deploy/promote) name the feature. Each falls
+  // back to the gate scope word when the id is unknown, so `subject` is never empty.
+  const subject = story
+    ? `story ${story}`
+    : name === "intake" || name === "plan"
+      ? `sprint ${ctx.sprint ?? name}`
+      : `feature ${ctx.featureId ?? name}`;
+  return {
+    role: "orchestrator",
+    level: "info",
+    feature_id: ctx.featureId,
+    event: "gate.surfaced",
+    slots: { gate: name, subject, ...(story ? { story } : {}) },
+  };
+}
+
+/**
+ * Has the parked `gate` ALREADY been surfaced-and-not-yet-approved in the log? True
+ * when the most recent gate.surfaced/gate.approved for this gate (matched by name,
+ * and by story for the story-scoped spec/acceptance gates) is a gate.surfaced , so
+ * a repeated drive re-run at the same park, and the spec/acceptance gates that
+ * pre-surface via surface-gate/await-acceptance, do not re-emit a duplicate. A prior
+ * cycle's gate.approved (or no gate event at all) is NOT "already surfaced", so a
+ * genuinely new park still surfaces.
+ */
+export function gateAlreadySurfaced(events: AgentLogEvent[], gate: WorkflowAction): boolean {
+  const name = parkedGateName(gate);
+  if (!name) return false;
+  const story = storyOf(gate);
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.event !== "gate.surfaced" && e.event !== "gate.approved") continue;
+    const md = (e.metadata ?? {}) as Record<string, unknown>;
+    if (md.gate !== name) continue;
+    // Story-scoped gates (spec/acceptance) only match their own story; sprint/feature
+    // gates (intake/plan/deploy/promote) carry no story and match on name alone.
+    if (story && typeof md.story === "string" && md.story !== story) continue;
+    return e.event === "gate.surfaced";
+  }
+  return false;
 }
 
 /**

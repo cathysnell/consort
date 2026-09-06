@@ -65,7 +65,7 @@ import {
   type DriveStepResult,
 } from "../../consort/intake/orchestrator-sprint.js";
 import { resolveConsortSettings, applyProjectOverrides } from "../../consort/orchestrator/settings/project-settings.js";
-import { describeAction, approveHint, makeOnAction } from "../../consort/logging/orchestrator-logging.js";
+import { describeAction, approveHint, makeOnAction, parkedGateSurfacedEvent, gateAlreadySurfaced } from "../../consort/logging/orchestrator-logging.js";
 import { kitVersion, exportConsortVersionEnv } from "../../consort/config/kit-bin.js";
 import { isForeignFeatureClaim, readWorkflowState } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
@@ -472,7 +472,24 @@ function stepResultOf(r: RunDriverResult): DriveStepResult {
   return { pendingGate: pendingGateOf(r), pendingInput: pendingInputOf(r), escalated: r.escalated, escalation: r.escalation };
 }
 
-function reportGate(gate: WorkflowAction, ctx: { featureId?: string; sprint?: string; featureBranch?: string } = {}): void {
+function reportGate(gate: WorkflowAction, ctx: { featureId?: string; sprint?: string; featureBranch?: string; consortDir?: string } = {}): void {
+  // Surface the parked gate to the log so the dashboard shows "waiting on you" and
+  // the gate flashes. The driver STOPS before a HITL gate in interactive mode
+  // (orchestrator-run halts at stopWhen, before onAction/perform), so a gate that
+  // parks directly , intake / plan / deploy / promote , would otherwise never emit
+  // gate.surfaced. This is the ONE place the interactive park surfaces it; idempotent
+  // via gateAlreadySurfaced, so a re-run at the same park + the spec/acceptance gates
+  // that pre-surface (surface-gate / await-acceptance) never double-log.
+  if (ctx.consortDir) {
+    const surfaced = parkedGateSurfacedEvent(gate, { featureId: ctx.featureId, sprint: ctx.sprint });
+    if (surfaced && !gateAlreadySurfaced(readAgentLog({ consortDir: ctx.consortDir }), gate)) {
+      try {
+        emitAgentLogEvent(surfaced, { consortDir: ctx.consortDir });
+      } catch {
+        /* swallow: observability is not load-bearing for the run */
+      }
+    }
+  }
   // Reuse the shared action narration (DRY) instead of dumping raw JSON; the
   // full action is available under LAKEBASE_CONSORT_TRACE for debugging.
   const trace = consortEnv("TRACE") ? `  ${JSON.stringify(gate)}` : "";
@@ -839,7 +856,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       const planning = await effects.drivePlanning();
       // A HITL gate pause = work produced, awaiting approval (resumable, exit 0).
       if (planning.pendingGate) {
-        reportGate(planning.pendingGate, { sprint });
+        reportGate(planning.pendingGate, { sprint, consortDir });
         return 0;
       }
       // A human-input pause = the PO must author requests FIRST; nothing was
@@ -879,7 +896,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
     }
     if (result.pendingGate) {
       if (result.pendingFeature) process.stderr.write(`[sprint] paused on ${result.pendingFeature}\n`);
-      reportGate(result.pendingGate, { sprint, featureId: result.pendingFeature });
+      reportGate(result.pendingGate, { sprint, featureId: result.pendingFeature, consortDir });
       return 0;
     }
     if (result.pendingInput) {
@@ -1284,7 +1301,7 @@ async function main(): Promise<number> {
     } else if (result.stoppedAtMax) {
       process.stderr.write(`[drive] stopped at --max-steps ${args.maxSteps} (${result.iterations} actions)\n`);
     } else if (pendingGate) {
-      reportGate(pendingGate, { featureId: cfg.featureId, featureBranch: cfg.featureBranch });
+      reportGate(pendingGate, { featureId: cfg.featureId, featureBranch: cfg.featureBranch, consortDir: cfg.consortDir });
     } else if (pendingInput) {
       // A human-input pause (the PO's author-requests) is NOT a completed bound:
       // nothing was produced. Report honestly + exit non-zero (never "complete").

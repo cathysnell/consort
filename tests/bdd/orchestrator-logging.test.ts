@@ -10,9 +10,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { orchestratorLogEvents, makeOnAction } from "../../consort/logging/orchestrator-logging";
+import { orchestratorLogEvents, makeOnAction, parkedGateSurfacedEvent, gateAlreadySurfaced } from "../../consort/logging/orchestrator-logging";
 import { renderEventMessage } from "../../consort/logging/agent-log-events";
-import { readAgentLog } from "../../consort/logging/agent-log";
+import { readAgentLog, type AgentLogEvent } from "../../consort/logging/agent-log";
 import { ALL_AGENT_ROLES } from "../../consort/config/agent-models";
 import type { WorkflowAction } from "../../consort/orchestrator/drive/orchestrator-drive";
 
@@ -179,6 +179,66 @@ describe("orchestratorLogEvents: pure action -> canonical log events", () => {
       const ctx = { role: e.role, ...(e.feature_id ? { feature_id: e.feature_id } : {}), ...(e.phase ? { phase: e.phase } : {}), ...(e.slots ?? {}) };
       expect(renderEventMessage(e.event, ctx).length, `event ${e.event} renders`).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("parkedGateSurfacedEvent: surfacing a HITL gate the drive parks at", () => {
+  // A synthetic gate.surfaced/gate.approved log event for the idempotency guard.
+  const gateEv = (event: "gate.surfaced" | "gate.approved", gate: string, story?: string): AgentLogEvent => ({
+    timestamp: "2026-01-01T00:00:00.000Z",
+    level: "info",
+    role: "orchestrator",
+    event,
+    message: `${event} ${gate}`,
+    metadata: { gate, ...(story ? { story } : {}) },
+  });
+
+  it("maps each parked approve-* action to a gate.surfaced with the right gate name", () => {
+    expect(parkedGateSurfacedEvent({ kind: "approve-intake-gate" } as WorkflowAction)?.slots?.gate).toBe("intake");
+    expect(parkedGateSurfacedEvent({ kind: "approve-plan-gate" } as WorkflowAction)?.slots?.gate).toBe("plan");
+    expect(parkedGateSurfacedEvent({ kind: "approve-deploy-gate" } as WorkflowAction)?.slots?.gate).toBe("deploy");
+    expect(parkedGateSurfacedEvent({ kind: "approve-promote-gate" } as WorkflowAction)?.slots?.gate).toBe("promote");
+    // Story-scoped gates carry the story slot.
+    const spec = parkedGateSurfacedEvent({ kind: "approve-gate", story: "S1" } as WorkflowAction);
+    expect(spec?.slots?.gate).toBe("spec");
+    expect(spec?.slots?.story).toBe("S1");
+    const accept = parkedGateSurfacedEvent({ kind: "accept", story: "S2" } as WorkflowAction);
+    expect(accept?.slots?.gate).toBe("acceptance");
+    expect(accept?.slots?.story).toBe("S2");
+    // Every surfacing is an orchestrator gate.surfaced (not gate.approved).
+    expect(spec?.event).toBe("gate.surfaced");
+    expect(spec?.role).toBe("orchestrator");
+  });
+
+  it("returns null for a non-gate action (nothing to surface)", () => {
+    expect(parkedGateSurfacedEvent({ kind: "invoke-role", role: "driver", story: "S1" } as WorkflowAction)).toBeNull();
+    expect(parkedGateSurfacedEvent({ kind: "cut-experiment", story: "S1" } as WorkflowAction)).toBeNull();
+  });
+
+  it("its slots render a valid gate.surfaced message (in-vocabulary + schema-valid)", () => {
+    const ev = parkedGateSurfacedEvent({ kind: "approve-intake-gate" } as WorkflowAction)!;
+    const ctx = { role: ev.role, ...(ev.feature_id ? { feature_id: ev.feature_id } : {}), ...(ev.slots ?? {}) };
+    expect(renderEventMessage(ev.event, ctx).length).toBeGreaterThan(0);
+  });
+
+  it("gateAlreadySurfaced is true only when the gate's last event is a surface (not an approval / absent)", () => {
+    const intake = { kind: "approve-intake-gate" } as WorkflowAction;
+    // No gate events yet → not surfaced (a genuinely new park surfaces).
+    expect(gateAlreadySurfaced([], intake)).toBe(false);
+    // Surfaced, not yet approved → already surfaced (a re-run at the same park must NOT double-log).
+    expect(gateAlreadySurfaced([gateEv("gate.surfaced", "intake")], intake)).toBe(true);
+    // A prior cycle's approval is the last event → a new park surfaces again.
+    expect(gateAlreadySurfaced([gateEv("gate.surfaced", "intake"), gateEv("gate.approved", "intake")], intake)).toBe(false);
+    // A DIFFERENT gate's surface does not count as this gate's.
+    expect(gateAlreadySurfaced([gateEv("gate.surfaced", "plan")], intake)).toBe(false);
+  });
+
+  it("story-scoped gates match on story (spec/acceptance are per-story)", () => {
+    const specS3 = { kind: "approve-gate", story: "S3" } as WorkflowAction;
+    // A surface for a DIFFERENT story is not S3's.
+    expect(gateAlreadySurfaced([gateEv("gate.surfaced", "spec", "S1")], specS3)).toBe(false);
+    // S3's own surface counts.
+    expect(gateAlreadySurfaced([gateEv("gate.surfaced", "spec", "S3")], specS3)).toBe(true);
   });
 });
 
