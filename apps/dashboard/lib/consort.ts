@@ -152,6 +152,23 @@ export function readArtifactAtHead(rel: string): ArtifactContent {
   return { path: rel, kind, content: r.content, reason };
 }
 
+// Read a file a LIVE turn produced, at the project's CURRENT HEAD, by its PROJECT-relative path
+// (`app/main.py`, `.consort/product-overview.md`). A live-index turn (snapshotContent:false) records
+// only the produced/deleted PATHS, never a frozen copy, so the drill-down reads the real file here.
+// `rel` round-trips from turn.json's produced[], so it is still containment-guarded (rooted at the
+// project tree, one level up from readArtifactAtHead's `.consort/` root). classify uses the bare
+// project-relative path, which already carries the `.consort/` prefix for artifacts, so live + replay
+// agree on kind. NOTE: not historically accurate , the file may have changed since the turn (by design).
+export function readProjectFileAtHead(rel: string): { kind: "code" | "artifact"; content: string | null; reason: string | null } {
+  const root = projectDir();
+  const kind = classify(rel);
+  const abs = resolveContained(root, rel);
+  if (abs === null) return { kind, content: null, reason: "(no longer present at HEAD)" };
+  const r = readTextFile(abs, rel);
+  const reason = r.reason === "(not a file)" || r.reason === "(unreadable)" ? "(no longer present at HEAD)" : r.reason;
+  return { kind, content: r.content, reason };
+}
+
 // The one definition of the "this isn't a Consort project" message. Both consort.buildState()
 // and LiveSource.unavailableReason() render it, so it must not be written twice.
 export function noSftddMessage(dir: string): string {

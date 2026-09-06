@@ -8,22 +8,19 @@
 // extraction broke two functions mid-move; the equivalence is the point, not the file
 // layout.)
 //
-// Capabilities depend on whether a COMPANION record-lane corpus is configured (Phase B):
+// One path: a recorded corpus can be replayed, a live build can be seen. A live build now records
+// every turn into its OWN `.consort/` (drive.cli/executor: turns/ + transcripts + a produced/deleted
+// INDEX; NO content snapshot), so this source reads its own turns exactly as a ReplaySource reads a
+// corpus , the companion IS `.consort` (or an external RECORD_DIR capture when one is set).
 //
-//   Plain live build (no companion) — `agent-log.jsonl` + produced artifacts only. It claims:
-//     artifactContent  — HEAD-only. It reads the file `artifact.written` named as it is NOW, not
-//                        a per-turn snapshot (replay's kind), so it is strictly less and the panel
-//                        says so. Claimed because the artifact panel reads HEAD.
-//   Deliberately NOT claimed here: transcripts / correspondence / stepOutputs — a plain live
-//   project has no `turns/` corpus, no correspondence.jsonl, no recorded-artifacts mirror.
-//
-//   Live build WITH a companion record dir (CONSORT_RECORD_DIR / LAKEBASE_CONSORT_RECORD_DIR) —
-//   the drive's record lane writes a full ReplaySource-shaped corpus to a SEPARATE dir as it
-//   goes, while the agent-log is ALSO mirrored under `.consort/` so liveness is unaffected. So
-//   this source keeps events/snapshot/liveness from the live project and DELEGATES the rich
-//   drill-down (transcripts, correspondence, stepOutputs) to a ReplaySource over the record dir —
-//   the "rewind == replay while live" unlock. The FidelityBanner, whose visibility is keyed on
-//   the MISSING capabilities, then auto-hides.
+//   Before the first turn lands — `agent-log.jsonl` + produced artifacts only. transcripts /
+//     correspondence stay off (no turns/index.json yet); the FidelityBanner shows "not captured yet".
+//   Once `.consort/turns/` has a turn — the source gains transcripts + correspondence, DELEGATING
+//     turn()/transcript()/correspondence to a ReplaySource over `.consort`. Two content differences
+//     from a full capture, because the live record is index-only: turn FILE content is read at HEAD
+//     (readProjectFileAtHead) rather than a frozen per-turn copy, and stepOutputs reads the live
+//     `.consort/` tree at HEAD (no recorded-artifacts mirror). Not historically accurate , by design.
+//   artifactContent is HEAD-only throughout (the file `artifact.written` named, as it is NOW).
 
 import { existsSync, statSync } from "node:fs";
 import { basename } from "node:path";
@@ -31,6 +28,7 @@ import {
   noSftddMessage,
   projectDir,
   readArtifactAtHead,
+  readProjectFileAtHead,
   readEvents,
   readSnapshot,
   recordDir,
@@ -97,7 +95,13 @@ export class LiveSource implements DashboardSource {
   // turn lands, available() is false, so the rich capabilities stay off and the banner still shows
   // "not captured yet" rather than the drill-down opening onto nothing.
   private companion(): ReplaySource | null {
-    const dir = recordDir();
+    // The turns corpus to read: an explicit external RECORD_DIR (a full capture), ELSE the project's
+    // OWN `.consort` , which the live build now always records into (turns/ + transcripts; index
+    // only, no content snapshot). One path: a live board reads its own turns exactly as replay reads
+    // a corpus. Volatile because `.consort/turns/` is GROWING while we watch. Surfaced only once
+    // there's a readable turns/index.json (before the first turn lands, available() is false → the
+    // rich capabilities stay off and the banner shows "not captured yet").
+    const dir = recordDir() || sftddDir();
     if (!dir) return null;
     const rs = new ReplaySource(dir, /* volatile */ true);
     return rs.available() ? rs : null;
@@ -170,21 +174,18 @@ export class LiveSource implements DashboardSource {
     return rec.correspondenceSummary(undefined, recentCount, horizon);
   }
 
-  // A lifecycle step's deliverables. A companion recording gives the richer per-turn snapshot; a
-  // plain live board reads the SAME deliverables from the project's `.consort/` tree at HEAD, so the
-  // drill-down works either way (the point-in-time nuance is the companion's, the files are the
-  // project's). An empty HEAD list is honest , the step simply hasn't produced them yet.
+  // A lifecycle step's deliverables, read from the live project's `.consort/` tree at HEAD. Always
+  // HEAD, even though the companion is now the project's own `.consort` corpus: the live record is
+  // INDEX-only (no recorded-artifacts mirror), and the deliverables live on disk at HEAD anyway , so
+  // HEAD is both the only source and the right one. An empty list is honest (the step hasn't produced
+  // them yet). An external CAPTURE (RECORD_DIR) is the historically-accurate path; a live board is not.
   stepOutputs(node: string, feature?: string | null): StepOutputs {
-    const rec = this.companion();
-    if (rec) return rec.stepOutputs(node, feature);
     return this.stepOutputsAtHead(node, feature ?? null);
   }
 
   stepOutputContent(rel: string): ArtifactContent {
-    const rec = this.companion();
-    if (rec) return rec.stepOutputContent(rel);
-    // No companion: read the deliverable from the live project at HEAD (containment-guarded, same
-    // reader as the artifact drill-down). classify AS RESOLVED under `.consort/`, matching HEAD.
+    // Read the deliverable from the live project at HEAD (containment-guarded, same reader as the
+    // artifact drill-down). classify AS RESOLVED under `.consort/`, matching HEAD.
     return readArtifactAtHead(rel);
   }
 
@@ -230,18 +231,24 @@ export class LiveSource implements DashboardSource {
   }
 
   file(ordinal: number, rel: string): { kind: "code" | "artifact"; content: string | null; reason: string | null } {
-    return this.companion()?.file(ordinal, rel) ?? { kind: classify(rel), content: null, reason: "(no companion recording)" };
+    const rec = this.companion();
+    if (!rec) return { kind: classify(rel), content: null, reason: "(no companion recording)" };
+    // A LIVE-INDEX turn (snapshotted:false) copied no content , read the produced file at HEAD (may
+    // have changed since; not historically accurate, by design). A CAPTURE turn (external RECORD_DIR)
+    // has the frozen per-turn snapshot, so read that.
+    const turn = rec.turn(ordinal) as (TurnDetail & { snapshotted?: boolean }) | null;
+    if (turn && turn.snapshotted === false) return readProjectFileAtHead(rel);
+    return rec.file(ordinal, rel);
   }
 
-  // Whether the watched build is capturing the full record-lane corpus vs only the agent-log.
+  // Whether the watched build has a readable turns corpus to drill into (vs only the agent-log).
   //
-  // FIXED in Phase B (the B1 spike's shipped-A3 bug): the record lane writes to a SEPARATE dir,
-  // NOT the watched `.consort/` (setting RECORD_DIR to the project's own `.consort/` would corrupt
-  // its agent-log via the mirror write). The old detection keyed on `.consort/turns` therefore
-  // always read "not recording" in the real setup. Now it keys off the CONFIGURED companion record
-  // dir being readable — the same condition that adds the transcripts/correspondence/stepOutputs
-  // capabilities, so `recording:true` and full-fidelity drill-down move together and the
-  // FidelityBanner (keyed on missing capabilities) hides exactly when recording is truly on.
+  // A live build now records its turns into its OWN `.consort/turns/` (index + transcripts), so the
+  // companion is that corpus once its first turn lands (or an external RECORD_DIR capture, if set).
+  // Keyed off the companion being readable , the same condition that adds transcripts/correspondence
+  // , so `recording:true` and the drill-down move together and the FidelityBanner (keyed on missing
+  // capabilities) hides exactly when a turns corpus exists. Before the first turn, available() is
+  // false → recording:false → the banner shows "not captured yet".
   fidelity(): NonNullable<SourceMeta["fidelity"]> {
     return { recording: this.companion() !== null };
   }

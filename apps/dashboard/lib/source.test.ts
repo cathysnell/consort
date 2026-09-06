@@ -588,3 +588,65 @@ describe("DashboardSource — a fake source satisfies the contract", () => {
     expect(hasCapability(new LiveSource(), "transcripts")).toBe(false);
   });
 });
+
+describe("LiveSource — reads its OWN .consort/turns corpus (one path: live build seen like a replay)", () => {
+  const saved = { proj: process.env.CONSORT_PROJECT_DIR, rec: process.env.CONSORT_RECORD_DIR };
+  let proj: string;
+
+  beforeEach(() => {
+    proj = mkdtempSync(join(tmpdir(), "consort-live-turns-"));
+    delete process.env.CONSORT_RECORD_DIR; // a PLAIN live board , no external capture dir
+    process.env.CONSORT_PROJECT_DIR = proj;
+    const c = join(proj, ".consort");
+    mkdirSync(join(c, "turns", "0000-product-owner-intake"), { recursive: true });
+    // The agent-log's phase.start for the PO turn , correlate pairs it to turn 0, which is what
+    // populates latestTurnByRole (a role card resolves its turn). A real run always logs this.
+    writeFileSync(
+      join(c, "agent-log.jsonl"),
+      JSON.stringify({ timestamp: "2026-01-01T00:00:00.000Z", level: "info", role: "product-owner", event: "phase.start", message: "product-owner START intake", metadata: { phase: "intake" } }) + "\n",
+    );
+    // The live-index turn: produced PATHS + transcript, snapshotted:false (no files/ copy).
+    writeFileSync(
+      join(c, "turns", "index.json"),
+      JSON.stringify({ turns: [{ ordinal: 0, step: 0, label: "product-owner-intake", kind: "invoke-role", role: "product-owner", mode: "intake", dir: "0000-product-owner-intake", producedCount: 2, deletedCount: 0, hasTranscript: true }] }),
+    );
+    writeFileSync(
+      join(c, "turns", "0000-product-owner-intake", "turn.json"),
+      JSON.stringify({ ordinal: 0, step: 0, label: "product-owner-intake", kind: "invoke-role", role: "product-owner", mode: "intake", produced: [".consort/product-overview.md", ".consort/nfrs.md"], deleted: [], snapshotted: false, transcript: { role: "product-owner", model: "opus", toolCount: 2, finalTextChars: 10 } }),
+    );
+    writeFileSync(
+      join(c, "turns", "0000-product-owner-intake", "transcript.md"),
+      "## Prompt\n\ndraft the intake\n\n## Tools used\n\n- Read answers.md\n- Write product-overview.md\n\n## Final reasoning\n\nDrafted the docs.\n",
+    );
+    // The produced file at HEAD (a live-index turn reads content here, not a frozen copy).
+    writeFileSync(join(c, "product-overview.md"), "# Portfolio Manager\n");
+  });
+  afterEach(() => {
+    rmSync(proj, { recursive: true, force: true });
+    for (const [k, v] of [["CONSORT_PROJECT_DIR", saved.proj], ["CONSORT_RECORD_DIR", saved.rec]] as const) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+  });
+
+  it("gains the transcripts capability from its own .consort/turns (no external record dir)", () => {
+    expect(new LiveSource().capabilities.has("transcripts")).toBe(true);
+    expect(new LiveSource().fidelity()).toEqual({ recording: true });
+  });
+
+  it("serves the turn's manifest + transcript, and reads a produced file at HEAD (index turn)", () => {
+    const src = new LiveSource();
+    const turn = src.turn!(0);
+    expect(turn?.role).toBe("product-owner");
+    expect(turn?.produced).toContain(".consort/product-overview.md");
+    // Transcript parses into prompt/tools/reasoning , what the PO card shows.
+    const tr = src.transcript!(0);
+    expect(tr?.prompt).toContain("draft the intake");
+    expect(tr?.tools.length).toBe(2);
+    expect(tr?.reasoning).toContain("Drafted the docs");
+    // The produced file's content comes from HEAD (the live project), since the index turn froze none.
+    const f = src.file!(0, ".consort/product-overview.md");
+    expect(f.content).toContain("# Portfolio Manager");
+    // latestTurnByRole resolves the PO's turn so a role card opens it (not a bare shell).
+    expect(src.correlationSummary!().latestTurnByRole?.["product-owner"]).toBe(0);
+  });
+});
