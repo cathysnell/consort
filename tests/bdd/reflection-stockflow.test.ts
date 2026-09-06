@@ -34,13 +34,13 @@ let tdd: string;
 beforeEach(() => {
   tdd = mkdtempSync(join(tmpdir(), "reflect-stockflow-"));
   // Stage the recorded F1 feature tree verbatim (story.json, acs/, architecture.json,
-  // the feature test-list master) , the real design-lane outputs.
+  // the feature test-list master) – the real design-lane outputs.
   mkdirSync(join(tdd, "features"), { recursive: true });
   cpSync(RECORDED_F1, join(tdd, "features", FEATURE), { recursive: true });
   // The recorded corpus predates the DBA role, so it has no db-design.json. The
   // design lane now runs the DBA (architect -> dba -> test-strategist), so stage a
   // db-design.json realizing the recorded architecture's persistence_invariants
-  // (PI1-PI4 on stock_records) , the DBA's physical product for this feature , so
+  // (PI1-PI4 on stock_records) – the DBA's physical product for this feature – so
   // the derive sees a DBA-complete design just as a real replay would.
   writeFileSync(
     join(tdd, "features", FEATURE, "db-design.json"),
@@ -67,7 +67,7 @@ beforeEach(() => {
   // The recording ships each story's reflect-verdict.json (a real design-lane
   // artifact). These tests DRIVE the reflect gate themselves (write the verdict
   // under test, leave siblings' absent), so strip the staged verdicts to control
-  // the reflection state , otherwise a sibling reads as already-passed.
+  // the reflection state – otherwise a sibling reads as already-passed.
   const storiesDir = join(tdd, "features", FEATURE, "stories");
   if (existsSync(storiesDir)) {
     for (const s of readdirSync(storiesDir)) {

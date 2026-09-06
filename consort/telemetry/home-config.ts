@@ -6,7 +6,7 @@
 // per-USER, per-MACHINE, and must never land in a project's git history, so they
 // live under `~/.config/consort/telemetry.json` (honoring $XDG_CONFIG_HOME).
 //
-// `install_id` is a persistent UUIDv4 , the PSEUDONYMOUS handle Level 1 ships. It
+// `install_id` is a persistent UUIDv4 – the PSEUDONYMOUS handle Level 1 ships. It
 // is created once, stable across reads, and regenerated only if the file is
 // deleted (a user who wants a fresh identity deletes the file). No PII: a random
 // v4 UUID carries nothing about the user or machine.
@@ -37,7 +37,7 @@ export interface StoredTelemetryConfig {
   telemetry_level?: TelemetryLevel;
   l2_opt_in_notified?: boolean;
   /** True once the human has been BRIEFED and made (or knowingly kept) a telemetry
-   *  choice , the L1 opt-out + L2 opt-in disclosure at `/consort:start`. Distinct from
+   *  choice – the L1 opt-out + L2 opt-in disclosure at `/consort:start`. Distinct from
    *  the config merely EXISTING: the config is written the first time an install id is
    *  minted (which happens with no human present), so existence is NOT acknowledgment.
    *  `/consort:start` presents the briefing until this is true. */
@@ -62,7 +62,7 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const isUuidV4 = (s: unknown): s is string => typeof s === "string" && UUID_V4.test(s);
 
 /** Emit a diagnostic ONLY when CONSORT_TELEMETRY_DEBUG is set. Telemetry is
- *  otherwise silent , it must never write to stderr on the offline/disabled path. */
+ *  otherwise silent – it must never write to stderr on the offline/disabled path. */
 export function telemetryDebug(msg: string, err?: unknown): void {
   if (!process.env.CONSORT_TELEMETRY_DEBUG) return;
   const detail = err instanceof Error ? err.message : err !== undefined ? String(err) : "";
@@ -189,7 +189,7 @@ function updateStoredConfig(
 
 /** Persist the enable/disable decision, preserving the existing install id, level,
  *  and notice flag (or minting an install id if none exists yet). Returns the
- *  config (whether or not the write landed , writeStoredConfig never throws). */
+ *  config (whether or not the write landed – writeStoredConfig never throws). */
 export function setTelemetryEnabled(enabled: boolean, deps: HomeConfigDeps = {}): StoredTelemetryConfig {
   return updateStoredConfig({ telemetry_enabled: enabled }, deps);
 }
@@ -202,7 +202,7 @@ export function setTelemetryLevel(level: TelemetryLevel, deps: HomeConfigDeps = 
 }
 
 /** True once the human has been briefed and made/kept a telemetry choice. FALSE for
- *  a config that merely exists (install id minted with no human present) , so the
+ *  a config that merely exists (install id minted with no human present) – so the
  *  `/consort:start` briefing shows until the human actually decides. Pure read. */
 export function isTelemetryAcknowledged(deps: HomeConfigDeps = {}): boolean {
   return readStoredConfig(deps)?.acknowledged === true;
@@ -229,7 +229,7 @@ export function markBeaconSent(deps: HomeConfigDeps = {}): StoredTelemetryConfig
  * The RESOLVED active level for this run. An explicit `CONSORT_TELEMETRY_LEVEL`
  * env var wins (`2` opts in, `1` forces back to Level 1 for this run); otherwise
  * the persisted level; otherwise the default (Level 1). Level 2 is ALWAYS an
- * explicit opt-in , there is no path that reaches it without one. Pure read.
+ * explicit opt-in – there is no path that reaches it without one. Pure read.
  */
 export function resolveTelemetryLevel(deps: HomeConfigDeps = {}): TelemetryLevel {
   const env = deps.env ?? process.env;

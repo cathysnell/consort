@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // consort-sync-backlog: commit a sprint's backlog from the PO's authored
-// feature-request.md files , the HUMAN-in-the-loop door that the Human Proxy takes
+// feature-request.md files – the HUMAN-in-the-loop door that the Human Proxy takes
 // headlessly at the planning `author-requests` step.
 //
 // Why this exists (FEIP-8002): in interactive `--plan-only` the driver stops
 // BEFORE performing the author-requests effect, and that effect (supply-requests +
-// sync-backlog) is the ONLY writer of backlog.json , from which `requestsAuthored`
+// sync-backlog) is the ONLY writer of backlog.json – from which `requestsAuthored`
 // is derived. So a human PO who authors feature-request.md files could never flip
 // the state or reach the plan gate; the loop was a dead-end. This CLI lets the PO
 // commit the backlog out-of-band: after it runs, re-running the driver advances to
 // the (interactive) plan gate.
 //
 // Membership: `--features` (repeatable or comma-separated) declares which features
-// belong to THIS sprint, recorded to sprints/<sprint>/requested.json , the SAME
+// belong to THIS sprint, recorded to sprints/<sprint>/requested.json – the SAME
 // one membership file the Human Proxy writes (writeRequested merges, never shrinks).
 // Omit it to (re-)project from whatever requested.json already holds. syncBacklog
 // then projects backlog.json = the requested features that have a feature-request.md.
@@ -51,7 +51,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-sync-backlog , commit a sprint's backlog from authored feature-request.md files\n\n` +
+    `consort-sync-backlog – commit a sprint's backlog from authored feature-request.md files\n\n` +
       `Usage:\n` +
       `  consort-sync-backlog --sprint <s> [--features F1,F2 ...] [--project-dir <path>] [--tdd-dir <path>] [--json]\n\n` +
       `--features declares this sprint's membership (recorded to sprints/<s>/requested.json); omit to re-project\n` +
@@ -69,12 +69,12 @@ if (!p.sprint) {
 const consortDir = p.tddDir ?? resolveConsortDir(p.projectDir);
 
 // Declare membership first (if given), warning about any declared feature that has
-// no feature-request.md yet , it will be excluded from the backlog until authored.
+// no feature-request.md yet – it will be excluded from the backlog until authored.
 if (p.features.length > 0) {
   const missing = p.features.filter((id) => !hasFeatureRequest(consortDir, id));
   writeRequested(consortDir, p.sprint, p.features);
   for (const id of missing) {
-    process.stderr.write(`sync-backlog: WARNING , ${id} has no feature-request.md yet; excluded until authored.\n`);
+    process.stderr.write(`sync-backlog: WARNING – ${id} has no feature-request.md yet; excluded until authored.\n`);
   }
 }
 
@@ -87,7 +87,7 @@ if (p.json) {
   process.stdout.write(`sync-backlog: committed ${ids.length} feature(s) to sprint '${p.sprint}': ${ids.join(", ")}\n`);
 } else {
   process.stderr.write(
-    `sync-backlog: no backlog committed for sprint '${p.sprint}' , no requested feature has a feature-request.md.\n` +
+    `sync-backlog: no backlog committed for sprint '${p.sprint}' – no requested feature has a feature-request.md.\n` +
       `Author the PO's feature-request.md files (and pass --features to declare membership), then re-run.\n`,
   );
 }

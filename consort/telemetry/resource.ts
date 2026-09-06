@@ -1,7 +1,7 @@
 // Build the Resource attributes (shipped once per trace) from the environment,
 // with every constrained field NORMALIZED into its closed enum. Non-enum strings
 // are limited to structured identifiers (schema, the persistent install_id, and
-// the consort / node version strings) , never free text. An unrecognized
+// the consort / node version strings) – never free text. An unrecognized
 // platform / arch / shell collapses to the enum's "other" / "unknown" bucket, so
 // a novel value can never leak as a raw string.
 
@@ -41,7 +41,7 @@ export function normalizeShell(env: NodeJS.ProcessEnv): ShellValue {
   return "unknown";
 }
 
-/** Whether this run is in CI (mirrors the consent CI check , any set,
+/** Whether this run is in CI (mirrors the consent CI check – any set,
  *  non-empty, non-0/false value counts). */
 export function ciBool(env: NodeJS.ProcessEnv): boolean {
   const v = (env.CI ?? "").trim();

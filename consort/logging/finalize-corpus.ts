@@ -6,16 +6,16 @@
 // reader examining the corpus later cannot follow the paths.
 //
 // This runs POST-recording, once the final `.consort` state exists:
-//   buildConsortMirror(recordDir) , create <rec>/.consort/ = recorded-artifacts (produced, wins) UNION
+//   buildConsortMirror(recordDir) – create <rec>/.consort/ = recorded-artifacts (produced, wins) UNION
 //                                    intake (seed, fills gaps), so every referenced .consort/<x> is a
 //                                    REAL file at <rec>/.consort/<x>.
-//   sweepRecordedPaths(recordDir) , rewrite <PROJECT_ROOT>/.consort/<x> (or a raw abs project path) in
+//   sweepRecordedPaths(recordDir) – rewrite <PROJECT_ROOT>/.consort/<x> (or a raw abs project path) in
 //                                    every prompt.txt + transcript.md + correspondence.jsonl to the
-//                                    record-relative `.consort/<x>` , which now resolves to the mirror
+//                                    record-relative `.consort/<x>` – which now resolves to the mirror
 //                                    (browser-openable). Code paths (app/tests/client/alembic) with no
 //                                    single mirror are left as <PROJECT_ROOT>/... (honest fallback).
 //
-// Both are idempotent and operate ONLY on recorded text/dirs , never on live artifacts.
+// Both are idempotent and operate ONLY on recorded text/dirs – never on live artifacts.
 
 import {
   existsSync, mkdirSync, readdirSync, statSync, readFileSync, writeFileSync, copyFileSync,
@@ -63,12 +63,12 @@ export function buildConsortMirror(recordDir: string): MirrorReport {
     copyFileSync(src, dst);
   };
 
-  // 1) produced state , the source of truth, copied first.
+  // 1) produced state – the source of truth, copied first.
   for (const rel of listFiles(producedDir)) {
     copy(producedDir, rel);
     report.fromProduced += 1;
   }
-  // 2) seed , fill only paths the produced state lacks; a same-path DIFFERENT-content file is a collision.
+  // 2) seed – fill only paths the produced state lacks; a same-path DIFFERENT-content file is a collision.
   for (const rel of listFiles(intakeDir)) {
     const dst = join(mirrorDir, rel);
     if (existsSync(dst)) {
@@ -88,7 +88,7 @@ export function buildConsortMirror(recordDir: string): MirrorReport {
 export interface SweepReport {
   filesScanned: number;
   rewrittenToConsort: number; // <PROJECT_ROOT>/.consort/x -> ./.consort/x (resolves to the mirror)
-  leftAsToken: number;        // <PROJECT_ROOT>/... with no mirror file (code paths etc.) , kept honest
+  leftAsToken: number;        // <PROJECT_ROOT>/... with no mirror file (code paths etc.) – kept honest
 }
 
 /** Files the sweep rewrites: every recorded prompt + transcript + the correspondence log. */
@@ -135,7 +135,7 @@ export function sweepRecordedPaths(recordDir: string, liveProjectRoot?: string):
       const re = new RegExp(escapeRegExp(root) + "/" + escapeRegExp(ARTIFACT_ROOT) + "/([^\\s\"'`)\\]]+)", "g");
       text = text.replace(re, (whole, rawTail: string) => {
         // The matched tail can absorb TRAILING sentence punctuation (a path ending a sentence, e.g.
-        // "...feature-proposals.md."). Try the tail as-is, then progressively trim trailing . , ; : )
+        // "...feature-proposals.md."). Try the tail as-is, then progressively trim trailing . – ; : )
         // characters until it resolves to a real mirror file. The trimmed suffix is preserved verbatim.
         let tail = rawTail;
         let trailer = "";
@@ -151,7 +151,7 @@ export function sweepRecordedPaths(recordDir: string, liveProjectRoot?: string):
           tail = tail.slice(0, -1);
         }
         report.leftAsToken += 1;
-        return whole; // no durable file , keep the portable token, do not fabricate a dead relative path
+        return whole; // no durable file – keep the portable token, do not fabricate a dead relative path
       });
       // A raw absolute root that is NOT a .consort path (code etc.) -> normalize to the token (portable),
       // never to a fake relative path.

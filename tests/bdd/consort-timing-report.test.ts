@@ -212,7 +212,7 @@ describe("timingReportFromLog + CLI", () => {
       spy.mockRestore();
     }
     // P0.1: --json nests the timing under `timing` and pairs it with `config`
-    // (null here , no run-config.json was seeded), so a report is self-describing.
+    // (null here – no run-config.json was seeded), so a report is self-describing.
     const parsed = JSON.parse(chunks.join("")) as {
       config: unknown;
       timing: { events: number; byRole: Array<{ key: string }> };

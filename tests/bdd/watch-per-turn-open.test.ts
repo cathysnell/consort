@@ -1,5 +1,5 @@
-// The per-turn artifact open must fire in the POLL-ONCE `--since` relay , the path the design
-// lane actually runs (start.md rule 73) , not only in the blocking-tail/--monitor loop the
+// The per-turn artifact open must fire in the POLL-ONCE `--since` relay – the path the design
+// lane actually runs (start.md rule 73) – not only in the blocking-tail/--monitor loop the
 // normal run never enters. And it must reveal exactly what the FINISHED role produced, never
 // silently (a design-role skip says WHY). These lock the three pieces: the role->artifact map,
 // the editor-guarded open, pollOnce surfacing finished roles, and the relay report line.
@@ -171,14 +171,14 @@ describe("reportRoleOpen (never silent for a design role; silent for a build tur
     expect(line).toContain("architect-reviewer");
     expect(line).toContain("NOT opened");
   });
-  it("a driver build turn reports nothing (null) , opening nothing is expected", () => {
+  it("a driver build turn reports nothing (null) – opening nothing is expected", () => {
     expect(reportRoleOpen(f.dir, "driver", { PATH: f.binDir, TERM_PROGRAM: "vscode" })).toBeNull();
   });
   it("LAKEBASE_CONSORT_OPEN=1 force-opens from a NON-editor (background monitor) context", () => {
-    // No TERM_PROGRAM (a background monitor), but the opt-in forces the open , the editor CLI
+    // No TERM_PROGRAM (a background monitor), but the opt-in forces the open – the editor CLI
     // surfaces the file in the running instance regardless of the caller's terminal. INJECT the
     // spawn so the test asserts the open WITHOUT launching the real editor (a real spawnSync
-    // resolves the editor against the process PATH, not this fixture's , so it would open the
+    // resolves the editor against the process PATH, not this fixture's – so it would open the
     // temp fixture files in the developer's actual editor; never do that from a test).
     const spawn = vi.fn();
     const line = reportRoleOpen(f.dir, "architect-reviewer", { PATH: f.binDir, LAKEBASE_CONSORT_OPEN: "1" }, spawn);

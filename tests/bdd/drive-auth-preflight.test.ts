@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { driveAuthPreflight } from "../../consort/orchestrator/provisioning/credentials";
 
-describe("driveAuthPreflight , fail-fast on an expired Databricks session", () => {
+describe("driveAuthPreflight – fail-fast on an expired Databricks session", () => {
   it("ok when the refresh-token probe passes", async () => {
     const res = await driveAuthPreflight(undefined, async () => ({ ok: true }));
     expect(res.ok).toBe(true);

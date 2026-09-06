@@ -36,7 +36,7 @@ export interface EphemeralVerifyBranchArgs {
   /**
    * The database the app is CONFIGURED to connect to (from the project's .env).
    * The child DSN targets THIS database, so the verify runs against the same DB
-   * the app ships against , not a silent `databricks_postgres` fallback. When a
+   * the app ships against – not a silent `databricks_postgres` fallback. When a
    * feature is misconfigured to a database the substrate never provisioned, the
    * verify connection fails and the gate catches it (test-what-ships). Omit to
    * use the substrate default (`databricks_postgres`).
@@ -90,7 +90,7 @@ export async function withEphemeralVerifyBranch<T>(
     const dsn = await resolveDsn({ instance: args.instance, branch: args.childName, database: args.database });
     return await run(dsn);
   } finally {
-    // Never fail the verify on teardown , the TTL reaps a leaked child.
+    // Never fail the verify on teardown – the TTL reaps a leaked child.
     try {
       await remove({ instance: args.instance, branch: args.childName });
     } catch {
@@ -108,7 +108,7 @@ export async function withEphemeralVerifyBranch<T>(
  * The result is capped at the Lakebase branch-name limit by truncating the
  * (descriptive) experiment prefix, NEVER the `-vrfy-<nonce>` suffix. An
  * over-limit name would be silently truncated on create, and the ephemeral flow
- * then looks the branch up by the untruncated name , "branch id not found".
+ * then looks the branch up by the untruncated name – "branch id not found".
  */
 export function ephemeralVerifyBranchName(experimentBranch: string, nonce: string): string {
   const clean = (s: string) => s.replace(/[^a-zA-Z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");

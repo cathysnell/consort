@@ -314,7 +314,7 @@ describe("deriveDriveState + nextTransition: realistic on-disk situations", () =
 
     // With no self-heal pending (assess spent + scoped, or no marker), a still-
     // unverified deploy falls through to the plain re-deploy (teeth), NOT a spin
-    // in the self-heal , the one-shot bound + terminal escalation close that.
+    // in the self-heal – the one-shot bound + terminal escalation close that.
     const plain = deriveDriveState(
       p,
       fakeProbe({ S1: { testsWritten: true, codeWritten: true, storyDeployVerified: false } }),

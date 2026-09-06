@@ -1,4 +1,4 @@
-// Stage G (#645) prompt-parity gate , the A-full core proof for the assess turn: the executor-
+// Stage G (#645) prompt-parity gate – the A-full core proof for the assess turn: the executor-
 // assembled prompt (base task body with the green-failure-advisory OMITTED, then phase 2.5 PREPENDS
 // the advisory back) is BYTE-IDENTICAL to the legacy inline assess task (advisory + directive built
 // as one string). This is what lets the assess turn move onto the formal precondition face without
@@ -7,7 +7,7 @@
 // The assertion works at the pure-function level (no spawn, no cloud): buildTaskBody(assess, cfg, ∅)
 // is the LEGACY inline body (advisory + directive); buildTaskBody(assess, cfg, {green-failure-advisory})
 // is the executor's BASE body (directive only); resolvePreparer("green-failure-advisory") projects
-// the advisory. So [advisory-block] + [base body] must equal [full inline body] , the exact
+// the advisory. So [advisory-block] + [base body] must equal [full inline body] – the exact
 // prepend-position composition phase 2.5 performs.
 
 import { describe, it, expect } from "vitest";
@@ -74,7 +74,7 @@ describe("assess executor prompt parity (Stage G): advisory prepend + omitted bo
   it("refactor (Stage H): [base body] + [context-pack] byte-equals the legacy inline body (APPEND position)", () => {
     // The refactor turn APPENDS the context pack (a clean suffix). On the executor path the pack is
     // a declared APPEND precondition; the base body omits it and phase 2.5 re-appends it. So
-    // [base body] + [pack] must equal the legacy inline body , the append-position composition.
+    // [base body] + [pack] must equal the legacy inline body – the append-position composition.
     const projectDir = mkdtempSync(join(tmpdir(), "refactor-parity-"));
     const consortDir = join(projectDir, ".consort");
     mkdirSync(consortDir, { recursive: true });

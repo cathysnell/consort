@@ -2,7 +2,7 @@
 // authored feature-request.md files, breaking the interactive planning deadlock
 // (FEIP-8002). requested.json (writeRequested/readRequested) is the single sprint
 // membership declaration; syncBacklog projects backlog.json from it; and
-// deriveSprintPlanningState derives requestsAuthored from that backlog , so after
+// deriveSprintPlanningState derives requestsAuthored from that backlog – so after
 // a human authors requests + runs sync-backlog, requestsAuthored flips true and
 // the driver can advance to the plan gate.
 
@@ -60,7 +60,7 @@ describe("syncBacklog: projects backlog.json from requested.json + authored requ
   it("includes only REQUESTED features that have a feature-request.md", () => {
     authorRequest("F1");
     authorRequest("F2"); // authored but NOT requested for this sprint
-    authorRequest("F3"); // requested but no request authored below? (it is authored) , keep as requested+authored
+    authorRequest("F3"); // requested but no request authored below? (it is authored) – keep as requested+authored
     writeRequested(tdd, SPRINT, ["F1", "F3", "F4"]); // F4 requested but never authored
 
     const backlog = syncBacklog(tdd, SPRINT);
@@ -97,7 +97,7 @@ describe("the drive runner executes a sync-backlog command (not a no-op)", () =>
     // sync-backlog], but the runner's sync-backlog arm was a NO-OP (`return;`), so backlog.json
     // was never written => deriveSprintPlanningState read an empty backlog => requestsAuthored
     // stayed false => the loop re-derived author-requests forever. The runner MUST actually project
-    // the backlog. (supply-requests' effect , the authored request + requested.json membership , is
+    // the backlog. (supply-requests' effect – the authored request + requested.json membership – is
     // the precondition; here we set it up directly, then prove the runner's sync-backlog does the work.)
     authorRequest("F1");
     writeRequested(tdd, SPRINT, ["F1"]);

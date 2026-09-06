@@ -2,7 +2,7 @@
 // CLI: read a recorded scenario's run conditions from its scenario.json manifest.
 // The capture harness (capture-scenario.sh) uses this to funnel the manifest's
 // DECLARED conditions (uiTrack, tiers, language, runner, pauseBefore) into
-// create-project as flags , the ONE way in , instead of ignoring the manifest and
+// create-project as flags – the ONE way in – instead of ignoring the manifest and
 // relying on the misnamed `--ui` flag (which wired only e2e, not the UX lane).
 //
 //   consort-scenario-conditions --manifest <scenario.json> [--field <name>]

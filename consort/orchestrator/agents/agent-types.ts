@@ -16,7 +16,7 @@ export interface StepInstructions {
 
 /**
  * One CONTAINED invocation of a step's agent. The agent may read the provided input
- * contents + write within workspaceDir , nothing else. It resolves no .consort, no global
+ * contents + write within workspaceDir – nothing else. It resolves no .consort, no global
  * paths.
  */
 export interface AgentInvocation {

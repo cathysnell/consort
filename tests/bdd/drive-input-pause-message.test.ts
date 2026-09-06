@@ -37,7 +37,7 @@ function writeProposals(...ids: string[]): void {
   writeFileSync(p, `# candidates\n\n${ids.map((i) => `## ${i}\n`).join("\n")}`);
 }
 
-describe("composeInputPause , the planning author-requests pause", () => {
+describe("composeInputPause – the planning author-requests pause", () => {
   it("never reads as approved/complete (nothing produced yet)", () => {
     expect(composeInputPause(ACTION, "s1", tdd)).toContain("PAUSED");
   });
@@ -81,7 +81,7 @@ describe("composeInputPause , the planning author-requests pause", () => {
     // The authored folders use slug ids; the Spec Author's proposal uses its OWN
     // positional labels (## F1, ## F2, ...). Regression (v0.3.21): those labels were
     // lifted verbatim into `--features F1,F2,F3,F4,F5`, which sync-backlog can't
-    // resolve (exact folder-id match) , an empty backlog , and which a prefix matcher
+    // resolve (exact folder-id match) – an empty backlog – and which a prefix matcher
     // would mis-map (F5 -> the DEFERRED F5-cycle-count).
     for (const f of ["F1-stock-visibility", "F2-stock-adjustment", "F3-inbound-receipt", "F4-outbound-pick", "F5-cycle-count"]) {
       authorRequest(f);

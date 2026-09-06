@@ -79,7 +79,7 @@ export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpen
   // single value passed to every lane only matches (lights) in its owning lane. Gate/escalation/idle
   // focus means no step is running (currentStep null); a parked gate is read from state.focus.
   const currentStep = state.focus.kind === "step" ? state.focus.step : null;
-  // ALL lanes stay expanded , no accordion , so clicking one never collapses the others. The
+  // ALL lanes stay expanded – no accordion – so clicking one never collapses the others. The
   // active lane is highlighted (LanePanel's accent border + header tint); the rest render quietly.
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -200,7 +200,7 @@ function LanePanel({
         >
           {/* Combined lanes span two lifecycle nodes, so their heading names both: the ship lane
               is deploy / promote, and the plan lane opens with intake (the PO's overview/nfrs) then
-              the sprint planning proper , intake / plan. */}
+              the sprint planning proper – intake / plan. */}
           {laneId === "deploy" ? "deploy / promote" : laneId === "plan" ? "intake / plan" : laneId}
         </span>
         {/* The ratio is suppressed once a lane is complete. "1/7 steps · complete" contradicts
@@ -478,7 +478,7 @@ function LaneSvg({
       // Backward same-row loop. In a multi-row lane, row 0's loop (REVIEW→RED) arcs ABOVE, into the
       // TOP_LANE headroom (never crossing the row below); a single-row lane's loop (design's
       // navigator→spec-author revise) arcs BELOW, into the reserved BACK_LANE_H. Either way it stays
-      // inside the viewBox , the crop was a backward arc routed to a negative y.
+      // inside the viewBox – the crop was a backward arc routed to a negative y.
       const above = p.row === 0 && nRows > 1;
       const yy = above ? p.y - 16 : p.y + STEP_H + 16;
       d = `M ${cx(from)} ${above ? p.y : p.y + STEP_H} V ${yy} H ${cx(to)} V ${above ? q.y : q.y + STEP_H}`;
@@ -486,8 +486,8 @@ function LaneSvg({
       ly = above ? yy - 3 : yy + 9;
     } else if (q.row > p.row && o.enterSide) {
       // Drop into the lower row, then run horizontally into the target's LEFT or RIGHT edge. The
-      // promote fail lines converge on the promote-side raise-to-HIL from both sides , prepare-pr
-      // enters the left edge, merge the right , so the two arrows don't stack on one face.
+      // promote fail lines converge on the promote-side raise-to-HIL from both sides – prepare-pr
+      // enters the left edge, merge the right – so the two arrows don't stack on one face.
       const endX = o.enterSide === "right" ? q.x + STEP_W + 4 : q.x - 4;
       d = `M ${cx(from)} ${p.y + STEP_H} V ${cy(to)} H ${endX}`;
       lx = (cx(from) + endX) / 2;
@@ -510,12 +510,12 @@ function LaneSvg({
       ly = yy - 3;
     }
     const dashed = o.branch || (sameRow && q.col < p.col);
-    // A happy-path same-row backward edge is the cycle loop (build's REVIEW→RED) , label it
+    // A happy-path same-row backward edge is the cycle loop (build's REVIEW→RED) – label it
     // "next cycle" so the green line reads as the next dev loop, not a re-verify. Branch labels
     // (verify fails / regression / re-verify) stay amber; the cycle-loop label is neutral.
     const labelText = o.label ?? (sameRow && q.col < p.col && !o.branch ? "next cycle" : undefined);
     // Branch labels (verify fails / regression / re-verify) are amber; the happy-path "next cycle"
-    // label reads green to match its loop line , not muted.
+    // label reads green to match its loop line – not muted.
     const labelFill = o.branch ? "var(--status-warning-text)" : "var(--status-good-text)";
     return (
       <g key={`${from}->${to}`}>

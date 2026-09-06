@@ -59,7 +59,7 @@ describe("commitExperimentCode (accept-merge clean-tree precondition)", () => {
 
     // On the EXPERIMENT branch (cut from base): a repair turn edits the migration
     // but never commits it, and runtime state churns (untracked .sftdd). The
-    // experiment line is a real experiment branch, never a protected tier , the
+    // experiment line is a real experiment branch, never a protected tier – the
     // build-commit guard (FEIP-8023) refuses a tier target.
     await exec("git checkout -b experiment main", { cwd: dir });
     await writeMigration(

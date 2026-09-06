@@ -136,7 +136,7 @@ function buildAgentLogEvent(input: AgentLogEventInput, now: () => Date): AgentLo
   const slots = input.slots ?? {};
   // The message is RENDERED from the event's template + the render context (the
   // top-level fields the template may reference + the slots). renderEventMessage
-  // THROWS if `event` is off-vocabulary or any required slot is missing , the
+  // THROWS if `event` is off-vocabulary or any required slot is missing – the
   // format is enforced at the source and nothing is dropped.
   const renderCtx: Record<string, unknown> = {
     role: input.role,

@@ -1,6 +1,6 @@
 // Corpus finalizer: build a browsable .consort/ mirror + sweep recorded paths onto it, so a reader
 // examining the corpus AFTER the ephemeral project is reclaimed can OPEN the referenced files.
-// The load-bearing assertion is #3: join(recordDir, rewrittenRelPath) is a REAL file , the definitive
+// The load-bearing assertion is #3: join(recordDir, rewrittenRelPath) is a REAL file – the definitive
 // "opens in a file browser" proof.
 
 import { describe, it, expect, afterEach } from "vitest";
@@ -60,7 +60,7 @@ describe("finalize-corpus: browsable .consort mirror + path sweep", () => {
     expect(existsSync(join(rec, ".consort", "nfrs.md"))).toBe(true);
   });
 
-  it("is idempotent , a second finalize is a byte-identical no-op", () => {
+  it("is idempotent – a second finalize is a byte-identical no-op", () => {
     const rec = mkRec();
     w(join(rec, "intake", "product-overview.md"), "# o\n");
     w(join(rec, "recorded-artifacts", "planning", "x.md"), "# x\n");

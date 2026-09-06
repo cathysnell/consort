@@ -95,7 +95,7 @@ describe("reconcileArtifactLog", () => {
   it("reconciles the ux-designer's PROJECT-level design system (.tdd/design/), not the feature dir", () => {
     // Regression: the ux-designer writes design-guide.{md,json} + ia.md to
     // .tdd/design/ (project-level; designGuideReady probes there too), but
-    // reconcile looked under .tdd/features/<F>/ , so a ux-designer turn logged a
+    // reconcile looked under .tdd/features/<F>/ – so a ux-designer turn logged a
     // phase.start with NO artifact.written for what it produced.
     const consortDir = mkTdd();
     write(path.join(consortDir, "features", F, "feature-spec.json")); // the drive's feature dir exists
@@ -115,8 +115,8 @@ describe("reconcileArtifactLog", () => {
   });
 
   it("establishes project architecture conventions from a service-backed architecture.json AND code-emits the architect's layout decision (fixes architect silence)", () => {
-    // The architect runs but its substantive output , the canonical role -> module
-    // layout , otherwise left no trace in the log (only a phase.start). reconcile
+    // The architect runs but its substantive output – the canonical role -> module
+    // layout – otherwise left no trace in the log (only a phase.start). reconcile
     // deterministically derives the project conventions from architecture.json and
     // emits the decision as a `reasoning` event attributed to the architect, so a
     // model that emits nothing still produces an observable, structural record.

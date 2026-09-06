@@ -24,7 +24,7 @@ const INLINE_FLAG_RE = /\(\?[aiLmsux]*[-]?[aiLmsux]+\)/;
 /** A `re.compile(<string-literal>, ...)` call, capturing the literal's body.
  *  Handles optional r/R/b/u/f prefixes and single or double quotes. Multi-flag
  *  or kwarg-flag forms (`re.compile("x", re.I)`) put their flags OUTSIDE the
- *  literal, so they never match INLINE_FLAG_RE , exactly the correct form. */
+ *  literal, so they never match INLINE_FLAG_RE – exactly the correct form. */
 const RE_COMPILE_RE = /re\.compile\(\s*[rRbuf]*(["'])((?:\\.|(?!\1).)*)\1/g;
 
 export interface E2eRegexViolation {
@@ -46,7 +46,7 @@ export interface E2eRegexCleanResult {
 export const E2E_REGEX_REMEDIATION =
   "A Playwright matcher uses a Python regex with inline flags (e.g. re.compile(r\"(?i)summary\")). " +
   "Playwright forwards the pattern verbatim to the browser's JavaScript engine, which does not support " +
-  "inline-flag syntax , the assertion can never match. Pass the flag as a kwarg instead: " +
+  "inline-flag syntax – the assertion can never match. Pass the flag as a kwarg instead: " +
   "re.compile(\"summary\", re.IGNORECASE). See the E2E rule in the Navigator role + the " +
   "e2e-inline-regex-flag bad smell.";
 

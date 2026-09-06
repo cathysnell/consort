@@ -20,14 +20,14 @@ import Ajv, { type ValidateFunction } from "ajv";
  *     the sibling walk consort/../config/schemas resolves directly.
  *   - DIST (consumer install): the schemas are copied to dist/consort/config/schemas/ (and the kit
  *     also ships the source tree). Since the inlined consumer's depth under dist/ varies, walk UP
- *     from __dirname looking for a consort/config/schemas at each ancestor , depth-independent.
+ *     from __dirname looking for a consort/config/schemas at each ancestor – depth-independent.
  * First existing candidate wins.
  */
 function resolveSchemaDir(): string {
   // Direct source path first (consort/orchestrator/validators -> consort/config/schemas).
   const direct = join(__dirname, "..", "..", "config", "schemas");
   if (existsSync(direct)) return direct;
-  // Otherwise walk up ancestors, probing <ancestor>/consort/config/schemas at each level , this
+  // Otherwise walk up ancestors, probing <ancestor>/consort/config/schemas at each level – this
   // finds the dist mirror regardless of how deep the inlined entry sits under dist/.
   let dir = __dirname;
   for (let i = 0; i < 8; i++) {

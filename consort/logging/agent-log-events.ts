@@ -2,7 +2,7 @@
 // templates. This is the single source of truth for "what events exist" and
 // "how each event's message reads". Enforcement (agent-log.ts): an emit whose
 // `event` is not in this map is REJECTED; a template slot with no value is
-// REJECTED. Nothing is dropped , a malformed emit throws so it gets fixed.
+// REJECTED. Nothing is dropped – a malformed emit throws so it gets fixed.
 //
 // A template is plain text with `{{ slot }}` placeholders. Every placeholder is
 // REQUIRED (there are no optional slots / conditionals, on purpose: a fixed
@@ -29,7 +29,7 @@ export const EVENT_TEMPLATES = {
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
 
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision – {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -39,9 +39,9 @@ export const EVENT_TEMPLATES = {
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
 
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} – {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} – owner {{owner_layer}}" },
 
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
@@ -61,7 +61,7 @@ export const EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} – verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -77,7 +77,7 @@ export const EVENT_TEMPLATES = {
 
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" },
+  "progress": { template: "{{note}} – {{step}}" },
 } as const satisfies Record<string, EventTemplate>;
 
 /** The legal event names (closed set). */

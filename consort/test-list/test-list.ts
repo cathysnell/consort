@@ -170,7 +170,7 @@ export interface StoryTestList {
 /** AC ids declared under a story dir's acs/, sorted. Only REAL AC files count:
  *  a conformant AC self-names (acs/<id>.json holds { id: "<id>" }), so non-AC
  *  files an agent may drop in (e.g. <ac>-tests.json / <ac>-test-list.json, whose
- *  `id` is the AC they test, not the suffixed basename) are excluded , the same
+ *  `id` is the AC they test, not the suffixed basename) are excluded – the same
  *  pollution that stalls the design lane via storyAcIds (see consort-paths.ts). */
 function acIdsInStoryDir(storyDir: string): string[] {
   const dir = join(storyDir, "acs");
@@ -241,7 +241,7 @@ function nextTestNumber(items: TestListItem[]): number {
 /**
  * Read the master test list, scope it to one story's ACs, and write the
  * canonical per-story list (storyTestListJson, the build lane's per-story input
- * AND the driver's testListReady probe target , one path, defined once). Returns
+ * AND the driver's testListReady probe target – one path, defined once). Returns
  * the written path, or null when the story cannot be resolved or the master is
  * not yet written (so a missing master surfaces as a stall, not a crash).
  */
@@ -276,7 +276,7 @@ export function writeStoryTestList(
         items: [],
       };
     // Dedup identity MUST be feature-stable. The test `id` (T1, T2, ...) is
-    // per-STORY , the Strategist restarts numbering each story , so keying dedup
+    // per-STORY – the Strategist restarts numbering each story – so keying dedup
     // on `id` made a later story's T1.. collide with an earlier story's T1.. and
     // every item got dropped as "already present", leaving the master without that
     // story. Its per-story scope then came back EMPTY and the build aborted. Key
@@ -306,7 +306,7 @@ export function writeStoryTestList(
       writeMasterTestList(tddDir, master);
     }
   }
-  if (!master) return null; // no master and no authored per-story list , nothing to scope
+  if (!master) return null; // no master and no authored per-story list – nothing to scope
 
   const scoped = scopeToStory(master, storyId, storyAcIds);
   const file = storyTestListJson(tddDir, featureId, storyId);
@@ -332,7 +332,7 @@ export interface TestItemGreenResult {
  * This is the deterministic record the orchestration writes when it greens a
  * cycle. Without it the cycle artifact says green but the test-list items stay
  * `pending` + the AC stays `draft`, so the Release Engineer (reading those)
- * judges the build incomplete and refuses to deploy , the await-acceptance
+ * judges the build incomplete and refuses to deploy – the await-acceptance
  * stall. Cycle bookkeeping is an orchestration concern; so is propagating it.
  */
 export function markTestItemGreen(

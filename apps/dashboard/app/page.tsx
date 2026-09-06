@@ -101,7 +101,7 @@ export default function Home() {
     if (!state) return;
     // Resolve the role's LATEST reached turn. Prefer the full-corpus map (finds the turn even when
     // it scrolled out of the recentTurns window) and fall back to the tail scan; this is what makes EVERY
-    // clicked card , a Current-State bubble or a lane step , open that role's full turn drill-down
+    // clicked card – a Current-State bubble or a lane step – open that role's full turn drill-down
     // (step number + Correspondence / tools / reasoning + Artifacts + Code) rather than a bare shell.
     const ord =
       state.source?.correlation?.latestTurnByRole?.[role] ??
@@ -209,7 +209,7 @@ export default function Home() {
           <SectionHeader>Current State</SectionHeader>
           <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
             {state.agents.map((a) => (
-              // Clicking a role ALWAYS opens the panel , never a dead click: `onOpenRole` opens the
+              // Clicking a role ALWAYS opens the panel – never a dead click: `onOpenRole` opens the
               // role's MOST RECENT recorded turn when the aligned recentEvents/recentTurns tail has
               // one, else the role panel (shell + honest "nothing recorded yet"). NOT gated on
               // canDrillDown: even with no record corpus, the bubble opens something. The lane's

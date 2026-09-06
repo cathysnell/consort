@@ -8,7 +8,7 @@
 // "claude" as argv[0]. So we prove the two halves separately, each hermetically:
 //  1) defaultTurnMonitor maps the module timeout envs to a monitor (the config wiring).
 //  2) A monitor-controller driven by a fake clock, given a real short-lived silent child,
-//     fires onTimeout and we SIGKILL it , the exact mechanism spawnClaudeStreaming uses ,
+//     fires onTimeout and we SIGKILL it – the exact mechanism spawnClaudeStreaming uses ,
 //     proving kill-on-silence works against a live pid.
 // The end-to-end (real claude stalls -> retried) is the live capture; these pin the logic.
 
@@ -67,7 +67,7 @@ describe("claude-runner stall wiring", () => {
   });
 
   it("the controller's onTimeout tree-kills a real silent child (the spawnClaudeStreaming mechanism)", async () => {
-    // A real child that prints nothing and would run ~30s , stands in for a stalled agent.
+    // A real child that prints nothing and would run ~30s – stands in for a stalled agent.
     const child = spawn("node", ["-e", "setTimeout(()=>{}, 30000)"], { stdio: ["inherit", "pipe", "pipe"] });
     let killed = false;
     // Fake clock so we control when the inactivity deadline fires (no 10-min wait).
@@ -101,7 +101,7 @@ describe("claude-runner stall wiring", () => {
     const code = await exited;
     ctl.stop();
     expect(killed).toBe(true);
-    // The child was SIGKILLed (exit code null with a signal, or non-zero) , it did NOT
+    // The child was SIGKILLed (exit code null with a signal, or non-zero) – it did NOT
     // run to its natural 30s completion.
     expect(code === null || code !== 0).toBe(true);
   });
@@ -109,7 +109,7 @@ describe("claude-runner stall wiring", () => {
 
 describe("agent transcript capture is concurrency-safe (peek BY cwd, no cross-candidate crosstalk)", () => {
   // The bug: peekLastAgentTranscript returned a module GLOBAL, so parallel candidates (each its own
-  // worktree) overwrote it and a peek got whoever flushed last , scrambling per-run transcript
+  // worktree) overwrote it and a peek got whoever flushed last – scrambling per-run transcript
   // attribution in every concurrent sweep. Fix: index by cwd; a caller peeks BY its worktree.
   const tx = (p: string) => ({ prompt: p, finalText: p + "-done", tools: [`Bash ${p}`] });
   it("peek(cwd) returns THAT worktree's turn even after a sibling records later", () => {
@@ -131,7 +131,7 @@ describe("agent transcript capture is concurrency-safe (peek BY cwd, no cross-ca
   });
 });
 
-describe("per-turn meta seam (recordTurnMeta / takeLastTurnMeta) , the telemetry turn-span source", () => {
+describe("per-turn meta seam (recordTurnMeta / takeLastTurnMeta) – the telemetry turn-span source", () => {
   // The runner records model/effort/retryCount/usage per turn AFTER its retry loop settles; the
   // telemetry decorator TAKEs it when building the consort.turn span. Same crosstalk-safe mechanism
   // as the transcript/usage seams: the serial drive uses the no-arg global, a concurrent sweep its cwd.

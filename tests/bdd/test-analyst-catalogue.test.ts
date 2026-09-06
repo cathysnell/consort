@@ -37,7 +37,7 @@ describe("TEST_ANALYST_CATALOGUE: the 3 seed kinds", () => {
       expect(entry.toolScope?.length ?? 0, `${key}.toolScope non-empty`).toBeGreaterThan(0);
     }
     // fitness is the densest-reasoning slice (layering + ORM + NFR guards + per-invariant real-branch
-    // tests) , its seed default is high effort, distinguishing it from the cheaper slices.
+    // tests) – its seed default is high effort, distinguishing it from the cheaper slices.
     expect(TEST_ANALYST_CATALOGUE.fitness.effort).toBe("high");
   });
 

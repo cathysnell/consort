@@ -1,12 +1,12 @@
-// mock-replay-agent: a role-agnostic REPLAY mock , a StepAgent (no cloud/model) that, instead
+// mock-replay-agent: a role-agnostic REPLAY mock – a StepAgent (no cloud/model) that, instead
 // of inventing content, copies a role's RECORDED authoring from a scenario corpus into the
 // provided workspace. Its canonical use is the PO Human Mock (the recorded product-overview.md /
 // nfrs.md / design-brief.md become the turn-1 outputs the spec-author then consumes), but the
-// `role` option makes it faithfully re-materialize ANY role's recorded artifacts offline , the
+// `role` option makes it faithfully re-materialize ANY role's recorded artifacts offline – the
 // catalogue's `replay` kind (agent-catalogue.ts) is a thin wrapper over this.
 //
 // It is a StepAgent (same seam as ClaudeStepAgent + the test mock), so Step + the
-// StepExecutor drive it identically , the Template Method does not know or care that this
+// StepExecutor drive it identically – the Template Method does not know or care that this
 // step is a deterministic replay rather than a live model turn. That is the point of the
 // contract: a step is a step.
 
@@ -20,7 +20,7 @@ import type { WorkflowAction } from "../workflow/workflow-vocabulary.js";
 /** One recorded artifact to materialize into the workspace under `outputId`.
  *  kind "file" (default) copies a single recorded file corpus `from` -> workspace `to`.
  *  kind "tree" overlays a recorded CODE TREE (a recorded-build turn's code/ dir) into the
- *  workspace, filtered by codeTreeFilter (excludes scaffold-owned dirs + junk , the SAME filter
+ *  workspace, filtered by codeTreeFilter (excludes scaffold-owned dirs + junk – the SAME filter
  *  replayBuildTurn uses), so a build-turn chain can seed a turn's pre-state working tree. */
 export interface RecordedSeed {
   /** The manifest output id this seed satisfies (for diagnostics + mapping). */
@@ -46,7 +46,7 @@ export interface MockReplayAgentOptions {
 
 /**
  * Build a PO Human Mock replay agent. On invoke it copies each recorded seed from the corpus
- * into the provided workspace (fail loud if a recorded file is missing , a replay must never
+ * into the provided workspace (fail loud if a recorded file is missing – a replay must never
  * silently produce nothing), then appends ONE authoring event to the workspace agent-log so
  * the manifest's log checker passes. Contained: it reads only the corpus + writes only the
  * workspace it was handed.
@@ -60,7 +60,7 @@ export function makeMockReplayAgent(opts: MockReplayAgentOptions): StepAgent {
         const src = join(opts.corpusRoot, seed.from);
         if (!existsSync(src)) {
           throw new Error(
-            `ReplayPoMockAgent: recorded seed for "${seed.outputId}" not found at ${src} , a replay cannot fabricate it. Check the corpus root + recorded path.`,
+            `ReplayPoMockAgent: recorded seed for "${seed.outputId}" not found at ${src} – a replay cannot fabricate it. Check the corpus root + recorded path.`,
           );
         }
         const dst = join(invocation.workspaceDir, seed.to);
@@ -106,7 +106,7 @@ export function makeMockReplayAgent(opts: MockReplayAgentOptions): StepAgent {
 // resolve to a corpus-replaying agent (kind "replay" with no seeds) so a whole run
 // replays through the ordinary executor with no model spawn.
 //
-// AMBIGUITY: a corpus is NOT one-action-per-turn , the same action recurs (both sprints
+// AMBIGUITY: a corpus is NOT one-action-per-turn – the same action recurs (both sprints
 // re-run product-owner/gate/breakdown; a design revise loop re-runs a story's spec-author;
 // an assess retry loop re-runs the same assess action). So matching on the action alone is
 // ambiguous. The orchestrator replays actions in the SAME order they were recorded, so the
@@ -133,12 +133,12 @@ const CORPUS_CURSORS = new Map<string, CorpusCursor>();
 
 /** Per-story BUILD-turn ordinals for one replay run, keyed `<corpusRoot>::<story>`. A build turn
  *  (navigator/driver) SYNCS the story's Kth recorded-build snapshot (replayBuildTurn), so the Kth
- *  build invocation for a story maps to its Kth recorded turn , the same monotonic per-story counter
+ *  build invocation for a story maps to its Kth recorded turn – the same monotonic per-story counter
  *  the runner short-circuit keeps (claude-runner's `buildTurns`). Module-scoped because the executor
  *  rebuilds the agent every turn (an instance field would reset). */
 const BUILD_TURN_CURSORS = new Map<string, number>();
 
-/** A stable signature for an action , the discriminators a corpus turn is keyed on. */
+/** A stable signature for an action – the discriminators a corpus turn is keyed on. */
 function actionSignature(a: WorkflowAction): string {
   return JSON.stringify(a);
 }
@@ -165,7 +165,7 @@ function loadCursor(corpusRoot: string): CorpusCursor {
   const turnsDir = resolveTurnsDir(corpusRoot);
   if (!turnsDir) {
     throw new Error(
-      `makeStepReplayAgent: no turns/ timeline under corpus root ${corpusRoot} (nor its parent) , a step-aware replay needs the recorded turns/ dir (each turns/NNNN-<label>/turn.json + files/).`,
+      `makeStepReplayAgent: no turns/ timeline under corpus root ${corpusRoot} (nor its parent) – a step-aware replay needs the recorded turns/ dir (each turns/NNNN-<label>/turn.json + files/).`,
     );
   }
   const turns: CorpusTurn[] = [];
@@ -203,7 +203,7 @@ export function lastSyncedBuildTurnIndex(corpusRoot: string, story: string): num
 }
 
 /** A code-bearing BUILD turn: a navigator/driver turn scoped to a story, EXCEPT reflect (a design
- *  gate that runs in the build lane, verdict-only, no code , it stays on the delta path so its
+ *  gate that runs in the build lane, verdict-only, no code – it stays on the delta path so its
  *  reflect-verdict materializes). These SYNC the story's Kth recorded-build snapshot instead of a
  *  per-turn delta, so the tree is byte-identical to record-time and the live verify is honest. */
 export function isBuildTurn(a: WorkflowAction): a is WorkflowAction & { role: string; story: string } {
@@ -257,7 +257,7 @@ function materializeFiles(filesDir: string, workspaceDir: string): string[] {
  *     instance in corpus order, so a recurring action resolves deterministically), MATERIALIZE that
  *     turn's `files/` DELTA into the workspace (independent accumulating artifacts).
  *   - BUILD turns (navigator/driver, not reflect): SYNC the story's Kth recorded-build SNAPSHOT
- *     (replayBuildTurn , mirror + in-scope delete) so the tree is byte-identical to record-time and
+ *     (replayBuildTurn – mirror + in-scope delete) so the tree is byte-identical to record-time and
  *     the live @build-cycle verify reproduces the recorded verdict. Needs buildCorpusRoot + featureId
  *     + consortDir in opts (the runner supplies them from env). The Kth build invocation of a story
  *     maps to its Kth recorded-build turn via a per-story ordinal cursor.
@@ -270,7 +270,7 @@ export function makeStepReplayAgent(opts: {
 }): StepAgent {
   return {
     async invoke(invocation: AgentInvocation): Promise<void> {
-      // BUILD lane , sync the cumulative recorded-build snapshot for the story's next build turn.
+      // BUILD lane – sync the cumulative recorded-build snapshot for the story's next build turn.
       if (isBuildTurn(invocation.action) && opts.buildCorpusRoot && opts.featureId && opts.consortDir) {
         const story = invocation.action.story;
         const key = `${opts.corpusRoot}::${story}`;
@@ -286,7 +286,7 @@ export function makeStepReplayAgent(opts: {
         });
         if (!synced) {
           throw new Error(
-            `makeStepReplayAgent: no recorded-build turn ${turnIndex} for ${opts.featureId}/${story} under ${opts.buildCorpusRoot} , a replay cannot fabricate it (the drive dispatched more build turns than the corpus recorded).`,
+            `makeStepReplayAgent: no recorded-build turn ${turnIndex} for ${opts.featureId}/${story} under ${opts.buildCorpusRoot} – a replay cannot fabricate it (the drive dispatched more build turns than the corpus recorded).`,
           );
         }
         return;
@@ -300,7 +300,7 @@ export function makeStepReplayAgent(opts: {
       const turn = matches[already];
       if (!turn) {
         throw new Error(
-          `makeStepReplayAgent: no recorded turn for action ${sig} (occurrence #${already + 1}) under ${opts.corpusRoot}/turns , a replay cannot fabricate it. Recorded ${matches.length} occurrence(s) of this action.`,
+          `makeStepReplayAgent: no recorded turn for action ${sig} (occurrence #${already + 1}) under ${opts.corpusRoot}/turns – a replay cannot fabricate it. Recorded ${matches.length} occurrence(s) of this action.`,
         );
       }
       cursor.consumed.set(sig, already + 1);

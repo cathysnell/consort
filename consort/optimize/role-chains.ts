@@ -2,7 +2,7 @@
 // the per-role live tests (tests/integration/live/) AND the per-role optimize sweep
 // (role-sweep.ts). Each entry names a chain dir (which carries the <dir>-seed replay + <dir>-live
 // claude manifests), the artifact the live role must produce, and the live-turn prompt. One
-// isolated role turn, recorded inputs replayed in, no full-project scaffold , the isolation the
+// isolated role turn, recorded inputs replayed in, no full-project scaffold – the isolation the
 // whole manifest/chain layer exists to give, so a role can be instrumented + lever-swept alone.
 //
 // The catalogue is DATA (prompts + paths), so it belongs with the optimize family, not buried in
@@ -28,7 +28,7 @@ export const STORY = "S1-file-stock";
 /** Workspace-relative roots a DESIGN role writes its output under (features/... or planning/...),
  *  OUTSIDE .consort/. runRoleChainLive snapshots these in addition to .consort so the produced
  *  artifact is captured in producedArtifacts (keyed by its workspace-relative path == outputFile)
- *  , which is what the QUALITY GATE + evidence preservation both key on. Without this the gate
+ *  – which is what the QUALITY GATE + evidence preservation both key on. Without this the gate
  *  silently skips (the scoreless-sweep defect). Every ROLE_CHAINS.outputFile lives under one of
  *  these; a `role-chains.test.ts` guard asserts that invariant so a new chain can't regress it. */
 export const SNAPSHOT_ROOTS = ["features", "planning", "design"] as const;
@@ -42,7 +42,7 @@ const REPORT_BLOCK =
   `[{ "level": "info", "event": "artifact.written", "message": "<one line: what you wrote>" }]\n` +
   "```\n";
 const NO_SHELL =
-  ` Then STOP , do NOT run any shell command, do NOT run npx or ./scripts/lk, do NOT self-verify (the orchestrator validates your work). `;
+  ` Then STOP – do NOT run any shell command, do NOT run npx or ./scripts/lk, do NOT self-verify (the orchestrator validates your work). `;
 
 /** One role chain's definition (the DATA that drives both the live test + the sweep). */
 export interface RoleChain {
@@ -54,7 +54,7 @@ export interface RoleChain {
   outputFile: string;
   /** The live-turn prompt handed to the real agent. */
   prompt: string;
-  /** OPTIONAL quality-gate reference override , the RECORDED PER-TURN OUTPUT this isolated turn is
+  /** OPTIONAL quality-gate reference override – the RECORDED PER-TURN OUTPUT this isolated turn is
    *  judged against, resolved relative to the CAMP root (consort/evaluation/reference-assets/stockflow).
    *  When the accreted `outputFile` (the whole-feature artifact merged across every story/turn) is a
    *  WIDER scope than what the isolated turn was given the inputs to produce, judge against the EXACT
@@ -63,7 +63,7 @@ export interface RoleChain {
    *  Absent => score against `outputFile` under recorded-artifacts (the produced artifact IS the whole
    *  recorded one, e.g. the F1 architecture is authored in one turn so it equals the accreted form). */
   referenceFile?: string;
-  /** Where `referenceFile` is resolved from: "camp" (default , the extracted recorded-turns/ output)
+  /** Where `referenceFile` is resolved from: "camp" (default – the extracted recorded-turns/ output)
    *  or "intake" (legacy, the seed corpus). Only "camp" is used now; the field documents intent. */
   referenceRoot?: "camp" | "intake";
 }
@@ -77,7 +77,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
     outputFile: `features/${FEATURE}/stories/${STORY}/acs/AC1-file-stock-record.json`,
     prompt:
       `You are the Spec Author. From the provided inputs (the product overview + the story stub, ` +
-      `in this prompt , do NOT search the filesystem), draft the acceptance criteria for story ` +
+      `in this prompt – do NOT search the filesystem), draft the acceptance criteria for story ` +
       `${STORY}. WRITE at least this file, relative to your current working directory:\n` +
       `  - features/${FEATURE}/stories/${STORY}/acs/AC1-file-stock-record.json\n` +
       `Each AC file is a JSON object whose "id" equals its basename (AC1-file-stock-record), with ` +
@@ -94,7 +94,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
       `current working directory:\n` +
       `  - features/${FEATURE}/architecture.json\n` +
       `It MUST declare feature_id, an explicit service_backed boolean, layers[] (each role + ` +
-      `module), and , when service_backed , persistence_invariants[] (each id/type/table/brief). ` +
+      `module), and – when service_backed – persistence_invariants[] (each id/type/table/brief). ` +
       `This feature persists stock records, so it is service_backed with a real schema.` +
       NO_SHELL + REPORT_BLOCK,
   },
@@ -103,7 +103,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
     dir: "dba-chain",
     outputFile: `features/${FEATURE}/db-design.json`,
     prompt:
-      `You are the DBA. From the provided architecture.json (in this prompt , the architect owns ` +
+      `You are the DBA. From the provided architecture.json (in this prompt – the architect owns ` +
       `the logical contract: service_backed, layers, persistence_invariants), produce the PHYSICAL ` +
       `schema. WRITE exactly this file, relative to your current working directory:\n` +
       `  - features/${FEATURE}/db-design.json\n` +
@@ -117,14 +117,14 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
     name: "test-strategist per-story",
     dir: "test-strategist-chain",
     outputFile: `features/${FEATURE}/test-list.json`,
-    // Judged against the RECORDED PER-TURN OUTPUT , the test-list turn 0018-driver-repair actually
+    // Judged against the RECORDED PER-TURN OUTPUT – the test-list turn 0018-driver-repair actually
     // wrote (extracted verbatim into the camp). NOT a hand-carved slice: the recorded turn's own
     // output is the honest reference, matching this isolated turn's scope by construction (same
     // inputs -> same scope). See feedback_judge_against_recorded_turn_output.
     referenceFile: `recorded-turns/0018-driver-repair/test-list.json`,
     prompt:
       `You are the Test Strategist, invoked for story ${STORY}. From the provided inputs (ALL of ` +
-      `story ${STORY}'s ACs + architecture.json + db-design.json, in this prompt , do NOT search the ` +
+      `story ${STORY}'s ACs + architecture.json + db-design.json, in this prompt – do NOT search the ` +
       `filesystem), produce the feature master test list covering EVERY provided AC. WRITE exactly ` +
       `this file, relative to your current working directory:\n` +
       `  - features/${FEATURE}/test-list.json\n` +
@@ -154,7 +154,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
     // The isolated estimate turn is seeded ONLY the sprint proposals (feature-proposals.md), so it can
     // produce ONLY the sprint-candidate (FP) estimates. The accreted estimates.json ALSO carries the
     // F1/F6 committed-feature sizes that sync-backlog added LATER (not this turn). Judge against the
-    // RECORDED PER-TURN OUTPUT , the estimate turn 0001-architect-reviewer-estimate actually wrote
+    // RECORDED PER-TURN OUTPUT – the estimate turn 0001-architect-reviewer-estimate actually wrote
     // (extracted verbatim into the camp), whose scope matches this isolated turn by construction. NOT
     // a hand-carved slice. See feedback_judge_against_recorded_turn_output.
     referenceFile: `recorded-turns/0001-architect-reviewer-estimate/planning/estimates.json`,
@@ -173,7 +173,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
     outputFile: `design/design-guide.json`,
     prompt:
       `You are the UX Designer. From the provided inputs (the HIL design brief + the product ` +
-      `overview, in this prompt , do NOT search the filesystem), translate the brief into the ` +
+      `overview, in this prompt – do NOT search the filesystem), translate the brief into the ` +
       `project's machine-checkable design system. WRITE exactly this file, relative to your ` +
       `current working directory:\n` +
       `  - design/design-guide.json\n` +
@@ -181,7 +181,7 @@ export const ROLE_CHAINS: Record<string, RoleChain> = {
       `radius, shadows, breakpoints) at every level the brief enumerates, and a "components" block ` +
       `with an entry for EACH reusable UI component the brief describes (navbar, page, card, ` +
       `button, form input, table, status badge, empty state, and any others named), each with its ` +
-      `class + notes. Conform to design-guide.schema.json. Cover the brief exhaustively , a missing ` +
+      `class + notes. Conform to design-guide.schema.json. Cover the brief exhaustively – a missing ` +
       `token level, asset, or component is a defect.` +
       NO_SHELL + REPORT_BLOCK,
   },
@@ -197,7 +197,7 @@ export interface RunRoleChainOptions {
    *  returns a lever-patched ClaudeStepAgent for the live-role manifest here. */
   agentFor?(manifest: StepManifest): StepAgent | undefined;
   /** TEST-STRATEGIST ONLY: per-analyst subagent lever overrides, projected into the injected
-   *  test-analyst roster the supervisor fans out from (parallel-safe , rides the precondition
+   *  test-analyst roster the supervisor fans out from (parallel-safe – rides the precondition
    *  options, not env). Absent on every other chain. See renderTestAnalystRoster + role-levers'
    *  testStrategistCandidates. */
   analystOverrides?: Record<string, { model?: string; effort?: "low" | "default" | "high"; toolScope?: string[] }>;
@@ -227,7 +227,7 @@ export async function runRoleChainLive(chain: RoleChain, opts: RunRoleChainOptio
     start: PO_SEED,
     // A design role writes its output at the WORKSPACE ROOT (features/... or planning/...), NOT
     // under .consort/. The default snapshot is .consort-only, so without this the produced artifact is
-    // never captured in producedArtifacts , which means the QUALITY GATE (which keys on
+    // never captured in producedArtifacts – which means the QUALITY GATE (which keys on
     // producedArtifacts[chain.outputFile]) SILENTLY SKIPS and the artifact is not preserved (the
     // exact scoreless-sweep defect #556 exists to prevent). Snapshot the design output roots so the
     // produced file lands under its workspace-relative path (== chain.outputFile).

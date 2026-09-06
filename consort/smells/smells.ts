@@ -209,7 +209,7 @@ export const SMELL_CATALOG: SmellDefinition[] = [
     name: "shared-state-aggregate-assertion",
     description:
       "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency " +
-      "probe, a global COUNT/SUM , e.g. 'the probe reports exactly 0/2/1 nonconforming rows') " +
+      "probe, a global COUNT/SUM – e.g. 'the probe reports exactly 0/2/1 nonconforming rows') " +
       "without owning the table state it asserts. It passes in the per-cycle build verify (an " +
       "ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature " +
       "deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch " +
@@ -300,7 +300,7 @@ export const SMELL_CATALOG: SmellDefinition[] = [
     name: "e2e-inline-regex-flag",
     description:
       "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is " +
-      "built from a Python regex carrying INLINE FLAGS , re.compile(r\"(?i)summary\") and the " +
+      "built from a Python regex carrying INLINE FLAGS – re.compile(r\"(?i)summary\") and the " +
       "like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's " +
       "JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, " +
       "so the regex is invalid and the assertion can never match the running app. The test is " +
@@ -322,15 +322,15 @@ export const SMELL_CATALOG: SmellDefinition[] = [
   {
     name: "contract-incompleteness",
     description:
-      "A migration DROPPED (or renamed) a column the running code still references , the ORM " +
-      "model field, a query/repository, a serializer/DTO, or a template/view , so the app emits " +
+      "A migration DROPPED (or renamed) a column the running code still references – the ORM " +
+      "model field, a query/repository, a serializer/DTO, or a template/view – so the app emits " +
       "SQL for a column the migrated database no longer has and crashes at runtime (\"column X " +
       "does not exist\") even though the migration itself succeeded. The contract half of " +
       "expand/contract (software-design-principles hard rule 9) was left incomplete: the schema " +
       "shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the " +
       "`consort-contract-clean` gate (it parses the migration's net column drops and greps " +
       "the code tree for residual references), which enriches the GREEN-verify failure with the " +
-      "exact file:line list , no model judgment needed to notice OR localize it.",
+      "exact file:line list – no model judgment needed to notice OR localize it.",
     proposed_remediation:
       "Driver REPAIR: remove or replace EVERY residual reference (model field, queries, " +
       "serializers/DTOs, templates/views) in the same change so the code matches the migrated " +
@@ -427,11 +427,11 @@ export function composeReviseBrief(input: { smell: string; gate: string; reason:
   if (isCoverageDefect) {
     return (
       `REVISE (reflection gate): ${input.reason}\n\n` +
-      `PRESERVE every ${artifact} item this story ALREADY has , they passed prior gates and MUST remain. ` +
+      `PRESERVE every ${artifact} item this story ALREADY has – they passed prior gates and MUST remain. ` +
       `This is an ADDITIVE revise: keep all existing files/entries intact (do not delete, rename, ` +
       `renumber, merge, or overwrite them) and ADD the specific coverage named above alongside them. ` +
       `The named coverage is REQUIRED: add the missing test(s)/criterion that assert the exact behavior ` +
-      `described , do NOT omit it, weaken it, or defer it to an open question. If the stated behavior ` +
+      `described – do NOT omit it, weaken it, or defer it to an open question. If the stated behavior ` +
       `genuinely cannot be tested as written, name the concrete blocker; do not punt. After writing, the ` +
       `story's ${artifact} set = every prior item PLUS the added one(s).`
     );
@@ -451,7 +451,7 @@ export function composeReviseBrief(input: { smell: string; gate: string; reason:
  * it. Unlike a `spec`-level smell (routed back to a design author + re-gate) or a
  * genuinely terminal build smell (cycle-stall, scaffold-defect, test-list-drift),
  * these SELF-HEAL in-loop and must not hard-halt to the HIL while a refactor for
- * the owning AC is already pending , the driver could have taken care of it.
+ * the owning AC is already pending – the driver could have taken care of it.
  * The post-refactor verify preserves behavior, refactorAc resolves the smell, and
  * the deploy/promote layering/adherence gate is the final deterministic backstop.
  */

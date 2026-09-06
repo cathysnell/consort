@@ -199,7 +199,7 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
 
 const NODES: WorkflowNode[] = [
   // intake carries the product-owner (its role dot): the metered PO intake turn drafts the intake.
-  // A dashboard-native departure from Kevin's Python (roleless there) , declared in topology.test.
+  // A dashboard-native departure from Kevin's Python (roleless there) – declared in topology.test.
   { id: "intake", label: "Intake", roles: ["product-owner"], type: "phase" },
   // The intake gate diamond, between intake and plan: the HITL review of the drafted intake before
   // planning. Dashboard-native added node (declared in topology.test's ADDED_NODES).
@@ -256,7 +256,7 @@ const PLAN_LANE: Lane = {
       match: { role: "product-owner", eventPrefix: "intake", phaseAny: ["intake"] },
     },
     {
-      // Dashboard-native gate step (declared in topology.test.ts ADDED_STEPS): the intake gate , the
+      // Dashboard-native gate step (declared in topology.test.ts ADDED_STEPS): the intake gate – the
       // HITL checkpoint AFTER the PO drafts product-overview/nfrs/design-brief and BEFORE the Spec
       // Author proposes. Human reviews / edits / approves. Lights (purple) from the run's intake gate
       // state, like p-gate does for the plan gate. Closes the INTAKE side of the split lane.
@@ -383,8 +383,8 @@ const DESIGN_LANE: Lane = {
     ["d-ts", "d-nav"],
     ["d-nav", "d-gate"],
   ] as const,
-  // reflect findings route back to the owning author (bounded revise), or , when a
-  // spec defect can't be auto-resolved , escalate to the human
+  // reflect findings route back to the owning author (bounded revise), or – when a
+  // spec defect can't be auto-resolved – escalate to the human
   backEdges: [
     ["d-nav", "d-spec", "revise on findings"],
     ["d-nav", "d-hil", "escalate"],
@@ -698,10 +698,10 @@ export function matchesStep(m: StepMatch | null, e: AgentLogEvent): boolean {
   if (m.event) return e.event === m.event;
 
   // eventPrefix: the event NAME starts with it. When the step ALSO declares a role/phase, treat the
-  // two as an OR , the step matches by event name (e.g. p-intake on the seed's `intake.supplied`) OR
+  // two as an OR – the step matches by event name (e.g. p-intake on the seed's `intake.supplied`) OR
   // by role+phase (e.g. p-intake on the metered PO intake turn's `phase.start`/`turn.usage`, which
   // carry phase="intake" but an event name that does not start with "intake"). An eventPrefix-ONLY
-  // step (e.g. b-verify, `eventPrefix:"verify"` with no role/phase) stays NAME-ALONE , a name miss is
+  // step (e.g. b-verify, `eventPrefix:"verify"` with no role/phase) stays NAME-ALONE – a name miss is
   // a miss, never a fall-through to the always-true tail.
   if (m.eventPrefix) {
     if (typeof e.event === "string" && e.event.startsWith(m.eventPrefix)) return true;

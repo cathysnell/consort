@@ -35,7 +35,7 @@ export interface Escalation {
   resolution?: string;
   /** Self-documenting resolution path, stamped into the record at write time. A session that opens
    *  this file directly (rather than `consort-next` / `consort-watch`) still learns the correct clear
-   *  path , the resolve verb , instead of improvising a hand-edit / rm of this file or smells.json. */
+   *  path – the resolve verb – instead of improvising a hand-edit / rm of this file or smells.json. */
   how_to_resolve?: string;
   /** The failing command's captured stdout+stderr tail, for a CLI-effect escalation (deploy-verify,
    *  wait-ci, merge, experiment cut, ...). Without this a human had to manually re-run the underlying
@@ -114,7 +114,7 @@ export function writeEscalation(
     how_to_resolve:
       `After fixing the ROOT CAUSE, clear this with: consort-resolve-escalation --id ${id} --resolution "<what you fixed>". ` +
       `That clears this escalation (and any blocking smell) and KEEPS the audit trail. Do NOT hand-edit or delete this ` +
-      `file, and do NOT edit smells.json, to move the run forward , that desyncs on-disk state from the drive.`,
+      `file, and do NOT edit smells.json, to move the run forward – that desyncs on-disk state from the drive.`,
   };
   fs.mkdirSync(escalationsDir(consortDir), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(full, null, 2) + "\n", "utf8");
@@ -144,11 +144,11 @@ export function readEscalations(consortDir: string): Escalation[] {
 }
 
 /** Resolve (stamp `resolved_at` on) every unresolved explicit FILE escalation
- *  for a story , the deploy-verify / driver-green halts that pin a story to the
+ *  for a story – the deploy-verify / driver-green halts that pin a story to the
  *  HIL. This is the escalation-file half of a clean rebuild (Finding 27): a
  *  status/cycle reset alone leaves the halting escalation on disk, so the drive
  *  still pre-empts to raise-to-hil. The SMELL-derived half (blocking smells in
- *  smells.json) is cleared separately by the smell resolvers , the dual-source
+ *  smells.json) is cleared separately by the smell resolvers – the dual-source
  *  rule. Returns the ids it resolved (empty when none matched). A story-scoped
  *  match: an escalation with no story_id is feature-wide and left untouched. */
 export function resolveEscalationsForStory(
@@ -171,13 +171,13 @@ export function resolveEscalationsForStory(
 
 /** Resolve (stamp `resolved_at` + optional `resolution` note on) UNRESOLVED explicit
  *  FILE escalations, the supported way to clear a HIL halt once the root cause is
- *  fixed , instead of `rm`-ing the record (which destroys the audit trail). The
+ *  fixed – instead of `rm`-ing the record (which destroys the audit trail). The
  *  record is KEPT; `firstPendingEscalation` already ignores anything with a
  *  `resolved_at`, so the drive stops pre-empting and retries the failed action fresh.
  *  Scope with `opts`: a specific `id`; else all pending files matching `featureId`
  *  and/or `story`; else (no scope) ALL pending explicit-file escalations. Returns the
  *  ids it resolved (empty when none matched). Smell-derived escalations are NOT files
- *  , they clear when their smell clears (the dual-source rule), so this never touches
+ *  – they clear when their smell clears (the dual-source rule), so this never touches
  *  them. */
 export function resolveEscalations(
   consortDir: string,
@@ -209,7 +209,7 @@ export function escalationsFromSmells(consortDir: string, featureId?: string): E
   return log.detected
     .filter((d) => !d.resolution && BLOCKING_SMELLS.has(d.smell))
     // Born-green fitness guard: a `cycle-stall` flagged while the story's next
-    // pending item is a `kind:"fitness"` test is NOT a stuck build , a fitness
+    // pending item is a `kind:"fitness"` test is NOT a stuck build – a fitness
     // test that "can't go RED" is born-green (a regression guard that already
     // holds). The GREEN run is the real arbiter (it greens a passing test;
     // a genuinely failing behavior test still stalls). Drop such a cycle-stall

@@ -4,10 +4,10 @@
 //
 // Proves the Stage 1/1b widening LIVE: a REAL dba `claude -p` turn, dispatched via
 // buildDriveEffects(cfg).performViaExecutor, resolves its feature-scoped input
-// (feature:features/{feature}/architecture.json , the {feature} scope fix) on a real .consort tree
+// (feature:features/{feature}/architecture.json – the {feature} scope fix) on a real .consort tree
 // and lands db-design.json under .consort at features/<F>/ (the artifact channel) + the reconciled
 // agent-log under .consort (meta). LEAN, no cloud. The spec is the catalogue's shared entry
-// (DESIGN_LIVE_SPECS.dba) , one source of truth for the role turn.
+// (DESIGN_LIVE_SPECS.dba) – one source of truth for the role turn.
 
 import { describe, it } from "vitest";
 import { runDesignExecutorDispatchLive, designSpec } from "./executor-dispatch-live-support.js";

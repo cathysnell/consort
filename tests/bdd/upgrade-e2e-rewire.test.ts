@@ -1,6 +1,6 @@
 // A kit upgrade RESETS scripts/run-tests.sh to the template, which carries no Playwright block
 // (the block is appended per-project). So refreshSurface must RE-APPEND the E2E block for a UI
-// project , otherwise every upgrade wipes E2E out of the deploy-verify gate (how F4's actor-less
+// project – otherwise every upgrade wipes E2E out of the deploy-verify gate (how F4's actor-less
 // form shipped past a green verify), and a pre-enable-e2e project never had it. Backend projects
 // are untouched.
 
@@ -68,7 +68,7 @@ describe("refreshSurface re-wires the E2E block for a UI project (upgrade must n
     expect(mergeYml).not.toContain("{{LAKEBASE_SCM_UTILS_VERSION}}");
 
     // ...replaced with the scm-utils version THIS kit pins (from consort's own dep pin), yielding a
-    // clean `${SCM_UTILS_REF:-v<version>}` fallback , exactly what a fresh scaffold produces.
+    // clean `${SCM_UTILS_REF:-v<version>}` fallback – exactly what a fresh scaffold produces.
     const pin = (JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8")).dependencies as Record<string, string>)[
       "@databricks-solutions/lakebase-scm-utils"
     ];

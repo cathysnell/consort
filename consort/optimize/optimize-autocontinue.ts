@@ -1,4 +1,4 @@
-// ⚠️ DEPRECATED (superseded 2026-08-07) , do NOT extend or build new work on this module.
+// ⚠️ DEPRECATED (superseded 2026-08-07) – do NOT extend or build new work on this module.
 // This is the UNATTENDED champion-walk driver (sweep -> apply -> rebuild -> advance over the live
 // drive), layered on the deprecated optimize-live engine. It is superseded by the ONE judged sweep
 // engine `runRoleSweep` (tests/optimization/role-sweep.ts) via `scripts/optimize-role.sh`. The
@@ -9,22 +9,22 @@
 // removal alongside optimize-live. New unattended sweeps ride the judged engine's launcher.
 //
 // optimize-autocontinue: the UNATTENDED driver that walks the orchestrator's lane
-// end to end , per role handoff: sweep candidates, pick the winner, auto-apply it to
+// end to end – per role handoff: sweep candidates, pick the winner, auto-apply it to
 // the kit + rebuild (so the NEXT role runs on the optimized kit), let the winner's
 // artifacts advance the drive, then re-plan the next handoff. Continues through the
 // design lane then the build lane to feature-complete, with NO human in the loop.
 //
 // This module is the PURE ORCHESTRATION SHELL: every side effect (position, sweep,
-// apply+rebuild, advance) is injected as a dep, so the loop's control flow , what to
+// apply+rebuild, advance) is injected as a dep, so the loop's control flow – what to
 // do on a viable winner, a non-viable candidate set, a systemic failure, a stop bound
-// , is unit-tested hermetically with no cloud, no model, no git. The live deps are
+// – is unit-tested hermetically with no cloud, no model, no git. The live deps are
 // wired by the CLI (optimize-live's positionToNextHandoff + runChampionWalk +
 // optimize-apply's applyWinnerToManifests + npm build + git commit).
 //
 // SAFETY (unattended): a SYSTEMIC failure (auth expiry, Lakebase fork collision,
-// runner death , distinct from a candidate merely not self-healing) HALTS the loop
+// runner death – distinct from a candidate merely not self-healing) HALTS the loop
 // with a written status instead of burning tokens. A candidate set where NOTHING is
-// viable is NOT systemic , it is logged, the baseline advances, and the loop
+// viable is NOT systemic – it is logged, the baseline advances, and the loop
 // continues (a role we could not optimize is not a reason to abandon the lane). The
 // loop is resumable: it re-derives its position from disk each iteration, so a restart
 // after the ~55min background cap picks up where it left off.
@@ -33,12 +33,12 @@ import type { HandoffPlan, HandoffResult } from "./optimize-harness.js";
 
 /** Why the auto-continue loop stopped. */
 export type AutoContinueStopReason =
-  | "lane-complete" // positionNext returned null at the feature boundary , success
+  | "lane-complete" // positionNext returned null at the feature boundary – success
   | "stop-after-story" // hit the configured story bound (first-run cap)
-  | "systemic-halt" // an injected step raised a SystemicFailure , halted, not burned
+  | "systemic-halt" // an injected step raised a SystemicFailure – halted, not burned
   | "max-handoffs"; // safety backstop (a lane that never advances)
 
-/** A systemic (infra) failure that must HALT the unattended loop , auth expiry, a
+/** A systemic (infra) failure that must HALT the unattended loop – auth expiry, a
  *  Lakebase fork collision, a runner death. Distinct from a candidate failing to
  *  self-heal (that is a normal DQ, not systemic). Injected steps throw this to halt. */
 export class SystemicFailure extends Error {
@@ -53,7 +53,7 @@ export class SystemicFailure extends Error {
 
 /** The outcome of sweeping one handoff: the winner + whether ANY candidate was viable.
  *  `viable:false` means no candidate passed its gate (design) / self-healed to GREEN +
- *  functional (build) , the role could not be optimized; the loop logs it and advances
+ *  functional (build) – the role could not be optimized; the loop logs it and advances
  *  at baseline rather than halting. */
 export interface SweepOutcome {
   result: HandoffResult;
@@ -72,7 +72,7 @@ export interface AutoContinueDeps {
   /** Champion-walk ONE handoff (design: semantic-gated; build: honest-GREEN + full
    *  self-heal loop + functional-gated, trials per config). Returns the winner +
    *  viability. Throws SystemicFailure on an infra fault (NOT on a candidate merely
-   *  failing to self-heal , that is a non-viable outcome, not a throw). */
+   *  failing to self-heal – that is a non-viable outcome, not a throw). */
   sweepOne(handoff: HandoffPlan): Promise<SweepOutcome>;
   /** Apply the winner's lever to the kit overlay + rebuild dist + local commit, so the
    *  NEXT handoff runs on the optimized kit. No-op for a baseline/non-viable winner
@@ -159,7 +159,7 @@ export async function runAutoContinue(deps: AutoContinueDeps, options: AutoConti
     }
 
     // Non-advance backstop: the same handoff twice means the drive did not move after
-    // the last advance (a stuck gate). Treat as systemic , halt, do not spin.
+    // the last advance (a stuck gate). Treat as systemic – halt, do not spin.
     if (handoff.id === prevId) {
       return systemicHalt(deps, new SystemicFailure(`handoff "${handoff.id}" did not advance after its winner was recorded`, "advance"), "advance", walk, nonViable, prevId);
     }
@@ -179,7 +179,7 @@ export async function runAutoContinue(deps: AutoContinueDeps, options: AutoConti
     }
 
     // Apply the winner (overlay + rebuild + commit) so the NEXT role runs on the
-    // optimized kit , ONLY for a viable winner. A non-viable/baseline outcome has
+    // optimized kit – ONLY for a viable winner. A non-viable/baseline outcome has
     // nothing to persist, so skip the (expensive) rebuild+commit entirely. Systemic
     // on a broken build.
     if (outcome.viable) {

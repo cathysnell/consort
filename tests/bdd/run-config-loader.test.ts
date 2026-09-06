@@ -2,7 +2,7 @@
 // markers against process.env, so the shipped config carries DEFAULTS anyone can override by
 // setting the named env var. Types are coerced (tiers -> number, "true"/"false" -> boolean)
 // so the resolved config is a real OrchestrationRunConfig + lifecycle configs. Secrets are
-// NEVER in the file , they arrive via env (DATABRICKS_HOST, tokens) at run time.
+// NEVER in the file – they arrive via env (DATABRICKS_HOST, tokens) at run time.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "fs";

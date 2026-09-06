@@ -1,13 +1,13 @@
 // route-scenarios: the CATALOGUE of route pathways out of a spec-author breakdown, each an
-// isolated scenario the suite runs in its own throwaway `.consort` workspace (LEAN , no cloud
+// isolated scenario the suite runs in its own throwaway `.consort` workspace (LEAN – no cloud
 // project). One entry per outcome of the StepOutcome space:
-//   produced  -> the honest next hop (ux-designer) , the happy path.
+//   produced  -> the honest next hop (ux-designer) – the happy path.
 //   revise    -> a routable spec smell routes back to the spec-author at Gate 1.
 //   escalate  -> a non-routable blocking escalation halts to the HIL.
 //
 // Every scenario shares the demo's PO-seed + spec-author-breakdown manifests + intake; they
 // differ only in whether an escalation is injected before the step under test and what route is
-// expected. No env/cloud needed , the route depends on `.consort` state, which the driver builds
+// expected. No env/cloud needed – the route depends on `.consort` state, which the driver builds
 // on a temp dir.
 
 import { join } from "node:path";
@@ -29,8 +29,8 @@ const STORY = "S1-stock-list";
 const PO_SEED: WorkflowAction = { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
 const SPEC_AUTHOR: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" };
 // The two OTHER spec-author invocations the orchestrator emits (see orchestrator-drive.ts):
-//   per-story ACs (mode absent) , produced -> the architect-reviewer for that story.
-//   sprint-planning propose      , produced -> the architect-reviewer estimate turn.
+//   per-story ACs (mode absent) – produced -> the architect-reviewer for that story.
+//   sprint-planning propose      – produced -> the architect-reviewer estimate turn.
 const SPEC_AUTHOR_STORY: WorkflowAction = { kind: "invoke-role", role: "spec-author", story: STORY } as WorkflowAction;
 const SPEC_AUTHOR_PROPOSE: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "propose" };
 // The UX Designer turn (UI track, once, after breakdown). Its route SPACE is only 3: it is NEVER
@@ -44,7 +44,7 @@ const UX_DESIGNER: WorkflowAction = { kind: "invoke-role", role: "ux-designer" }
 const TEST_STRATEGIST: WorkflowAction = { kind: "invoke-role", role: "test-strategist", story: STORY } as WorkflowAction;
 const ARCHITECT_REVIEWER: WorkflowAction = { kind: "invoke-role", role: "architect-reviewer", story: STORY } as WorkflowAction;
 
-/** An inject-escalation op scoped to the demo story , the config-driven mechanism that plants a
+/** An inject-escalation op scoped to the demo story – the config-driven mechanism that plants a
  *  real escalation on disk so a scenario deterministically drives revise/escalate. */
 function inject(source: string, reason: string): LifecycleOp {
   return { kind: "inject-escalation", config: { source, reason, feature_id: FEATURE, story_id: STORY } };
@@ -73,7 +73,7 @@ export const ROUTE_SCENARIOS: RouteScenario[] = [
   {
     ...base("escalate-hil", "a non-routable blocking escalation halts the breakdown to the HIL (escalate)"),
     seedActions: [PO_SEED, SPEC_AUTHOR],
-    injectEscalation: inject("honest-green", "verify failed on main , not recoverable by a re-spec"),
+    injectEscalation: inject("honest-green", "verify failed on main – not recoverable by a re-spec"),
     stepUnderTest: SPEC_AUTHOR,
     expectedRoute: { kind: "raise-to-hil" },
   },
@@ -87,7 +87,7 @@ export const ROUTE_SCENARIOS: RouteScenario[] = [
     expectedRoute: SPEC_AUTHOR, // bounded retry re-issues the same action.
   },
   {
-    // The per-story ACs invocation , its distinct produced next-hop is the architect for the
+    // The per-story ACs invocation – its distinct produced next-hop is the architect for the
     // story. (revise/escalate/blocked are the SAME shared machinery proven via breakdown.)
     ...base("story-produced-architect", "per-story ACs route forward to the Architect for that story (produced)"),
     seedActions: [],
@@ -95,7 +95,7 @@ export const ROUTE_SCENARIOS: RouteScenario[] = [
     expectedRoute: { kind: "invoke-role", role: "architect-reviewer", story: STORY },
   },
   {
-    // The sprint-planning propose invocation , its distinct produced next-hop is the architect
+    // The sprint-planning propose invocation – its distinct produced next-hop is the architect
     // estimate turn.
     ...base("propose-produced-estimate", "sprint-planning propose routes forward to the Architect estimate (produced)"),
     seedActions: [],
@@ -115,7 +115,7 @@ export const ROUTE_SCENARIOS: RouteScenario[] = [
     // escalate: a non-routable blocking escalation halts the UX turn to the HIL.
     ...base("uxdesigner-escalate-hil", "a non-routable blocking escalation halts the UX Designer turn to the HIL (escalate)"),
     seedActions: [],
-    injectEscalation: inject("honest-green", "verify failed on main , not recoverable by a re-design"),
+    injectEscalation: inject("honest-green", "verify failed on main – not recoverable by a re-design"),
     stepUnderTest: UX_DESIGNER,
     expectedRoute: { kind: "raise-to-hil" },
   },

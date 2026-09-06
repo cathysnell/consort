@@ -10,9 +10,9 @@
 // gitignored, so git never reverts it on a checkout/reset, and the `lk` shim reads
 // it with precedence over the committed `.lakebase/kit-ref` (just below the env
 // var). The drive resolves the launch ref ONCE and writes it here, so every
-// subsequent `lk` call for the whole run , the orchestrator, each subagent's Bash
+// subsequent `lk` call for the whole run – the orchestrator, each subagent's Bash
 // tool (which do NOT reliably inherit env vars, which is why the pin is a FILE not
-// an env export), and manual operator commands , runs the launch ref regardless of
+// an env export), and manual operator commands – runs the launch ref regardless of
 // what a checkout does to the committed file. The committed `.lakebase/kit-ref`
 // stays untouched (CI reads it to resolve its own KIT_REF).
 

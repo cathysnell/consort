@@ -4,9 +4,9 @@
 // both sides import the same types without dragging in the runner or the catalogue's cloud calls.
 //
 // The run bracket itself (OrchestrationRunConfig / OrchestrationResult) lives with the runner in
-// runner/orchestration-runner.ts , it composes these ops with a WorkflowAction + the chain turns.
+// runner/orchestration-runner.ts – it composes these ops with a WorkflowAction + the chain turns.
 
-/** A lifecycle op declaration , WHICH op (kind) + its config (both DATA), mirroring the
+/** A lifecycle op declaration – WHICH op (kind) + its config (both DATA), mirroring the
  *  agent spec. `scaffold-project` / `remove-project` are the catalogued kinds. */
 export interface LifecycleOp {
   kind: string;
@@ -23,7 +23,7 @@ export interface LifecycleResult {
   handle?: Record<string, unknown>;
 }
 
-/** The injected lifecycle executor , runs an op by kind. The real impl dispatches to the
+/** The injected lifecycle executor – runs an op by kind. The real impl dispatches to the
  *  lifecycle catalogue (scaffold-project/remove-project); tests pass a mock. */
 export interface LifecycleDeps {
   run(op: LifecycleOp, context: LifecycleRunContext): Promise<LifecycleResult>;

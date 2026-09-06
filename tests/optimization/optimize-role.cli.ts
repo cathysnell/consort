@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// optimize-role: the per-CHAIN lever sweep CLI , INTERNAL agent performance-tuning tooling (NOT a
+// optimize-role: the per-CHAIN lever sweep CLI – INTERNAL agent performance-tuning tooling (NOT a
 // published bin; it lives under tests/optimization/ and is invoked via scripts/optimize-role.sh).
 // It sweeps one or MANY manifest turn-chains: each chain runs its isolated chain (recorded inputs
 // replayed in, only that role's turn live) once per candidate lever patch (model tiers x effort
 // rungs x scan-tight), gates each on the role's conformance validator + a reference-example quality
 // judge, and reports the fastest quality-holding candidate vs the baseline. Every chain is measured
-// STANDALONE against its recorded reference , so chains AND candidates fan out in parallel with zero
+// STANDALONE against its recorded reference – so chains AND candidates fan out in parallel with zero
 // shared mutable state (each candidate's runIntegrationChain mkdtemps its own workspace; levers ride
 // in-memory on the ClaudeStepAgent). This is the lightweight sibling of consort-optimize; it needs
 // NO cloud project (the design + navigator tiers), only the isolation substrate + recorded corpus.
@@ -20,7 +20,7 @@
 //   Each candidate's telemetry + produced artifacts survive to <telemetry-dir>/<chain>/<candidate>/.
 //
 // LIVE + LEAN: every candidate is a real `claude -p` turn, tool-scoped out of Bash, reporting via
-// the agent-report channel, in a throwaway .sftdd workspace , nothing to tear down.
+// the agent-report channel, in a throwaway .sftdd workspace – nothing to tear down.
 
 import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, mkdtempSync, rmSync } from "node:fs";
@@ -46,13 +46,13 @@ import { snapshotTree } from "../../consort/orchestrator/scenarios/integration-c
 /** A driver turn the sweep can exercise, and the CONTAINED next-step navigator determination it is
  *  judged against. `evaluatorKind` picks the directional comparison (assess for green/repair, review
  *  for refactor); `refRel` is the camp-relative dir holding the recorded determination (copied into
- *  consort/evaluation/reference-assets/stockflow/next-step/ , the corpus is assumed deleted). */
+ *  consort/evaluation/reference-assets/stockflow/next-step/ – the corpus is assumed deleted). */
 export interface DriverTurnSpec {
   driverTurn: "green" | "repair" | "refactor";
   evaluatorKind: "assess" | "review";
   /** Camp-relative dir (under BUILD_CORPUS_REL) with the recorded next-step determination. */
   refRel: string;
-  /** The RECORDED original turn's wall-clock (ms), from the corpus agent-log , the fixed baseline the
+  /** The RECORDED original turn's wall-clock (ms), from the corpus agent-log – the fixed baseline the
    *  sweep scores each candidate's time against (same/better/worse), so we compare to the recording
    *  (not a noisy fresh baseline run). Absent => fall back to the live baseline candidate's median. */
   recordedBaselineMs?: number;
@@ -62,7 +62,7 @@ export const DRIVER_TURN_SPECS: Record<string, DriverTurnSpec> = {
   // The S2-drop-combined MIGRATION thrasher pin (the turn where the full-suite waste is large enough to
   // exceed the S3 variance; see DRIVER-GREEN-LEVERS.md). Same green turn, its OWN bundle + judge reference.
   // recordedBaselineMs = the recorded original 002-driver green wall-clock (stockflow-full agent-log,
-  // S2-drop-combined-code, first `green` phase = 667.2s) , the fixed time baseline for same/better/worse.
+  // S2-drop-combined-code, first `green` phase = 667.2s) – the fixed time baseline for same/better/worse.
   "driver-green-s2": { driverTurn: "green", evaluatorKind: "assess", refRel: "next-step/driver-green-s2", recordedBaselineMs: 667200 },
   "driver-repair": { driverTurn: "repair", evaluatorKind: "assess", refRel: "next-step/driver-repair" },
   "driver-refactor": { driverTurn: "refactor", evaluatorKind: "review", refRel: "next-step/driver-refactor" },
@@ -78,7 +78,7 @@ const CHAIN_SETS: Record<string, string[]> = {
 };
 
 /** Combined universe of all chains (design + build + driver). Used for validation. The driver handles
- *  (driver-green/-repair/-refactor) are synthetic , they route to sweepDriverGreen (the ONE sweep engine),
+ *  (driver-green/-repair/-refactor) are synthetic – they route to sweepDriverGreen (the ONE sweep engine),
  *  each seeded to its own flagged pre-turn state + judged by its next-step navigator determination. */
 function allChains(): Record<string, RoleChain | BuildRoleChain | { id: string }> {
   const driver = Object.fromEntries(Object.keys(DRIVER_TURN_SPECS).map((h) => [h, { id: h }]));
@@ -108,7 +108,7 @@ export interface OptimizeRoleArgs {
   baseModel?: string;
   telemetryDir?: string;
   concurrency?: number;
-  /** Optional candidate-id subset (comma list). When set, only these candidates run , used to
+  /** Optional candidate-id subset (comma list). When set, only these candidates run – used to
    *  RESUME a partial driver-green sweep (run just the ones a crash didn't complete). Their trials
    *  MERGE with any per-candidate trials already persisted under the run dir, so the rollup covers
    *  the full set. Absent => every candidate runs. */
@@ -118,7 +118,7 @@ export interface OptimizeRoleArgs {
    *  (pair with --concurrency N). Absent/1 => no replication. */
   replicas?: number;
   /** Path to an externalized EXPERIMENT config (turn + candidates + levers). When set (driver chains),
-   *  it SUPPLIES the candidates + the corpus turn (preconditions) + concurrency/replicas , the run picks
+   *  it SUPPLIES the candidates + the corpus turn (preconditions) + concurrency/replicas – the run picks
    *  up the config instead of the hardcoded driverGreenCandidates()/default turn. See experiment-config. */
   experiment?: string;
 }
@@ -178,10 +178,10 @@ function baseModelFor(role: string, override?: string): string {
 
 /** The driver-green sweep: a CLOUD LIVE run (requires RUN_LIVE_STEP + LAKEBASE_TEST_E2E to be set).
  *  Each candidate runs a FULL driver-GREEN cycle with the levers patched, gates on honest-GREEN, is
- *  JUDGED (code discriminator vs the 003-driver pin), and PRESERVED , all via the ONE sweep engine. */
+ *  JUDGED (code discriminator vs the 003-driver pin), and PRESERVED – all via the ONE sweep engine. */
 
 /** Resolve which candidates a driver-green run executes: all of them, or the named subset (a resume of a
- *  partial sweep). Throws loud on an unknown id BEFORE any scaffold is spun up , a typo in a resume must
+ *  partial sweep). Throws loud on an unknown id BEFORE any scaffold is spun up – a typo in a resume must
  *  not burn a live scaffold. Pure + exported for a unit test. */
 export function selectDriverCandidates<C extends { id: string }>(all: C[], subset?: string[]): C[] {
   if (!subset?.length) return all;
@@ -192,10 +192,10 @@ export function selectDriverCandidates<C extends { id: string }>(all: C[], subse
   return all.filter((c) => subset.includes(c.id));
 }
 
-/** ONE per-candidate replay dispatcher for BOTH substrates , the convergence point. Given the corpus
+/** ONE per-candidate replay dispatcher for BOTH substrates – the convergence point. Given the corpus
  *  turn's bundle + the substrate, it runs the candidate through the SAME shared pieces (replay-set
  *  preconditions + recorded prompt + swept agent) and returns the SAME ChainRunResult that runRoleSweep
- *  consumes , so the sweep engine, judge, telemetry, and cost recording are identical for driver (cloud)
+ *  consumes – so the sweep engine, judge, telemetry, and cost recording are identical for driver (cloud)
  *  and navigator/design (lean). Cloud: a per-candidate worktree + Lakebase branch + honest-GREEN + the
  *  next-turn navigator eval (the discriminator). Lean: a throwaway workspace, the single turn, no cloud
  *  (usage rides turns[].agentResult). */
@@ -209,14 +209,14 @@ async function runReplayCandidate(args: {
   idx: number;
   driverTurn: "green" | "repair" | "refactor";
   pfx: string;
-  /** The chain's manifest dir , required for the lean substrate (the per-chain manifest subdir). */
+  /** The chain's manifest dir – required for the lean substrate (the per-chain manifest subdir). */
   manifestDir?: string;
 }): Promise<ChainRunResult> {
   if (args.substrate === "lean") {
     if (!args.bundle) throw new Error("lean replay requires a bundle (the corpus turn to replay)");
     if (!args.manifestDir) throw new Error("lean replay requires a manifestDir (the chain's manifest subdir)");
     // The lean lane's usage rides turns[].agentResult (the design-lane telemetry path), so cost is
-    // recorded identically. Supply a STRUCTURAL gate (passed) , same as the cloud path: reaching here
+    // recorded identically. Supply a STRUCTURAL gate (passed) – same as the cloud path: reaching here
     // means the turn ran + produced its determination, which is a valid SCORABLE turn (the judge scores
     // it same/better/worse vs the recorded marker; a thin/empty determination is the judge's call, not a
     // gate skip). Without this, role-sweep derives a DESIGN-shaped gate (producedOk on chain.outputFile +
@@ -252,14 +252,14 @@ async function runReplayCandidate(args: {
 }
 
 /** The CORPUS-FAITHFUL lean judge: compares the candidate's produced assess marker to the SAME corpus
- *  turn's RECORDED marker (its files/.consort snapshot), same/better/worse , the discriminator principle,
+ *  turn's RECORDED marker (its files/.consort snapshot), same/better/worse – the discriminator principle,
  *  vs the replayed turn's own recorded determination (not the curated reference-assets). Mirrors
  *  buildDriverNextStepJudge but the reference is the replayed turn itself. */
 function buildReplayTurnJudge(turnLabel: string, feature: string, story: string, ac: string, discriminator: "assess" | "review" | "red"): QualityGate {
   const cwd = process.cwd();
   if (discriminator === "red") {
     // navigator-RED: functional coverage of the candidate's authored tests vs the tests the REPLAYED
-    // corpus turn recorded (the corpus-faithful reference , what THAT turn produced, not curated
+    // corpus turn recorded (the corpus-faithful reference – what THAT turn produced, not curated
     // reference-assets). A faster/cheaper lever HOLDS the score when its tests cover the SAME behaviors
     // (score >= FUNCTIONAL_THRESHOLD); missing coverage drops the score. Mirrors the reference-assets red
     // path (makeOpusJudge functional:"tests") but the reference is the replayed turn's own test tree.
@@ -270,7 +270,7 @@ function buildReplayTurnJudge(turnLabel: string, feature: string, story: string,
     const recMap = snapshotTree(join(CORPUS_TURNS, turnLabel, "files"), join(CORPUS_TURNS, turnLabel, "files"));
     const reference = concatTreeFiles(recMap, "tests/", RED_EXTS) + "\n" + concatTreeFiles(recMap, "client/tests/", RED_EXTS);
     if (!reference.trim()) {
-      throw new Error(`buildReplayTurnJudge(red): recorded turn ${turnLabel} has no test tree under files/tests|client/tests , cannot judge.`);
+      throw new Error(`buildReplayTurnJudge(red): recorded turn ${turnLabel} has no test tree under files/tests|client/tests – cannot judge.`);
     }
     return {
       judgeCandidate: async ({ producedArtifacts }) => {
@@ -282,7 +282,7 @@ function buildReplayTurnJudge(turnLabel: string, feature: string, story: string,
     };
   }
   if (discriminator === "review") {
-    // "review" compares review-verdict.json (recordedReviewDirective vs candidateReview) , wired when a
+    // "review" compares review-verdict.json (recordedReviewDirective vs candidateReview) – wired when a
     // refactor/review turn is first targeted; assess + red are what's live now.
     throw new Error(`buildReplayTurnJudge: discriminator "${discriminator}" not yet wired (assess + red only)`);
   }
@@ -354,10 +354,10 @@ function readRecordedNextReview(turnLabel: string, feature: string, story: strin
 }
 
 /** Read the recorded review DIRECTIVE that PROMPTED a refactor (the smells the refactor must resolve). The
- *  refactor's recorded NEXT turn is acceptance (no review-verdict), so , unlike repair , the reference is
+ *  refactor's recorded NEXT turn is acceptance (no review-verdict), so – unlike repair – the reference is
  *  the UPSTREAM review-verdict, read from the corpus recorded-artifacts (the cumulative .consort mirror).
  *  The harness FORCES a fresh post-refactor review (resets the story review state after the refactor so the
- *  drive re-reviews the refactored code); that verdict is compared to THIS directive , clean (refactor:false)
+ *  drive re-reviews the refactored code); that verdict is compared to THIS directive – clean (refactor:false)
  *  == the refactor resolved the directive's smells in one step. */
 function readRecordedRefactorDirective(feature: string, story: string): VerdictOutput {
   const rv = join(CORPUS_RA, "cycles", feature, story, "review-verdict.json");
@@ -365,11 +365,11 @@ function readRecordedRefactorDirective(feature: string, story: string): VerdictO
   return parseVerdictFile(readFileSync(rv, "utf8"));
 }
 
-/** The CORPUS-FAITHFUL post-turn REVIEW-quality judge , the QUALITY method (NOT code-equivalence, which
+/** The CORPUS-FAITHFUL post-turn REVIEW-quality judge – the QUALITY method (NOT code-equivalence, which
  *  always has non-deterministic diffs; the navigator's review prompts already gauge quality). It is a
  *  TWO-TURN review: after the driver turn, the drive runs the navigator's ACTUAL review of the resolved
- *  story , run with the navigator's CONFIGURED model (the applied-winner lever, NOT a pinned opus-high , see
- *  runDriverGreenOnScaffold) , and this judge compares that review-verdict to the recorded review directive
+ *  story – run with the navigator's CONFIGURED model (the applied-winner lever, NOT a pinned opus-high – see
+ *  runDriverGreenOnScaffold) – and this judge compares that review-verdict to the recorded review directive
  *  via evaluateNextStepDetermination(review): clean (refactor:false) => PASS (resolved), smells remaining =>
  *  FAIL. Gated on honest-GREEN (the turn kept the story green). The two callers differ ONLY in which recorded
  *  review is the directive (repair: the turn-AFTER review it routes to; refactor: the UPSTREAM review it must
@@ -389,12 +389,12 @@ function buildReviewResolutionJudge(recordedReviewDirective: VerdictOutput): Qua
       } else {
         resolved = producedArtifacts[`${NEXT_STEP_MARKER_PREFIX}review-verdict.json`] !== undefined;
       }
-      if (!resolved) return { passed: false, reason: "driver turn did not hold honest-GREEN , not the same quality as the recorded resolved turn" };
+      if (!resolved) return { passed: false, reason: "driver turn did not hold honest-GREEN – not the same quality as the recorded resolved turn" };
       const candRaw = producedArtifacts[`${NEXT_STEP_MARKER_PREFIX}review-verdict.json`];
-      if (candRaw === undefined) return { passed: false, reason: "no next-step review-verdict captured , the navigator's next review did not run/produce a verdict" };
+      if (candRaw === undefined) return { passed: false, reason: "no next-step review-verdict captured – the navigator's next review did not run/produce a verdict" };
       const candidateReview = parseVerdictFile(candRaw);
       // Two-turn quality: does the candidate's next-turn review reach the same-or-better determination as the
-      // recorded directive? (review evaluator , clean=resolved=PASS; the actual navigator model, not opus-high.)
+      // recorded directive? (review evaluator – clean=resolved=PASS; the actual navigator model, not opus-high.)
       const outcome = await evaluateNextStepDetermination({ evaluatorKind: "review", deltaJudge, verdictJudge, recordedReviewDirective, candidateReview });
       const passed = outcome.verdict !== "fail";
       const classification = outcome.verdict === "pass-with-honors" ? "pass-with-honors" : outcome.candidateClass;
@@ -434,11 +434,11 @@ export async function sweepDriverGreen(
 
   // Candidate subset (resume a partial sweep): run only the named ids; their trials MERGE with any
   // per-candidate dirs already persisted from a prior (crashed) run in the SAME run dir. Absent => all.
-  // Driver turns use the ENFORCEMENT + CONTEXT lever set (DRIVER-GREEN-LEVERS.md) , the run-17 analysis
+  // Driver turns use the ENFORCEMENT + CONTEXT lever set (DRIVER-GREEN-LEVERS.md) – the run-17 analysis
   // showed the driver's wall-clock is tool-churn (orientation + redundant self-verification), not model
   // tier (already sonnet), so the interesting levers are behavioral, not the generic model/effort grid.
   // Externalized experiment config (--experiment): SUPPLIES the candidates + the corpus turn (fixed
-  // preconditions) + concurrency/replicas , the run picks it up instead of the hardcoded candidate set +
+  // preconditions) + concurrency/replicas – the run picks it up instead of the hardcoded candidate set +
   // default turn. Its driverTurn must match this handle (the handle names the judge + turn kind). Absent
   // => the built-in driverGreenCandidates() + the default corpus turn for this handle.
   const experiment = opts.experiment ? loadExperimentConfig(opts.experiment) : undefined;
@@ -460,7 +460,7 @@ export async function sweepDriverGreen(
   // evaluated this driver turn (the navigator turn that followed it). buildDriverNextStepJudge re-runs
   // that SAME evaluation LIVE on the candidate (the harness drives the opus-high navigator eval; its
   // determination rides producedArtifacts under navigator-eval/) and compares the candidate's
-  // determination to the RECORDED one at the same step , the discriminator is SAME / BETTER / WORSE
+  // determination to the RECORDED one at the same step – the discriminator is SAME / BETTER / WORSE
   // (evaluateNextStepDetermination). PASS (same) / PASS-WITH-HONORS (fewer/no issues, better) / FAIL (worse).
   // A REPAIR experiment is judged CORPUS-FAITHFULLY: a repair resolves (honest-GREEN passes => state-derived
   // next step is a REVIEW) and that review must be NO-WORSE than the recorded turn-after's review (green +
@@ -482,7 +482,7 @@ export async function sweepDriverGreen(
   const project = await scaffoldDriverGreenProject();
   const driverChain: SweepableChain = { dir: handle, outputFile: "app", prompt: `driver ${spec.driverTurn} (live, shared scaffold)` };
   // Slug/branch prefix DERIVED from the pinned bundle's story (S2-drop-combined -> "s2", S3-stock-shows
-  // -> "s3") so the worktree + Lakebase branch names name the RIGHT story , no hardcoded "s3" that
+  // -> "s3") so the worktree + Lakebase branch names name the RIGHT story – no hardcoded "s3" that
   // mislabels an S2 sweep for the results reader.
   // The bundle for this sweep: the experiment config's corpus turn (when given) else the S2 legacy pin
   // else the handle's default replay turn (resolved inside runDriverGreenOnScaffold).
@@ -520,7 +520,7 @@ export async function sweepDriverGreen(
         const q = trial.qualityPassed === undefined ? "" : trial.qualityPassed ? ` judge PASSED (${trial.telemetry?.classification ?? "?"})` : ` judge FAILED (${trial.telemetry?.classification ?? "?"})`;
         const status = trial.disqualified ? `DISQUALIFIED (${trial.reason})` : trial.gatePassed ? "honest-GREEN" : "not-green";
         // eslint-disable-next-line no-console
-        console.log(`[optimize-role] ${handle} (${i}/${total}) ${trial.candidateId}: ${status}${q}${trial.telemetry?.outerDurationMs ? ` , ${(trial.telemetry.outerDurationMs / 1000).toFixed(1)}s` : ""}`);
+        console.log(`[optimize-role] ${handle} (${i}/${total}) ${trial.candidateId}: ${status}${q}${trial.telemetry?.outerDurationMs ? ` – ${(trial.telemetry.outerDurationMs / 1000).toFixed(1)}s` : ""}`);
       },
     });
   } finally {
@@ -530,9 +530,9 @@ export async function sweepDriverGreen(
   }
 
   // Winner via the SHARED report: the fastest candidate that passed BOTH conformance (honest-GREEN)
-  // AND the mandatory judge , NOT wall-clock among honest-GREEN (the prior, judge-less bug).
+  // AND the mandatory judge – NOT wall-clock among honest-GREEN (the prior, judge-less bug).
   // Score time SAME/BETTER/WORSE against the RECORDED original turn (spec.recordedBaselineMs), not a
-  // fresh baseline run , the recording is the fixed reference (its pre/post-state + duration are in the
+  // fresh baseline run – the recording is the fixed reference (its pre/post-state + duration are in the
   // corpus). Falls back to the live baseline candidate when the spec has no recorded time.
   const report = reportRoleSweep(trials, spec.recordedBaselineMs);
   writeFileSync(join(runDir, "report.txt"), formatRoleSweepReport(report) + "\n");
@@ -545,11 +545,11 @@ export async function sweepDriverGreen(
 }
 
 /** Read a required recorded reference from the CAMP; throw loud if absent (the evaluation cannot
- *  run without its reference , never a silent skip). */
+ *  run without its reference – never a silent skip). */
 function readCampReference(relFromCorpusRoot: string, what: string): string {
   const p = join(process.cwd(), BUILD_CORPUS_REL, relFromCorpusRoot);
   if (!existsSync(p)) {
-    throw new Error(`optimize-role: MISSING recorded reference for ${what} at ${p} , the LLM judge is mandatory and cannot run without it. Extract it from the corpus into the camp first.`);
+    throw new Error(`optimize-role: MISSING recorded reference for ${what} at ${p} – the LLM judge is mandatory and cannot run without it. Extract it from the corpus into the camp first.`);
   }
   return readFileSync(p, "utf8");
 }
@@ -565,7 +565,7 @@ export const DRIVER_GREEN_CODE_PIN_REL =
  *  (superseded-tests.json / regression-assessment.json / review-verdict.json, relpath -> contents) from
  *  the harness. It rides producedArtifacts so (a) the judge closure reads it without widening the
  *  ChainRunResult seam, and (b) persistTrial DURABLY stores it per candidate at
- *  `<runDir>/<candidate>/artifacts/navigator-eval/<file>` , a first-class, legibly-named record of the
+ *  `<runDir>/<candidate>/artifacts/navigator-eval/<file>` – a first-class, legibly-named record of the
  *  navigator's evaluation of this driver output. That stored evaluation is a REUSABLE SAMPLE for a
  *  separate test OF THE NAVIGATOR itself (how the navigator assessed/reviewed each driver candidate),
  *  so the prefix is a real path segment, not an opaque marker. */
@@ -588,12 +588,12 @@ export function concatTreeFiles(producedArtifacts: Record<string, string>, prefi
  *  CAMP and concatenate its .py contents into ONE text, the SAME shape the driver-green judge builds
  *  from the candidate's produced app/ (its `app/**\/*.py` joined). Sorted by relpath so the reference
  *  text is deterministic across runs. Throws loud if the dir is absent or holds no .py (the code
- *  judge is mandatory and cannot run without its reference , never a silent skip). Exported for a
+ *  judge is mandatory and cannot run without its reference – never a silent skip). Exported for a
  *  hermetic guard test. */
 export function readCampAppDir(relFromCorpusRoot: string, what: string): string {
   const dir = join(process.cwd(), BUILD_CORPUS_REL, relFromCorpusRoot);
   if (!existsSync(dir)) {
-    throw new Error(`optimize-role: MISSING recorded reference for ${what} at ${dir} , the LLM judge is mandatory and cannot run without it. Extract it from the corpus into the camp first.`);
+    throw new Error(`optimize-role: MISSING recorded reference for ${what} at ${dir} – the LLM judge is mandatory and cannot run without it. Extract it from the corpus into the camp first.`);
   }
   const tree = snapshotTree(dir, dir); // { relpath -> contents } for every file under the app dir
   const text = Object.entries(tree)
@@ -602,14 +602,14 @@ export function readCampAppDir(relFromCorpusRoot: string, what: string): string 
     .map(([, v]) => v)
     .join("\n");
   if (!text.trim()) {
-    throw new Error(`optimize-role: recorded reference for ${what} at ${dir} has no .py files , cannot judge produced code against an empty reference.`);
+    throw new Error(`optimize-role: recorded reference for ${what} at ${dir} has no .py files – cannot judge produced code against an empty reference.`);
   }
   return text;
 }
 
 /** Build the MANDATORY per-chain judge (a QualityGate closure). Every chain kind routes to its OWN
  *  existing discriminator in consort/evaluation/semantic-gate, comparing the candidate's produced
- *  output to the committed recorded reference. There is NO judge-less branch , an LLM judge is a hard
+ *  output to the committed recorded reference. There is NO judge-less branch – an LLM judge is a hard
  *  requirement of every evaluation (the guarantee of product-result equivalence). A missing reference
  *  throws (evaluation invalid), never a silent skip. */
 export function buildChainJudge(chain: RoleChain | BuildRoleChain, handle: string, isBuildChain: boolean): QualityGate {
@@ -618,7 +618,7 @@ export function buildChainJudge(chain: RoleChain | BuildRoleChain, handle: strin
     // DESIGN chains: opus semantic judge vs the recorded per-turn artifact (camp).
     const reference = readReference(chain as RoleChain, handle);
     if (reference === undefined) {
-      throw new Error(`optimize-role: MISSING recorded reference for design chain '${handle}' , the LLM judge is mandatory. Point the chain's referenceFile at a committed recorded per-turn output.`);
+      throw new Error(`optimize-role: MISSING recorded reference for design chain '${handle}' – the LLM judge is mandatory. Point the chain's referenceFile at a committed recorded per-turn output.`);
     }
     const judge = makeOpusJudge({ cwd });
     return {
@@ -640,7 +640,7 @@ export function buildChainJudge(chain: RoleChain | BuildRoleChain, handle: strin
         // navigator-red's outputFile is the "tests" DIRECTORY, not a single file, so
         // `primary = producedArtifacts["tests"]` is ALWAYS undefined (snapshotTree only ever keys
         // individual files, tests/foo.py). Reconstruct the judged text by concatenating the produced
-        // tests/**.{py,ts,tsx} (sorted, deterministic , concatTreeFiles). This was a latent bug: the
+        // tests/**.{py,ts,tsx} (sorted, deterministic – concatTreeFiles). This was a latent bug: the
         // bare-key lookup made red ALWAYS return "no tests produced" => passed:false, so it never
         // actually scored. Fall back to `primary` for a file-shaped outputFile.
         const testsText = primary ?? concatTreeFiles(producedArtifacts, "tests/", [".py", ".ts", ".tsx"]);
@@ -670,7 +670,7 @@ export function buildChainJudge(chain: RoleChain | BuildRoleChain, handle: strin
             if (key !== undefined) { writeFileSync(join(markerDir, name), producedArtifacts[key]); wroteMarker = true; }
           }
           // No marker => the candidate judged the code clean (equivalent), which parseNavigatorAssessMarker
-          // reads from an empty dir , a legitimate verdict, not a missing artifact.
+          // reads from an empty dir – a legitimate verdict, not a missing artifact.
           void wroteMarker;
           const outcome = await evaluateNavigatorAssessAlignment({ recordedVerdict, navigatorMarkerDir: markerDir, deltaJudge });
           return { passed: outcome.passed, classification: outcome.classificationMatch ? recordedVerdict.classification : "insufficient", reason: outcome.reason };
@@ -708,18 +708,18 @@ export function buildChainJudge(chain: RoleChain | BuildRoleChain, handle: strin
  *  makeVerdictAlignmentJudge (review). Maps the directional verdict: pass + pass-with-honors => passed
  *  (honors surfaced via classification + nextStep); fail => not passed. A missing reference throws.
  *
- *  INVARIANT , the discriminator is the NAVIGATOR DETERMINATION, never a turn OUTPUT signal. DO NOT wrap
+ *  INVARIANT – the discriminator is the NAVIGATOR DETERMINATION, never a turn OUTPUT signal. DO NOT wrap
  *  this judge with an honest-GREEN (or any driver-output) shortcut that returns pass/pass-with-honors
  *  WITHOUT consulting the navigator determination. The corpus recorded not just the driver output but how
  *  the navigator EVALUATED it at that step; the trial re-runs that SAME evaluation live and this judge
  *  compares the two, SAME / BETTER / WORSE. Whether the driver's own green passed is a report signal only
- *  , a green that ignored a supersession is WORSE (it breaks prior tests), not "better", and ONLY the
+ *  – a green that ignored a supersession is WORSE (it breaks prior tests), not "better", and ONLY the
  *  navigator determination tells them apart. A shortcut here silently mis-scores that case. This invariant
  *  is locked by "buildDriverNextStepJudge is the discriminator (no output shortcut)" in
- *  tests/bdd/optimize-role-cli.test.ts , keep it green. See consort/optimize/DRIVER-GREEN-LEVERS.md. */
+ *  tests/bdd/optimize-role-cli.test.ts – keep it green. See consort/optimize/DRIVER-GREEN-LEVERS.md. */
 export function buildDriverNextStepJudge(handle: string): QualityGate {
   const spec = DRIVER_TURN_SPECS[handle];
-  if (!spec) throw new Error(`optimize-role: buildDriverNextStepJudge , unknown driver handle "${handle}"`);
+  if (!spec) throw new Error(`optimize-role: buildDriverNextStepJudge – unknown driver handle "${handle}"`);
   const cwd = process.cwd();
   const deltaJudge = makeSupersessionDeltaJudge({ cwd });
   const verdictJudge = makeVerdictAlignmentJudge({ cwd });
@@ -728,7 +728,7 @@ export function buildDriverNextStepJudge(handle: string): QualityGate {
   const regressionJudge = makeRegressionFidelityJudge({ cwd });
   const recordedRefDir = join(cwd, BUILD_CORPUS_REL, spec.refRel);
   if (!existsSync(recordedRefDir)) {
-    throw new Error(`optimize-role: MISSING contained next-step reference for ${handle} at ${recordedRefDir} , the LLM judge is mandatory and cannot run without it.`);
+    throw new Error(`optimize-role: MISSING contained next-step reference for ${handle} at ${recordedRefDir} – the LLM judge is mandatory and cannot run without it.`);
   }
   const driverFailureSummary = ((): string | undefined => {
     const p = join(recordedRefDir, "green-failure.json");
@@ -763,11 +763,11 @@ export function buildDriverNextStepJudge(handle: string): QualityGate {
                 candidateReview: parseVerdictFile(producedArtifacts[`${NEXT_STEP_MARKER_PREFIX}review-verdict.json`] ?? "{}"),
               }),
         });
-        // ENFORCED INVARIANT , the discriminator IS the next-turn assessment, nothing else. `outcome`
+        // ENFORCED INVARIANT – the discriminator IS the next-turn assessment, nothing else. `outcome`
         // above is evaluateNextStepDetermination: the RECORDED next-turn navigator determination vs the
         // candidate's captured next-turn determination, ranked same / better / worse. The next-turn agent
         // (navigator assess/review) AND the orchestrator's deterministic assessment (honest-GREEN verify,
-        // supersession pre-localization, smell/refactor detection) ALREADY evaluate the code results , do
+        // supersession pre-localization, smell/refactor detection) ALREADY evaluate the code results – do
         // NOT re-implement any of that here (no code scanning, no honest-GREEN shortcut, no bespoke
         // milestone/resolution overlay). This maps `outcome` straight through, and that is the WHOLE judge.
         // Any richer evaluation belongs in the next-turn assessment / orchestrator, not this closure.
@@ -783,7 +783,7 @@ export function buildDriverNextStepJudge(handle: string): QualityGate {
 }
 
 /** Sweep ONE chain end to end + persist its evidence + report under <runRoot>/<handle>/. Returns
- *  the chain's report (for the multi-chain roll-up). LIVE , each candidate spawns a real claude
+ *  the chain's report (for the multi-chain roll-up). LIVE – each candidate spawns a real claude
  *  turn; candidates fan out under `concurrency`. Handles both design role chains and build chains. */
 export async function sweepOneChain(
   handle: string,
@@ -798,11 +798,11 @@ export async function sweepOneChain(
   }
 
   const baseModel = baseModelFor(handle, opts.baseModel);
-  // The test-strategist is a SUPERVISOR , its optimization target is the per-analyst SUBAGENT levers,
+  // The test-strategist is a SUPERVISOR – its optimization target is the per-analyst SUBAGENT levers,
   // not its own model. Its candidate set permutes ALL enabled analysts (behavior/fitness/client);
   // every other chain uses the single-role model/effort set.
   // Externalized experiment config (--experiment): SUPPLIES the candidates + the corpus turn (fixed
-  // preconditions) , the LEAN lane replays the recorded replay-set (recorded prompt + pre-project) via the
+  // preconditions) – the LEAN lane replays the recorded replay-set (recorded prompt + pre-project) via the
   // ONE dispatcher (runReplayCandidate substrate:"lean"), not the curated reference-assets + regenerated
   // prompt. Absent => the built-in candidate set + the reference-assets chain (legacy). The judge stays the
   // per-chain discriminator either way.
@@ -819,7 +819,7 @@ export async function sweepOneChain(
   const runDir = join(runRoot, handle);
   mkdirSync(runDir, { recursive: true });
 
-  // MANDATORY per-chain JUDGE , every chain kind supplies its OWN existing discriminator (an LLM
+  // MANDATORY per-chain JUDGE – every chain kind supplies its OWN existing discriminator (an LLM
   // judge is required for every evaluation; it is the only guarantee of product-result equivalence).
   // A missing recorded reference is a HARD ERROR here (the evaluation cannot run without it), never a
   // silent skip. The closure is handed to runRoleSweep, which judges every conformant candidate and
@@ -850,7 +850,7 @@ export async function sweepOneChain(
           idx: 0,
           driverTurn: "green",
           pfx: "",
-          // The per-chain manifest subdir (e.g. navigator-assess-chain) , the lean turn's manifests.
+          // The per-chain manifest subdir (e.g. navigator-assess-chain) – the lean turn's manifests.
           manifestDir: join(process.cwd(), BUILD_MANIFESTS_REL, chain.dir),
         })
     : isBuildChain
@@ -869,23 +869,23 @@ export async function sweepOneChain(
     ...((experiment?.concurrency ?? opts.concurrency) ? { concurrency: experiment?.concurrency ?? opts.concurrency } : {}),
     onStart: (candidate, i, total) => {
       // eslint-disable-next-line no-console
-      console.log(`[optimize-role] ${handle} (${i}/${total}) running ${candidate.id} , levers ${JSON.stringify(candidate.levers)} ...`);
+      console.log(`[optimize-role] ${handle} (${i}/${total}) running ${candidate.id} – levers ${JSON.stringify(candidate.levers)} ...`);
     },
     // PRESERVE each candidate's full result AS IT COMPLETES (not batched at the end): its
     // telemetry, its produced artifacts (the actual files), and a replay.json (levers + seed
-    // corpus ref) , so the experiment is reproducible + re-judgeable, and an interrupted sweep
+    // corpus ref) – so the experiment is reproducible + re-judgeable, and an interrupted sweep
     // still leaves every finished candidate's evidence on disk.
     onDone: (trial, i, total) => {
       persistTrial(runDir, chain, baseModel, trial);
       const q = trial.qualityPassed === undefined ? "" : trial.qualityPassed ? " quality PASSED" : ` quality FAILED (${trial.telemetry?.semanticScore?.toFixed(2)})`;
       const status = trial.disqualified ? `DISQUALIFIED (${trial.reason})` : trial.gatePassed ? "gate PASSED" : "gate failed";
       // eslint-disable-next-line no-console
-      console.log(`[optimize-role] ${handle} (${i}/${total}) ${trial.candidateId}: ${status}${q}${trial.telemetry?.outerDurationMs ? ` , ${(trial.telemetry.outerDurationMs / 1000).toFixed(1)}s` : ""}`);
+      console.log(`[optimize-role] ${handle} (${i}/${total}) ${trial.candidateId}: ${status}${q}${trial.telemetry?.outerDurationMs ? ` – ${(trial.telemetry.outerDurationMs / 1000).toFixed(1)}s` : ""}`);
     },
   });
 
   const report = reportRoleSweep(trials);
-  // Write the report itself into the chain's run dir , the run's own summary lives with its evidence.
+  // Write the report itself into the chain's run dir – the run's own summary lives with its evidence.
   writeFileSync(join(runDir, "report.txt"), formatRoleSweepReport(report) + "\n");
 
   // Write a machine-readable summary.json (winner + per-candidate median/gate) in the SAME shape the
@@ -905,7 +905,7 @@ export async function sweepOneChain(
   return report;
 }
 
-/** One chain's durable summary , winner + per-candidate median ms / gate / quality. Mirrors the
+/** One chain's durable summary – winner + per-candidate median ms / gate / quality. Mirrors the
  *  committed examples/replay/optimize-results/<handle>/summary.json shape so both corpora are diffable. */
 interface ChainSummary {
   chain: string;
@@ -950,18 +950,18 @@ function formatBaselineDelta(handle: string, prior: ChainSummary, now: ChainSumm
   const ms = (v: number | null) => (v == null ? "?" : `${(v / 1000).toFixed(1)}s`);
   const drift =
     prior.baselineMs != null && now.baselineMs != null
-      ? ` , baseline ${ms(prior.baselineMs)} -> ${ms(now.baselineMs)} (${(((now.baselineMs - prior.baselineMs) / prior.baselineMs) * 100).toFixed(0)}%)`
+      ? ` – baseline ${ms(prior.baselineMs)} -> ${ms(now.baselineMs)} (${(((now.baselineMs - prior.baselineMs) / prior.baselineMs) * 100).toFixed(0)}%)`
       : "";
-  return `[compare] ${handle}: ${winnerChange}${drift} , prior run ${prior.capturedAt}`;
+  return `[compare] ${handle}: ${winnerChange}${drift} – prior run ${prior.capturedAt}`;
 }
 
 /** Run the sweep for EVERY requested chain, each standalone against its reference example, and
  *  print a per-chain report + a roll-up. Returns the reports keyed by handle. LIVE. Chains run in
- *  sequence; each chain's candidates fan out under `concurrency` (a global cap , the chains do not
+ *  sequence; each chain's candidates fan out under `concurrency` (a global cap – the chains do not
  *  overlap, so N concurrency is N in-flight candidates at any moment). */
 export async function runOptimizeRole(args: OptimizeRoleArgs): Promise<Record<string, SweepReport | { summary: unknown }>> {
   // Results land in the VISIBLE, git-tracked corpus (examples/replay/optimize-results/), NOT a hidden
-  // dir , so a run is durable + reviewable + diffable. Each run gets a timestamped subdir under runs/
+  // dir – so a run is durable + reviewable + diffable. Each run gets a timestamped subdir under runs/
   // so prior runs accumulate; the newest prior run (if any) is the BASELINE this run's summary.json is
   // compared against + a delta printed. Override with --telemetry-dir for an ad-hoc scratch run.
   const resultsHome = join(process.cwd(), "examples/replay/optimize-results");
@@ -970,7 +970,7 @@ export async function runOptimizeRole(args: OptimizeRoleArgs): Promise<Record<st
   const runRoot = args.telemetryDir ?? join(runsDir, runStamp());
   mkdirSync(runRoot, { recursive: true });
   // eslint-disable-next-line no-console
-  console.log(`[optimize-role] sweeping ${args.chains.length} chain(s): ${args.chains.join(", ")} , run root ${runRoot}${baselineDir ? ` (baseline: ${baselineDir})` : " (no prior run , this is the baseline)"}`);
+  console.log(`[optimize-role] sweeping ${args.chains.length} chain(s): ${args.chains.join(", ")} – run root ${runRoot}${baselineDir ? ` (baseline: ${baselineDir})` : " (no prior run – this is the baseline)"}`);
 
   const reports: Record<string, SweepReport | { summary: unknown }> = {};
   for (const handle of args.chains) {
@@ -1043,7 +1043,7 @@ function latestRunDir(runsDir: string): string | undefined {
 
 /** The recorded reference the quality gate scores a candidate against. An explicit `referenceFile`
  *  is the RECORDED PER-TURN OUTPUT extracted into the CAMP (recorded-turns/<NNNN>-<role>/...), the
- *  honest same-scope reference , resolved against the camp root. Absent, fall back to the produced
+ *  honest same-scope reference – resolved against the camp root. Absent, fall back to the produced
  *  artifact's recorded form in the seed corpus (intake). Absent there too -> undefined (gate skipped).
  *  This is the #705 correction: judge against what the turn ACTUALLY recorded, never a hand-carved
  *  slice. See feedback_judge_against_recorded_turn_output + the camp README. */
@@ -1063,7 +1063,7 @@ function persistTrial(runDir: string, chain: RoleChain, baseModel: string, trial
   const dir = join(runDir, trial.candidateId);
   mkdirSync(dir, { recursive: true });
   if (trial.telemetry) writeFileSync(join(dir, "telemetry.json"), JSON.stringify(trial.telemetry, null, 2) + "\n");
-  // The actual produced files (the outputs) , the evidence telemetry alone can't provide.
+  // The actual produced files (the outputs) – the evidence telemetry alone can't provide.
   for (const [rel, contents] of Object.entries(trial.producedArtifacts ?? {})) {
     const dest = join(dir, "artifacts", rel);
     mkdirSync(dirname(dest), { recursive: true });
@@ -1097,7 +1097,7 @@ function persistTrial(runDir: string, chain: RoleChain, baseModel: string, trial
 // persisted run dir (<runRoot>/<chain>/<candidate>/artifacts/...), read each candidate's produced output
 // back off disk, resolve the SAME discriminator the live sweep uses (buildChainJudge for design/navigator,
 // buildDriverNextStepJudge for driver), re-run it against the SAME recorded reference, and compare the
-// fresh verdict to the stored telemetry.json. NO live drive, NO cloud project, NO green cycle , just the
+// fresh verdict to the stored telemetry.json. NO live drive, NO cloud project, NO green cycle – just the
 // opus judge over preserved bytes, so it is safe to run independently (does not touch a live sweep's
 // substrate). Writes rejudge.json per candidate + prints a reproduce report.
 
@@ -1119,9 +1119,9 @@ export function loadPreservedArtifacts(candidateDir: string): Record<string, str
 }
 
 /** A judge verdict whose reason signals its JUDGED TARGET was absent (the produced artifact the judge
- *  scores , the primary file / the tests tree / the review-or-reflect verdict / the app code). During a
+ *  scores – the primary file / the tests tree / the review-or-reflect verdict / the app code). During a
  *  re-judge of PRESERVED data this is NOT a real FAIL: it means that target was not preserved (the run
- *  preserved SOME files but not the one the judge reads , e.g. navigator-reflect kept its code tree but
+ *  preserved SOME files but not the one the judge reads – e.g. navigator-reflect kept its code tree but
  *  not reflect-verdict.json). So it is "not rejudgeable (judge target not preserved)", same category as
  *  an entirely-empty artifacts/ dir, never a fresh FAIL. Matches the judges' own "no ... to judge" family
  *  (buildChainJudge + buildDriverNextStepJudge); a genuine content FAIL never carries these reasons. */
@@ -1131,10 +1131,10 @@ export function isMissingJudgeTarget(reason: string | undefined): boolean {
 }
 
 /** Classify a re-judge outcome vs the stored verdict. Keys on whether a stored verdict VALUE exists
- *  (classification OR score) , a telemetry.json can exist verdict-less for a never-judged run, which is
+ *  (classification OR score) – a telemetry.json can exist verdict-less for a never-judged run, which is
  *  "first-verdict", NOT a reproduce. Compares the right KIND: classification-based judges (build
  *  discriminator) by EXACT class; score-based judges (design/red) by |Δ| <= tol (opus judges are
- *  near-deterministic, not bit-identical , default tol 0.1). Pure + exported for a hermetic guard. */
+ *  near-deterministic, not bit-identical – default tol 0.1). Pure + exported for a hermetic guard. */
 export function classifyReproduce(
   stored: { storedClass?: string; storedScore?: number },
   fresh: { classification?: string; score?: number },
@@ -1152,7 +1152,7 @@ export function classifyReproduce(
 /** Re-judge every candidate of every chain under a preserved run dir. For each candidate: reconstruct
  *  producedArtifacts from artifacts/, resolve the chain's discriminator, re-run it vs the recorded
  *  reference, and compare to the stored telemetry verdict. Writes <candidate>/rejudge.json + prints a
- *  reproduce report. LOCAL (opus judges only) , safe to run alongside nothing-live. */
+ *  reproduce report. LOCAL (opus judges only) – safe to run alongside nothing-live. */
 export async function runRejudge(runRoot: string, experimentPath?: string): Promise<void> {
   if (!existsSync(runRoot)) throw new Error(`optimize-role --rejudge: run dir not found: ${runRoot}`);
   // eslint-disable-next-line no-console
@@ -1170,16 +1170,16 @@ export async function runRejudge(runRoot: string, experimentPath?: string): Prom
     const isBuildChain = handle in BUILD_ROLE_CHAINS;
     const chain = isDriver ? undefined : (isBuildChain ? BUILD_ROLE_CHAINS[handle] : ROLE_CHAINS[handle]);
     // A DRIVER-REPAIR experiment is judged by the corpus-faithful CODE-equivalence judge (candidate code vs
-    // the recorded repaired output, gated on honest-GREEN) , NOT the lean replay judge and NOT a fresh
+    // the recorded repaired output, gated on honest-GREEN) – NOT the lean replay judge and NOT a fresh
     // review. A LEAN experiment's chain dir is the experiment turn's chain (turn label ends with the handle,
-    // e.g. "0157-navigator-assess" -> "navigator-assess") , score it through the replay judge. Otherwise
+    // e.g. "0157-navigator-assess" -> "navigator-assess") – score it through the replay judge. Otherwise
     // require a known chain (driver / build / design).
     const driverSpec = DRIVER_TURN_SPECS[handle];
     const isRepairExperiment = !!(experiment && experimentBundle && driverSpec?.driverTurn === "repair");
     const isRefactorExperiment = !!(experiment && experimentBundle && driverSpec?.driverTurn === "refactor");
     const isExperimentChain = !!(experiment && experimentBundle && !isDriver && experiment.turn.endsWith(handle));
     if (!isDriver && !chain && !isExperimentChain) { console.log(`[rejudge] ${handle}: not a known chain, skipping`); continue; }
-    // Resolve the SAME discriminator the live sweep used , repair/refactor-experiment: the two-turn review-
+    // Resolve the SAME discriminator the live sweep used – repair/refactor-experiment: the two-turn review-
     // resolution judge (post-turn navigator review vs the recorded directive); lean experiment: the corpus-
     // faithful replay judge; driver: buildDriverNextStepJudge; else buildChainJudge.
     let quality: QualityGate;
@@ -1201,7 +1201,7 @@ export async function runRejudge(runRoot: string, experimentPath?: string): Prom
       const candDir = join(chainDir, candidateId);
       const producedArtifacts = loadPreservedArtifacts(candDir);
       if (Object.keys(producedArtifacts).length === 0) {
-        console.log(`[rejudge] ${handle}/${candidateId}: NO preserved artifacts , cannot re-judge (output not preserved)`);
+        console.log(`[rejudge] ${handle}/${candidateId}: NO preserved artifacts – cannot re-judge (output not preserved)`);
         writeFileSync(join(candDir, "rejudge.json"), JSON.stringify({ handle, candidateId, rejudgeable: false, reason: "no preserved artifacts" }, null, 2) + "\n");
         continue;
       }
@@ -1218,14 +1218,14 @@ export async function runRejudge(runRoot: string, experimentPath?: string): Prom
         continue;
       }
       // The judge short-circuited because its JUDGED TARGET was not preserved (some artifacts exist, but
-      // not the specific file/tree this judge scores , e.g. navigator-reflect kept its code tree but not
+      // not the specific file/tree this judge scores – e.g. navigator-reflect kept its code tree but not
       // reflect-verdict.json). That is NOT a real FAIL: it is not-rejudgeable, same as an empty dir.
       if (!verdict.passed && isMissingJudgeTarget(verdict.reason)) {
-        console.log(`[rejudge] ${handle}/${candidateId}: NOT rejudgeable , judge target not preserved (${verdict.reason})`);
+        console.log(`[rejudge] ${handle}/${candidateId}: NOT rejudgeable – judge target not preserved (${verdict.reason})`);
         writeFileSync(join(candDir, "rejudge.json"), JSON.stringify({ handle, candidateId, rejudgeable: false, reason: `judge target not preserved: ${verdict.reason}` }, null, 2) + "\n");
         continue;
       }
-      // Reproduce check , see classifyReproduce: keys on whether a stored verdict VALUE exists (not the
+      // Reproduce check – see classifyReproduce: keys on whether a stored verdict VALUE exists (not the
       // telemetry FILE, which can exist verdict-less for a never-judged run), compares the right KIND per
       // judge (classification exact; score within tolerance), flags first-verdict when nothing was stored.
       const storedClass = stored?.classification;
@@ -1235,7 +1235,7 @@ export async function runRejudge(runRoot: string, experimentPath?: string): Prom
       const report = { handle, candidateId, rejudgeable: true, fresh: { passed: verdict.passed, score: verdict.score, classification: verdict.classification, reason: verdict.reason }, stored: hasStoredVerdict ? { score: storedScore, classification: storedClass } : null, reproduce };
       writeFileSync(join(candDir, "rejudge.json"), JSON.stringify(report, null, 2) + "\n");
       // eslint-disable-next-line no-console
-      console.log(`[rejudge] ${handle}/${candidateId}: fresh=${verdict.passed ? "PASS" : "FAIL"}${verdict.classification ? ` (${verdict.classification})` : ""}${verdict.score !== undefined ? ` score=${verdict.score.toFixed(2)}` : ""} , ${reproduce}`);
+      console.log(`[rejudge] ${handle}/${candidateId}: fresh=${verdict.passed ? "PASS" : "FAIL"}${verdict.classification ? ` (${verdict.classification})` : ""}${verdict.score !== undefined ? ` score=${verdict.score.toFixed(2)}` : ""} – ${reproduce}`);
     }
   }
   // eslint-disable-next-line no-console

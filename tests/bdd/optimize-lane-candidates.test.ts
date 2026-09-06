@@ -2,7 +2,7 @@
 // roles carry a SCALAR model/effort (roles.<role>.model = "opus"), not the
 // per-turn map generateCandidates emits for build turns, so the lane sweep needs
 // role-appropriate candidate sets. defaultLaneCandidates builds them: baseline +
-// a model-downgrade + an effort-drop + one prompt/scope content variant , the
+// a model-downgrade + an effort-drop + one prompt/scope content variant – the
 // "model + effort + a prompt/scope variant" axis. The navigator REFLECT turn is a
 // critic gate (it FLAGS defects), not an authoring turn, so it is not swept.
 
@@ -29,7 +29,7 @@ describe("defaultLaneCandidates: design roles (scalar model/effort)", () => {
   });
 
   it("tries a MORE-capable model too: a sonnet-based role (ux-designer) gets an opus candidate", () => {
-    // "Try all possibilities" , a bigger model can win wall-clock via fewer round-trips.
+    // "Try all possibilities" – a bigger model can win wall-clock via fewer round-trips.
     const cands = defaultLaneCandidates(h("ux-designer"));
     const models = cands
       .filter((c) => typeof c.configOverrides.roles?.["ux-designer"]?.model === "string" && c.configOverrides.roles?.["ux-designer"]?.effort === undefined)

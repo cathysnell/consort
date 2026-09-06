@@ -1,5 +1,5 @@
 // role-telemetry: the per-role turn instrumentation that SURVIVES an isolated role run (the
-// point of the manifest/chain isolation substrate , each role's turn can be measured + lever-
+// point of the manifest/chain isolation substrate – each role's turn can be measured + lever-
 // swept on its own). Captures what the optimize harness measured per trial (durationMs, cost,
 // tokens, the agent-reported num_turns) PLUS the transcript + which levers were in effect, then
 // persists it to a durable dir + formats a one-line summary. Pure + deterministic here; the live
@@ -32,7 +32,7 @@ describe("formatRoleTelemetry: a one-line, human-scannable summary", () => {
     const line = formatRoleTelemetry(REC);
     expect(line).toContain("test-strategist");
     expect(line).toContain("produced");
-    // The agent-reported turn count , the signal that distinguishes a one-shot turn from a
+    // The agent-reported turn count – the signal that distinguishes a one-shot turn from a
     // retry/loop-heavy one (why a role was slow).
     expect(line).toMatch(/turns[=: ]*41/i);
     // Wall-clock in seconds (outer step timer), so a 14-min outlier is obvious at a glance.
@@ -62,7 +62,7 @@ describe("writeRoleTelemetry: persists a durable per-role record", () => {
     expect(back.transcript?.finalText).toContain("test-list.json");
   });
 
-  it("survives to disk independent of the (rm'd) workspace , the durable dir is the caller's", () => {
+  it("survives to disk independent of the (rm'd) workspace – the durable dir is the caller's", () => {
     writeRoleTelemetry(dir, REC);
     // A second role's record coexists (one file per chain).
     writeRoleTelemetry(dir, { ...REC, role: "dba", chain: "dba-chain" });

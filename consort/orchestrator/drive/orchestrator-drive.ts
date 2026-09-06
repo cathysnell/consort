@@ -80,7 +80,7 @@ export function nextDesignAction(state: DesignDriveState): DriveAction {
 
     if (!design.hasAcs) return { kind: "invoke-role", role: "spec-author", story };
     // Architect step: PROJECT the per-AC notes from the canon when the story maps
-    // cleanly (no turn); otherwise dispatch the architect live , to author the
+    // cleanly (no turn); otherwise dispatch the architect live – to author the
     // feature architecture.json on the first story, or clean a novel story + amend
     // the canon (the architect-canon-gap self-heal handles a mis-projection later).
     if (!design.architectAnnotated) {
@@ -110,7 +110,7 @@ export function nextDesignAction(state: DesignDriveState): DriveAction {
 function nextBuildAction(story: string, b: StoryBuild): WorkflowAction {
   if (!b.experimentCut || b.experimentStale) {
     // A re-cut after a discarded experiment re-forks the polluted paired branch. A STALE
-    // experiment (still active, but its design was re-authored under it , the withdraw-gate
+    // experiment (still active, but its design was re-authored under it – the withdraw-gate
     // + set-status hazard) is treated the same: re-fork clean off the feature branch so the
     // superseded design's code/tests cannot ride into the merge. Both re-cuts reset the
     // stale paired branch; a fresh first cut does not.
@@ -161,8 +161,8 @@ function nextBuildAction(story: string, b: StoryBuild): WorkflowAction {
   if (b.repairRegressionAc) return { kind: "invoke-role", role: "driver", story, buildMode: "repair", ac: b.repairRegressionAc };
   // Pure-supersession re-GREEN: the Navigator ASSESSED the green-failure and flagged
   // prior tests this AC supersedes (superseded-tests.json), with NO genuine regression
-  // to repair. The Driver permissively re-greens , the SAME honest GREEN as the plain
-  // path below , but this turn is LABELED green-superseded so the recorder writes a
+  // to repair. The Driver permissively re-greens – the SAME honest GREEN as the plain
+  // path below – but this turn is LABELED green-superseded so the recorder writes a
   // distinct dir the replay filter + corpus guard drop (per-turn verify is trusted at
   // replay, so this assess->re-green detour never re-dispatches). Runs AFTER repair so
   // a mixed verdict (supersession + regression) takes the repair path, which does both.
@@ -175,7 +175,7 @@ function nextBuildAction(story: string, b: StoryBuild): WorkflowAction {
   if (!b.codeWritten) return { kind: "invoke-role", role: "driver", story };
   if (!b.awaitingAcceptance) return { kind: "await-acceptance", story };
   // Deploy-verify self-heal: the deploy ran but verify FAILED as shared-state
-  // CONTAMINATION (fails the full feature suite, passes in isolation , a prior
+  // CONTAMINATION (fails the full feature suite, passes in isolation – a prior
   // test that does not own its DB state, e.g. an absolute whole-table aggregate).
   // The deploy step suppressed the terminal escalation into a one-shot marker
   // instead. Route it BEFORE re-deploying so the same fragile test is not re-run

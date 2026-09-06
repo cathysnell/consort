@@ -27,7 +27,7 @@
 //                      vocabulary. This list may only SHRINK.
 //
 // The union of the three MUST equal the vocabulary, so a newly-added event fails
-// the build until it is classified , forcing the author to say who emits it.
+// the build until it is classified – forcing the author to say who emits it.
 
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
@@ -52,7 +52,7 @@ function grepFiles(pattern: string, dir: string, include?: string): string[] {
 }
 
 /** A deterministic TS producer: the event name appears as a quoted string
- *  literal in a non-plumbing scripts/ *.ts file , either inline (`event: "x"`)
+ *  literal in a non-plumbing scripts/ *.ts file – either inline (`event: "x"`)
  *  or passed to an emit helper (`logDeployEvent(consortDir, "x", ...)`). Both are
  *  real emit sites; the guard must not force one syntax. Restricted to .ts (so
  *  the schema JSON enum + docs do not count) and PLUMBING is excluded, so only
@@ -98,10 +98,10 @@ const CODE_EMITTED = new Set<string>([
 ]);
 
 const AGENT_EMITTED = new Set<string>([
-  // Genuine role judgments , a human/agent decides these, no deterministic moment.
+  // Genuine role judgments – a human/agent decides these, no deterministic moment.
   "smell.flagged", "concern.flagged", "open.question", "progress",
   // gate.modified: a HIL gate-modification decision (the human alters a gate),
-  // not a deterministic substrate moment , stays role-emitted.
+  // not a deterministic substrate moment – stays role-emitted.
   "gate.modified",
   // PENDING promotion to CODE_EMITTED (user-approved direction). runner.missing:
   // the runner-dispatch substrate detects a missing runner deterministically.
@@ -150,8 +150,8 @@ describe("agent-log event vocabulary: every event is reachable (no silent/dead e
 
   it("KNOWN_DEAD events truly have NO producer (the list only shrinks; wiring one forces reclassification)", () => {
     for (const name of KNOWN_DEAD) {
-      expect(hasCodeProducer(name), `"${name}" now HAS a code producer , move it to CODE_EMITTED`).toBe(false);
-      expect(hasAgentInstruction(name), `"${name}" is now agent-instructed , move it to AGENT_EMITTED`).toBe(false);
+      expect(hasCodeProducer(name), `"${name}" now HAS a code producer – move it to CODE_EMITTED`).toBe(false);
+      expect(hasAgentInstruction(name), `"${name}" is now agent-instructed – move it to AGENT_EMITTED`).toBe(false);
     }
   });
 });

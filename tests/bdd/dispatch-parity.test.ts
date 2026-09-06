@@ -1,11 +1,11 @@
-// Stage F , the "same process" parity proof. The live drive (performTurnViaExecutor,
+// Stage F – the "same process" parity proof. The live drive (performTurnViaExecutor,
 // executor-dispatch.ts:324) and the integration tests / manifest-runner (resolveAgent,
 // manifest-runner.ts:135) now resolve a step's agent through the SAME seam:
-// buildAgent(manifest.agent, context). The ONLY difference is the build context , the live drive
+// buildAgent(manifest.agent, context). The ONLY difference is the build context – the live drive
 // supplies `liveDispatch` (=> the uncontained ClaudeStepAgent), the runner supplies corpusRoot
 // (for replay). This test proves there is ONE resolution path: given a shipped manifest, both call
 // sites produce the same agent kind, and the live context yields the live variant while its absence
-// yields the contained variant , from the identical buildAgent call.
+// yields the contained variant – from the identical buildAgent call.
 
 import { describe, it, expect } from "vitest";
 import { SHIPPED_MANIFESTS, manifestForAction } from "../../consort/orchestrator/steps/manifest";
@@ -53,13 +53,13 @@ describe("dispatch parity: live drive + tests resolve the agent via ONE buildAge
   it("a REPLAY context resolves the SAME shipped manifest to a step-aware replay agent (kind swap, same manifest)", () => {
     // Stage G swaps the kind to `replay` from the REPLAY_DIR env; here we prove the seam accepts it:
     // the identical shipped manifest, its kind overridden to replay, resolves to the corpus agent
-    // WITHOUT any manifest edit , the modular point.
+    // WITHOUT any manifest edit – the modular point.
     const action: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" };
     const manifest = manifestForAction(action)!;
     const replaySpec = { ...manifest.agent!, kind: "replay", config: {} };
     const agent = buildAgent(replaySpec, { workspaceDir: "/tmp/x", corpusRoot: "/tmp/corpus" });
     expect(typeof agent.invoke).toBe("function");
-    // It is NOT a ClaudeStepAgent (no spawn) , it's the step-aware replay agent.
+    // It is NOT a ClaudeStepAgent (no spawn) – it's the step-aware replay agent.
     expect(agent).not.toBeInstanceOf(ClaudeStepAgent);
   });
 });

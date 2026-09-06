@@ -182,17 +182,17 @@ function parkedGateName(gate: WorkflowAction): string | null {
 /**
  * The `gate.surfaced` event for a HITL gate the drive PARKED at in interactive mode,
  * or null for a non-gate action. Distinct from orchestratorLogEvents' approve-*
- * cases, which emit gate.APPROVED , the outcome of PERFORMING a gate (the Human
+ * cases, which emit gate.APPROVED – the outcome of PERFORMING a gate (the Human
  * Proxy approves headless). When the driver instead STOPS before a gate for a live
  * human, `onAction` never fires (orchestrator-run halts at stopWhen, before the
- * perform), so the gate is never surfaced to the log , the dashboard can't show
+ * perform), so the gate is never surfaced to the log – the dashboard can't show
  * "waiting on you" and the gate never flashes. The spec gate (surface-gate) +
  * acceptance (await-acceptance) pre-surface via a preceding NON-HITL action, but the
  * intake / plan / deploy / promote gates park directly and had no surfacing at all.
  * This is the SINGLE surfacing for a parked gate, its slots mirroring surface-gate's
  * (gate + subject + story). Emitted at the interactive park (drive.cli reportGate),
- * guarded by `gateAlreadySurfaced` so a re-run at the same park , and the two gates
- * that already pre-surface , never double-log.
+ * guarded by `gateAlreadySurfaced` so a re-run at the same park – and the two gates
+ * that already pre-surface – never double-log.
  */
 export function parkedGateSurfacedEvent(
   gate: WorkflowAction,
@@ -222,7 +222,7 @@ export function parkedGateSurfacedEvent(
 /**
  * Has the parked `gate` ALREADY been surfaced-and-not-yet-approved in the log? True
  * when the most recent gate.surfaced/gate.approved for this gate (matched by name,
- * and by story for the story-scoped spec/acceptance gates) is a gate.surfaced , so
+ * and by story for the story-scoped spec/acceptance gates) is a gate.surfaced – so
  * a repeated drive re-run at the same park, and the spec/acceptance gates that
  * pre-surface via surface-gate/await-acceptance, do not re-emit a duplicate. A prior
  * cycle's gate.approved (or no gate event at all) is NOT "already surfaced", so a

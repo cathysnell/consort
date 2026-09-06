@@ -2,7 +2,7 @@
 // shipped manifest, agentOptions.{model,effort} must equal what resolveConsortSettings() resolves for
 // the same action at the DEFAULT precedence (no project consort-config.json). defaultConsortConfig no
 // longer bakes per-turn model/effort and there is no overlay file, so the resolver reads the manifest
-// directly , this guard therefore also proves nothing has re-introduced a file-layer copy that would
+// directly – this guard therefore also proves nothing has re-introduced a file-layer copy that would
 // shadow the manifest. If it goes RED, either a manifest drifted or a per-turn default crept back into
 // defaultConsortConfig; fix the manifest (the one home), not this test.
 
@@ -37,9 +37,9 @@ function actionFromMatch(match: Record<string, unknown>, role: string, hasMode: 
 
 describe("step-manifest agentOptions ≡ resolveConsortSettings (per-step config parity)", () => {
   // Resolve against what a REAL scaffolded project runs: project setup writes defaultConsortConfig()
-  // (now PROJECT settings only , no per-turn model/effort) to the project consort-config.json, and the
+  // (now PROJECT settings only – no per-turn model/effort) to the project consort-config.json, and the
   // drive reads THAT file, falling through to the manifest agentOptions for per-turn model/effort. So
-  // seed the config exactly as scaffolding does, then resolve , the manifest agentOptions must equal
+  // seed the config exactly as scaffolding does, then resolve – the manifest agentOptions must equal
   // what the resolver returns (which, with no file-layer per-turn copy, IS the manifest).
   const proj = mkdtempSync(join(tmpdir(), "parity-scaffolded-"));
   writeConsortConfig(proj, defaultConsortConfig(), { force: true });

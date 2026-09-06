@@ -82,7 +82,7 @@ function storyAcProblems(fdir: string, story: string): string[] {
     }
     acs.push({ name: f.replace(/\.json$/, ""), content });
     // checkArtifactConformance JSON.parses first, so a truncated/invalid AC file
-    // (missing closing brace) fails here with "not valid JSON" , the exact defect
+    // (missing closing brace) fails here with "not valid JSON" – the exact defect
     // that previously slipped past the spec + reflect gates to deploy (Finding 29).
     const r = checkArtifactConformance(canonicalArtifactName(p), content);
     if (!r.ok) problems.push(`${story}/acs/${f}: ${r.violations.join("; ")}`);
@@ -159,12 +159,12 @@ export function storyIndependenceForStoryReason(fdir: string, story: string): st
  * story.json sets `requires_e2e: true` MUST carry >=1 `layer:"E2E"` AC. This is the
  * flatten-PROOF lever for a client-facing story the design lane keeps collapsing into a
  * backend "the record is saved" API AC. Everything else we can steer with is agent-derived
- * , the AC layer tags, the architect's renders_via, prose in story.md , and the design lane
+ * – the AC layer tags, the architect's renders_via, prose in story.md – and the design lane
  * flattens its own classification. `requires_e2e` is set by the HUMAN/PO on the story, so the
  * design lane cannot override it: a flagged story with no E2E AC HARD-BLOCKS (fail-closed)
  * instead of opening on a backend-only spec. Complements the FEATURE-wide checkE2eLayerPresent
  * (which a sibling story's E2E AC can satisfy); this is PER-story, so it bites even when other
- * stories carry the E2E , the sub-case checkE2eLayerPresent cannot see. Null when the story is
+ * stories carry the E2E – the sub-case checkE2eLayerPresent cannot see. Null when the story is
  * unflagged / already has an E2E AC / is absent / is malformed (its own conformance check
  * catches malformed).
  */
@@ -188,7 +188,7 @@ export function storyRequiresE2eReason(fdir: string, story: string): string | nu
     }
   }
   return (
-    `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" , the client<->server ` +
+    `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" – the client<->server ` +
     `interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be ` +
     `an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a ` +
     `client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`
@@ -198,7 +198,7 @@ export function storyRequiresE2eReason(fdir: string, story: string): string | nu
 /**
  * Feature-wide backstop for the per-story requires_e2e check: apply it to every DESIGNED
  * story (one with an acs/ dir), so a flagged story that slipped its per-story gate still
- * blocks the ship gate. Defers on a not-yet-designed flagged story (no acs/ yet , the
+ * blocks the ship gate. Defers on a not-yet-designed flagged story (no acs/ yet – the
  * streaming design lane may not have authored it), the same way the other feature-wide
  * checks tolerate a partially-designed feature.
  */
@@ -207,7 +207,7 @@ function requiresE2eReason(consortDir: string, featureId: string): string | null
   const storiesDir = join(fdir, "stories");
   if (!existsSync(storiesDir)) return null;
   for (const s of readdirSync(storiesDir)) {
-    if (!existsSync(join(storiesDir, s, "acs"))) continue; // not designed yet , defer
+    if (!existsSync(join(storiesDir, s, "acs"))) continue; // not designed yet – defer
     const r = storyRequiresE2eReason(fdir, s);
     if (r !== null) return r;
   }
@@ -307,10 +307,10 @@ function nfrCoverageReason(consortDir: string, featureId: string): string | null
   const r = checkNfrCoverage(nfrsContent, arch, projectBriefRefs(consortDir));
   if (r.ok) return null;
   // Name WHICH nfrs.md (feature override vs project) + that this HARD-BLOCKS the spec gate, so the
-  // HIL/agent sees the exact uncovered Required NFR and where it was declared , the architect must add
+  // HIL/agent sees the exact uncovered Required NFR and where it was declared – the architect must add
   // a matching brief_ref (or nfr_out_of_scope) before the gate opens.
   const src = nfrsFile === featureNfrs ? `per-feature nfrs.md (features/${featureId}/nfrs.md)` : "project nfrs.md";
-  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} , ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
+  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} – ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
 }
 
 /**
@@ -329,7 +329,7 @@ function fitnessCoverageReason(consortDir: string, featureId: string, testListJs
 
 /**
  * E2E-coverage test_list-gate condition: every AC tagged `layer:"E2E"` (a client<->server
- * contract , the client rendering a REAL server response) MUST have a real Playwright e2e in the
+ * contract – the client rendering a REAL server response) MUST have a real Playwright e2e in the
  * test-list (scenario_file under an `e2e/` path), never only a mocked component test whose
  * fabricated response envelope drifts from the real wire contract. Makes test-strategy.md's E2E
  * rule a DETERMINISTIC gate (was prose the supervisor was asked to catch), closing the recurring
@@ -361,7 +361,7 @@ function e2eCoverageReason(consortDir: string, featureId: string, testListJson: 
  * Persistence-coverage test_list-gate condition: a service_backed feature's
  * architecture must declare its persistence_invariants[] and the test-list must
  * cover each (an item referencing its invariant_id), so every DB-level guarantee
- * gets a real-branch test tied to the schema's own contract , not a blunt quota,
+ * gets a real-branch test tied to the schema's own contract – not a blunt quota,
  * and not a re-test of the ORM. Trivial features are exempt. Null when covered /
  * no test-list or architecture yet.
  */
@@ -427,8 +427,8 @@ function invariantCoverageDistinctReason(consortDir: string, featureId: string, 
  * escape hatch): the layering + fitness guards all key off `service_backed`, so an
  * architect that omits it / sets it false on a feature that demonstrably persists
  * data silently disables every layering check. This cross-checks the declaration
- * against the architect's OWN structured evidence , the feature's AC `layer`s and
- * the architecture.json `nfrs[]` text , and hard-blocks a not-service_backed
+ * against the architect's OWN structured evidence – the feature's AC `layer`s and
+ * the architecture.json `nfrs[]` text – and hard-blocks a not-service_backed
  * feature that shows persistence evidence. Null when consistent / no architecture.
  */
 function serviceBackedReason(consortDir: string, featureId: string): string | null {
@@ -468,12 +468,12 @@ function serviceBackedReason(consortDir: string, featureId: string): string | nu
  * E2E-layer-presence spec-gate condition (closes the "UI feature designed as all-backend"
  * escape): `e2eCoverageReason` only bites once an AC is tagged `layer:"E2E"`, so a design
  * lane that mis-classifies every client-facing AC as `API`/`Infra` produces a UI feature with
- * ZERO E2E ACs that passes the coverage guard vacuously , exactly how the actor-less pick form
+ * ZERO E2E ACs that passes the coverage guard vacuously – exactly how the actor-less pick form
  * shipped. This cross-checks the architect's OWN structural signal (a `boundary` layer with
  * `renders_via` = the feature renders a UI) against the feature's AC `layer`s: a UI-rendering
  * feature must carry >=1 `layer:"E2E"` AC. It is FEATURE-wide but NON-monotonic (zero E2E now
- * can become >=1 once a later, still-undesigned story is authored), so , unlike the monotonic
- * serviceBacked check , it enforces ONLY once every story the feature-spec DECLARES has been
+ * can become >=1 once a later, still-undesigned story is authored), so – unlike the monotonic
+ * serviceBacked check – it enforces ONLY once every story the feature-spec DECLARES has been
  * designed (an `acs/` dir on disk); a partially-designed feature returns null (defer). Null when
  * design is incomplete / the feature renders no UI / an E2E AC already exists / no architecture.
  */
@@ -482,7 +482,7 @@ export function e2eLayerPresentReason(consortDir: string, featureId: string): st
   if (arch === undefined) return null;
   const fdir = featureDir(consortDir, featureId);
   // Declared stories (feature-spec.json.stories) vs designed stories (an acs/ dir on disk).
-  // Defer until every declared story is designed , the streaming design lane may not have
+  // Defer until every declared story is designed – the streaming design lane may not have
   // reached the client-facing story yet, and a premature zero-E2E read would false-positive.
   let declared: string[];
   try {
@@ -493,7 +493,7 @@ export function e2eLayerPresentReason(consortDir: string, featureId: string): st
   if (declared.length === 0) return null;
   const storiesDir = join(fdir, "stories");
   const hasAcs = (story: string): boolean => existsSync(join(storiesDir, story, "acs"));
-  if (!declared.every(hasAcs)) return null; // design not complete yet , defer
+  if (!declared.every(hasAcs)) return null; // design not complete yet – defer
   // Every declared story is designed: collect its AC layers (the same acs/ walk serviceBackedReason uses).
   const acLayers: string[] = [];
   for (const s of declared) {
@@ -509,7 +509,7 @@ export function e2eLayerPresentReason(consortDir: string, featureId: string): st
     }
   }
   // The architect-independent client-facing signal: a React UI track (consort-config.json,
-  // read from the project root , consortDir is <projectDir>/.consort). Lets the check fire even
+  // read from the project root – consortDir is <projectDir>/.consort). Lets the check fire even
   // when the mis-classification also dropped the boundary's renders_via.
   let uiReact = false;
   try {
@@ -525,7 +525,7 @@ export function e2eLayerPresentReason(consortDir: string, featureId: string): st
 /**
  * db-design story-attribution spec-gate condition: a `create_table` must be attributed to a story
  * that actually persists (has an API/Infra AC), never a pure UI/E2E shell story. This closes the
- * root cause of the persistence-invariant reflect loop , a scaffold story handed the table creation
+ * root cause of the persistence-invariant reflect loop – a scaffold story handed the table creation
  * makes `invariantRealizingStory` name it the owner, so the fitness PI tests anchor there and the
  * navigator reflect gate bounces them. Cross-checks db-design `schema_changes[]` against each
  * story's AC `layer`s (the same acs/ walk serviceBackedReason uses). Null when every create_table
@@ -639,7 +639,7 @@ export function resolveArtifactInputs(
       // declare its layers, and every Required NFR must be covered by a brief_ref.
       const serviceBacked = serviceBackedReason(consortDir, featureId);
       if (serviceBacked !== null) return { reason: serviceBacked };
-      // A UI-rendering feature (boundary renders_via) must carry >=1 layer:"E2E" AC , else the
+      // A UI-rendering feature (boundary renders_via) must carry >=1 layer:"E2E" AC – else the
       // design lane classified a client-facing feature as all-backend and the E2E-coverage guard
       // (test_list gate) never bites. Enforced only once every declared story is designed.
       const e2eLayerReason = e2eLayerPresentReason(consortDir, featureId);
@@ -656,7 +656,7 @@ export function resolveArtifactInputs(
       const dbReason = dbDesignReason(consortDir, featureId);
       if (dbReason !== null) return { reason: dbReason };
       // db-design must attribute each create_table to a story that actually persists (API/Infra AC),
-      // never a UI/E2E shell story , the mis-attribution that otherwise makes the fitness PI tests
+      // never a UI/E2E shell story – the mis-attribution that otherwise makes the fitness PI tests
       // anchor to a scaffold story and get bounced by the navigator reflect gate.
       const schemaStoryReason = schemaChangeStoryRealizesReason(consortDir, featureId);
       if (schemaStoryReason !== null) return { reason: schemaStoryReason };
@@ -702,7 +702,7 @@ export function resolveArtifactInputs(
         if (distinctReason !== null) return { reason: distinctReason };
         // E2E coverage (Gate 3): an AC whose acceptance is a CLIENT render of a real SERVER
         // response (a validation rejection shown inline, a success confirmation) is a
-        // client<->server contract , layer:"E2E" , and MUST have a real Playwright e2e, never
+        // client<->server contract – layer:"E2E" – and MUST have a real Playwright e2e, never
         // only a mocked component test whose fabricated response envelope drifts from the real
         // wire contract (the S3 inline-error defect: the mock used a flat body, the backend
         // sent {detail:{...}}, so nothing rendered against the live API).

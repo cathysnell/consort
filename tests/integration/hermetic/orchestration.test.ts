@@ -1,13 +1,13 @@
 // A 2-turn REPLAY orchestration, expressed entirely as step manifests + driven by the
 // Template Method (StepExecutor), hermetically:
-//   Turn 1 , PO Human Mock: replays the human PO's RECORDED authoring (product-overview.md,
+//   Turn 1 – PO Human Mock: replays the human PO's RECORDED authoring (product-overview.md,
 //     nfrs.md, design-brief.md) from the stockflow corpus into the workspace, logs it, and
 //     ROUTES to the spec-author breakdown (its manifest's produced.next).
-//   Turn 2 , Spec Author: takes those three PO files as INPUTS and produces feature-spec.json
+//   Turn 2 – Spec Author: takes those three PO files as INPUTS and produces feature-spec.json
 //     (a mock agent stands in for the model; the PO mock is the piece under demonstration).
 //
-// The demo manifests live in the integration corpus (tests/integration/manifests/) , NOT the
-// shipped step-manifests/ , because turn 2 shares its `match` with the production
+// The demo manifests live in the integration corpus (tests/integration/manifests/) – NOT the
+// shipped step-manifests/ – because turn 2 shares its `match` with the production
 // spec-author-breakdown manifest; keeping them integration-local avoids an ambiguous overlap in
 // the shipped set while still exercising the exact loader/Step/StepExecutor path.
 
@@ -112,7 +112,7 @@ describe("stockflow-demo: 2-turn replay orchestration through the StepExecutor",
     expect(existsSync(join(ws, "nfrs.md"))).toBe(true);
     expect(existsSync(join(ws, "design-brief.md"))).toBe(true);
     expect(readFileSync(join(ws, "product-overview.md"), "utf8").length).toBeGreaterThan(0);
-    // And it ROUTED to the spec-author breakdown , the next turn.
+    // And it ROUTED to the spec-author breakdown – the next turn.
     expect(result.bounded.action).toEqual(SPEC_AUTHOR);
   });
 
@@ -123,7 +123,7 @@ describe("stockflow-demo: 2-turn replay orchestration through the StepExecutor",
     }
 
     const manifest = manifestForAction(SPEC_AUTHOR, loadStepManifests(MANIFEST_DIR))!;
-    // Turn 2 takes the 3 PO files by their manifest input ids , the orchestrator resolves
+    // Turn 2 takes the 3 PO files by their manifest input ids – the orchestrator resolves
     // them from where turn 1 wrote them.
     expect(manifest.inputs.map((i) => i.id)).toEqual(["product-overview", "nfrs", "design-guideline"]);
 

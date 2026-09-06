@@ -1,4 +1,4 @@
-// mock-replay-agent: a role-agnostic replay mock , copies a role's RECORDED corpus artifacts
+// mock-replay-agent: a role-agnostic replay mock – copies a role's RECORDED corpus artifacts
 // into the workspace + logs one authoring event. Pins the two behaviors the design-role
 // integration manifests depend on: NESTED seed paths are mkdir'd (stories/<S>/acs/<AC>.json),
 // and a missing recorded seed fails loud (a replay never fabricates).

@@ -1,4 +1,4 @@
-// Handoff mapping , the pure functions that map a drive WorkflowAction to the champion walk's
+// Handoff mapping – the pure functions that map a drive WorkflowAction to the champion walk's
 // HandoffPlan unit and classify a handoff as a build vs design turn. These are shared by BOTH the
 // optimize.cli bin AND optimize-live.ts, so they live in a lib here (not in the bin): a library must
 // never import a value from a bin, and both consumers import these DOWN from this module.

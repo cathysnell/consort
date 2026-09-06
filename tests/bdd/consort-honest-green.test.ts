@@ -50,7 +50,7 @@ const pass: GreenVerifier = async () => ({ passed: true, summary: "ok" });
 const fail: GreenVerifier = async () => ({ passed: false, summary: "T2 returns 201, sibling test T1 expects 303 (contradiction)" });
 // A failing verifier that surfaces the verify's OWN captured output (the pytest/vitest failure
 // tail), the way defaultGreenVerifier now does. greenOpenCycle must record this into the
-// green-failure marker so the ASSESS turn starts from the real failure , not a re-scan.
+// green-failure marker so the ASSESS turn starts from the real failure – not a re-scan.
 const failWithOutput: GreenVerifier = async () => ({
   passed: false,
   summary: "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)",
@@ -101,7 +101,7 @@ describe("honest GREEN: greenOpenCycle runs a real verify before stamping green"
     const r = await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: failWithOutput });
     expect(r.needsAssess).toBe(true);
     const gf = readGreenFailure(tdd, F, S, "AC1")!;
-    // The real failure lines are now in the marker , the assess turn starts from them
+    // The real failure lines are now in the marker – the assess turn starts from them
     // instead of re-scanning the tree to rediscover the missing module.
     expect(gf.failureOutput).toMatch(/Cannot find module '\.\.\/\.\.\/src\/pages\/StockViewPage'/);
     expect(gf.failureOutput).toMatch(/StockView\.test\.tsx/);
@@ -171,7 +171,7 @@ describe("honest GREEN: greenOpenCycle runs a real verify before stamping green"
     await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: fail }); // 1st -> assess
     writeGreenFailure(tdd, F, S, "AC1", {
       assessed: true,
-      // The SAME summary the `fail` verifier returns , the diagnosis still explains it.
+      // The SAME summary the `fail` verifier returns – the diagnosis still explains it.
       summary: "T2 returns 201, sibling test T1 expects 303 (contradiction)",
       diagnosis: "T2's 201 contradicts T1's 303; reconcile the intended status",
       fixAttempts: MAX_REGRESSION_FIX_ATTEMPTS - 1,
@@ -209,7 +209,7 @@ describe("honest GREEN: greenOpenCycle runs a real verify before stamping green"
   });
 });
 
-// FAITHFUL REPLAY: the per-turn honest-GREEN verify runs even under a build replay , the tree is
+// FAITHFUL REPLAY: the per-turn honest-GREEN verify runs even under a build replay – the tree is
 // SYNCED byte-identical to record-time (replayBuildTurn), so the same verify reaches the same
 // verdict the recording did. The old replayTrustVerifier (hardcoded passed:true) is GONE: faking a
 // pass let the tree never disagree, skipping recorded assess/repair turns and orphaning a

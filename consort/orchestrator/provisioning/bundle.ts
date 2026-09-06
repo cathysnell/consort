@@ -1,4 +1,4 @@
-// bundle: the environment overlay primitives , lay recorded/seed assets onto a provisioned workspace.
+// bundle: the environment overlay primitives – lay recorded/seed assets onto a provisioned workspace.
 // Prep routines (the integration chain, the gated driver-green harness) seed a scaffolded or throwaway
 // workspace with agent definitions + pre-turn code/design trees before a run drives. Those overlays
 // were open-coded per caller (each with its own cpSync/mkdirSync); this is the ONE home for the
@@ -10,7 +10,7 @@ import { join, dirname } from "node:path";
 /** Copy the kit's role agent definitions (skills/consort/agents/*.md) into
  *  <workspaceDir>/.claude/agents/ so a spawned `claude --agent <role>` resolves them. The kit's
  *  agents live in the repo (NOT in the scm-utils package's deployClaudeAgents), so this copies
- *  from there directly. A plain file copy , the load-bearing bit a live agent needs from the
+ *  from there directly. A plain file copy – the load-bearing bit a live agent needs from the
  *  workspace, with no cloud project. */
 export function layDownKitAgents(workspaceDir: string, kitDir: string = process.cwd()): void {
   const src = join(kitDir, "skills", "consort", "agents");

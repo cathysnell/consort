@@ -1,13 +1,13 @@
 // Stage 2 (#578) 2b golden: dispatching spec-author breakdown THROUGH the StepExecutor
 // (buildDriveEffects.performViaExecutor) drives the SAME deterministic CLIs, in the SAME order,
-// as the legacy perform() path , the byte-identical contract that lets the executor own the live
+// as the legacy perform() path – the byte-identical contract that lets the executor own the live
 // turn. The ONE declared delta (kept intentionally, per the plan) is execute()'s validate-outputs
 // gate, which runs the manifest validators at the turn; the CLI sequence around the agent is
 // identical: reset-breakdown (pre) -> agent -> reconcile (materialize) -> sync-breakdown (post).
 //
 // Hermetic: a fake runner records every DriveCommand. The agent's `claude` command is dispatched
 // by LiveDriveStepAgent through that same runner, so both paths funnel through one command stream
-// we can compare. No live spawn , the fake runner just records + returns.
+// we can compare. No live spawn – the fake runner just records + returns.
 
 import { describe, it, expect } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
@@ -23,7 +23,7 @@ const FEATURE = "F1-stock-visibility";
 const RED_STORY = "S1-create-sku";
 const RED: WorkflowAction = { kind: "invoke-role", role: "navigator", story: RED_STORY };
 
-/** Seed the breakdown manifest's declared inputs into the real .consort , the uncontained agent
+/** Seed the breakdown manifest's declared inputs into the real .consort – the uncontained agent
  *  reads them there, and the executor's phase-1 gate checks their presence. product-overview + nfrs
  *  are PROJECT-level (.consort root); feature-request is FEATURE-scoped at
  *  features/<F>/feature-request.md (featureRequestMd / the corrected breakdown manifest source
@@ -57,7 +57,7 @@ function recordingRunner(consortDir: string) {
         if (cmd.kind === "cli") {
           const verb = cmd.args[0];
           labels.push(`cli:${cmd.bin.replace("consort-", "")}:${verb}`);
-          // The reconcile CLI materializes the agent-log , simulate that so validate-outputs passes.
+          // The reconcile CLI materializes the agent-log – simulate that so validate-outputs passes.
           if (cmd.bin.endsWith("-log") && verb === "--reconcile") {
             writeFileSync(join(consortDir, "agent-log.jsonl"),
               JSON.stringify({ timestamp: "2026-08-05T00:00:00Z", level: "info", role: "spec-author", event: "artifact.written", message: "wrote feature-spec.json" }) + "\n");
@@ -130,7 +130,7 @@ describe("performViaExecutor (Stage 2 2b): spec-author breakdown through the Ste
     const projectDir = mkdtempSync(join(tmpdir(), "pve-"));
     try {
       const effects = buildDriveEffects(cfg(join(projectDir, ".consort"), projectDir, { useManifestSteps: true }));
-      // estimate-committed is a design turn that stays on the LEGACY path , it re-syncs the sprint
+      // estimate-committed is a design turn that stays on the LEGACY path – it re-syncs the sprint
       // backlog via a dedicated commandsForAction branch with no shipped manifest, so it is
       // deliberately EXCLUDED from executorDispatched (unlike plain `estimate`, which IS dispatched).
       const notMigrated: WorkflowAction = { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" } as WorkflowAction;
@@ -162,7 +162,7 @@ describe("performViaExecutor (Stage 2 2b): spec-author breakdown through the Ste
       const effects = buildDriveEffects(cfg(consortDir, projectDir, { useManifestSteps: true, runner }));
       const bounded = await effects.performViaExecutor!(BREAKDOWN, state, routerDeps);
       expect(bounded).toBeDefined();
-      // sync-breakdown (the `after` CLI) must NOT have run , validation blocked the turn.
+      // sync-breakdown (the `after` CLI) must NOT have run – validation blocked the turn.
       expect(labels).not.toContain("cli:sync-breakdown");
       // reset-breakdown (pre) + reconcile still ran (they precede the gate).
       expect(labels).toContain("cli:reset-breakdown");
@@ -172,16 +172,16 @@ describe("performViaExecutor (Stage 2 2b): spec-author breakdown through the Ste
   });
 });
 
-// ─── navigator RED (a BUILD turn, LEAN , no cloud) through the StepExecutor ───────────────────────
+// ─── navigator RED (a BUILD turn, LEAN – no cloud) through the StepExecutor ───────────────────────
 // Same performViaExecutor seam, widened to a build turn. The 3 divergences from breakdown:
 //   1. inputs are STORY-scoped (test-list-per-story.json + the story's acs/ DIR), not feature-flat.
-//   2. the output is the PRODUCT channel , a real tests/ tree at the PROJECT ROOT (not .consort).
-//   3. the post-turn CLI is the `@build-cycle` marker (the RED cycle stamp), NOT sync-breakdown , so
+//   2. the output is the PRODUCT channel – a real tests/ tree at the PROJECT ROOT (not .consort).
+//   3. the post-turn CLI is the `@build-cycle` marker (the RED cycle stamp), NOT sync-breakdown – so
 //      the expander must RESOLVE the marker (via buildCycleCommand), not filter it. Absent that, no
 //      RED is stamped, testsWritten never flips, and the loop re-proposes RED and stalls.
 
 /** Seed navigator RED's story-scoped inputs on the live tree: the per-story test-list + the acs/
- *  dir (a DIRECTORY input , presence-checked, not injected). The executor's phase-1 gate needs both. */
+ *  dir (a DIRECTORY input – presence-checked, not injected). The executor's phase-1 gate needs both. */
 function seedRedInputs(consortDir: string): void {
   const storyDir = join(consortDir, "features", FEATURE, "stories", RED_STORY);
   mkdirSync(join(storyDir, "acs"), { recursive: true });
@@ -227,7 +227,7 @@ function redRecordingRunner(projectDir: string, consortDir: string) {
 }
 
 describe("performViaExecutor (#590): navigator RED (the PRODUCT channel) through the StepExecutor", () => {
-  it("runs the build-turn CLI sequence: claude, @build-cycle (RED stamp), reconcile , and writes tests/ at the project ROOT", async () => {
+  it("runs the build-turn CLI sequence: claude, @build-cycle (RED stamp), reconcile – and writes tests/ at the project ROOT", async () => {
     const projectDir = mkdtempSync(join(tmpdir(), "pve-red-"));
     const consortDir = join(projectDir, ".consort");
     mkdirSync(consortDir, { recursive: true });
@@ -241,7 +241,7 @@ describe("performViaExecutor (#590): navigator RED (the PRODUCT channel) through
       expect(bounded).toBeDefined();
       // The command stream in Template-Method phase order: RED has NO pre-turn CLI; the agent writes
       // its tests; reconcile materializes the meta agent-log; the post-turn `@build-cycle` marker
-      // RESOLVES to the cycle `begin` (RED stamp) , NOT filtered out, NOT sync-breakdown.
+      // RESOLVES to the cycle `begin` (RED stamp) – NOT filtered out, NOT sync-breakdown.
       expect(rec.labels).toEqual([
         "claude:navigator",
         "cli:log:--reconcile",
@@ -270,7 +270,7 @@ describe("performViaExecutor (#590): navigator RED (the PRODUCT channel) through
       const effects = buildDriveEffects(cfg(consortDir, projectDir, { useManifestSteps: true, runner, loopGranularity: "story" }));
       const bounded = await effects.performViaExecutor!(RED, state, routerDeps);
       expect(bounded).toBeDefined();
-      // The `@build-cycle` RED stamp (cycle begin) must NOT have run , validation (no tests/) blocked it.
+      // The `@build-cycle` RED stamp (cycle begin) must NOT have run – validation (no tests/) blocked it.
       expect(labels).not.toContain("cli:begin");
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
@@ -295,7 +295,7 @@ describe("performViaExecutor (#590): navigator RED (the PRODUCT channel) through
 // ─── driver GREEN (a BUILD turn) through the StepExecutor ─────────────────────────────────────────
 // The build lane's other half, same performViaExecutor seam. Divergences from navigator RED:
 //   - the PRODUCT edits span the app (app/ + migrations + client/), so there is NO single product
-//     file to validate , the manifest's validated output is the META agent-log; the post-turn
+//     file to validate – the manifest's validated output is the META agent-log; the post-turn
 //     @build-cycle honest-GREEN verify (the `green` verb) is what proves the code + flips codeWritten.
 //   - HERE (hermetic) the @build-cycle green is just recorded as a label + its DB verify is NOT run
 //     (no cloud); the LIVE honest-GREEN is the cloud-gated proof. This golden asserts the DISPATCH
@@ -304,7 +304,7 @@ describe("performViaExecutor (#590): navigator RED (the PRODUCT channel) through
 const GREEN: WorkflowAction = { kind: "invoke-role", role: "driver", story: RED_STORY };
 
 describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () => {
-  it("runs the build-turn CLI sequence: claude, reconcile, @build-cycle (green) , with agent-log as the validated meta output", async () => {
+  it("runs the build-turn CLI sequence: claude, reconcile, @build-cycle (green) – with agent-log as the validated meta output", async () => {
     const projectDir = mkdtempSync(join(tmpdir(), "pve-green-"));
     const consortDir = join(projectDir, ".consort");
     mkdirSync(consortDir, { recursive: true });
@@ -315,7 +315,7 @@ describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () 
         async run(cmd: DriveCommand) {
           if (cmd.kind === "claude") {
             labels.push(`claude:${cmd.role}`);
-            // Simulate the driver editing app code (the product channel spans the app , not a single file).
+            // Simulate the driver editing app code (the product channel spans the app – not a single file).
             mkdirSync(join(projectDir, "app"), { recursive: true });
             writeFileSync(join(projectDir, "app", "models.py"), "class Sku:\n    pass\n");
             return;
@@ -336,7 +336,7 @@ describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () 
 
       expect(bounded).toBeDefined();
       // Same phase order as RED: agent, reconcile (materialize the meta agent-log the validator
-      // checks), then the post-turn @build-cycle , here the `green` verb (honest-GREEN), NOT `begin`.
+      // checks), then the post-turn @build-cycle – here the `green` verb (honest-GREEN), NOT `begin`.
       expect(labels).toEqual([
         "claude:driver",
         "cli:log:--reconcile",
@@ -363,7 +363,7 @@ describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () 
       const effects = buildDriveEffects(cfg(consortDir, projectDir, { useManifestSteps: true, runner, loopGranularity: "story" }));
       const bounded = await effects.performViaExecutor!(GREEN, state, routerDeps);
       expect(bounded).toBeDefined();
-      // The honest-GREEN @build-cycle (cycle:green) must NOT have run , validation (missing agent-log) blocked it.
+      // The honest-GREEN @build-cycle (cycle:green) must NOT have run – validation (missing agent-log) blocked it.
       expect(labels).not.toContain("cli:green");
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
@@ -386,8 +386,8 @@ describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () 
 });
 
 // ─── the 7 remaining DESIGN roles: the executor DISPATCH GATE + channel PLACEMENT (Stage 1) ────────
-// This block asserts the two role-specific knobs the widening added , executorDispatched (the gate)
-// and outputPathsForAction (the per-output channel-relative path) , directly, since those are the
+// This block asserts the two role-specific knobs the widening added – executorDispatched (the gate)
+// and outputPathsForAction (the per-output channel-relative path) – directly, since those are the
 // only role-specific parts of the otherwise role-agnostic performTurnViaExecutor.
 //
 // It does NOT run the FULL performViaExecutor for these roles yet: that surfaced a REAL latent bug in
@@ -409,7 +409,7 @@ describe("executorDispatched (Stage 1): the 7 widened design turns take the exec
     expect(executorDispatched(action)).toBe(true);
   });
 
-  // The turns that STAY on the legacy path , the ONLY remaining not-dispatched agent turns after
+  // The turns that STAY on the legacy path – the ONLY remaining not-dispatched agent turns after
   // A-full Stages G/H/I: human-input (author-requests) + the backlog-resyncing estimate-committed
   // (neither has a shipped manifest). EVERY build turn (RED/GREEN + all self-heal + reflect + the
   // deploy/superseded variants) is now executor-dispatched.
@@ -453,7 +453,7 @@ describe("outputPathsForAction (Stage 1): each design turn's artifact resolves f
 
   it.each(CASES)("%s: channel-relative output paths", (_label, action, expected) => {
     expect(outputPathsForAction(action, CONSORT, FEATURE)).toEqual(expected);
-    // Every path is channel-RELATIVE , none re-encodes the .consort root (the double-encode guard).
+    // Every path is channel-RELATIVE – none re-encodes the .consort root (the double-encode guard).
     for (const p of Object.values(outputPathsForAction(action, CONSORT, FEATURE))) {
       expect(p.startsWith(".consort"), `${p} must not re-encode .consort`).toBe(false);
       expect(p.startsWith("/"), `${p} must be relative`).toBe(false);
@@ -555,7 +555,7 @@ describe("performViaExecutor (Stage 1b): the 7 design roles run FULL through the
       expect(existsSync(join(consortDir, ".consort")), `${label} must NOT double-encode .consort`).toBe(false);
       if (role === "test-strategist") {
         // The executor runs reconcile (materialize, phase 4.5) BEFORE the manifest's `after` CLIs
-        // (post-turn, phase 6.5) , the SAME reconcile-then-after order as the breakdown golden
+        // (post-turn, phase 6.5) – the SAME reconcile-then-after order as the breakdown golden
         // (a declared executor-path behavior; the legacy path ran the after-CLI then reconcile).
         // So the stream is [claude, reconcile, test-list], not reconcile-last.
         expect(rec.labels[0]).toBe("claude:test-strategist");

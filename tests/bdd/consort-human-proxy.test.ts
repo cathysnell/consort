@@ -256,7 +256,7 @@ describe("drainGatesAsHumanProxy: hard-blocks non-conformant artifacts (Layer 2)
     // Own it: service_backed:true + the 3 layers. The migration NFR is
     // persistence evidence, so the safety net now also requires a declared
     // persistence_invariant (a service does not always mean a database, but a
-    // feature that DOES persist must name its DB-level guarantee) , declare it
+    // feature that DOES persist must name its DB-level guarantee) – declare it
     // and realize it, then spec approves.
     writeFileSync(
       join(fdir, "architecture.json"),

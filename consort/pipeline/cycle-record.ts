@@ -7,15 +7,15 @@
 // artifacts, or the runner-outcome bookkeeping. The deterministic driver calls
 // the two functions here (via the consort-cycle CLI) to RECORD the cycle:
 //
-//   beginNextPendingCycle , after the Navigator: stamp a RED cycle (red_at +
+//   beginNextPendingCycle – after the Navigator: stamp a RED cycle (red_at +
 //     layer) for the first test-list item that has no cycle yet.
-//   greenOpenCycle , after the Driver: record the runner outcome + stamp GREEN
+//   greenOpenCycle – after the Driver: record the runner outcome + stamp GREEN
 //     on the open RED cycle. Per the "driver runs, orchestration records"
 //     contract, the run already happened in the Driver's loop; this records it.
 //
 // Both read the SAME per-story test-list (storyTestListJson) + cycle artifacts
 // the probe reads, so producer (orchestration) and consumer (probe) cannot
-// drift , the bug that stalled the live smoke (the Navigator hand-wrote a
+// drift – the bug that stalled the live smoke (the Navigator hand-wrote a
 // cycle with `status:"red"` instead of the `red_at` the probe reads).
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from "fs";
@@ -68,7 +68,7 @@ import type { AcLayer } from "../../consort/experiment/experiment.js";
 /**
  * Commit the working tree (production code + tests + cycle artifacts) on the
  * current experiment branch after a GREEN or a completed REFACTOR, so each TDD
- * transition is its own commit , the canonical "commit when green, commit the
+ * transition is its own commit – the canonical "commit when green, commit the
  * refactor" rhythm.
  *
  * This is what makes `accept`'s `git merge <experiment> into <feature>` carry
@@ -78,12 +78,12 @@ import type { AcLayer } from "../../consort/experiment/experiment.js";
  * merge was vacuous and promote's prepare-pr aborted on a dirty tree.
  *
  * Best-effort: a missing git repo (hermetic unit runs) or a clean tree
- * (nothing to commit) never breaks the cycle transition , mirroring this
+ * (nothing to commit) never breaks the cycle transition – mirroring this
  * file's logging resilience. A genuine failure leaves the tree dirty, which
  * prepare-pr catches downstream rather than the build stamping a false state.
  */
 /**
- * Stage + commit the experiment branch's CODE , the canonical build-commit
+ * Stage + commit the experiment branch's CODE – the canonical build-commit
  * policy, shared by the per-cycle green/refactor commits AND the accept/merge
  * precondition so both leave an identical clean code tree.
  *
@@ -95,20 +95,20 @@ import type { AcLayer } from "../../consort/experiment/experiment.js";
  * CODE tree for promote.
  *
  * BUT force-include the project-level design + architecture corpora:
- *   `.tdd/design/`        , the design guide + IA (UX Designer).
- *   `.tdd/architecture/`  , the architecture conventions (the canonical
+ *   `.tdd/design/`        – the design guide + IA (UX Designer).
+ *   `.tdd/architecture/`  – the architecture conventions (the canonical
  *                           role -> module layout the first feature pins).
  * Both are written ONCE in the design phase and never touched during build, so
  * they do NOT churn or diverge. Committing them here carries them onto the
  * feature branch's PR to the parent tier, so the NEXT feature (forked from that
- * tier) inherits them , `designGuideReady` skips re-authoring the design system,
+ * tier) inherits them – `designGuideReady` skips re-authoring the design system,
  * and `conventionsReady` makes the architect inherit + conform to the
  * established layout instead of re-deriving it.
  *
  * Returns true when a commit was made. Throws on a genuine git failure (callers
  * that want best-effort wrap it in try/catch).
  */
-// FEIP-8023: build/experiment commits must never land on a protected tier , the
+// FEIP-8023: build/experiment commits must never land on a protected tier – the
 // guard + error live in the tier-protection home (branch-utils). Re-exported so
 // the build lane's public surface still carries the error its commit path throws.
 export { ProtectedBranchCommitError };
@@ -142,7 +142,7 @@ async function commitCycleWork(consortDir: string, message: string): Promise<voi
   try {
     await commitExperimentCode(dirname(consortDir), message);
   } catch (e) {
-    // A wrong-branch commit is NOT best-effort bookkeeping , it means the build
+    // A wrong-branch commit is NOT best-effort bookkeeping – it means the build
     // is about to pollute a shared tier (FEIP-8023). Re-throw so the run fails
     // loud rather than silently proceeding un-committed onto staging/main.
     if (e instanceof ProtectedBranchCommitError) throw e;
@@ -173,7 +173,7 @@ export interface StoryTestItem {
   ac_id: string;
   status?: string;
   /** "behavior" (a pytest-bdd / behavior test through the API, RED-first) or
-   *  "fitness" (an architectural constraint test , structural OR a data/persistence
+   *  "fitness" (an architectural constraint test – structural OR a data/persistence
    *  invariant run against the real branch DB; MAY be born-green, a regression
    *  guard that already holds, which is not a stall). Surfaced from the per-story
    *  test-list JSON (the test-strategist writes it). "client" (a Vitest/RTL or
@@ -232,7 +232,7 @@ export interface StoryTestProgress {
   total: number;
   /** Test-list items with NO cycle yet (the Navigator's queue). */
   pending: StoryTestItem[];
-  /** Cycles that are RED (red_at) but not yet GREEN (green_at) , the Driver's queue. */
+  /** Cycles that are RED (red_at) but not yet GREEN (green_at) – the Driver's queue. */
   openRed: CycleArtifact[];
   /** Every test-list item has a GREEN cycle (and there is at least one item). */
   allGreen: boolean;
@@ -268,7 +268,7 @@ export function storyTestProgress(consortDir: string, featureId: string, story: 
  * or undefined when nothing is pending or the item omits it. Used by the
  * escalation layer to recognize that a `cycle-stall` flagged while the next item
  * is a fitness test is a born-green regression guard (not a stuck build), so it
- * must not hard-halt , the GREEN run is the real arbiter.
+ * must not hard-halt – the GREEN run is the real arbiter.
  */
 export function pendingItemKind(
   consortDir: string,
@@ -283,7 +283,7 @@ export function pendingItemKind(
  * re-deploying its stale GREENs. `storyTestProgress` derives "pending" from the
  * cycle records on disk (a test with a cycle is not pending), so a revise that
  * only flips the pipeline status to "designing" leaves every test still
- * "covered" , the build lane sees allGreen, does nothing, and the drive goes
+ * "covered" – the build lane sees allGreen, does nothing, and the drive goes
  * straight back to deploy with the same code. Removing the story's cycle
  * artifacts makes all its test-list items pending again; the test-list item
  * statuses are also flipped back to "pending" so the recorded state is honest.
@@ -441,8 +441,8 @@ export interface GreenResult {
 
 /** True when a verify failure summary carries a Databricks auth-expiry signature
  *  (the OAuth session/refresh token is dead, so credential minting was refused).
- *  Such a failure is non-assessable + non-repairable , it needs a human
- *  `databricks auth login` , so the cycle escalates immediately instead of
+ *  Such a failure is non-assessable + non-repairable – it needs a human
+ *  `databricks auth login` – so the cycle escalates immediately instead of
  *  routing an assess/repair loop that can never converge. Mirrors the CLI
  *  wrapper's isAuthFailure classifier + the Python app's DatabricksAuthExpired. */
 export function isAuthExpiredSummary(summary: string | undefined): boolean {
@@ -466,12 +466,12 @@ export type GreenVerifier = (args: {
 const defaultGreenVerifier: GreenVerifier = async ({ projectDir, branchId }) => {
   const r = await ensureDeployedAndVerify({ projectDir, lakebaseBranch: branchId });
   // Surface the verify's captured failure output so greenOpenCycle can record it into
-  // green-failure.json , the ASSESS turn then starts from the real failure, not a re-scan.
+  // green-failure.json – the ASSESS turn then starts from the real failure, not a re-scan.
   return { passed: r.passed, summary: r.summary, ...(r.failureOutput ? { failureOutput: r.failureOutput } : {}) };
 };
 
 /**
- * Pick the GREEN/REFACTOR verifier for the current environment. Always `undefined` , greenOpenCycle
+ * Pick the GREEN/REFACTOR verifier for the current environment. Always `undefined` – greenOpenCycle
  * / refactorAc use the real `defaultGreenVerifier`, on the LIVE drive AND under a build replay.
  *
  * FAITHFUL REPLAY: replayBuildTurn now SYNCS each turn's recorded snapshot onto the tree (mirror +
@@ -479,7 +479,7 @@ const defaultGreenVerifier: GreenVerifier = async ({ projectDir, branchId }) => 
  * per-turn verify therefore reproduces the RECORDED verdict by construction: a recorded GREEN
  * failure re-fails (the router routes assess -> repair on its own; the repair snapshot lands the
  * code at the turn it was authored), a recorded GREEN pass re-passes. There is no reason to fake a
- * pass , the old `replayTrustVerifier` (which hardcoded passed:true) let the tree never disagree,
+ * pass – the old `replayTrustVerifier` (which hardcoded passed:true) let the tree never disagree,
  * skipping the recorded self-heal turns and orphaning a repair-authored file. A live verdict that
  * DIVERGES from the recorded one is a genuine regression, surfaced by the replay's divergence guard.
  */
@@ -493,7 +493,7 @@ export function greenVerifierForEnv(_env: NodeJS.ProcessEnv = process.env): Gree
  * Driver already ran the project's test command in its loop; this records that
  * run (recordRunnerOutcome unlocks markGreen's runner contract for
  * layer-tagged cycles) and marks the cycle green. Throws when there is no open
- * RED cycle (the Driver was dispatched with nothing to green , a real defect).
+ * RED cycle (the Driver was dispatched with nothing to green – a real defect).
  */
 export async function greenOpenCycle(
   args: CycleRecordArgs & { driverChanges?: string; verify?: GreenVerifier; repair?: boolean },
@@ -520,7 +520,7 @@ export async function greenOpenCycle(
   };
   // HONEST GREEN (follow-up): run the project's verify suite against
   // the running app and record the REAL outcome. The old code hardcoded
-  // passed:true , which faked the runner contract and shipped a
+  // passed:true – which faked the runner contract and shipped a
   // false-green (a test that broke a sibling test was stamped green). A failure
   // here leaves the cycle RED and raises an escalation to the HIL; the
   // orchestration then routes to raise-to-hil rather than advancing.
@@ -547,7 +547,7 @@ export async function greenOpenCycle(
   if (!result.passed) {
     // AUTH-EXPIRED short-circuit: a verify that failed because the Databricks
     // OAuth session is dead (credential mint refused) is NOT a supersession or a
-    // driver-fixable regression , assessing/repairing it just spins on a failure
+    // driver-fixable regression – assessing/repairing it just spins on a failure
     // that can never clear without a human `databricks auth login`. Detect the
     // signature in the verify summary and escalate IMMEDIATELY (source
     // "auth-expired"), before the assess route, on the first failure.
@@ -577,7 +577,7 @@ export async function greenOpenCycle(
       // assert it, and ONLY the Navigator assess can flag those, so contract-clean
       // does NOT short-circuit the assess; it records its findings as an advisory
       // the assess directive injects, so the Navigator's fix covers the code refs
-      // (no re-localizing , the live ceiling) AND flags the superseded tests in
+      // (no re-localizing – the live ceiling) AND flags the superseded tests in
       // the same turn.
       let contractRefs: string | undefined;
       let supersededTestRefs: string | undefined;
@@ -594,7 +594,7 @@ export async function greenOpenCycle(
       writeGreenFailure(consortDir, featureId, story, open.ac_id, {
         assessed: false,
         summary: result.summary,
-        // The verify's captured failure output (failing node-ids + top error) , the general
+        // The verify's captured failure output (failing node-ids + top error) – the general
         // pre-localization for failures the deterministic gates cannot localize (a missing
         // client component, a broken import), so the ASSESS turn starts from the real failure.
         ...(result.failureOutput ? { failureOutput: result.failureOutput } : {}),
@@ -626,7 +626,7 @@ export async function greenOpenCycle(
     // it was recorded against the SAME failure this verify hit. green-failure.json's `summary`
     // is the failure the recorded `diagnosis` explains; if the CURRENT verify's summary DIFFERS,
     // the failure MODE changed since that diagnosis (a repair fixed one break and exposed another
-    // , or, the observed bug, the driver was sandbox-blocked and re-raised without a fresh
+    // – or, the observed bug, the driver was sandbox-blocked and re-raised without a fresh
     // diagnosis), so the recorded root-cause no longer explains what is failing. Blending a stale
     // diagnosis with a fresh summary produces a self-contradictory escalation (e.g. an "e2e 500"
     // diagnosis glued to a "client Vitest failed" summary) that misleads the human. When the mode
@@ -637,9 +637,9 @@ export async function greenOpenCycle(
       source: "driver-green",
       reason:
         `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)` +
-        (diagnosisMatchesMode ? ` , ${gf.diagnosis}` : "") +
+        (diagnosisMatchesMode ? ` – ${gf.diagnosis}` : "") +
         (staleDiagnosis
-          ? " , (the failure MODE changed since the last recorded diagnosis, which was for a different failure , re-diagnose from the CURRENT failure below; do not trust a prior root-cause)"
+          ? " – (the failure MODE changed since the last recorded diagnosis, which was for a different failure – re-diagnose from the CURRENT failure below; do not trust a prior root-cause)"
           : "") +
         `: ${result.summary}`,
       feature_id: featureId,
@@ -680,11 +680,11 @@ export async function greenOpenCycle(
 // ─── Per-AC REVIEW / REFACTOR (driver-navigator-tdd handoff) ───────
 //
 // Once an AC's tests are all GREEN, the Navigator REVIEWs the AC's diff against
-// the architecture + design guide and the Driver REFACTORs on request , the
+// the architecture + design guide and the Driver REFACTORs on request – the
 // per-slice handoff from /driver-navigator-tdd, at AC grain. The review verdict
 // is the Navigator's output (review-verdict.json: { refactor, notes }); the
 // orchestration records the transition (review.json: reviewed_at /
-// refactor_requested / refactored_at) , same producer/consumer split as the
+// refactor_requested / refactored_at) – same producer/consumer split as the
 // RED/GREEN recording. Both roles read architecture.md + design-guide.md.
 
 export interface AcReviewState {
@@ -800,7 +800,7 @@ export function firstRefactorPendingAc(consortDir: string, featureId: string, st
  * `install_to` (e.g. client/public/warehouse.png). The staged intake asset lives at
  * `.consort/design/assets/<basename>` (stage-first-project put it there); a coding agent
  * cannot copy a binary via text writes, so this is the ONLY place the actual image lands
- * in the client , the driver only references it. Overwrites (the staged asset is the
+ * in the client – the driver only references it. Overwrites (the staged asset is the
  * source of truth, so it replaces any placeholder the driver wrote to pass the check).
  * Best-effort + idempotent; when no staged source exists the ux-adherence gate reports
  * the asset missing at `install_to` as usual. Exported for a focused test.
@@ -818,7 +818,7 @@ export function installBrandAsset(
       join(projectDir, appIcon.source),
       join(consortDir, appIcon.source),
     ].find((p) => existsSync(p));
-    if (!src) return false; // no bytes to install , the gate flags "missing at install_to"
+    if (!src) return false; // no bytes to install – the gate flags "missing at install_to"
     const dest = join(projectDir, appIcon.install_to);
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(src, dest);
@@ -855,7 +855,7 @@ function flagUxAdherenceIfDirty(consortDir: string, story: string): void {
     // DETERMINISTIC brand-asset install: copy the real image bytes from the staged
     // intake asset into the design-guide's `install_to` (e.g. client/public/warehouse.png)
     // so the built app actually SERVES it. A coding agent cannot `cp` a binary via text
-    // writes , without this the icon is declared + referenced but never present, and the
+    // writes – without this the icon is declared + referenced but never present, and the
     // app ships the placeholder. The driver only has to REFERENCE it (index.html + shell).
     if (appIcon) installBrandAsset(dirname(consortDir), consortDir, appIcon);
     const ux = checkUxClean({ projectDir: dirname(consortDir), designClasses, appIcon });

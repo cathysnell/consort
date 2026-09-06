@@ -1,4 +1,4 @@
-// workflow-vocabulary: the WORKFLOW domain vocabulary , the WorkflowAction / DriveState type family
+// workflow-vocabulary: the WORKFLOW domain vocabulary – the WorkflowAction / DriveState type family
 // (the WHAT a run is made of) plus the PURE predicates over them (escalationPreempt, actionLane,
 // isHitlGateAction, isHumanInputAction, pauseBeforeMilestone). No I/O, no model, no dependency on the
 // drive engine: the lower orchestrator layers (steps/turns/runners/state/agents/scenarios/optimize) and
@@ -102,7 +102,7 @@ export interface StoryBuild {
    *  --reset-stale-branch precedent (Finding 27). */
   experimentDiscarded?: boolean;
   /** The active experiment was cut for a design (test-list) that has since been
-   *  re-authored under it , its stamped design fingerprint no longer matches the
+   *  re-authored under it – its stamped design fingerprint no longer matches the
    *  story's current design. Reusing it would merge the superseded design's
    *  code/tests, so nextBuildAction re-cuts a fresh experiment (reset-stale-branch)
    *  instead. The stale-experiment guardrail; see design-fingerprint.ts. */
@@ -142,7 +142,7 @@ export interface StoryBuild {
    *  not yet consumed, or null. Drives a Driver GREEN-SUPERSEDED turn: the same
    *  honest GREEN as a plain re-green, but LABELED so the recorder writes a distinct
    *  turn dir. That label is what lets replay-build.ts + the corpus-integrity guard
-   *  DROP the turn , at replay per-turn verify is trusted, so the assess -> re-green
+   *  DROP the turn – at replay per-turn verify is trusted, so the assess -> re-green
    *  detour never re-dispatches (symmetric to repair). An un-labeled re-green records
    *  bare and reads as a spurious extra `green` in the kept replay shape. */
   greenSupersededAc?: string | null;

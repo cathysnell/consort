@@ -1,4 +1,4 @@
-// optimize-build-trial: classify a BUILD trial's outcome per the user's rule , a build
+// optimize-build-trial: classify a BUILD trial's outcome per the user's rule – a build
 // candidate is NOT scored on one isolated turn but on whether it SELF-HEALS to the
 // story's terminal good state through the orchestrator's own raises/retries/route-backs
 // (runDriver). This module holds the PURE decision (a RunDriverResult + any thrown
@@ -8,20 +8,20 @@
 //
 // The three outcomes:
 //   - self-healed  : the loop reached terminal-good (story built + accepted, NO
-//                    unresolved escalation). VALID lever , its wall-clock (the WHOLE
+//                    unresolved escalation). VALID lever – its wall-clock (the WHOLE
 //                    loop, every heal turn included) is the measured cost-to-good.
 //   - not-viable   : the loop raised-to-HIL after exhausting retries, or a route-back
 //                    could not resolve (DriverStalled / ProtocolViolation). That model/
-//                    lever cannot produce recoverable software , LOG + DQ + next trial.
+//                    lever cannot produce recoverable software – LOG + DQ + next trial.
 //                    NOT fatal to the sweep.
 //   - systemic     : an infra fault (auth expiry, Lakebase fork collision, runner
-//                    death) , NOT the candidate's fault. HALT the unattended run.
+//                    death) – NOT the candidate's fault. HALT the unattended run.
 
 /** The terminal signals a build-trial's runDriver produced, plus any thrown error. */
 export interface BuildTrialSignals {
   /** runDriver returned normally (no throw). Its RunDriverResult fields we care about. */
   result?: {
-    /** The run raised a blocking problem to the HIL after retries , did NOT self-heal. */
+    /** The run raised a blocking problem to the HIL after retries – did NOT self-heal. */
     escalated?: boolean;
     /** Stopped at the story/lane bound (a clean bounded completion). */
     stoppedAtBound?: boolean;
@@ -43,7 +43,7 @@ export type BuildTrialVerdict =
   | { outcome: "not-viable"; reason: string }
   | { outcome: "systemic"; reason: string };
 
-/** Error names that mean "the candidate's build could not converge" , a normal DQ, not
+/** Error names that mean "the candidate's build could not converge" – a normal DQ, not
  *  a systemic halt. These are the orchestrator's own bounded-retry / protocol failures. */
 const NON_VIABLE_ERRORS = new Set(["DriverStalledError", "ProtocolViolationError", "UnexpectedCallbackError"]);
 

@@ -1,7 +1,7 @@
 // driver-green-enforcement: the per-candidate workspace setup for the driver-GREEN enforcement +
 // context levers (see consort/optimize/DRIVER-GREEN-LEVERS.md). Sweep-only (not shipped runtime):
 // the driver-sweep calls applyDriverLevers on each candidate's throwaway workspace BEFORE the driver
-// turn. All writes land under <workspace>/.claude/ , which headless `claude -p --setting-sources
+// turn. All writes land under <workspace>/.claude/ – which headless `claude -p --setting-sources
 // project` loads (verified), so the hook + deny rules gate the DRIVER AGENT's tool calls only; the
 // orchestrator's execSync honest-GREEN verify is untouched.
 
@@ -11,7 +11,7 @@ import { load, dump } from "js-yaml";
 import type { RoleLeverPatch } from "./role-levers.js";
 
 /** Deterministic per-candidate deploy port: base + the candidate's index in the sweep. Deterministic
- *  (not OS-allocated) so there is NO allocation race / TOCTOU across the parallel pool , candidate i
+ *  (not OS-allocated) so there is NO allocation race / TOCTOU across the parallel pool – candidate i
  *  always owns port BASE_DEPLOY_PORT+i, unique across the whole candidate set regardless of the
  *  concurrency cap. Base 8100 (above the common :8000) to dodge a stray dev server. */
 export const BASE_DEPLOY_PORT = 8100;
@@ -41,13 +41,13 @@ export function assignWorktreePort(projectDir: string, port: number): string {
 }
 
 /**
- * Build the PreToolUse guard hook (python3, present in the scaffold via uv , no jq dep). It reads the
+ * Build the PreToolUse guard hook (python3, present in the scaffold via uv – no jq dep). It reads the
  * Bash tool call on stdin and DENIES per the enabled checks, ALLOWING everything else. Deny = exit-0 +
  * the documented permissionDecision JSON; an unparseable command is ALLOWED (never block on our own
  * parse error). SEGMENT-AWARE: the command is split on &&/||/;/| and each segment's leading verb is
  * checked, so a scan/suite verb ANYWHERE in a compound or pipeline (`cd X && ls`, `pytest … | grep`)
- * is caught , the fix for the glob approach's prefix-only blind spot.
- *   - suite: deny a WHOLE-suite run (run-tests.sh / make test / npm test / bare `pytest` , no test path)
+ * is caught – the fix for the glob approach's prefix-only blind spot.
+ *   - suite: deny a WHOLE-suite run (run-tests.sh / make test / npm test / bare `pytest` – no test path)
  *     while allowing a targeted `pytest <path>` / `run-tests.sh <path>`.
  *   - scan:  deny ls/find/grep/rg/tree (force reliance on the injected LAYOUT + named paths).
  */
@@ -123,7 +123,7 @@ function readSettings(file: string): ClaudeSettings {
   }
 }
 
-/** The env patch a candidate's `ctxPack` contributes , the drive inherits these so buildContextPack
+/** The env patch a candidate's `ctxPack` contributes – the drive inherits these so buildContextPack
  *  turns the matching section on. Pure: enumerate only. */
 export function ctxPackEnv(ctxPack: RoleLeverPatch["ctxPack"]): Record<string, string> {
   const env: Record<string, string> = {};

@@ -1,4 +1,4 @@
-// Open the Consort roles' reviewable artifacts in the user's editor at a gate , so
+// Open the Consort roles' reviewable artifacts in the user's editor at a gate – so
 // they review the spec/architecture/test-list/ACs in Cursor/Code instead of hunting
 // for files. Shared by BOTH triggers the user named: the drive (or a session) via
 // the `consort-open` bin, and the log narrator (`consort-watch`) when it stops at a
@@ -43,7 +43,7 @@ export function findEditorCmd(env: NodeJS.ProcessEnv = process.env): string | nu
   return null;
 }
 
-/** True when the process runs INSIDE Cursor/Code's integrated terminal , the signal
+/** True when the process runs INSIDE Cursor/Code's integrated terminal – the signal
  *  that the user is actually viewing this project in the editor. Both Cursor and VS
  *  Code set TERM_PROGRAM=vscode; a Cursor-specific marker also counts. */
 export function isInsideEditor(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -67,7 +67,7 @@ export interface OpenOpts {
   /** Injectable spawner (tests). Defaults to opening the files in the editor. */
   spawn?: (cmd: string, files: string[]) => void;
   /** PER-TURN delta: when set, open ONLY the reviewable artifacts modified at/after this
-   *  epoch-ms , i.e. the files the just-finished role actually produced/updated this turn,
+   *  epoch-ms – i.e. the files the just-finished role actually produced/updated this turn,
    *  not the whole review set. Left unset (consort-open, manual) opens the full set. */
   changedSinceMs?: number;
 }
@@ -106,7 +106,7 @@ export function openArtifactsInEditor(consortDir: string, opts: OpenOpts = {}): 
 
 /** Per-turn open: reveal exactly what the role that just finished its turn produced (from
  *  roleArtifacts), opening in the editor when inside its terminal. Same guards + result shape
- *  as openArtifactsInEditor, but role-scoped instead of the whole review set , so each turn
+ *  as openArtifactsInEditor, but role-scoped instead of the whole review set – so each turn
  *  shows only its own output. Never throws. */
 export function openRoleArtifacts(consortDir: string, role: string, opts: OpenOpts = {}): OpenResult {
   const env = opts.env ?? process.env;

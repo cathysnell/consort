@@ -1,16 +1,16 @@
-// evaluation/semantic-gate: the SHARED comparison judges , the SEMANTIC / DISCRIMINATOR /
+// evaluation/semantic-gate: the SHARED comparison judges – the SEMANTIC / DISCRIMINATOR /
 // FUNCTIONAL / RED-coverage bar comparing a produced output to the reference recorded at that same
 // step. Used by BOTH the regression path (the executor-dispatch equivalence proofs) and the
-// optimization path (the champion-walk sweep) , ONE comparison mechanism, so it lives in
+// optimization path (the champion-walk sweep) – ONE comparison mechanism, so it lives in
 // consort/evaluation/ (a peer family), not optimize-only. The structural self-check
 // (optimize-gate.evaluateDesignGate) proves an artifact is well-FORMED; this proves it is
-// well-MEANING , that the output conveys the SAME design/behavior as the reference recorded at that
+// well-MEANING – that the output conveys the SAME design/behavior as the reference recorded at that
 // same step, regardless of wording, slug, or how content is split. An output that drops material
 // intent (a design-guide missing the status-badge concept, a spec missing a behavior) is
 // disqualified no matter how fast it was produced.
 //
 // "Comparable" is a SEMANTIC judgment, not a structural diff, so it is judged by an
-// LLM-as-judge on a FIXED model (opus) , constant across candidates, so the bar
+// LLM-as-judge on a FIXED model (opus) – constant across candidates, so the bar
 // never moves with the thing being measured. The judge scores coverage 0..1 and
 // names what is missing; the gate passes at >= SEMANTIC_THRESHOLD. The judge call is
 // made AFTER the timed spawn (the harness stops its clock first), so it never
@@ -30,7 +30,7 @@ import { projectLanguage, productDirForLanguage, productExtsForLanguage, testExt
 
 /** The .tdd-layout artifact path for a step, built via consort-paths (the single source
  *  of truth for the layout). `base` is a .tdd-shaped root: the live project's .sftdd
- *  for the candidate, or a corpus's recorded-artifacts/ for the reference , both carry
+ *  for the candidate, or a corpus's recorded-artifacts/ for the reference – both carry
  *  the identical features/<F>/... + design/... shape, so one builder set serves both.
  *  Returns null for a step whose artifact is per-story (acs), handled separately. */
 function stepArtifactPath(base: string, step: TurnKey, featureId: string): string | null {
@@ -40,12 +40,12 @@ function stepArtifactPath(base: string, step: TurnKey, featureId: string): strin
     case "breakdown":
       return featureSpecJson(base, featureId);
     case "propose":
-      // The Spec Author's sprint proposal , a project-level (not per-feature) artifact.
+      // The Spec Author's sprint proposal – a project-level (not per-feature) artifact.
       return featureProposalsMd(base);
     case "architect":
       return architectureJson(base, featureId);
     case "estimate":
-      // The Architect's feature-level t-shirt sizes , planning/estimates.json (NOT
+      // The Architect's feature-level t-shirt sizes – planning/estimates.json (NOT
       // architecture.json). estimate + architect are distinct artifacts by distinct actions.
       return planningEstimatesJson(base);
     case "test-list":
@@ -57,7 +57,7 @@ function stepArtifactPath(base: string, step: TurnKey, featureId: string): strin
   }
 }
 
-/** The SHARED reference-asset pin, relative to the kit root , the ONE reference set BOTH the
+/** The SHARED reference-asset pin, relative to the kit root – the ONE reference set BOTH the
  *  regression + optimization paths compare against (a self-contained snapshot copied from the most
  *  recent re-record; see reference-assets/stockflow/README.md). Design refs live under its
  *  recorded-artifacts/; build seeds/refs under recorded-build/. */
@@ -67,7 +67,7 @@ const CANONICAL = "stockflow";
 
 /** The reference corpus ROOT (the dir that CONTAINS recorded-artifacts/ + recorded-build/).
  *  Default = the pinned reference-assets under the kit. Override with CONSORT_REFERENCE_CORPUS to
- *  point at ANY corpus root when re-recording , a FULLY-CONFIGURABLE absolute-or-relative path (NOT
+ *  point at ANY corpus root when re-recording – a FULLY-CONFIGURABLE absolute-or-relative path (NOT
  *  a name appended to a hardcoded scenarios prefix; that prefix is going away). An override is
  *  resolved as-is when absolute, else relative to kitRoot. */
 function referenceCorpusRoot(kitRoot: string): string {
@@ -94,7 +94,7 @@ export function buildOutputKind(role: string): BuildOutputKind | undefined {
 
 /** The recorded reference for a step: which corpus + the artifact path(s) under its
  *  recorded-artifacts/ tree, and a human label. `perStoryGlob` marks steps whose
- *  artifact is per-story (acs) , the reference is the union across recorded stories,
+ *  artifact is per-story (acs) – the reference is the union across recorded stories,
  *  since slugs + per-story splits legitimately differ (semantic, not slug, match). */
 export interface StepReference {
   corpus: string;
@@ -106,7 +106,7 @@ export interface StepReference {
 /** Which TurnKeys HAVE a design reference (build turns + unknown steps do not). One pinned
  *  reference set now carries every design artifact (feature-spec / architecture / db-design /
  *  test-list / design-guide / proposals / estimates / acs), so there is no per-step corpus split
- *  anymore , the earlier dba->rerecord vs others->canonical split existed only because canonical
+ *  anymore – the earlier dba->rerecord vs others->canonical split existed only because canonical
  *  lacked db-design.json; the pin has all of them. */
 function hasDesignReference(step: TurnKey): boolean {
   switch (step) {
@@ -148,7 +148,7 @@ export function resolveStepReference(args: {
   if (step === "acs") {
     // Per-story ACs. By default the reference is the UNION of every recorded story's ACs (the
     // feature-aggregate coverage bar). When storyId is given, restrict to THAT story's recorded
-    // ACs , the like-for-like reference for a single-story turn (else a one-story candidate is
+    // ACs – the like-for-like reference for a single-story turn (else a one-story candidate is
     // unfairly judged against all stories' ACs, the scope-mismatch the equivalence suite hit).
     const sdir = storiesDir(root, featureId);
     if (!existsSync(sdir)) return null;
@@ -335,7 +335,7 @@ export function readTree(root: string, exts: string[], maxBytes = 200_000): stri
 
 /** The recorded-build reference for a BUILD turn's output: the LAST recorded turn dir
  *  for the story under recorded-build (its terminal-good code tree), scoped to the
- *  role's output subtree , tests/ for a navigator (tests) turn, app/ for a driver
+ *  role's output subtree – tests/ for a navigator (tests) turn, app/ for a driver
  *  (code) turn. Story matched POSITIONALLY (slugs differ across corpora), by the
  *  story's index in storyOrder, since the reference and candidate feature decompose
  *  the same way. Returns null when no recorded-build reference exists. */
@@ -426,7 +426,7 @@ export async function evaluateBuildFunctionalGate(args: {
       ...(disc.fixDirective ? { fixDirective: disc.fixDirective } : {}),
       ...(passed
         ? {}
-        : { reason: `discriminator: ${disc.classification} (${disc.nextStep ?? "escalate"}) vs ${ref.label}${disc.diagnosis ? ` , ${disc.diagnosis}` : ""}` }),
+        : { reason: `discriminator: ${disc.classification} (${disc.nextStep ?? "escalate"}) vs ${ref.label}${disc.diagnosis ? ` – ${disc.diagnosis}` : ""}` }),
     };
   }
 
@@ -482,7 +482,7 @@ export interface RegressionFidelityVerdict {
  *  and prescribes a fix that would resolve the SAME failure. Benign wording/detail differences are
  *  aligned; a different/wrong root cause or a misdirected fix (which would send the driver at the wrong
  *  change) is MATERIAL. Real impl spawns fixed-opus; stubbable in tests. This is the regression analogue
- *  of the superseded-shift set delta , class-match alone never proves two regression assessments agree. */
+ *  of the superseded-shift set delta – class-match alone never proves two regression assessments agree. */
 export type RegressionFidelityJudge = (args: {
   candidate: { diagnosis?: string; fixDirective?: string };
   recorded: { diagnosis?: string; fixDirective?: string };
@@ -497,7 +497,7 @@ export type RegressionFidelityJudge = (args: {
  *   - neither present => equivalent / accept (the navigator judged the code clean). */
 export function parseNavigatorAssessMarker(markerDir: string): DiscriminatorVerdict {
   // Superseded determination filename: the kit's navigator writes `superseded.json`; older corpora used
-  // `superseded-tests.json`. Accept EITHER , WITHOUT this the kit's superseded-shift is invisible and the
+  // `superseded-tests.json`. Accept EITHER – WITHOUT this the kit's superseded-shift is invisible and the
   // determination falls through to "equivalent" (clean), mis-scoring a real superseded-shift as a pass.
   const sup = ["superseded.json", "superseded-tests.json"].map((n) => join(markerDir, n)).find((p) => existsSync(p));
   const reg = join(markerDir, "regression-assessment.json");
@@ -517,7 +517,7 @@ export function parseNavigatorAssessMarker(markerDir: string): DiscriminatorVerd
       const diagnosis = typeof j.diagnosis === "string" ? j.diagnosis : undefined;
       // The regression's repair directive. Accept `fix` as a legacy/alias alongside `fixDirective`: the
       // kit's navigator (and the recorded corpus) emit `fix`, while consort's canonical key is
-      // `fixDirective` , WITHOUT this alias a real regression parses as "insufficient" (no directive) and
+      // `fixDirective` – WITHOUT this alias a real regression parses as "insufficient" (no directive) and
       // the driver-turn discriminator mis-scores every kit-produced regression. fixDirective wins if both.
       const fixDirective =
         (typeof j.fixDirective === "string" && j.fixDirective ? j.fixDirective : undefined) ??
@@ -549,15 +549,15 @@ export function parseNavigatorAssessMarker(markerDir: string): DiscriminatorVerd
   return { score: 1, classification: "equivalent", nextStep: "accept" };
 }
 
-/** Evaluate whether the navigator's ASSESS verdict aligns with the RECORDED GROUND TRUTH , the
+/** Evaluate whether the navigator's ASSESS verdict aligns with the RECORDED GROUND TRUTH – the
  *  canonical answer the corpus navigator produced for this turn. This is the right reference: a
  *  cold oracle re-deriving a verdict from raw code (WITHOUT the deterministic pre-localization the
- *  navigator had) is a NOISIER estimator than the navigator it judges , it can diverge from ground
+ *  navigator had) is a NOISIER estimator than the navigator it judges – it can diverge from ground
  *  truth even when the navigator matches it exactly (the S1 finding). So:
  *   - classification-match vs the recorded verdict is the HARD gate (a misclassification always fails);
  *   - for superseded-shift, the navigator's flagged SET is compared to the recorded SET, and a
  *     DELTA JUDGE decides if the difference is MATERIAL (a real miss / over-flag) or benign
- *     (coverage-equivalent) , identical sets short-circuit to PASS with no judge call.
+ *     (coverage-equivalent) – identical sets short-circuit to PASS with no judge call.
  *  This judges two CONCRETE answers against each other (well-grounded), not a re-derivation. */
 export async function evaluateNavigatorAssessAlignment(args: {
   recordedVerdict: DiscriminatorVerdict;
@@ -601,12 +601,12 @@ export async function evaluateNavigatorAssessAlignment(args: {
  *  ground-truth set, decide if they are COVERAGE-EQUIVALENT (supersede the same behaviors / cover
  *  the same dropped-symbol references, tolerating a borderline test either way) or differ
  *  MATERIALLY (the navigator MISSED a test the ground truth flags for the actual dropped symbol,
- *  or OVER-FLAGGED a still-valid test). Judges two CONCRETE answers , it does NOT re-derive. */
+ *  or OVER-FLAGGED a still-valid test). Judges two CONCRETE answers – it does NOT re-derive. */
 export function buildSupersessionDeltaPrompt(navigatorSet: string[], recordedSet: string[], reason?: string): string {
   return [
-    `You are a strict senior engineer comparing two SUPERSESSION answers for the same failed build turn , a Navigator's flagged set of prior tests it judged superseded by an intentional change (e.g. a dropped column), and the RECORDED GROUND-TRUTH set the canonical navigator produced for the same turn.`,
+    `You are a strict senior engineer comparing two SUPERSESSION answers for the same failed build turn – a Navigator's flagged set of prior tests it judged superseded by an intentional change (e.g. a dropped column), and the RECORDED GROUND-TRUTH set the canonical navigator produced for the same turn.`,
     reason ? `The supersession reason (why these tests are retired): ${reason}` : ``,
-    `Decide whether the two sets are COVERAGE-EQUIVALENT: do they supersede the SAME behaviors / cover the SAME dropped-symbol references? Two correct assessors legitimately differ at the margin (a fitness test that only INDIRECTLY references the dropped symbol may reasonably be flagged or not) , such a difference is BENIGN. A MATERIAL difference is: the navigator MISSED a test the ground truth flags for the ACTUAL dropped symbol (an under-flag that would leave the verify red), or OVER-FLAGGED a still-valid test the ground truth keeps (which would wrongly retire live coverage).`,
+    `Decide whether the two sets are COVERAGE-EQUIVALENT: do they supersede the SAME behaviors / cover the SAME dropped-symbol references? Two correct assessors legitimately differ at the margin (a fitness test that only INDIRECTLY references the dropped symbol may reasonably be flagged or not) – such a difference is BENIGN. A MATERIAL difference is: the navigator MISSED a test the ground truth flags for the ACTUAL dropped symbol (an under-flag that would leave the verify red), or OVER-FLAGGED a still-valid test the ground truth keeps (which would wrongly retire live coverage).`,
     `Return ONLY a JSON object on a single line: {"equivalent": <bool>, "materialDifferences": ["<a real miss or over-flag, empty when none>", ...]}. equivalent:true when the difference is only benign/borderline; equivalent:false with the specific material difference(s) named otherwise.`,
     ``,
     `NAVIGATOR set (${navigatorSet.length}):`,
@@ -656,11 +656,11 @@ export function buildRegressionFidelityPrompt(
   failureSummary?: string,
 ): string {
   return [
-    `You are a strict senior engineer comparing two REGRESSION assessments for the SAME failed build-verify , a Navigator's diagnosis + fix directive, and the RECORDED GROUND-TRUTH assessment the canonical navigator produced for the same failure.`,
+    `You are a strict senior engineer comparing two REGRESSION assessments for the SAME failed build-verify – a Navigator's diagnosis + fix directive, and the RECORDED GROUND-TRUTH assessment the canonical navigator produced for the same failure.`,
     failureSummary ? `The failure being diagnosed: ${failureSummary}` : ``,
-    `Both assessments already agree it is a genuine, driver-fixable regression. Decide whether the CANDIDATE reaches the SAME ROOT CAUSE and prescribes a fix that would ACTUALLY RESOLVE that failure , the way the ground truth does.`,
+    `Both assessments already agree it is a genuine, driver-fixable regression. Decide whether the CANDIDATE reaches the SAME ROOT CAUSE and prescribes a fix that would ACTUALLY RESOLVE that failure – the way the ground truth does.`,
     `Benign (aligned:true): the candidate names the same underlying root cause and a fix that would resolve the same failure, even with different wording, a different level of detail, or a different-but-equivalent way to express the same change.`,
-    `MATERIAL (aligned:false): the candidate blames a DIFFERENT or WRONG root cause, or its fix targets the WRONG layer / would NOT resolve the actual failure , anything that would MISDIRECT the driver into the wrong change.`,
+    `MATERIAL (aligned:false): the candidate blames a DIFFERENT or WRONG root cause, or its fix targets the WRONG layer / would NOT resolve the actual failure – anything that would MISDIRECT the driver into the wrong change.`,
     `Return ONLY a JSON object on a single line: {"aligned": <bool>, "materialDifferences": ["<the wrong root cause or misdirected fix, empty when none>", ...]}. aligned:true when the difference is only benign/wording; aligned:false with the specific material divergence(s) named otherwise.`,
     ``,
     `RECORDED GROUND-TRUTH diagnosis:`,
@@ -732,13 +732,13 @@ export function buildJudgePrompt(step: TurnKey, reference: string, candidate: st
 /** Build the FUNCTIONAL-similarity judge prompt for a BUILD turn's output (code or
  *  tests). Unlike the design prompt (same intent), this asks for FUNCTIONAL
  *  equivalence: same behaviors tested / same functionality implemented / same layer
- *  responsibilities , explicitly ignoring naming, formatting, and structural
+ *  responsibilities – explicitly ignoring naming, formatting, and structural
  *  arrangement (code varies more than prose, hence the looser bar). */
 export function buildFunctionalJudgePrompt(kind: BuildOutputKind, reference: string, candidate: string): string {
   const what =
     kind === "tests"
-      ? `These are TEST files. Judge whether the CANDIDATE tests assert the SAME behaviors / acceptance criteria as the REFERENCE tests , the same things are verified (endpoints, validations, persistence invariants, edge/empty cases, migration reversibility).`
-      : `These are CODE files. Judge whether the CANDIDATE code implements the SAME functionality as the REFERENCE , the same operations/endpoints, the same layer responsibilities (boundary/route, service, repository, model), the same persistence behavior.`;
+      ? `These are TEST files. Judge whether the CANDIDATE tests assert the SAME behaviors / acceptance criteria as the REFERENCE tests – the same things are verified (endpoints, validations, persistence invariants, edge/empty cases, migration reversibility).`
+      : `These are CODE files. Judge whether the CANDIDATE code implements the SAME functionality as the REFERENCE – the same operations/endpoints, the same layer responsibilities (boundary/route, service, repository, model), the same persistence behavior.`;
   return [
     `You are a strict senior engineer scoring FUNCTIONAL similarity of ${kind} produced for one build turn.`,
     `The REFERENCE is the known-good ${kind} recorded for this story in a prior build. The CANDIDATE is newly produced ${kind} for the same story.`,
@@ -761,8 +761,8 @@ export function buildFunctionalJudgePrompt(kind: BuildOutputKind, reference: str
 /** Build the DISCRIMINATOR prompt for a build turn's code/tests. Unlike the flat
  *  functional-similarity prompt (which returns only a score), this mirrors the
  *  navigator ASSESS turn: the judge must CLASSIFY the candidate and name the NEXT STEP
- *  it warrants. Crucially, a CLEAN verdict (equivalent/accept , the candidate needs no
- *  refactor and introduced no regression) is the BEST possible result , the candidate
+ *  it warrants. Crucially, a CLEAN verdict (equivalent/accept – the candidate needs no
+ *  refactor and introduced no regression) is the BEST possible result – the candidate
  *  converged cleaner than the recorded baseline that needed the assess->repair spiral ,
  *  and must score HIGH, never be treated as a miss. */
 export function buildDiscriminatorPrompt(kind: BuildOutputKind, reference: string, candidate: string): string {
@@ -776,14 +776,14 @@ export function buildDiscriminatorPrompt(kind: BuildOutputKind, reference: strin
     `Judge FUNCTION, not form: different file/symbol names, ordering, formatting, or a different structural split of the SAME behavior is FINE and must NOT lower the verdict.`,
     ``,
     `CLASSIFY the CANDIDATE into exactly one:`,
-    `  - "equivalent"      : the candidate implements/asserts the same functionality with NO gap and NO regression. This is the BEST, IDEAL outcome , the candidate is done and needs no follow-up (it converged cleaner / better than the reference, which may have needed extra repair turns). Score it HIGH (>= 0.9).`,
-    `  - "superseded-shift": the candidate legitimately CHANGES behavior the reference/prior tests encode (the latest requirement wins), so some PRIOR tests are now superseded and should be permissively refactored , NOT a bug.`,
+    `  - "equivalent"      : the candidate implements/asserts the same functionality with NO gap and NO regression. This is the BEST, IDEAL outcome – the candidate is done and needs no follow-up (it converged cleaner / better than the reference, which may have needed extra repair turns). Score it HIGH (>= 0.9).`,
+    `  - "superseded-shift": the candidate legitimately CHANGES behavior the reference/prior tests encode (the latest requirement wins), so some PRIOR tests are now superseded and should be permissively refactored – NOT a bug.`,
     `  - "regression"      : the candidate is genuinely WRONG (missing/broken functionality the requirement needs). If a driver could fix it, provide a concrete fixDirective; the diagnosis states the root cause.`,
     `  - "insufficient"    : the candidate is unrecoverable or the problem needs a human / a design or spec change (NO safe driver fix). This is the ONLY failing verdict.`,
     ``,
     `Then name the NEXT STEP: "accept" (equivalent), "permissive-refactor-superseded" (superseded-shift), "driver-repair-with-directive" (fixable regression), or "escalate" (insufficient).`,
     ``,
-    `Return ONLY a JSON object on a single line: {"score": <0..1>, "classification": "<one of the four>", "nextStep": "<one of the four>", "missing": ["<dropped/changed behavior>", ...], "diagnosis": "<root cause, regression only>", "fixDirective": "<what a driver should change, fixable regression only>", "supersededTests": ["<prior test path>", ...]}. Omit diagnosis/fixDirective/supersededTests when not applicable. A clean "equivalent" verdict with empty missing is the best answer , do NOT invent problems.`,
+    `Return ONLY a JSON object on a single line: {"score": <0..1>, "classification": "<one of the four>", "nextStep": "<one of the four>", "missing": ["<dropped/changed behavior>", ...], "diagnosis": "<root cause, regression only>", "fixDirective": "<what a driver should change, fixable regression only>", "supersededTests": ["<prior test path>", ...]}. Omit diagnosis/fixDirective/supersededTests when not applicable. A clean "equivalent" verdict with empty missing is the best answer – do NOT invent problems.`,
     ``,
     `REFERENCE ${kind}:`,
     "```",
@@ -804,11 +804,11 @@ export function buildDiscriminatorPrompt(kind: BuildOutputKind, reference: strin
  *  describes (right behavior/invariant, owns its DB state). The bar is the SPEC. */
 export function buildRedCoverageJudgePrompt(testListJson: string, acsJson: string, candidateTests: string): string {
   return [
-    `You are a strict senior engineer scoring a Navigator's authored RED tests against the TEST-LIST SPEC for a story , NOT against any recorded tests. The bar is the SPEC: do these tests correctly encode what the test list + acceptance criteria require?`,
+    `You are a strict senior engineer scoring a Navigator's authored RED tests against the TEST-LIST SPEC for a story – NOT against any recorded tests. The bar is the SPEC: do these tests correctly encode what the test list + acceptance criteria require?`,
     `Judge two things:`,
-    `  (1) COVERAGE , every item in the test list (and every acceptance criterion) is covered by at least one produced test.`,
-    `  (2) FAITHFULNESS , each test actually ASSERTS the requirement its test-list item describes (the right behavior / invariant / edge case), and any DB-writing test owns its own state (a per-run-unique key), not a shared/absolute whole-table assertion.`,
-    `Judge FUNCTION, not form: test/file/symbol names, ordering, and structure are irrelevant , only whether the requirements are covered + faithfully asserted.`,
+    `  (1) COVERAGE – every item in the test list (and every acceptance criterion) is covered by at least one produced test.`,
+    `  (2) FAITHFULNESS – each test actually ASSERTS the requirement its test-list item describes (the right behavior / invariant / edge case), and any DB-writing test owns its own state (a per-run-unique key), not a shared/absolute whole-table assertion.`,
+    `Judge FUNCTION, not form: test/file/symbol names, ordering, and structure are irrelevant – only whether the requirements are covered + faithfully asserted.`,
     `Return ONLY a JSON object on a single line: {"score": <0..1>, "missing": ["<test-list item or AC that is uncovered OR unfaithfully asserted>", ...]}. score 1.0 = every item covered + faithful; lower as items are missing or wrongly asserted. missing lists ONLY the gaps (empty array when none).`,
     ``,
     `TEST LIST (the spec):`,
@@ -835,7 +835,7 @@ const BUILD_NEXT_STEPS = new Set<BuildNextStep>(["accept", "permissive-refactor-
 /** Parse a DISCRIMINATOR reply into a classified verdict. Tolerant like parseJudgeReply,
  *  but an UNPARSEABLE reply OR an unknown classification defaults to
  *  insufficient/escalate (fail-safe: a judge that cannot classify must NOT pass the
- *  candidate , the same posture as score 0 on the flat judge). */
+ *  candidate – the same posture as score 0 on the flat judge). */
 export function parseDiscriminatorReply(reply: string): DiscriminatorVerdict {
   const base = parseJudgeReply(reply);
   const m = reply.match(/\{[\s\S]*"classification"[\s\S]*\}/);
@@ -964,7 +964,7 @@ function spawnOpusJudge<T>(cwd: string, prompt: string, parse: (text: string) =>
 }
 
 /** The build-code DISCRIMINATOR judge: a FIXED-opus `claude -p` (model NON-overridable,
- *  by design , the discriminator is the constant bar an assess turn's judgment is
+ *  by design – the discriminator is the constant bar an assess turn's judgment is
  *  measured against + the independent oracle the navigator-assess alignment check
  *  reuses, so its model must never vary). Given the reference + candidate build output,
  *  returns a classified DiscriminatorVerdict (classification + next step). An
@@ -1099,10 +1099,10 @@ export function makeVerdictAlignmentJudge(opts: { cwd: string }): (args: { recor
 // that actually follows that driver turn (pinned opus-high, done by the harness), then compare THAT
 // navigator's determination to the recorded navigator determination at the same step. The verdict is
 // DIRECTIONAL on the issues found (candidate's issues vs the recorded issues):
-//   - PASS               , the candidate's determination reaches the SAME / coverage-equivalent conclusion.
-//   - PASS-WITH-HONORS    , the candidate's determination found FEWER / NO issues where recorded found some
+//   - PASS               – the candidate's determination reaches the SAME / coverage-equivalent conclusion.
+//   - PASS-WITH-HONORS    – the candidate's determination found FEWER / NO issues where recorded found some
 //                           (better than the recorded run). ALWAYS surfaced/flagged, never a silent pass.
-//   - FAIL                , the candidate's determination found MORE / DIFFERENT issues than recorded.
+//   - FAIL                – the candidate's determination found MORE / DIFFERENT issues than recorded.
 // None of the existing judges model this direction, so this is the one new discriminator; it REUSES the
 // existing parsers + judges (parseNavigatorAssessMarker / makeSupersessionDeltaJudge for assess;
 // parseVerdictFile / makeVerdictAlignmentJudge for review) and adds only the directional decision on top.
@@ -1116,7 +1116,7 @@ export interface NextStepOutcome {
   recordedClass: string;
   candidateClass: string;
   reason: string;
-  /** true only on pass-with-honors , the candidate's determination was cleaner than the recorded run. */
+  /** true only on pass-with-honors – the candidate's determination was cleaner than the recorded run. */
   betterThanRecorded?: boolean;
 }
 
@@ -1138,7 +1138,7 @@ async function evaluateAssessNextStep(args: {
   const cc = candidate.classification;
   const base = { recordedClass: rc, candidateClass: cc };
 
-  // Both superseded-shift: SAME rung on the ladder below , the flagged SET decides same/better/worse
+  // Both superseded-shift: SAME rung on the ladder below – the flagged SET decides same/better/worse
   // (identical / coverage-equivalent => same; strict subset => fewer issues => honors; superset / divergent
   // set => more/different => worse). The shared makeSupersessionDeltaJudge owns the set comparison.
   if (rc === "superseded-shift" && cc === "superseded-shift") {
@@ -1157,16 +1157,16 @@ async function evaluateAssessNextStep(args: {
       return { ...base, verdict: "pass", reason: `candidate's superseded set is coverage-equivalent to the recorded ground truth (delta-judged)` };
     }
     if (candidateSubset) {
-      return { ...base, verdict: "pass-with-honors", betterThanRecorded: true, reason: `candidate flagged a strict subset of the recorded superseded set (${navSet.length} of ${recSet.length}) , fewer issues: ${(verdict.materialDifferences ?? []).join("; ")}` };
+      return { ...base, verdict: "pass-with-honors", betterThanRecorded: true, reason: `candidate flagged a strict subset of the recorded superseded set (${navSet.length} of ${recSet.length}) – fewer issues: ${(verdict.materialDifferences ?? []).join("; ")}` };
     }
     return { ...base, verdict: "fail", reason: `candidate's superseded set differs materially from the recorded ground truth${candidateSuperset ? " (over-flagged more tests)" : ""}: ${(verdict.materialDifferences ?? []).join("; ") || "sets not coverage-equivalent"}` };
   }
 
-  // Both regression (SAME rung): class-match alone is NOT enough , a candidate can land the regression
+  // Both regression (SAME rung): class-match alone is NOT enough – a candidate can land the regression
   // class with a WRONG root cause or a fix aimed at the wrong layer, which would MISDIRECT the driver into
   // the wrong change (the navigator-assess panel finding: two fast candidates "held the class" but
   // misdiagnosed). When a fidelity judge is supplied, grade the diagnosis + fixDirective CONTENT against
-  // the recorded ground truth , the regression analogue of the superseded-shift SET delta: aligned => pass;
+  // the recorded ground truth – the regression analogue of the superseded-shift SET delta: aligned => pass;
   // a material divergence => fail. Absent judge => fall through to the class-only resolution ladder (legacy).
   if (rc === "regression" && cc === "regression" && args.regressionJudge) {
     const verdict = await args.regressionJudge({
@@ -1180,16 +1180,16 @@ async function evaluateAssessNextStep(args: {
     return { ...base, verdict: "fail", reason: `candidate's regression assessment diverges materially from the recorded ground truth: ${(verdict.materialDifferences ?? []).join("; ") || "different root cause / misdirected fix"}` };
   }
 
-  // RESOLUTION LADDER , the "same or better" directional scorer over the next-turn navigator
+  // RESOLUTION LADDER – the "same or better" directional scorer over the next-turn navigator
   // determination classes. A HIGHER rung is a MORE-RESOLVED outcome (the code is closer to correct-and-done):
-  //   equivalent (3)       : the navigator found the code clean , fully resolved.
+  //   equivalent (3)       : the navigator found the code clean – fully resolved.
   //   superseded-shift (2) : the code is CORRECT; only PRIOR tests are now obsolete (a permissive refactor
-  //                          remains). The AC's change SUCCEEDED , strictly MORE resolved than a regression.
+  //                          remains). The AC's change SUCCEEDED – strictly MORE resolved than a regression.
   //   regression (1)       : the code is WRONG (broke behavior the AC did not intend).
-  //   insufficient (0)     : a failed verify the navigator could not even diagnose , least resolved.
+  //   insufficient (0)     : a failed verify the navigator could not even diagnose – least resolved.
   // "same or better" = candidate rung >= recorded rung. This is the layered scorer that recognizes, e.g., a
   // candidate reaching `superseded-shift` as BETTER than a recorded `regression` (the drop/change resolved;
-  // only test bookkeeping is left) , the case that matters for contract-change turns.
+  // only test bookkeeping is left) – the case that matters for contract-change turns.
   const RANK: Record<string, number> = { equivalent: 3, "superseded-shift": 2, regression: 1, insufficient: 0 };
   const rr = RANK[rc] ?? 1;
   const cr = RANK[cc] ?? 1;
@@ -1207,11 +1207,11 @@ async function evaluateAssessNextStep(args: {
  *  executes (refactor=true + the issue notes). A good candidate refactor RESOLVES that issue, so its OWN
  *  post-refactor review verdict should come back refactor=false. Directional:
  *   - candidate review refactor=false => PASS (the flagged cleanup landed; nothing left to refactor).
- *   - candidate review still refactor=true => FAIL (issue not resolved) , the alignment judge confirms the
+ *   - candidate review still refactor=true => FAIL (issue not resolved) – the alignment judge confirms the
  *     candidate's notes are still about the SAME issue the recorded directive raised (a different, genuinely
  *     new issue is also a FAIL: the refactor introduced/left a different problem).
  *  Uses makeVerdictAlignmentJudge to check the candidate's review notes concern the recorded directive's
- *  issue (not to require decision-MATCH , here a matching refactor=true would mean "unresolved"). */
+ *  issue (not to require decision-MATCH – here a matching refactor=true would mean "unresolved"). */
 async function evaluateReviewResolution(args: {
   recordedDirective: VerdictOutput; // the recorded upstream review (refactor:true + issue notes)
   candidateReview: VerdictOutput; // the candidate's OWN post-refactor review verdict
@@ -1220,10 +1220,10 @@ async function evaluateReviewResolution(args: {
   const base = { recordedClass: "review:refactor-requested", candidateClass: args.candidateReview.refactor ? "review:refactor-requested" : "review:clean" };
   // The candidate's post-refactor review says the code is clean => the flagged cleanup was resolved => PASS.
   if (args.candidateReview.refactor === false) {
-    return { ...base, verdict: "pass", reason: `candidate's post-refactor review is clean (refactor=false) , the recorded directive's issue was resolved` };
+    return { ...base, verdict: "pass", reason: `candidate's post-refactor review is clean (refactor=false) – the recorded directive's issue was resolved` };
   }
   // Still refactor-requested: confirm (via the alignment judge) whether it is the SAME issue (unresolved)
-  // or a genuinely new one , both are FAIL, but we name which for the record.
+  // or a genuinely new one – both are FAIL, but we name which for the record.
   const align = await args.verdictJudge({ recordedVerdict: args.recordedDirective, candidateVerdict: args.candidateReview, kind: "review" });
   return {
     ...base,
@@ -1235,8 +1235,8 @@ async function evaluateReviewResolution(args: {
 }
 
 /** Evaluate a driver candidate by its NEXT-STEP navigator determination vs the recorded determination.
- *  `evaluatorKind` picks the comparison: "assess" (driver-green, driver-repair , directional over the
- *  recorded vs candidate assess markers) or "review" (driver-refactor , resolution semantics: the
+ *  `evaluatorKind` picks the comparison: "assess" (driver-green, driver-repair – directional over the
+ *  recorded vs candidate assess markers) or "review" (driver-refactor – resolution semantics: the
  *  candidate's post-refactor review must come back clean). Reuses the existing parsers + judges; the only
  *  new logic is the directional trichotomy (pass / pass-with-honors / fail). */
 export async function evaluateNextStepDetermination(args: {
@@ -1252,7 +1252,7 @@ export async function evaluateNextStepDetermination(args: {
   deltaJudge: SupersessionDeltaJudge;
   verdictJudge: (a: { recordedVerdict: VerdictOutput; candidateVerdict: VerdictOutput; kind: "review" | "reflect" }) => Promise<VerdictAlignmentOutcome>;
   /** OPTIONAL regression-fidelity judge: when both determinations are `regression` (same rung), grade the
-   *  diagnosis + fixDirective CONTENT against the recorded ground truth , class-match alone can pass a
+   *  diagnosis + fixDirective CONTENT against the recorded ground truth – class-match alone can pass a
    *  candidate that landed the regression class with a WRONG root cause. Absent => class-only (legacy). */
   regressionJudge?: RegressionFidelityJudge;
   /** OPTIONAL failure context for the regression-fidelity judge (the failed-verify summary). */

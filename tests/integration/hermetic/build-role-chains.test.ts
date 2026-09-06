@@ -1,6 +1,6 @@
 // HERMETIC guard for the per-role BUILD-turn LIVE chains (runs under `npm test`, no live agent).
 // The build-lane sibling of design-role-chains.test.ts: each chain dir under
-// tests/integration/manifests/<role>-chain/ is a lean 2-turn pair , a REPLAY seed that overlays
+// tests/integration/manifests/<role>-chain/ is a lean 2-turn pair – a REPLAY seed that overlays
 // the recorded PRE-turn state (a CODE TREE via a "tree" seed, + any markers/design artifacts as
 // "file" seeds) then routes to the LIVE build role (a `claude` navigator). This proves, WITHOUT
 // spawning a model, that:
@@ -66,7 +66,7 @@ describe.each(CHAINS)("build-role LIVE chain: $dir", ({ dir, liveRole, start }) 
   it("every replay seed source (file OR tree) exists in the recorded corpus on disk", () => {
     const seeds = (seed.agent!.config.seeds as { from: string; kind?: string }[]) ?? [];
     expect(seeds.length).toBeGreaterThan(0);
-    // At least one TREE seed (the pre-turn code overlay) , the build-lane distinction.
+    // At least one TREE seed (the pre-turn code overlay) – the build-lane distinction.
     expect(seeds.some((s) => s.kind === "tree")).toBe(true);
     for (const s of seeds) {
       expect(existsSync(join(CORPUS, s.from)), `recorded seed missing: ${s.from}`).toBe(true);
@@ -80,7 +80,7 @@ describe.each(CHAINS)("build-role LIVE chain: $dir", ({ dir, liveRole, start }) 
   });
 });
 
-// Every BUILD chain must be able to reference a recorded-build code baseline for its story , the
+// Every BUILD chain must be able to reference a recorded-build code baseline for its story – the
 // functional/discriminator gate scores against it. Assert the story's recorded-build turns dir is
 // on disk, so a chain added without a baseline fails a test rather than scoring silently.
 describe("per-build-role chain: the recorded-build story baseline exists", () => {

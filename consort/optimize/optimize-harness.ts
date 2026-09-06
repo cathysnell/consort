@@ -8,7 +8,7 @@
 //      disqualified (it can never pass a weaker check than baseline).
 //   4. Keep the FASTEST gate-passing candidate (median of its passing trials;
 //      tie-break lower cost, then baseline). If nothing beats baseline, baseline
-//      wins , the corpus keeps the honest turn.
+//      wins – the corpus keeps the honest turn.
 //   5. Overlay the winner ONCE more with recording on (recordWinner), so the
 //      surviving corpus captures it as a normal turn, and continue from there.
 //
@@ -31,7 +31,7 @@ export interface HandoffPlan {
   /** The build turn mode (green/review/refactor/...); absent for design turns. */
   buildMode?: string;
   /** The resolved orchestrator action this handoff PINS. The walk runs THIS action's
-   *  role turn every trial , it never re-asks the orchestrator "what's next" (which
+   *  role turn every trial – it never re-asks the orchestrator "what's next" (which
    *  reads current disk state and, after the turn's artifact lands, returns the NEXT
    *  role, running the wrong turn). Carrying the action makes the pinned turn explicit
    *  and lossless (actionToHandoffPlan otherwise drops it). */
@@ -42,22 +42,22 @@ export interface HandoffPlan {
 export interface TrialResult {
   /** Did the trial pass the SAME gate the baseline must pass? */
   gatePassed: boolean;
-  /** Wall-clock for the turn (ms) , the thing being optimized. */
+  /** Wall-clock for the turn (ms) – the thing being optimized. */
   durationMs: number;
   /** Dollar cost of the turn (tie-breaker + report). */
   costUsd: number;
-  /** The turn's INPUT (prompt) tokens , the prompt-weight signal. A role whose
+  /** The turn's INPUT (prompt) tokens – the prompt-weight signal. A role whose
    *  turns are slow AND input-heavy is prompt-bound (a trim-the-.md candidate). One
    *  whose input is dominated by cache reads is not. Undefined when unmeasured. */
   inputTokens?: number;
   /** Cache-read tokens (input already cached, cheap + fast). High cache-read vs
-   *  input means the prompt weight is amortized , NOT a trim target. */
+   *  input means the prompt weight is amortized – NOT a trim target. */
   cacheReadTokens?: number;
   /** Why the gate failed (present only when gatePassed is false). */
   gateReason?: string;
   /** An opaque handle to THIS trial's produced artifacts (the .consort it wrote),
    *  captured before the between-trial restore wipes them. When this trial's candidate
-   *  wins, the walk RESTORES these exact artifacts to advance the drive , so the next
+   *  wins, the walk RESTORES these exact artifacts to advance the drive – so the next
    *  role runs against the winner's ACTUAL, measured, gated output, not a fresh re-run.
    *  Opaque to the pure engine; the live deps produce + consume it. */
   artifactsRef?: unknown;
@@ -78,7 +78,7 @@ export interface ChampionWalkDeps {
   runTrial(args: { handoff: HandoffPlan; candidate: Candidate; trial: number }): Promise<TrialResult>;
   /** Advance the walk to the winner's state + record it to the corpus. Given the
    *  WINNING TRIAL's artifactsRef, the live impl RESTORES those exact artifacts (the
-   *  measured, gated output) , it does NOT re-run the turn, so the next role consumes
+   *  measured, gated output) – it does NOT re-run the turn, so the next role consumes
    *  the winner's ACTUAL output. artifactsRef is undefined only in degenerate cases
    *  (no passing trial captured); the impl may then fall back to a re-run. */
   recordWinner(args: { handoff: HandoffPlan; candidate: Candidate; artifactsRef?: unknown }): Promise<void>;
@@ -89,7 +89,7 @@ export interface ChampionWalkArgs {
   candidates: Candidate[];
   /** Trials per candidate (median of passing trials damps model variance). */
   trials: number;
-  /** Propose-only: do NOT PERSIST the winner to the kit , the human reviews the
+  /** Propose-only: do NOT PERSIST the winner to the kit – the human reviews the
    *  ranked outcomes and runs optimize-apply to persist. This gates KIT PERSISTENCE,
    *  which runChampionWalk never does anyway (that is a separate CLI); on its own it
    *  also skips the local recordWinner advance, which is correct for a SINGLE-handoff
@@ -100,7 +100,7 @@ export interface ChampionWalkArgs {
    *  multi-handoff LANE sweep REQUIRES this: each handoff's winner artifact feeds the
    *  next handoff's planNextAction, so without advancing, positionNext re-plans the
    *  same handoff and the lane sweep stalls after handoff #1. This is the local
-   *  corpus advance, NOT kit persistence , proposeOnly still governs the latter
+   *  corpus advance, NOT kit persistence – proposeOnly still governs the latter
    *  (the separate optimize-apply step). Default false (single-handoff behavior). */
   alwaysAdvance?: boolean;
 }
@@ -112,7 +112,7 @@ export interface CandidateOutcome {
   medianMs?: number;
   /** Median cost over passing trials (tie-breaker). */
   medianCostUsd?: number;
-  /** Median INPUT (prompt) tokens over passing trials , the prompt-weight signal
+  /** Median INPUT (prompt) tokens over passing trials – the prompt-weight signal
    *  the two-pass plan reads to decide which roles are worth authoring a .md trim
    *  for. Undefined when unmeasured. */
   medianInputTokens?: number;
@@ -156,7 +156,7 @@ export async function runChampionWalk(args: ChampionWalkArgs, deps: ChampionWalk
       for (const candidate of candidates) {
         const results: TrialResult[] = [];
         for (let t = 0; t < trials; t++) {
-          // A trial can THROW (the turn crashed , e.g. the role wrote its artifact
+          // A trial can THROW (the turn crashed – e.g. the role wrote its artifact
           // to a malformed sibling root -> ArtifactOutOfRootError, an auth blip, a
           // spawn failure). One candidate crashing must DISQUALIFY that candidate,
           // never kill the whole walk (which would discard every completed handoff).
@@ -179,7 +179,7 @@ export async function runChampionWalk(args: ChampionWalkArgs, deps: ChampionWalk
           // identical point (the champion-walk invariant). A crashing trial may have
           // left partial writes, so this restore matters most exactly then. A restore
           // failure would corrupt the fork point, but it must NOT kill the whole walk
-          // either , log its stack + carry on (the next candidate re-snapshots).
+          // either – log its stack + carry on (the next candidate re-snapshots).
           try {
             await snap.restore();
           } catch (e) {
@@ -198,7 +198,7 @@ export async function runChampionWalk(args: ChampionWalkArgs, deps: ChampionWalk
       // Advance: overlay the winner once more (recorded) so its artifact is the
       // surviving turn + the next handoff plans from it. This is the LOCAL corpus
       // advance, distinct from KIT PERSISTENCE (the separate optimize-apply step).
-      //   - Single-handoff propose-only: skip advance , nothing downstream needs it,
+      //   - Single-handoff propose-only: skip advance – nothing downstream needs it,
       //     and the human reviews before optimize-apply persists.
       //   - LANE sweep (alwaysAdvance): advance EVEN under propose-only, because each
       //     handoff's winner feeds the next handoff's planNextAction; without it the
@@ -208,7 +208,7 @@ export async function runChampionWalk(args: ChampionWalkArgs, deps: ChampionWalk
         // Hand recordWinner the WINNING TRIAL's captured artifacts so it restores the
         // exact measured/gated output (the next role runs against the winner's ACTUAL
         // artifacts), not a re-run. Pick the fastest passing trial of the winning
-        // candidate , the representative that its median reflects. Undefined only if
+        // candidate – the representative that its median reflects. Undefined only if
         // no passing trial captured artifacts (degenerate; impl falls back to re-run).
         const winnerOutcome = outcomes.find((o) => o.candidateId === winner.candidateId);
         const artifactsRef = bestPassingTrial(winnerOutcome)?.artifactsRef;
@@ -224,7 +224,7 @@ export async function runChampionWalk(args: ChampionWalkArgs, deps: ChampionWalk
   return { walk };
 }
 
-/** The fastest PASSING trial of a candidate outcome , the representative whose
+/** The fastest PASSING trial of a candidate outcome – the representative whose
  *  artifacts should survive as the winner (its wall-clock is what the median
  *  reflects). Returns undefined for a disqualified/absent outcome. */
 function bestPassingTrial(outcome: CandidateOutcome | undefined): TrialResult | undefined {

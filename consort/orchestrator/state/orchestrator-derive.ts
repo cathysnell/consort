@@ -137,7 +137,7 @@ const DESIGN_DONE_STATUSES = new Set([
  * every view in lockstep (`software-design-principles` hard rule 9). Packed into
  * one story-level GREEN turn that is too much to land reliably (the F6/S3 build
  * ground for 20+ min without converging), so a contract story automatically
- * runs at the FINEST `ac` granularity , one small, verifiable increment per AC ,
+ * runs at the FINEST `ac` granularity – one small, verifiable increment per AC ,
  * regardless of the run default. Detected from the story id's verb (the Spec
  * Author names contract stories descriptively: `...-drop-old`, `...-remove-x`,
  * `...-rename-y`, `...-cleanup`). */
@@ -168,7 +168,7 @@ function storyView(
   // Stale-experiment guardrail: an ACTIVE experiment whose stamped design fingerprint no
   // longer matches the story's CURRENT design (test-list) was cut for a design that has
   // since been re-authored under it (the `withdraw-gate` + `set --status designing`
-  // hand-surgery, which , unlike `revise` / `consort-reopen-story` , does not discard the
+  // hand-surgery, which – unlike `revise` / `consort-reopen-story` – does not discard the
   // experiment). Reusing it would ride the superseded design's code/tests into the merge.
   // Flag it so nextBuildAction re-cuts a fresh experiment instead. Fires ONLY when a
   // fingerprint was stamped (experiments cut before this guardrail, or with no test-list,

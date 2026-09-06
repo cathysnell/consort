@@ -1,4 +1,4 @@
-// The drive-live-log classifier , the robust replacement for a session's brittle
+// The drive-live-log classifier – the robust replacement for a session's brittle
 // hand-rolled `tail -f … | while read; case …` monitor. Asserted against the EXACT
 // line formats the drive writes (claude-runner.ts + drive.cli.ts), so a format
 // change that this misclassifies fails the build, not a user's run.
@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { classifyDriveLine } from "../../consort/orchestrator/drive/watch-classify";
 
-describe("classifyDriveLine , progress lines (relay, keep tailing)", () => {
+describe("classifyDriveLine – progress lines (relay, keep tailing)", () => {
   it("per-action dispatch line => dispatch, prefix trimmed, no stop", () => {
     const c = classifyDriveLine("[drive] 000 dispatch spec-author for design");
     expect(c).toMatchObject({ kind: "dispatch", text: "dispatch spec-author for design", stop: false });
@@ -27,7 +27,7 @@ describe("classifyDriveLine , progress lines (relay, keep tailing)", () => {
 
   it("sprint feature skip => skip, no stop", () => {
     expect(
-      classifyDriveLine("[sprint] feature 2: F2-stock-adjustment , already shipped, skipping"),
+      classifyDriveLine("[sprint] feature 2: F2-stock-adjustment – already shipped, skipping"),
     ).toMatchObject({ kind: "skip", stop: false });
   });
 
@@ -39,7 +39,7 @@ describe("classifyDriveLine , progress lines (relay, keep tailing)", () => {
   });
 });
 
-describe("classifyDriveLine , STOP points (control returns to the human)", () => {
+describe("classifyDriveLine – STOP points (control returns to the human)", () => {
   it("GATE line => gate, STOP", () => {
     expect(classifyDriveLine("[drive] GATE awaiting human approval: approve the spec gate for F1.")).toMatchObject({
       kind: "gate",
@@ -50,12 +50,12 @@ describe("classifyDriveLine , STOP points (control returns to the human)", () =>
 
   it("PAUSED line => pause, STOP", () => {
     expect(
-      classifyDriveLine("[drive] PAUSED , awaiting the Product Owner's sprint backlog. This is a DECISION"),
+      classifyDriveLine("[drive] PAUSED – awaiting the Product Owner's sprint backlog. This is a DECISION"),
     ).toMatchObject({ kind: "pause", stop: true, outcome: "pause" });
   });
 
   it("holding line => pause, STOP", () => {
-    expect(classifyDriveLine("[drive] holding , write Y to .consort/answer when ready.")).toMatchObject({
+    expect(classifyDriveLine("[drive] holding – write Y to .consort/answer when ready.")).toMatchObject({
       kind: "pause",
       stop: true,
     });
@@ -66,30 +66,30 @@ describe("classifyDriveLine , STOP points (control returns to the human)", () =>
   });
 
   it("RAISED TO HIL headline => escalation, STOP (on the line itself)", () => {
-    expect(classifyDriveLine("[sprint] RAISED TO HIL on F1-stock-visibility , halting sprint s1.")).toMatchObject({
+    expect(classifyDriveLine("[sprint] RAISED TO HIL on F1-stock-visibility – halting sprint s1.")).toMatchObject({
       kind: "escalation",
       stop: true,
       outcome: "escalation",
     });
-    expect(classifyDriveLine("[drive] RAISED TO HIL after 12 actions , awaiting HIL decision.")).toMatchObject({
+    expect(classifyDriveLine("[drive] RAISED TO HIL after 12 actions – awaiting HIL decision.")).toMatchObject({
       kind: "escalation",
       stop: true,
     });
   });
 
-  it("ABORTED headline (unexpected crash) => escalation, STOP , never a silent, skipped line", () => {
+  it("ABORTED headline (unexpected crash) => escalation, STOP – never a silent, skipped line", () => {
     // Regression: a deterministic CLI effect (wait-ci / merge) or an unexpected error
     // used to die as a bare, unprefixed "<bin> exited N" line that classifyDriveLine
     // returned null for, so a Monitor tailing drive-live.log never surfaced the CI
     // failure and the run looked like it was "still waiting on CI" after it had died.
-    const c = classifyDriveLine("[drive] ABORTED , unexpected error: something broke");
+    const c = classifyDriveLine("[drive] ABORTED – unexpected error: something broke");
     expect(c).toMatchObject({ kind: "escalation", stop: true, outcome: "escalation" });
     expect(c?.text).toContain("ABORTED");
   });
 
   it("a CLI-effect failure that raised to HIL (wait-ci) => escalation, STOP", () => {
     expect(
-      classifyDriveLine("[drive] RAISED TO HIL , lakebase-scm-wait-ci failed."),
+      classifyDriveLine("[drive] RAISED TO HIL – lakebase-scm-wait-ci failed."),
     ).toMatchObject({ kind: "escalation", stop: true, outcome: "escalation" });
   });
 
@@ -109,18 +109,18 @@ describe("classifyDriveLine , STOP points (control returns to the human)", () =>
   });
 });
 
-describe("classifyDriveLine , [consort] disclosures are surfaced (not dropped)", () => {
+describe("classifyDriveLine – [consort] disclosures are surfaced (not dropped)", () => {
   it("a [consort] telemetry-briefing line => notice, shown, no stop", () => {
     // Regression: the notice lands in drive-live.log but the classifier used to return
     // null for non-[drive]/[sprint] lines, so consort-watch dropped the L1/L2 briefing
-    // the orchestrator contract requires surfacing , the human was never briefed.
+    // the orchestrator contract requires surfacing – the human was never briefed.
     const c = classifyDriveLine("[consort] Anonymous* usage telemetry is on (no PII).");
     expect(c).toMatchObject({ kind: "notice", stop: false });
     expect(c?.text).toContain("usage telemetry is on");
   });
 });
 
-describe("classifyDriveLine , create + refresh narration relays through the SAME watcher", () => {
+describe("classifyDriveLine – create + refresh narration relays through the SAME watcher", () => {
   // One relay follows create / refresh / drive. create narrates provisioning as
   // bracketed stage lines (NOT [drive]/[sprint]); the guard used to drop them, so a
   // session watching `lakebase-create-project` saw nothing. Any bracketed stage line
@@ -143,7 +143,7 @@ describe("classifyDriveLine , create + refresh narration relays through the SAME
   });
 });
 
-describe("classifyDriveLine , non-narration lines are skipped", () => {
+describe("classifyDriveLine – non-narration lines are skipped", () => {
   it.each(["", "  ", "raw pytest output", "{\"event\":\"x\"}", "npm warn something"])(
     "returns null for %j",
     (line) => {

@@ -40,7 +40,7 @@ interface Args {
   since?: number;
   /** PERSISTENT MONITOR mode (for the Monitor tool, NOT a Bash call): follow the log
    *  indefinitely and stop ONLY at a terminal marker (gate/pause/escalation/done).
-   *  Unlike a `--pid`-bound follow, it does NOT exit when a drive process dies , so ONE
+   *  Unlike a `--pid`-bound follow, it does NOT exit when a drive process dies – so ONE
    *  monitor spans the drive's mid-turn silences AND its turn-by-turn re-runs (each run
    *  truncates drive-live.log; the follow re-reads from 0). This is the kit-owned
    *  replacement for a hand-rolled `tail -F | while read; case …`. Implies no timeout
@@ -50,11 +50,11 @@ interface Args {
 }
 
 /** Per-turn open + relay report: open exactly what the just-finished ROLE produced (roleArtifacts,
- *  scoped to the live feature/story) and return one line for the human , NEVER silent for a design
+ *  scoped to the live feature/story) and return one line for the human – NEVER silent for a design
  *  role: it says what it opened, or WHY it could not (not inside the editor's terminal / no editor
  *  CLI / nothing authored yet), so a skip is diagnosable instead of looking like nothing happened.
- *  A build turn (driver , no reviewable design artifact) returns null: opening nothing is expected.
- *  This is the visibility the design lane needs , after each role's turn, see its artifacts. */
+ *  A build turn (driver – no reviewable design artifact) returns null: opening nothing is expected.
+ *  This is the visibility the design lane needs – after each role's turn, see its artifacts. */
 export function reportRoleOpen(
   consortDir: string,
   role: string,
@@ -62,7 +62,7 @@ export function reportRoleOpen(
   spawn?: (cmd: string, files: string[]) => void,
 ): string | null {
   // LAKEBASE_CONSORT_OPEN=1/force lets a background monitor (whose process is NOT the editor's
-  // integrated terminal, so isInsideEditor is false) still open , the human opted in, and the
+  // integrated terminal, so isInsideEditor is false) still open – the human opted in, and the
   // editor CLI surfaces the file in the already-running instance regardless of the caller.
   // `spawn` is injectable so a test asserts the open WITHOUT launching the real editor (the
   // default resolves + spawns the real editor CLI, as production wants).
@@ -72,11 +72,11 @@ export function reportRoleOpen(
   if (!DESIGN_ROLES.has(role)) return null; // build turn / no design output: expected, stay silent
   switch (res.reason) {
     case "not-in-editor":
-      return `[consort-watch] ${role} turn done , ${res.files.length} artifact(s) to review, NOT opened , run the relay inside your Cursor/VS Code integrated terminal, OR set LAKEBASE_CONSORT_OPEN=1 to auto-open from a background monitor (else review via consort-open)`;
+      return `[consort-watch] ${role} turn done – ${res.files.length} artifact(s) to review, NOT opened – run the relay inside your Cursor/VS Code integrated terminal, OR set LAKEBASE_CONSORT_OPEN=1 to auto-open from a background monitor (else review via consort-open)`;
     case "no-editor":
-      return `[consort-watch] ${role} turn done , no cursor/code CLI found to open its ${res.files.length} artifact(s) , install the editor's shell command (else review via consort-open)`;
+      return `[consort-watch] ${role} turn done – no cursor/code CLI found to open its ${res.files.length} artifact(s) – install the editor's shell command (else review via consort-open)`;
     case "no-artifacts":
-      return `[consort-watch] ${role} turn done , no reviewable artifact found yet for this scope`;
+      return `[consort-watch] ${role} turn done – no reviewable artifact found yet for this scope`;
     default:
       return null;
   }
@@ -97,7 +97,7 @@ function parseArgs(argv: string[]): Args {
       case "--monitor": out.monitor = true; out.timeout = 0; break; // persistent: no self-bound
       case "-h": case "--help":
         process.stdout.write(
-          "consort-watch , follow a backgrounded drive's live log and relay transitions.\n\n" +
+          "consort-watch – follow a backgrounded drive's live log and relay transitions.\n\n" +
             "  consort-watch [--log <path>] [--pid <n>] [--from-start] [--project-dir <p>]\n" +
             "  consort-watch --since <cursor> [--pid <n>]   POLL-ONCE: new lines + status, exit at once (for a Bash-call relay loop)\n" +
             "  consort-watch --monitor                      PERSISTENT: follow the log across silences + drive re-runs, stop only at a marker (for the Monitor TOOL)\n\n" +
@@ -131,7 +131,7 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 /** Read the WHOLE log and return the LAST classified STOP line (gate/pause/escalation/
  *  done), or null if none. Used when the drive already reached a terminal marker before
- *  (or just as) we attached , a fast detached run that stopped before this follow
+ *  (or just as) we attached – a fast detached run that stopped before this follow
  *  started from EOF. Without it we'd miss the marker and falsely report an unclean exit.
  *  Works for ANY step (it matches whatever the classifier flags as a stop). */
 export function scanLastStop(logPath: string): WatchClass | null {
@@ -142,7 +142,7 @@ export function scanLastStop(logPath: string): WatchClass | null {
       if (c?.stop) last = c;
     }
   } catch {
-    /* unreadable , treat as no stop found */
+    /* unreadable – treat as no stop found */
   }
   return last;
 }
@@ -150,13 +150,13 @@ export function scanLastStop(logPath: string): WatchClass | null {
 /** Emit the stop GUIDANCE for a terminal transition (point the human at consort-next at a
  *  gate/pause; consort-diagnose on escalation; else "run complete") and return the process
  *  exit code (3 for escalation, else 0). Artifacts are opened PER TURN as each role finishes
- *  (see the follow loop) , NOT batched here at the gate. The stop LINE itself is printed by
+ *  (see the follow loop) – NOT batched here at the gate. The stop LINE itself is printed by
  *  the caller. Shared by the live follow AND the late-attach scan so both behave alike. */
 function emitStop(c: WatchClass): number {
   if (c.outcome === "gate" || c.outcome === "pause") {
-    process.stderr.write("consort-watch: control is back with you , run `consort-next` for the exact command, then re-run the drive.\n");
+    process.stderr.write("consort-watch: control is back with you – run `consort-next` for the exact command, then re-run the drive.\n");
   } else if (c.outcome === "escalation") {
-    process.stderr.write(`consort-watch: the run escalated , \`consort-diagnose\` bundles the forensics; after fixing the cause, \`consort-resolve-escalation\` clears it (do NOT rm the record), then re-run.\n`);
+    process.stderr.write(`consort-watch: the run escalated – \`consort-diagnose\` bundles the forensics; after fixing the cause, \`consort-resolve-escalation\` clears it (do NOT rm the record), then re-run.\n`);
   } else {
     process.stderr.write("consort-watch: run complete.\n");
   }
@@ -167,7 +167,7 @@ function emitStop(c: WatchClass): number {
  *  stop (a gate, the planning backlog pause, accept/discard/revise, done, or an escalation)
  *  and NEVER while running. Read directly (no derive) so the persistent monitor can alert
  *  the INSTANT the drive stops, WITHOUT waiting on a `[drive]` marker the transient
- *  drive-live.log may never carry , the sit-at-gate bug. `generated_at` is stamped fresh on
+ *  drive-live.log may never carry – the sit-at-gate bug. `generated_at` is stamped fresh on
  *  each stop, so a change since the monitor attached means a NEW stop (not the stale prior
  *  one). `awaiting_human` is the sole human-needed signal (mirrors consort-next). Returns
  *  null when next.json is absent/unreadable (the drive has not stopped yet). */
@@ -203,21 +203,21 @@ export function readNextStop(consortDir: string): NextStop | null {
 }
 
 /** True when next.json describes a real STOP the monitor must surface (a human decision,
- *  a terminal done, or an escalation) , as opposed to a mid-run snapshot. */
+ *  a terminal done, or an escalation) – as opposed to a mid-run snapshot. */
 function isNextStop(ns: NextStop | null): ns is NextStop {
   return !!ns && (ns.awaiting_human || ns.done || ns.escalated);
 }
 
-/** When the monitored drive's PID is gone, classify WHY it exited , so the persistent
+/** When the monitored drive's PID is gone, classify WHY it exited – so the persistent
  *  --monitor does not false-alarm on every turn. The deterministic drive performs its
  *  action(s) and EXITS at a boundary (the driver re-runs it per turn), so a dead pid is
  *  usually NOT a crash.
- *  - `stop`  : a real terminal , a gate/pause/done/escalation (next.json awaiting_human/
+ *  - `stop`  : a real terminal – a gate/pause/done/escalation (next.json awaiting_human/
  *              done/escalated, or a log stop marker).
  *  - `turn-boundary` : the drive ADVANCED to a new next-action and exited cleanly for a
- *              re-run (its action identity , `enact`, else `summary` , CHANGED since we
+ *              re-run (its action identity – `enact`, else `summary` – CHANGED since we
  *              attached). Benign; the driver just re-runs. NOT a crash.
- *  - `crash` : pid gone with NO progress (same pending action) AND no stop marker , genuinely
+ *  - `crash` : pid gone with NO progress (same pending action) AND no stop marker – genuinely
  *              stuck or died (e.g. a substrate-failure the re-run keeps hitting).
  *  The ACTION IDENTITY, not `generated_at`, is the progress signal: a crash that re-derives +
  *  re-writes the SAME action each retry keeps the same identity (generated_at still advances),
@@ -240,9 +240,9 @@ export function classifyPidGone(
  *  Used by the persistent monitor so a drive-stop is surfaced the moment next.json changes,
  *  never contingent on a log marker. Escalation => 3; gate/done => 0. */
 function emitNextStop(ns: NextStop): number {
-  process.stdout.write(`[consort-watch] DRIVE STOPPED , ${ns.summary || (ns.done ? "run complete" : ns.escalated ? "escalation" : "awaiting a decision")}\n`);
+  process.stdout.write(`[consort-watch] DRIVE STOPPED – ${ns.summary || (ns.done ? "run complete" : ns.escalated ? "escalation" : "awaiting a decision")}\n`);
   if (ns.escalated) {
-    process.stderr.write("consort-watch: the run escalated , `consort-diagnose` bundles the forensics; after fixing the cause, `consort-resolve-escalation` clears it (do NOT rm the record), then re-run.\n");
+    process.stderr.write("consort-watch: the run escalated – `consort-diagnose` bundles the forensics; after fixing the cause, `consort-resolve-escalation` clears it (do NOT rm the record), then re-run.\n");
     return 3;
   }
   if (ns.done) {
@@ -251,8 +251,8 @@ function emitNextStop(ns: NextStop): number {
   }
   // awaiting_human at a gate / backlog / accept-discard-revise: surface the prompt + the
   // exact enact command. (Artifacts are opened per turn as roles finish, not here.)
-  if (ns.hil) process.stdout.write(`[consort-watch] HUMAN NEEDED: ${ns.hil}${ns.enact ? ` , run: ${ns.enact}` : ""}\n`);
-  process.stderr.write("consort-watch: control is back with you , run `consort-next` for the exact command, then re-run the drive.\n");
+  if (ns.hil) process.stdout.write(`[consort-watch] HUMAN NEEDED: ${ns.hil}${ns.enact ? ` – run: ${ns.enact}` : ""}\n`);
+  process.stderr.write("consort-watch: control is back with you – run `consort-next` for the exact command, then re-run the drive.\n");
   return 0;
 }
 
@@ -261,15 +261,15 @@ export interface PollResult {
   /** The lines a human sees this poll, already PREFIX-formatted (role/gate/etc.). */
   relayed: string[];
   /** Roles whose turn FINISHED in this batch (one per `[drive] <role> turn Ns` line), in
-   *  order , the caller opens each role's produced artifacts for the human to review before
+   *  order – the caller opens each role's produced artifacts for the human to review before
    *  the next turn. Empty when no turn completed this poll. */
   turnsDone: string[];
-  /** New byte offset , pass as the next `--since`. */
+  /** New byte offset – pass as the next `--since`. */
   cursor: number;
   /** running until a stop is seen (this batch OR, when the pid is gone, anywhere in the log). */
   status: PollStatus;
   /** MEASURED liveness, never inferred: ms since the log's last write (now - mtime). A long
-   *  silent stretch is a slow OR a hung turn , the log ALONE CANNOT tell which (one model
+   *  silent stretch is a slow OR a hung turn – the log ALONE CANNOT tell which (one model
    *  call writes nothing until it returns), so the caller RELAYS this number and must NOT
    *  invent a "hung" / "stuck N min" verdict from it. The only authoritative stall signal is
    *  the drive's own `[drive] turn stalled:` line (emitted by the in-process inactivity
@@ -281,7 +281,7 @@ export interface PollResult {
 
 /** POLL-ONCE, pure + testable (no stdout): read new lines from `since` to EOF, format
  *  each meaningful transition for relay, and resolve the status. This is the ONE relay
- *  the guidance mandates , the caller loops it (narrating `relayed` each time) until
+ *  the guidance mandates – the caller loops it (narrating `relayed` each time) until
  *  `status` is a stop. `isAlive` is injectable so a test can drive the pid-gone path;
  *  `nowMs` is injectable so a test can drive the measured-silence path deterministically.
  *  Also returns MEASURED liveness (`silentMs`, `pidAlive`) so the caller relays real
@@ -340,21 +340,21 @@ async function main(): Promise<number> {
 
   // POLL-ONCE (--since <offset>): read new lines from the offset, relay them, print a
   // machine-readable `[consort-watch] cursor=<N> status=<…> silent_for_s=<N> pid_alive=<…>`
-  // trailer, and EXIT at once. This is the harness-friendly relay , a blocking follow is not
+  // trailer, and EXIT at once. This is the harness-friendly relay – a blocking follow is not
   // streamed to the human (they see only a spinner until it returns), so the caller LOOPS
   // short --since calls and narrates each batch. `silent_for_s` + `pid_alive` are MEASURED
   // (log mtime + pid probe): relay them as-is and do NOT infer a "hung" / "stuck N min"
-  // verdict from a long silence , one model call is silent until it returns, so only the
+  // verdict from a long silence – one model call is silent until it returns, so only the
   // drive's own `stalled` line is an authoritative stall. Returns fast whether or not there
   // is new content.
   if (args.since !== undefined) {
     const r = pollOnce(logPath, args.since, args.pid);
     for (const line of r.relayed) process.stdout.write(`${line}\n`);
-    // PER-TURN artifact open , THE path the design lane actually runs. For each role whose
+    // PER-TURN artifact open – THE path the design lane actually runs. For each role whose
     // turn finished this batch, reveal what it produced (a no-op unless inside the editor;
     // openRoleArtifacts' own guard) and relay the result, so the human sees each role's output
     // turn by turn. (The old open lived only in the blocking-tail/--monitor loop below, which
-    // the mandatory poll-once relay never enters , so it never fired during a normal run.)
+    // the mandatory poll-once relay never enters – so it never fired during a normal run.)
     if (args.open) {
       for (const role of r.turnsDone) {
         const rep = reportRoleOpen(consortDir, role, process.env);
@@ -367,7 +367,7 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  // Wait (bounded) for the log to appear , the drive may be backgrounding just now.
+  // Wait (bounded) for the log to appear – the drive may be backgrounding just now.
   const APPEAR_MS = 30_000;
   const t0 = Date.now();
   while (!fs.existsSync(logPath)) {
@@ -395,7 +395,7 @@ async function main(): Promise<number> {
   // Monitor late-attach: if the drive ALREADY wrote a terminal marker before this monitor
   // started following from EOF, report it now. Monitor mode skips the pid-gone exit (to
   // span re-runs), so without this it would follow an already-finished log forever. (In
-  // the normal case , armed while the drive runs, no marker yet , scanLastStop is null and
+  // the normal case – armed while the drive runs, no marker yet – scanLastStop is null and
   // we follow forward. A re-run truncates the log, so no stale marker survives.)
   if (args.monitor) {
     const last = scanLastStop(logPath);
@@ -405,14 +405,14 @@ async function main(): Promise<number> {
     }
   }
 
-  // Persistent-monitor stop detection , the fix for "sits at a gate for hours". The drive
+  // Persistent-monitor stop detection – the fix for "sits at a gate for hours". The drive
   // writes next.json on EVERY stop, so the monitor alerts the INSTANT it stops instead of
   // waiting on a [drive] log marker the transient log may never carry. `nextBaseline` is the
   // snapshot present at attach (the drive is running now, so this is the prior/handled stop);
   // the no-pid fallback fires only on a CHANGE. With --pid (recommended), a dead pid IS the
-  // stop , unambiguous, no staleness. Either way the authoritative STATE comes from next.json.
+  // stop – unambiguous, no staleness. Either way the authoritative STATE comes from next.json.
   const nextBaseline = readNextStop(consortDir)?.generated_at ?? "";
-  // The pending next-ACTION at attach (enact, else summary) , the progress signal for the
+  // The pending next-ACTION at attach (enact, else summary) – the progress signal for the
   // pid-gone check: a CHANGE means the drive advanced a turn (benign boundary); UNCHANGED +
   // no stop means it is stuck/crashed on the same action.
   const baselineForAction = readNextStop(consortDir);
@@ -432,10 +432,10 @@ async function main(): Promise<number> {
         // Benign: the drive advanced a turn and exited for a re-run (NOT a crash). Exit 0
         // with a re-run hint instead of the exit-3 crash alarm, so a per-turn drive does not
         // trip a false "check for a crash" every single turn boundary.
-        process.stdout.write(`[consort-watch] turn boundary , the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.\n`);
+        process.stdout.write(`[consort-watch] turn boundary – the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.\n`);
         return 0;
       }
-      process.stderr.write(`consort-watch: drive pid ${args.pid} is no longer running with no progress + no stop recorded , run consort-next to check for a crash.\n`);
+      process.stderr.write(`consort-watch: drive pid ${args.pid} is no longer running with no progress + no stop recorded – run consort-next to check for a crash.\n`);
       return 3;
     }
     // No --pid: a FRESH next.json stop (generated_at changed since attach) means the drive
@@ -448,7 +448,7 @@ async function main(): Promise<number> {
 
   for (;;) {
     const size = fs.statSync(logPath).size;
-    if (size < offset) offset = 0; // truncated / rotated , restart
+    if (size < offset) offset = 0; // truncated / rotated – restart
     if (size > offset) {
       const fd = fs.openSync(logPath, "r");
       const buf = Buffer.alloc(size - offset);
@@ -470,7 +470,7 @@ async function main(): Promise<number> {
         process.stdout.write(`${PREFIX[c.kind]} ${c.text}\n`);
         if (c.kind === "notice") { inNotice = true; continue; }
         // PER-TURN artifact open: when a role's turn finishes, reveal exactly what THAT role
-        // produced , visibility only, a no-op unless inside an editor, and never silent for a
+        // produced – visibility only, a no-op unless inside an editor, and never silent for a
         // design role (reportRoleOpen says opened / why-not). Same path as the poll-once relay.
         if (c.kind === "turn-done" && args.open) {
           const role = c.text.match(/^(\S+) turn/)?.[1];
@@ -480,16 +480,16 @@ async function main(): Promise<number> {
           }
         }
         // The exact next command lives in the authoritative read-only surface, not in
-        // this line's indented follow-up (which the classifier skips) , emitStop points there.
+        // this line's indented follow-up (which the classifier skips) – emitStop points there.
         if (c.stop) return emitStop(c);
       }
     }
     // Drive process gone + nothing more to read PAST our offset. This is the common
     // late-attach case: a fast detached drive wrote its terminal marker (a PAUSE at any
     // step, a gate, done) and exited BEFORE we started following from EOF. Scan the whole
-    // log for the last stop and report the REAL outcome , NOT a false "unclean exit".
+    // log for the last stop and report the REAL outcome – NOT a false "unclean exit".
     // Only when there is genuinely no stop marker anywhere is it a crash/kill.
-    // Persistent monitor: alert the moment the drive STOPS , keyed on the authoritative
+    // Persistent monitor: alert the moment the drive STOPS – keyed on the authoritative
     // next.json (written on every stop) + the drive pid, NEVER on a [drive] log marker that
     // the transient log may never carry. This is the fix for the monitor sitting silently at
     // a gate for hours: previously --monitor skipped the pid-gone check to "span re-runs" and
@@ -514,7 +514,7 @@ async function main(): Promise<number> {
     // drive too). The drive keeps running detached; re-run consort-watch to resume.
     if (args.timeout > 0 && (Date.now() - watchStart) / 1000 >= args.timeout) {
       process.stderr.write(
-        `consort-watch: still running after ${args.timeout}s and no gate yet , the drive continues in the background. ` +
+        `consort-watch: still running after ${args.timeout}s and no gate yet – the drive continues in the background. ` +
           `Re-run \`consort-watch\` to keep relaying (or pass --timeout 0 when running consort-watch itself detached).\n`,
       );
       return 0;

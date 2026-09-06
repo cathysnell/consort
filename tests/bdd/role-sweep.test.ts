@@ -1,7 +1,7 @@
 // role-sweep + role-sweep-report: the per-role sweep runner + its before/after report, exercised
 // hermetically with a FAKE chain runner (canned turns) + a STUB judge, so the sweep logic ,
 // candidate iteration, conformance gating, QUALITY gating vs a baseline, crash-disqualify,
-// ranking , is proven without spawning a model.
+// ranking – is proven without spawning a model.
 
 import { describe, it, expect } from "vitest";
 import { runRoleSweep, type ChainRunner, type ChainRunResult } from "../optimization/role-sweep";
@@ -101,7 +101,7 @@ describe("runRoleSweep parallel: candidates fan out under a concurrency cap, ord
 
   it("returns trials in CANDIDATE order (baseline first) regardless of completion order", async () => {
     const cands = roleCandidates("sonnet");
-    // A runner whose duration is INVERSE to index, so later candidates finish first , the pool
+    // A runner whose duration is INVERSE to index, so later candidates finish first – the pool
     // returns completion order, but runRoleSweep must re-sort to candidate order.
     const runner: ChainRunner = async (_c, _a, candidateId) => {
       const idx = cands.findIndex((c) => c.id === candidateId);
@@ -241,9 +241,9 @@ describe("reportRoleSweep: rank winners by wall-clock among QUALITY-HOLDING cand
   it("a faster candidate that FAILS quality is NOT the winner", () => {
     const trials = [
       { candidateId: "baseline", levers: {}, gatePassed: true, qualityPassed: true, telemetry: { role: "test-strategist", chain: "x#baseline", levers: {}, outerDurationMs: 600000, outcome: "produced", semanticScore: 0.95 } },
-      // faster but THIN (quality failed) , must NOT win despite being fastest.
+      // faster but THIN (quality failed) – must NOT win despite being fastest.
       { candidateId: "m-haiku", levers: { model: "haiku" }, gatePassed: true, qualityPassed: false, telemetry: { role: "test-strategist", chain: "x#m-haiku", levers: { model: "haiku" }, outerDurationMs: 190000, outcome: "produced", semanticScore: 0.5 } },
-      // slower than haiku but holds quality , the legitimate winner.
+      // slower than haiku but holds quality – the legitimate winner.
       { candidateId: "m-opus", levers: { model: "opus" }, gatePassed: true, qualityPassed: true, telemetry: { role: "test-strategist", chain: "x#m-opus", levers: { model: "opus" }, outerDurationMs: 300000, outcome: "produced", semanticScore: 0.9 } },
     ];
     const r = reportRoleSweep(trials);

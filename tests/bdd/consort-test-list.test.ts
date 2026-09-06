@@ -209,7 +209,7 @@ describe("test-list: per-story scoping (phase 2c)", () => {
     // testListReady(S2) stays false and the design lane re-issues test-strategist
     // forever. writeStoryTestList must fold the story's authored items into the
     // master, then scope.
-    writeMasterTestList(tdd, masterList()); // T1/T2 (AC1), T3 (AC2) , story 1 only
+    writeMasterTestList(tdd, masterList()); // T1/T2 (AC1), T3 (AC2) – story 1 only
     writeFileSync(
       join(tdd, STORY2_DIR, "test-list-per-story.json"),
       JSON.stringify({

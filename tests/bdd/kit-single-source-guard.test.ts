@@ -14,14 +14,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(here, "..", "..");
 const read = (rel: string) => fs.readFileSync(path.join(REPO, rel), "utf8");
 
-// The launchers that scaffold + drive a run , they must resolve via the shared function.
+// The launchers that scaffold + drive a run – they must resolve via the shared function.
 const LAUNCHERS = [
   "examples/replay/_replay-smoke.sh",
   "examples/replay/run-smoke.sh",
   "examples/replay/capture-scenario.sh",
 ];
 
-// The live tests that spawn a real `claude -p` agent , they must resolve via the TS twin.
+// The live tests that spawn a real `claude -p` agent – they must resolve via the TS twin.
 const LIVE_TS = [
   "tests/integration/live/spec-author-breakdown-live.test.ts",
   "tests/integration/live/navigator-red-executor-dispatch-live.test.ts",
@@ -65,7 +65,7 @@ describe("kit single-source guard: exactly ONE resolver declaration of each (no 
 
   it("resolveKitSingleSource is exported from exactly one module (kit-resolution.ts)", () => {
     const tsFiles = walk(path.join(REPO, "tests"), (p) => p.endsWith(".ts"))
-      // Exclude THIS guard file , it names the symbol as a string, not a declaration.
+      // Exclude THIS guard file – it names the symbol as a string, not a declaration.
       .filter((p) => path.relative(REPO, p) !== "tests/bdd/kit-single-source-guard.test.ts");
     const decls = tsFiles.filter((p) => /export function resolveKitSingleSource\b/.test(fs.readFileSync(p, "utf8")));
     expect(decls.map((p) => path.relative(REPO, p))).toEqual(["tests/integration/live/kit-resolution.ts"]);

@@ -1,4 +1,4 @@
-// Guard: the orchestrator's directories mirror the control hierarchy , a WORKFLOW is run by an
+// Guard: the orchestrator's directories mirror the control hierarchy – a WORKFLOW is run by an
 // ORCHESTRATOR managing TURNS, each TURN executes a STEP, tuned by per-project SETTINGS. This is the
 // anti-recurrence gate for the step/turns/runners/settings reorg: it fails if a layer's definition
 // re-scatters outside its home, OR if the killed manifest-step / step-manifest homophone (or the old
@@ -8,7 +8,7 @@
 //   turns/    executes ONE step (the Template Method + monitor + report)
 //   runners/  runs a workflow's turns + loads its run-config
 //   settings/ the per-project settings resolver
-// (turns/ + runners/ are PLURAL per the family-naming rule , a catalog of interchangeable members;
+// (turns/ + runners/ are PLURAL per the family-naming rule – a catalog of interchangeable members;
 //  the old singular turn/ + runner/ are among the forbidden dir names below.)
 
 import { describe, it, expect } from "vitest";
@@ -27,7 +27,7 @@ function grepFiles(pattern: string): string[] {
   }
 }
 
-/** Tracked paths under consort/orchestrator/ (scoped so the output stays small , the whole tree,
+/** Tracked paths under consort/orchestrator/ (scoped so the output stays small – the whole tree,
  *  incl. committed dist/ + corpus, overflows execFileSync's buffer, and these checks only concern
  *  the orchestrator source dirs anyway). */
 function orchestratorPaths(): string[] {
@@ -98,7 +98,7 @@ describe("orchestrator layers: step / turn / runner / settings each live in ONE 
         const offenders = grepFiles(token).filter((f) => !f.startsWith(home) && !f.startsWith("dist/") && f !== SELF);
         expect(
           offenders,
-          `"${token}" is defined outside ${home} , move it back:\n  ${offenders.join("\n  ")}`,
+          `"${token}" is defined outside ${home} – move it back:\n  ${offenders.join("\n  ")}`,
         ).toEqual([]);
       });
     }
@@ -126,6 +126,6 @@ describe("orchestrator layers: step / turn / runner / settings each live in ONE 
 
   it("drive-runner.ts is gone (the claude spawn engine is claude-runner.ts, not a workflow 'runner')", () => {
     const offenders = orchestratorPaths().filter((p) => p.endsWith("/drive-runner.ts"));
-    expect(offenders, `drive-runner.ts returned , it should be drive/claude-runner.ts:\n  ${offenders.join("\n  ")}`).toEqual([]);
+    expect(offenders, `drive-runner.ts returned – it should be drive/claude-runner.ts:\n  ${offenders.join("\n  ")}`).toEqual([]);
   });
 });

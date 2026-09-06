@@ -1,7 +1,7 @@
 // Telemetry span + trace identity model (schema "consort/v1").
 //
 // Hand-rolled ids (no OpenTelemetry SDK): a trace_id is 16 random bytes (32 hex
-// chars), a span_id is 8 random bytes (16 hex chars) , the OTLP-compatible
+// chars), a span_id is 8 random bytes (16 hex chars) – the OTLP-compatible
 // widths, generated with node:crypto so nothing is imported for it. The span
 // SHAPES are the allowlist's RUN_SPAN_FIELDS / GATE_SPAN_FIELDS made concrete;
 // `sanitizeRunSpan` / `sanitizeGateSpan` DROP any non-allowlisted key so a span
@@ -54,7 +54,7 @@ export interface ResourceAttrs {
 
 /** The root span: one per runDriver invocation. The L2 fields are OPTIONAL and
  *  present only on a level-2 (opted-in) run; they are all counts / a boolean lever
- *  , never free text. See RUN_SPAN_FIELDS_L2 in the allowlist. */
+ *  – never free text. See RUN_SPAN_FIELDS_L2 in the allowlist. */
 export interface RunSpan {
   trace_id: string;
   span_id: string;
@@ -81,7 +81,7 @@ export interface RunSpan {
 
 /** The child span: one per performed action/gate, parented to the root span. `fail_class`
  *  (a fail/abort's categorized signature) and `revise_class` (why a revise-route re-routed)
- *  are L1 closed-enum categories , NEVER error/verdict text; each is present only when it
+ *  are L1 closed-enum categories – NEVER error/verdict text; each is present only when it
  *  applies (a failed/aborted gate, resp. a revise-route action). */
 export interface GateSpan {
   trace_id: string;
@@ -109,7 +109,7 @@ export interface GateSpan {
 /** The LEVEL-2-only span: one per role invocation ("who is slow / expensive /
  *  flaky"). `role` is a closed enum; `model` / `effort` / `token_bucket` are
  *  closed-enum coarse buckets and OPTIONAL (only carried when the executor layer
- *  surfaces them , they are not available at every seam). Never free text. */
+ *  surfaces them – they are not available at every seam). Never free text. */
 export interface TurnSpan {
   trace_id: string;
   parent_span_id: string;
@@ -125,7 +125,7 @@ export interface TurnSpan {
   retry_count?: number;
   token_bucket?: TokenBucketValue;
   /** L2 cost split (coarse bands): input = context read, output = generation,
-   *  cache_read = reuse , shows whether a turn is read-heavy or write-heavy. */
+   *  cache_read = reuse – shows whether a turn is read-heavy or write-heavy. */
   token_bucket_input?: TokenBucketValue;
   token_bucket_output?: TokenBucketValue;
   token_bucket_cache_read?: TokenBucketValue;

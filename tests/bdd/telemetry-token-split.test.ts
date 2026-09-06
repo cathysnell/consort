@@ -1,6 +1,6 @@
 // L2 cost split: a turn's tokens bucketed by input (context read) / output (generation) /
 // cache-read (reuse), each a coarse TOKEN_BUCKET band. Shows WHY a turn is expensive
-// (read-heavy vs write-heavy) , the data is already on TurnMeta.usage.
+// (read-heavy vs write-heavy) – the data is already on TurnMeta.usage.
 
 import { describe, it, expect } from "vitest";
 import { turnSpanFieldsFromMeta, bucketCount } from "../../consort/telemetry/turn-meta";

@@ -7,7 +7,7 @@
 // Exit 0 = clean (layered, or the feature is not service-backed so layering is
 //          not warranted, or there is no boundary to scan).
 // Exit 1 = the boundary calls the DB session directly and/or no repository
-//          module exists , the fat-controller form of the layering-violation
+//          module exists – the fat-controller form of the layering-violation
 //          smell. Prints the offending lines + remediation.
 //
 // Usage:
@@ -55,7 +55,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-layering-clean , prove the boundary/routes layer does not touch persistence\n\n` +
+    `consort-layering-clean – prove the boundary/routes layer does not touch persistence\n\n` +
       `Usage:\n` +
       `  consort-layering-clean [--project-dir <path>] [--architecture <path>] \\\n` +
       `                              [--boundary <rel> ...] [--repository <rel> ...] \\\n` +
@@ -99,11 +99,11 @@ if (repository.length > 0) callArgs.repositoryModules = repository;
 const layering = checkLayeringClean(callArgs);
 const placement = serviceBacked && allModules.length ? checkModulePlacement(p.projectDir, allModules) : { ok: true, violations: [] };
 const rendering = serviceBacked ? checkInlineRendering(p.projectDir, boundary, rendersVia) : { ok: true, violations: [] as string[] };
-// Budget over the declared layer modules (or `app` by default) , broad clean-code check.
+// Budget over the declared layer modules (or `app` by default) – broad clean-code check.
 const budgetPaths = allModules.length ? allModules.map((m) => m.module) : ["app"];
 const budget = checkCodeBudget(p.projectDir, budgetPaths);
 // Duplicate-class invariant: runs UNCONDITIONALLY (independent of service_backed
-// and of declared layers) , a repo cannot hold the same class in two modules.
+// and of declared layers) – a repo cannot hold the same class in two modules.
 const duplicates = checkDuplicateClasses(p.projectDir);
 
 const groups: Array<{ label: string; ok: boolean; violations: string[]; remediation?: string }> = [
@@ -123,13 +123,13 @@ if (p.json) {
       ? `layered + rendered + within budget (boundary scanned: ${layering.scanned.join(", ")})`
       : "no boundary modules to scan"
     : "feature is not service-backed (layering not required)";
-  process.stdout.write(`layering-clean: OK , ${what}\n`);
+  process.stdout.write(`layering-clean: OK – ${what}\n`);
 } else {
   const blocks = groups
     .filter((g) => !g.ok)
     .map((g) => `  [${g.label}]\n${g.violations.map((v) => `    ${v}`).join("\n")}${g.remediation ? `\n    -> ${g.remediation}` : ""}`)
     .join("\n\n");
-  process.stderr.write(`layering-clean: FAILED , architecture-quality checks did not pass.\n\n${blocks}\n`);
+  process.stderr.write(`layering-clean: FAILED – architecture-quality checks did not pass.\n\n${blocks}\n`);
 }
 
 process.exit(ok ? 0 : 1);

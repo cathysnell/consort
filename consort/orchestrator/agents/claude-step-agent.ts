@@ -13,9 +13,9 @@
 //
 // The levers (>= the four asked for), all optional with production defaults:
 //   - model        : which model backs the turn (e.g. "haiku" | "sonnet" | "opus").
-//   - effort       : reasoning effort ("low" | "medium" | default) , the fast/deep knob.
+//   - effort       : reasoning effort ("low" | "medium" | default) – the fast/deep knob.
 //   - session      : "resume" reuses a warm claude session (context kept) across turns;
-//                    "fresh" starts a NEW session (context CLEARED) , the compaction/clear
+//                    "fresh" starts a NEW session (context CLEARED) – the compaction/clear
 //                    lever. A resumeKey names the session to resume.
 //   - toolScope    : allow/deny tool lists (restrict what the agent may call).
 //   - fallbackModel: auto-failover model when the primary is overloaded.
@@ -39,7 +39,7 @@ export interface AgentLevers {
   /** Reasoning effort ("low" | "medium" | default). Omit for the model default. */
   effort?: string;
   /** Session management: reuse a warm session (context kept) or start fresh (context
-   *  CLEARED). Default "fresh" , each isolated step starts clean unless told to resume. */
+   *  CLEARED). Default "fresh" – each isolated step starts clean unless told to resume. */
   session?: "fresh" | "resume";
   /** The session key to resume when session === "resume". A stable id per (role, scope). */
   resumeKey?: string;
@@ -54,13 +54,13 @@ export interface AgentLevers {
   maxBudgetUsd?: number;
 }
 
-/** The seam that actually spawns the turn , injectable so the agent is unit-testable. */
+/** The seam that actually spawns the turn – injectable so the agent is unit-testable. */
 export type SpawnFn = (args: string[], cwd: string) => Promise<TurnUsage | undefined>;
 
 /**
  * The UNCONTAINED production dispatch seam (the LIVE drive). When present, invoke() delegates the
  * turn to this fn INSTEAD OF the contained raw spawn: the seam builds + dispatches the turn through
- * the production runner (execRunner) , so the agent inherits, for free, everything execRunner owns
+ * the production runner (execRunner) – so the agent inherits, for free, everything execRunner owns
  * (per-role session warmth, the context-budget guard, mid-turn overflow + transient-blip retries,
  * the per-turn build-replay overlay, set-phase/sync-backlog) that the contained raw spawn lacks. It
  * is the ONE axis on which the live drive differs from a contained test run: cwd = the real project
@@ -77,14 +77,14 @@ export type LiveDispatchFn = (invocation: AgentInvocation) => Promise<void>;
 export interface AgentTurnResult {
   usage?: TurnUsage;
   /** The turn's FINAL assistant text (stdout). The orchestrator reads a fenced
-   *  ```agent-report block from this , the containment-proof log channel (no file path the
+   *  ```agent-report block from this – the containment-proof log channel (no file path the
    *  agent can misplace). Undefined when the spawn captured no final text. */
   finalText?: string;
 }
 
 /**
  * The real StepAgent: build the `claude` command from the levers + the orchestrator's
- * passed-through instructions, then spawn it. Maps NOTHING itself , the artifact the
+ * passed-through instructions, then spawn it. Maps NOTHING itself – the artifact the
  * agent writes on disk IS the output the StepContract's run() validates + maps to
  * outputs()/route(). Exposes lastResult for the tokens/usage of the most recent turn.
  */
@@ -98,7 +98,7 @@ export class ClaudeStepAgent implements StepAgent {
     private readonly levers: AgentLevers,
     spawn?: SpawnFn,
     /** The UNCONTAINED production dispatch seam. When supplied (the live executor-dispatch path),
-     *  invoke() delegates to it instead of the contained raw spawn , see LiveDispatchFn. When
+     *  invoke() delegates to it instead of the contained raw spawn – see LiveDispatchFn. When
      *  omitted (every contained caller: the integration chains, the per-role sweep, the unit
      *  tests), invoke() takes the contained raw-spawn path, byte-identical to before. */
     liveDispatch?: LiveDispatchFn,
@@ -148,11 +148,11 @@ export class ClaudeStepAgent implements StepAgent {
     if (this.levers.session === "resume") {
       const id = this.sessionId ?? this.levers.resumeKey;
       if (id) return ["--resume", id];
-      // Asked to resume but no id yet , mint one so the NEXT turn can resume it.
+      // Asked to resume but no id yet – mint one so the NEXT turn can resume it.
       this.sessionId = randomUUID();
       return ["--session-id", this.sessionId];
     }
-    // Fresh (default): a new session every invocation , context CLEARED. Artifact-as-API
+    // Fresh (default): a new session every invocation – context CLEARED. Artifact-as-API
     // makes a cold turn correct (it reloads its inputs from disk).
     this.sessionId = randomUUID();
     return ["--session-id", this.sessionId];
@@ -171,7 +171,7 @@ export class ClaudeStepAgent implements StepAgent {
   }
 
   async invoke(invocation: AgentInvocation): Promise<void> {
-    // UNCONTAINED (live drive): a production dispatch seam was supplied , delegate the turn to it
+    // UNCONTAINED (live drive): a production dispatch seam was supplied – delegate the turn to it
     // (execRunner owns cwd=project, session warmth, context-budget, overflow/blip retry, replay
     // overlay, set-phase/sync-backlog). The seam does the dispatch only; we still read the turn's
     // transcript HERE (the one place), so lastResult is surfaced identically on both paths and no
@@ -188,7 +188,7 @@ export class ClaudeStepAgent implements StepAgent {
     }
     const args = this.spawnArgs(invocation);
     // CONTAINED: spawn with the PROVIDED workspace as cwd, so the agent's Write/Bash tools
-    // land inside the workspace the orchestrator gave it , never elsewhere.
+    // land inside the workspace the orchestrator gave it – never elsewhere.
     const usage = await this.spawn(args, invocation.workspaceDir);
     // Capture the turn's final assistant text (the report channel). PEEK (not take) for the same
     // reason as the live path: the record wrapper is the sole clearer. Undefined under a test spawn.

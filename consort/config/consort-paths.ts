@@ -32,14 +32,14 @@ export const LEGACY_ARTIFACT_ROOT: (typeof LEGACY_ARTIFACT_ROOTS)[number] = ".sf
 
 /** Every artifact-root directory name the kit recognises, current first then
  *  legacy (newest-first). The SINGLE source any scanner/skip-list uses to
- *  exclude the workflow bookkeeping dir , so a future rename touches only the
+ *  exclude the workflow bookkeeping dir – so a future rename touches only the
  *  constants above, never a hardcoded ".consort"/".sftdd"/".tdd" literal
  *  scattered across the tree. */
 export const ALL_ARTIFACT_ROOTS = [ARTIFACT_ROOT, ...LEGACY_ARTIFACT_ROOTS] as const;
 
 /** The artifact-root names as a regex-escaped alternation (`\.consort|\.sftdd|\.tdd`)
  *  for embedding in a directory-exclusion pattern. Derived from ALL_ARTIFACT_ROOTS so
- *  a scanner's skip-list stays in lockstep with the root rename , the ONE place the
+ *  a scanner's skip-list stays in lockstep with the root rename – the ONE place the
  *  alternation is built (no consumer re-escapes the literal). */
 export const artifactRootsRegexAlternation = (): string =>
   ALL_ARTIFACT_ROOTS.map((r) => r.replace(/[.]/g, "\\.")).join("|");
@@ -87,7 +87,7 @@ export const acReviewVerdictJson = (tdd: string, f: string, s: string, ac: strin
 // transition record lives at the story's cycles root (sibling of the per-AC
 // dirs), not under any single AC. review-verdict.json is the Navigator's output
 // ({ refactor, notes }); review.json records reviewed_at / refactor_requested /
-// refactored_at , the same producer/consumer split as the per-AC pair above.
+// refactored_at – the same producer/consumer split as the per-AC pair above.
 export const storyReviewJson = (tdd: string, f: string, s: string): string =>
   join(cyclesRootDir(tdd), f, s, "review.json");
 export const storyReviewVerdictJson = (tdd: string, f: string, s: string): string =>
@@ -101,18 +101,18 @@ export const nfrsMd = (tdd: string): string => join(tdd, "nfrs.md");
  *  product-overview.md + nfrs.md. The Product Owner intake turn produces them; a fresh project has
  *  neither, so the drive dispatches that turn FIRST. ONE definition, used by BOTH the drive probe
  *  (orchestrator-probe) AND the sprint-planning derivation (orchestrator-sprint), so the two can
- *  never disagree about whether intake is done , the exact split that let the sprint path skip it. */
+ *  never disagree about whether intake is done – the exact split that let the sprint path skip it. */
 export const intakeReadyOnDisk = (tdd: string): boolean =>
   fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 /** The intake-gate approval marker (`.consort/intake/approved`): written when the human (or, headless,
  *  the Human Proxy) approves the drafted intake at the intake gate. Its presence gates the transition
- *  from the intake turn to the Spec Author's propose , the drive parks at the gate until it exists. */
+ *  from the intake turn to the Spec Author's propose – the drive parks at the gate until it exists. */
 export const intakeApprovedMarker = (tdd: string): string => join(tdd, "intake", "approved");
 /** True once the intake gate has been approved (the marker exists). Distinct from intakeReadyOnDisk
  *  (docs drafted): drafted-but-unapproved is exactly the state the intake gate pauses in. */
 export const intakeApprovedOnDisk = (tdd: string): boolean => fs.existsSync(intakeApprovedMarker(tdd));
 /** The design corpus dir (`.consort/design/`): the design brief, project-level
- *  design-guide, IA, and staged brand assets , the committed design half of a
+ *  design-guide, IA, and staged brand assets – the committed design half of a
  *  feature's spec. */
 export const designDir = (tdd: string): string => join(tdd, "design");
 export const designBriefMd = (tdd: string): string => join(designDir(tdd), "design-brief.md");
@@ -140,7 +140,7 @@ export const architectureConventionsJson = (tdd: string): string =>
 export const architectureCanonJson = (tdd: string): string =>
   join(architectureDir(tdd), "canon.json");
 /** The Spec Author's sprint proposal. ONE canonical location (project-level,
- *  sequential across sprints) , the path the spec-author actually writes. */
+ *  sequential across sprints) – the path the spec-author actually writes. */
 export const featureProposalsMd = (tdd: string): string => join(planningDir(tdd), "feature-proposals.md");
 
 // ── Feature scope ─────────────────────────────────────────────────
@@ -151,7 +151,7 @@ export const featureProposalsMd = (tdd: string): string => join(planningDir(tdd)
 // either. The canonical CREATE path is the exact `<id>` (featureDir); every
 // file builder targets the RESOLVED dir (featureResolved) so a reader and a
 // writer of the same feature always land in the same place regardless of which
-// naming the dir uses , the whole point of the single source of truth.
+// naming the dir uses – the whole point of the single source of truth.
 export const featureDir = (tdd: string, featureId: string): string => join(featuresDir(tdd), featureId);
 /** The feature's on-disk dir (exact `<id>`, else unique `<id>-<slug>`), falling
  *  back to the exact create-path when it does not exist yet. Every feature-
@@ -243,7 +243,7 @@ export const sprintRequestedJson = (tdd: string, sprint: string): string =>
 /**
  * Resolve a feature's directory by id. Exact match preferred; falls back to a
  * unique prefix match (the kit's feature dirs are `<id>` or `<id>-<slug>`).
- * Returns undefined when absent or AMBIGUOUS (>1 prefix match) , callers decide
+ * Returns undefined when absent or AMBIGUOUS (>1 prefix match) – callers decide
  * whether that is fatal. Replaces 6 divergent copies that variously threw,
  * picked-first, or returned undefined on the ambiguous case.
  */
@@ -457,7 +457,7 @@ export function writeBacklog(tdd: string, backlog: SprintBacklog): void {
 }
 
 /**
- * The sprint's REQUESTED feature ids (`sprints/<s>/requested.json`) , the single
+ * The sprint's REQUESTED feature ids (`sprints/<s>/requested.json`) – the single
  * membership declaration that scopes syncBacklog. `undefined` means the file is
  * absent (unscoped: every committed request is in scope, single-sprint/legacy);
  * `[]` means present-but-empty (nothing in scope). Both the Human Proxy (headless,
@@ -491,7 +491,7 @@ export function writeRequested(tdd: string, sprint: string, ids: string[]): stri
  * Project the committed backlog from disk: every feature that has a
  * feature-request.md (the PO's commitment), in directory order, enriched with
  * the Architect's t-shirt size from estimates.json. This is the deterministic
- * sync-backlog body , the single bridge from "PO authored a request" to the
+ * sync-backlog body – the single bridge from "PO authored a request" to the
  * backlog the driver reads, so producer (PO) and consumer (driver) never drift.
  */
 export function syncBacklog(tdd: string, sprint: string): SprintBacklog {

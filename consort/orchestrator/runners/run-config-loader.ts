@@ -2,7 +2,7 @@
 // markers against process.env, so the shipped config carries DEFAULTS anyone can override by
 // setting the named env var. String leaves that look numeric/boolean are coerced (tiers -> 1,
 // "true" -> true), so the resolved object is a real OrchestrationRunConfig with typed
-// lifecycle configs. Secrets are NEVER in the file , tokens/hosts arrive via env at run time.
+// lifecycle configs. Secrets are NEVER in the file – tokens/hosts arrive via env at run time.
 //
 // This is what makes the demo "config-driven so anyone can put their own in and run it": the
 // committed .run.json is the recipe + the maintainer's defaults; an operator overrides only
@@ -37,7 +37,7 @@ export function resolveEnvTemplate(value: string): string {
   return value;
 }
 
-/** A compact UTC timestamp (YYYYMMDD-HHMMSS) for the `{{TS}}` token , so a default project
+/** A compact UTC timestamp (YYYYMMDD-HHMMSS) for the `{{TS}}` token – so a default project
  *  name is collision-free per run without the operator having to set anything. */
 function compactTimestamp(): string {
   // "2026-08-03T23:07:19.123Z" -> "20260803-230719"
@@ -76,7 +76,7 @@ function resolveDeep(node: unknown): unknown {
 /**
  * Load + resolve an orchestration run-config from a JSON file. Reads the file, resolves every
  * ${ENV:-default} marker against process.env, coerces numeric/boolean leaves, and returns the
- * typed OrchestrationRunConfig. Does NOT touch the cloud , it only produces the config the
+ * typed OrchestrationRunConfig. Does NOT touch the cloud – it only produces the config the
  * runner will act on.
  */
 export function loadRunConfig(path: string): OrchestrationRunConfig {

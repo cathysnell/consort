@@ -1,5 +1,5 @@
 // The design-role schema-conformance validators (validator-registry): each gates a role's
-// primary artifact against its canonical kit schema via checkArtifactConformance , the SAME
+// primary artifact against its canonical kit schema via checkArtifactConformance – the SAME
 // truth the design gate + response self-check use. Pinned against the RECORDED F1 intake
 // (conformant by construction) + a bogus artifact (rejected). These back the design-role
 // integration live chains, where a real agent's output must be schema-conformant, not merely

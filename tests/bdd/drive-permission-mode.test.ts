@@ -1,6 +1,6 @@
 // The drive spawns role agents headless (claude -p). A scaffolded project ships NO
 // .claude/settings.json, so without an explicit permission mode the subagent
-// DEFAULTS TO PROMPTING , and headless there is nothing to answer the prompt. A
+// DEFAULTS TO PROMPTING – and headless there is nothing to answer the prompt. A
 // headless SFTDD role agent must both WRITE its artifact (feature-spec.json, story
 // stubs, code) AND RUN kit CLIs (its self-check `consort-response-formatter`,
 // the cycle stamps, ls/cat).
@@ -28,7 +28,7 @@ describe("claudeBaseArgs: headless permission mode", () => {
     expect(i).toBeGreaterThan(-1);
     expect(args[i + 1]).toBe("acceptEdits");
     // Never bypassPermissions: the policy silently downgrades it to `default`, which
-    // auto-denies headless , the exact regression this guards against.
+    // auto-denies headless – the exact regression this guards against.
     expect(args).not.toContain("bypassPermissions");
   });
 

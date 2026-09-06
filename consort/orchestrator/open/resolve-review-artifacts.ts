@@ -86,7 +86,7 @@ export const DESIGN_ROLES: ReadonlySet<string> = new Set([
 ]);
 
 /** The reviewable artifacts a SPECIFIC role produces this turn, existing-only, in review
- *  order , so the per-turn open reveals exactly what the role that just finished authored
+ *  order – so the per-turn open reveals exactly what the role that just finished authored
  *  (not the whole review set). Empty for `driver` (build turns emit code, no design artifact)
  *  and for any role with no output yet. Scope comes from the live workflow-state feature/story. */
 export function roleArtifacts(consortDir: string, role: string, opts: { feature?: string; story?: string } = {}): string[] {
@@ -97,7 +97,7 @@ export function roleArtifacts(consortDir: string, role: string, opts: { feature?
   };
   switch (role) {
     case "product-owner":
-      // The PO's intake deliverables , what it drafts at the intake step and the human reviews at the
+      // The PO's intake deliverables – what it drafts at the intake step and the human reviews at the
       // intake gate. design-brief.md is UI-track only (a backend-only project produces none), so it is
       // simply absent then (add() no-ops on a missing file). feature-proposals.md is the SPEC-AUTHOR's
       // propose output, not the PO's, so it is not here.
@@ -148,7 +148,7 @@ export function roleArtifacts(consortDir: string, role: string, opts: { feature?
       if (f && s) add(storyTestListJson(consortDir, f, s));
       break;
     case "navigator":
-      // reflect: the story under review , what's going into the gate the human is about to
+      // reflect: the story under review – what's going into the gate the human is about to
       // approve, so they see the reflected design (not the reflect verdict itself).
       if (f && s) {
         add(join(storyDir(consortDir, f, s), "story.md"));
@@ -161,7 +161,7 @@ export function roleArtifacts(consortDir: string, role: string, opts: { feature?
   return out;
 }
 
-/** The freshest mtime across a story's key artifacts (dir + story.json + acs/) , used to pick
+/** The freshest mtime across a story's key artifacts (dir + story.json + acs/) – used to pick
  *  the story a just-finished role wrote into when several are mid-design. 0 when none exist. */
 function storyFreshness(consortDir: string, feature: string, story: string): number {
   let m = 0;
@@ -172,12 +172,12 @@ function storyFreshness(consortDir: string, feature: string, story: string): num
 }
 
 /**
- * The LIVE current feature + story for scoping the per-turn open. Reads `next.json` , the drive's
- * AUTHORITATIVE per-turn snapshot (`feature` + `state.stories`) , NOT `workflow-state.json`, whose
+ * The LIVE current feature + story for scoping the per-turn open. Reads `next.json` – the drive's
+ * AUTHORITATIVE per-turn snapshot (`feature` + `state.stories`) – NOT `workflow-state.json`, whose
  * `feature_id`/`story_id` are null during a design/build drive (its `phase_feature_id` also drifts
  * stale). That mismatch was the real bug: the per-turn open resolved an EMPTY scope and so opened
  * nothing. The story is the FRESHEST among the snapshot's stories (the one the finishing role just
- * wrote into) , the right pick when several sit in "designing" at once. Falls back to
+ * wrote into) – the right pick when several sit in "designing" at once. Falls back to
  * `workflow-state.json`, then `{}`. Never throws.
  */
 export function resolveScope(consortDir: string): { feature?: string; story?: string } {
@@ -196,7 +196,7 @@ export function resolveScope(consortDir: string): { feature?: string; story?: st
       }
       return { feature, ...(story ? { story } : {}) };
     }
-  } catch { /* no next.json , fall through */ }
+  } catch { /* no next.json – fall through */ }
   try {
     const ws = JSON.parse(fs.readFileSync(join(consortDir, "workflow-state.json"), "utf8")) as {
       feature_id?: string | null;

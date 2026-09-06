@@ -203,7 +203,7 @@ describe("buildNextSnapshot: reconciled state, blockers, truthful summary", () =
     expect(snap.state.stories).toEqual({ S1: "done", S2: "done" });
   });
 
-  it("awaiting_human is the SOLE human-needed signal , TRUE for the backlog pause even though it is an invoke-role with empty open_gates", () => {
+  it("awaiting_human is the SOLE human-needed signal – TRUE for the backlog pause even though it is an invoke-role with empty open_gates", () => {
     // The planning author-requests pause is modeled as invoke-role (product-owner) with
     // EMPTY open_gates, so gating on kind/open_gates read it as "resume" and the session
     // sat SILENT at the backlog decision. awaiting_human keys on the option menu instead.
@@ -263,7 +263,7 @@ describe("buildNextSnapshot: reconciled state, blockers, truthful summary", () =
     expect(snap.primary_action.kind).toBe("raise-to-hil");
     expect(snap.state.blockers).toHaveLength(1);
     // The deterministic clear is the resolve verb (clears the escalation AND any blocking smell), not a
-    // null resolver + "rm the files" hint , the old hint that led sessions to hand-edit state on disk.
+    // null resolver + "rm the files" hint – the old hint that led sessions to hand-edit state on disk.
     expect(snap.state.blockers[0]).toMatchObject({
       source: "smell:fragility",
       reason: "flaky aggregate",

@@ -1,10 +1,10 @@
-// The `.lakebase/consort-config.json` FILE primitive , the low config layer that reads/writes the
+// The `.lakebase/consort-config.json` FILE primitive – the low config layer that reads/writes the
 // on-disk project settings and resolves the non-model half (build/plan/project) from file -> code
 // default. It imports only config-layer modules (step-key types, agent-models, agent-log's AgentRole
 // type) so ANY layer may depend on it downward: the settings RESOLVER (which layers model/effort on
 // top, needing manifests + the turn-key map) AND the domain modules that only touch the file
 // (intake reads project.uiTrack; project-consort-setup writes the default). Splitting the file half
-// DOWN here is what makes the graph acyclic , a domain no longer reaches UP into the resolver.
+// DOWN here is what makes the graph acyclic – a domain no longer reaches UP into the resolver.
 //
 // Model knobs mirror what `claude -p` exposes: model, effort (low|medium|high|xhigh|max|default),
 // fallbackModel, maxBudgetUsd. Their RESOLUTION is the resolver's job (project-settings.ts); this
@@ -68,7 +68,7 @@ export interface ConsortConfigFile {
   };
 }
 
-/** The non-model half of the resolved settings (build/plan/project) , the portion that
+/** The non-model half of the resolved settings (build/plan/project) – the portion that
  *  needs no per-step model/effort machinery, so it resolves purely from the file here. */
 export interface ProjectFileSettings {
   build: { loopGranularity: "story" | "ac" | "hybrid-a"; batchCap?: number; sessionScope: "story" | "cycle" };
@@ -121,7 +121,7 @@ export function resolveProjectSettings(projectDir: string): ProjectFileSettings 
     gates: (file?.project?.gates ?? "interactive") as "interactive" | "proxy",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: (file?.project?.clientFramework ?? "none") as "react" | "none",
-    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" – the
     // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
     // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
     // default only affects config-less/legacy trees.
@@ -164,7 +164,7 @@ export function projectLanguage(projectDir: string): ProjectLanguage {
 export function defaultConsortConfig(): ConsortConfigFile {
   // ONE per-turn config home: the step-manifest `agentOptions` (model/effort per turn), read by
   // resolveConsortSettings' manifest layer (manifestStep) and by the lean/replay harness directly.
-  // defaultConsortConfig no longer bakes per-role/per-turn model or effort , doing so wrote a SECOND
+  // defaultConsortConfig no longer bakes per-role/per-turn model or effort – doing so wrote a SECOND
   // copy into the scaffolded config file that SHADOWED the manifest, so a turn's model lived in two (or
   // three, with optimized-defaults.json) places and had to be kept in sync by hand. Now the scaffold
   // config carries only PROJECT settings (build/plan/project); every turn's model/effort comes from its

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ⚠️ DEPRECATED (superseded 2026-08-07) , use `scripts/optimize-role.sh` instead.
+// ⚠️ DEPRECATED (superseded 2026-08-07) – use `scripts/optimize-role.sh` instead.
 // This bin drives the CHAMPION-WALK engine (optimize-harness + optimize-live), which ranks
 // candidates on the fastest gate-passing turn and does NOT run a mandatory LLM judge on every
 // candidate (build handoffs bypass any judge). That violates the standing evaluation invariant
@@ -67,11 +67,11 @@ export interface OptimizeArgs {
    *  human reviews the ranked candidates and runs optimize-apply to persist one. */
   proposeOnly?: boolean;
   /** Sweep EVERY role handoff in a lane (design|build), sequentially, with per-role
-   *  default candidates (defaultLaneCandidates) , not just the one handoff the drive
+   *  default candidates (defaultLaneCandidates) – not just the one handoff the drive
    *  sits on. Overrides the single-handoff path. */
   sweepLane?: "design" | "build";
   /** With --sweep-lane: the handoff id OR role to START sweeping from. Handoffs before
-   *  it are already-settled (winner applied to the kit) , ADVANCED once at baseline to
+   *  it are already-settled (winner applied to the kit) – ADVANCED once at baseline to
    *  reach the target, NOT re-swept. Lets a lane resume at the next unsettled role. */
   from?: string;
   projectDir?: string;
@@ -243,7 +243,7 @@ async function main(): Promise<number> {
   // recorder only fires for a WINNER capture (makeLiveSpawnTurn re-sets it per
   // record:true spawn) and NEVER for a trial. Leaving it ambient (as the runbook
   // used to export it) made every losing candidate's turn record into the shippable
-  // corpus , the pollution this fixes. recordDir is threaded into each handoff ctx.
+  // corpus – the pollution this fixes. recordDir is threaded into each handoff ctx.
   const recordDir = consortEnv("RECORD_DIR")?.trim() || undefined;
   // Clear EVERY prefix variant (current + legacy) so no record-dir leaks ambient
   // into a trial's child spawn regardless of which name the runbook exported.
@@ -300,7 +300,7 @@ async function main(): Promise<number> {
         return walk.walk[0];
       },
       // advanceOne: a settled upstream handoff (before --from) whose winner is already
-      // applied to the kit , run its baseline turn to move the drive forward, do NOT
+      // applied to the kit – run its baseline turn to move the drive forward, do NOT
       // re-sweep. Dispatched THROUGH the executor (the SAME performViaExecutor the sweep +
       // live drive use), which runs the agent turn AND its post-turn substrate (e.g.
       // breakdown's sync-breakdown populates pipeline.json), advancing the drive exactly as
@@ -338,7 +338,7 @@ async function main(): Promise<number> {
   // Build-lane positioning: the design-complete boundary lands on a build-lane
   // SUBSTRATE action (dispatch, then cut-experiment), not a role turn. When the
   // next action is a build-lane substrate step, advance through those (performing
-  // the fork) to sit ON the first build role turn , unless --only design, which
+  // the fork) to sit ON the first build role turn – unless --only design, which
   // must not enter the build lane.
   if (!handoff && actionLane(action) === "build" && args.only !== "design") {
     handoff = await positionToBuildHandoff({
@@ -375,7 +375,7 @@ async function main(): Promise<number> {
 
   // Candidates for THIS handoff. An explicit --candidates spec wins (build-turn
   // model/effort tiering). With no spec, fall back to defaultLaneCandidates(handoff)
-  // , the same per-role default set the lane sweep uses (baseline + cheaper-model +
+  // – the same per-role default set the lane sweep uses (baseline + cheaper-model +
   // effort-low + scan-tighten). This is what lets a SINGLE-handoff sweep exercise a
   // DESIGN role's scalar model/effort levers, which the --candidates grammar (keyed
   // on build turns) cannot express. So `optimize --feature F ... ` on a positioned

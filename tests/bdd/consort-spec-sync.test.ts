@@ -238,7 +238,7 @@ describe("normalizeStoryJson", () => {
   });
 });
 
-describe("healAndReportStoryNarrative , the breakdown post-hook's heal + fail-fast input", () => {
+describe("healAndReportStoryNarrative – the breakdown post-hook's heal + fail-fast input", () => {
   const storyDir = (s = "S1-test-story") => join(tdd, "features", "F1-test-feature", "stories", s);
   const narrativeMd = (role: string) =>
     [`# story`, "", `As a ${role},`, `I want a thing,`, `So that an outcome.`, ""].join("\n");
@@ -281,7 +281,7 @@ describe("healAndReportStoryNarrative , the breakdown post-hook's heal + fail-fa
     expect(missing.map((m) => m.story)).toEqual(["S2-second"]);
   });
 
-  it("returns clean (no missing) once every stub is conformant , idempotent", () => {
+  it("returns clean (no missing) once every stub is conformant – idempotent", () => {
     writeFileSync(join(storyDir(), "story.json"), JSON.stringify({ id: "S1", asA: "u", iWantTo: "w", soThat: "s", feature_id: "F1" }));
     writeFileSync(join(storyDir(), "story.md"), "# story\n\nAlready conformant.\n");
     expect(healAndReportStoryNarrative(tdd, "F1")).toEqual({ healed: [], missing: [] });

@@ -6,11 +6,11 @@
 // The two navigator outputs are judged DIFFERENTLY (the whole point of the discriminator work):
 //   - RED  : the produced tests are judged for COVERAGE + FAITHFULNESS against the TEST-LIST SPEC
 //            (buildRedCoverageJudgePrompt, opus), NOT turn-for-turn vs recorded tests.
-//   - ASSESS: ALIGNMENT , an independent opus oracle (makeBuildDiscriminatorJudge) re-evaluates
+//   - ASSESS: ALIGNMENT – an independent opus oracle (makeBuildDiscriminatorJudge) re-evaluates
 //            the SAME driver code the navigator assessed, and the gate passes iff the navigator's
 //            marker verdict aligns with the oracle (did the navigator judge the driver correctly).
 //
-// LEAN , NO cloud project. The navigator is tool-scoped to Write/Read (never runs ./scripts/lk).
+// LEAN – NO cloud project. The navigator is tool-scoped to Write/Read (never runs ./scripts/lk).
 
 import { expect } from "vitest";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -45,7 +45,7 @@ export const TELEMETRY_DIR = process.env.LAKEBASE_ROLE_TELEMETRY_DIR ?? join(KIT
 
 export { BUILD_ROLE_CHAINS, type BuildRoleChain };
 
-/** The RECORDED GROUND-TRUTH assess verdict , the canonical navigator's marker for this turn,
+/** The RECORDED GROUND-TRUTH assess verdict – the canonical navigator's marker for this turn,
  *  parsed into a discriminator-shaped verdict. This is the alignment reference (the navigator's
  *  live verdict is judged against THIS, not a cold re-derivation). ASSESS runs on S1; its
  *  ground-truth marker is the 004-navigator-assess turn's superseded-tests.json in the fixtures. */
@@ -63,7 +63,7 @@ function recordedGroundTruthVerdict(): DiscriminatorVerdict {
     ASSESS_AC,
   );
   // parseNavigatorAssessMarker reads superseded-tests.json / regression-assessment.json from a dir
-  // into {classification, supersededTests, ...} , exactly the shape the alignment gate compares.
+  // into {classification, supersededTests, ...} – exactly the shape the alignment gate compares.
   return parseNavigatorAssessMarker(cycleDir);
 }
 

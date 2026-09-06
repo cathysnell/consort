@@ -2,15 +2,15 @@
 //
 // A Consort run is a SEQUENCE of consort-drive processes with HITL gates between
 // them, and the kit version is bound at each drive LAUNCH (resolved once from the
-// pin). So the ONLY safe moment to upgrade is AT A STOP , between drive processes ,
+// pin). So the ONLY safe moment to upgrade is AT A STOP – between drive processes ,
 // never mid-turn (a running drive already resolved the old kit; swapping files under
 // it is split-brain within one run). This module is the file-level upgrade:
-//   1. quiesceGate  , is the run at a clean stop (no live drive + awaiting_human/done)?
-//   2. pinBoth      , dual-pin .local (run) + committed kit-ref (CI) to the target,
+//   1. quiesceGate  – is the run at a clean stop (no live drive + awaiting_human/done)?
+//   2. pinBoth      – dual-pin .local (run) + committed kit-ref (CI) to the target,
 //                     recording the prior values to kit-ref.prev for rollback.
-//   3. refreshSurface , updateAgents + updateCommands from the target kit + reset the
+//   3. refreshSurface – updateAgents + updateCommands from the target kit + reset the
 //                     agent-sync marker so the next drive does not re-refresh.
-//   4. rollbackPins , restore the prior pins from kit-ref.prev (the instant undo).
+//   4. rollbackPins – restore the prior pins from kit-ref.prev (the instant undo).
 // The bin (consort-upgrade) adds the side effects around this: `lk --refresh` to
 // download the target kit into the cache, the pid liveness probe, and the output.
 
@@ -59,13 +59,13 @@ export interface QuiesceResult {
  */
 export function quiesceGate(q: QuiesceInput): QuiesceResult {
   if (q.pidAlive === true) {
-    return { safe: false, reason: "a drive process is still RUNNING , wait for it to stop at a gate before upgrading (never swap the kit mid-turn)." };
+    return { safe: false, reason: "a drive process is still RUNNING – wait for it to stop at a gate before upgrading (never swap the kit mid-turn)." };
   }
   if (!q.atStop) {
-    return { safe: false, reason: "next.json does not show a clean stop (no awaiting_human / done) , the run may be mid-flight. Resolve to a gate first." };
+    return { safe: false, reason: "next.json does not show a clean stop (no awaiting_human / done) – the run may be mid-flight. Resolve to a gate first." };
   }
   if (q.pidAlive === null) {
-    return { safe: true, reason: "at a stop (awaiting_human/done); drive liveness UNVERIFIED (no --pid) , confirm no drive is running." };
+    return { safe: true, reason: "at a stop (awaiting_human/done); drive liveness UNVERIFIED (no --pid) – confirm no drive is running." };
   }
   return { safe: true, reason: "at a clean stop (drive pid not alive + awaiting_human/done)." };
 }
@@ -79,7 +79,7 @@ export interface PinBothResult {
 
 /** Dual-pin the run pin (.local) + the committed kit-ref (CI) to `ref`, recording the
  *  prior values to kit-ref.prev so the upgrade is reversible. Keeps the two refs in
- *  lockstep , the fix for the committed-vs-.local drift. Idempotent: re-pinning the same
+ *  lockstep – the fix for the committed-vs-.local drift. Idempotent: re-pinning the same
  *  ref still records prev (harmless) but reports changed=false when nothing moved. */
 export function pinBoth(projectDir: string, ref: string): PinBothResult {
   const previousLocal = localKitRef(projectDir);
@@ -111,7 +111,7 @@ export interface RollbackResult {
  *  new kit misbehaves). A missing/empty prior ref clears that file (back to unpinned). */
 export function rollbackPins(projectDir: string): RollbackResult {
   const prevFile = lakebaseFile(projectDir, KIT_REF_PREV_FILE);
-  if (!fs.existsSync(prevFile)) return { restored: false, reason: "no kit-ref.prev , nothing to roll back to." };
+  if (!fs.existsSync(prevFile)) return { restored: false, reason: "no kit-ref.prev – nothing to roll back to." };
   let prev: { local: string | null; committed: string | null };
   try {
     prev = JSON.parse(fs.readFileSync(prevFile, "utf8")) as typeof prev;
@@ -154,7 +154,7 @@ function countFiles(dir: string): number {
 /** Copy a kit-owned template subtree over the project's copy (recursive, overwriting), or
  *  a no-op when the source is absent. cpSync preserves file modes (so `+x` on `.sh` files
  *  survives). Files the project has that the kit does not (e.g. the scm-utils `scripts/lk`
- *  shim, project-local scripts) are LEFT untouched , only kit-owned files are refreshed. */
+ *  shim, project-local scripts) are LEFT untouched – only kit-owned files are refreshed. */
 function copyKitTree(kitSubtree: string, projectSubtree: string): number {
   if (!fs.existsSync(kitSubtree)) return 0;
   fs.mkdirSync(projectSubtree, { recursive: true });
@@ -165,7 +165,7 @@ function copyKitTree(kitSubtree: string, projectSubtree: string): number {
 /** The scm-utils version THIS kit ships, parsed from consort's own dependency pin
  *  (`@databricks-solutions/lakebase-scm-utils: github:...#v<version>`). This is the value the
  *  workflow templates' scaffold-time `{{LAKEBASE_SCM_UTILS_VERSION}}` placeholder must resolve
- *  to , NOT the kit's own version (walking up from the templates would wrongly yield consort's
+ *  to – NOT the kit's own version (walking up from the templates would wrongly yield consort's
  *  version). Bare (leading `v` stripped) to match the template's literal `v{{...}}`. Null when
  *  the pin carries no `#ref` (unpinned dev checkout). */
 function resolveSubstrateVersion(kitDir: string): string | null {
@@ -206,7 +206,7 @@ function substituteWorkflowVersion(workflowsDir: string, version: string): void 
   }
 }
 
-/** Substitute {{LAKEBASE_SCM_UTILS_VERSION}} in the scaffolded scripts on upgrade , the
+/** Substitute {{LAKEBASE_SCM_UTILS_VERSION}} in the scaffolded scripts on upgrade – the
  *  post-checkout / setup-federation hooks carry it in their `scm-utils/<version>` connection
  *  label (the direct-run case). refreshSurface copies scripts raw, so without this an upgrade
  *  would ship the literal placeholder, exactly like the workflow CI-ref bug. Recursive
@@ -240,7 +240,7 @@ export function refreshSurface(projectDir: string, kitDir: string, targetVersion
   const workflowsDir = path.join(projectDir, ".github", "workflows");
   const workflows = copyKitTree(path.join(commonDir, ".github", "workflows"), workflowsDir);
   // Substitute the scaffold-time {{LAKEBASE_SCM_UTILS_VERSION}} placeholder the raw copies above
-  // just shipped verbatim , leaving the literal breaks the CI ref's bash expansion (workflows)
+  // just shipped verbatim – leaving the literal breaks the CI ref's bash expansion (workflows)
   // AND the post-checkout/setup-federation scripts' `scm-utils/<version>` connection label. The
   // scripts get it too now (they carry the same placeholder). Resolve the scm-utils version from
   // THIS kit's dep pin so an upgraded project matches a freshly-scaffolded one.
@@ -250,13 +250,13 @@ export function refreshSurface(projectDir: string, kitDir: string, targetVersion
     substituteScmUtilsVersionInScripts(path.join(projectDir, "scripts"), substrate);
   }
   // Re-append the Playwright E2E block to run-tests.sh for a UI project. The scripts copy above
-  // just reset run-tests.sh to the kit TEMPLATE, which carries NO E2E block , the block is appended
+  // just reset run-tests.sh to the kit TEMPLATE, which carries NO E2E block – the block is appended
   // PER-PROJECT by enableE2eForProject, never shipped in the template. So without this, every
   // upgrade WIPES a UI project's E2E out of the deploy-verify gate (the gate then never runs the
-  // client Playwright suite , exactly how F4's actor-less form shipped past a green deploy-verify),
+  // client Playwright suite – exactly how F4's actor-less form shipped past a green deploy-verify),
   // and a UI project scaffolded before enable-e2e-by-default never had the block at all.
   // enableE2eForProject is idempotent: it re-appends the block + wires the harness only where
-  // missing. Best-effort , a failure here must never block the upgrade.
+  // missing. Best-effort – a failure here must never block the upgrade.
   let e2e = false;
   try {
     const cfg = loadConsortConfig(projectDir);
@@ -296,10 +296,10 @@ export interface CommitSurfaceResult {
  * afterwards. This is the durable fix for the mid-run-upgrade failure: refreshSurface + pinBoth
  * rewrite tracked files (`.claude/commands` + `agents` + `scripts` + `.github/workflows` +
  * `.lakebase/kit-ref`), and the very next experiment/feature fork REFUSES to fork while the tree
- * has uncommitted tracked changes (they would ride onto the new branch , paired-branch's guard).
+ * has uncommitted tracked changes (they would ride onto the new branch – paired-branch's guard).
  * Committing them here (matching the repo's own `chore: bump committed kit-ref` convention) leaves
  * the fork a clean tree. Staged by EXACT kit path (never app code or the `.consort` corpus).
- * `--no-verify` so a slow pre-commit hook (e.g. schema-diff) cannot hang the upgrade , this is kit
+ * `--no-verify` so a slow pre-commit hook (e.g. schema-diff) cannot hang the upgrade – this is kit
  * metadata, not app code. No-op (committed:false) when not a git repo or nothing changed. Never
  * throws; the git runner is injectable for tests.
  */
@@ -312,7 +312,7 @@ export function commitRefreshedSurface(
   },
 ): CommitSurfaceResult {
   if (git(["rev-parse", "--is-inside-work-tree"]).status !== 0) return { committed: false, reason: "not-a-git-repo" };
-  // Only stage paths that exist , `git add` fails the whole command on a missing pathspec.
+  // Only stage paths that exist – `git add` fails the whole command on a missing pathspec.
   const paths = KIT_SURFACE_PATHS.filter((p) => fs.existsSync(path.join(projectDir, p)));
   if (!paths.length) return { committed: false, reason: "nothing-to-commit" };
   git(["add", "--", ...paths]);

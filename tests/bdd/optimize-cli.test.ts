@@ -1,7 +1,7 @@
 // P2c optimize.cli pure core: argument parsing, sweep-spec parsing, and the
 // action -> HandoffPlan mapping. The live glue (runTrial spawns a real turn via
 // execRunner, recordWinner re-runs with recording on, snapshot forks a branch) is
-// exercised by the P2d hermetic-design + P3 live-cloud validation, not here , here
+// exercised by the P2d hermetic-design + P3 live-cloud validation, not here – here
 // we pin the deterministic pieces the CLI is built on.
 
 import { describe, expect, it } from "vitest";
@@ -105,7 +105,7 @@ describe("actionToHandoffPlan", () => {
   it("carries the resolved action so the walk runs the PINNED turn (never re-plans)", () => {
     const action = { kind: "invoke-role", role: "spec-author", story: "S1" } as const;
     const p = actionToHandoffPlan(action);
-    // The plan pins the exact action, so makeLiveSpawnTurn runs THIS role turn , not
+    // The plan pins the exact action, so makeLiveSpawnTurn runs THIS role turn – not
     // whatever planNextAction would return for the current (possibly-advanced) disk.
     expect(p?.action).toEqual(action);
   });

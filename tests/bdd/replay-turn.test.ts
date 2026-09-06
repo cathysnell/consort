@@ -1,6 +1,6 @@
 // The shared replay-turn core: it reads a corpus turn's replay-set (preconditions + recorded prompt +
 // levers + inputs) and rehydrates the portable <PROJECT_ROOT> token. This guards the "experiments
-// replay the corpus turn, perturb only levers" contract at its foundation , if the reader drifts, every
+// replay the corpus turn, perturb only levers" contract at its foundation – if the reader drifts, every
 // experiment's baseline drifts. Also proves it against a REAL corpus turn so the corpus format + reader
 // stay in lockstep.
 import { describe, it, expect } from "vitest";

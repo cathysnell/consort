@@ -1,6 +1,6 @@
 // The deterministic brand-icon install: the staged intake asset (a binary PNG) must
 // land at the design-guide's `install_to` (e.g. client/public/warehouse.png) with its
-// REAL bytes , a coding agent can't `cp` a binary via text writes, so without this the
+// REAL bytes – a coding agent can't `cp` a binary via text writes, so without this the
 // built app ships a placeholder even though the icon is declared + referenced. This is
 // the fix for "the built app still does not incorporate warehouse.png".
 
@@ -12,7 +12,7 @@ import { installBrandAsset } from "../../consort/pipeline/cycle-record";
 
 const ICON = { source: "intake/assets/warehouse.png", install_to: "client/public/warehouse.png" };
 
-describe("installBrandAsset , deterministic binary brand-icon install", () => {
+describe("installBrandAsset – deterministic binary brand-icon install", () => {
   let proj: string;
   let consort: string;
   beforeEach(() => {

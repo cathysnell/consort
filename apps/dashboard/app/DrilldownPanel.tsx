@@ -22,7 +22,7 @@ import { buildFileTree, type FileTreeRow } from "@/lib/filetree";
 export type DrilldownTarget =
   | { kind: "turn"; ord: number }
   // A role bubble with NO recorded turn yet (a plain live run, or a role that hasn't taken a turn
-  // in the event tail). Clicking a bubble ALWAYS opens the panel , this target just renders the
+  // in the event tail). Clicking a bubble ALWAYS opens the panel – this target just renders the
   // shell + an honest "nothing recorded yet" body instead of a turn, so the panel is never a dead
   // click even when there's nothing to show.
   | { kind: "role"; role: string }

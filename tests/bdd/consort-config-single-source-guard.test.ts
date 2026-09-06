@@ -23,7 +23,7 @@ const RESOLVER_SRC = join(
 describe("single-source guard (SOURCE): the resolver module reads no env", () => {
   const src = readFileSync(RESOLVER_SRC, "utf8");
   // Strip line + block comments so a comment that merely NAMES process.env / an
-  // env var (explaining why it is absent) doesn't trip the guard , only real code
+  // env var (explaining why it is absent) doesn't trip the guard – only real code
   // references count.
   const code = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
 

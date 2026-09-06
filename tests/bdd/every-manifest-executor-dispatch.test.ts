@@ -1,4 +1,4 @@
-// A-full (#649) , the "every agent manifest works through the executor" matrix. The user's
+// A-full (#649) – the "every agent manifest works through the executor" matrix. The user's
 // directive: confirm EVERY shipped step manifest with an agent dispatches through performViaExecutor
 // with the provided scaffolding + its declared preconditions injected. This is the coverage proof
 // that the ONE dispatch path is universally applied (F2/G/H/I), not just the turns we hand-picked.
@@ -9,16 +9,16 @@
 // it through buildDriveEffects.performViaExecutor with a recording runner that SIMULATES the agent
 // (writes the manifest's declared outputs into their channel roots) + reconcile (writes the meta
 // agent-log). Assert:
-//   (a) DISPATCHED , performViaExecutor returned a BoundedRoute (not undefined => it took the executor).
+//   (a) DISPATCHED – performViaExecutor returned a BoundedRoute (not undefined => it took the executor).
 //   (b) the CLI stream funneled the agent turn + (non-planning) reconcile + the postTurn CLI/@build-cycle.
 //   (c) each DECLARED output landed under its channel root (validated by the executor's phase 5).
 //   (d) a declared PRECONDITION's projected block is present in the dispatched claude task, in position
-//       (prepend => before the base directive; append => after) , the formal precondition face is live.
+//       (prepend => before the base directive; append => after) – the formal precondition face is live.
 //
 // Fixtures are assembled from the stockflow-rerecord corpus + the existing intake tree and live under
 // tests/integration/intake (build-markers/story/), so the matrix draws from a durable, versioned source.
 //
-// TIER: every case here is HERMETIC , the recording runner simulates the agent + reconcile, and the
+// TIER: every case here is HERMETIC – the recording runner simulates the agent + reconcile, and the
 // @build-cycle marker is recorded as a label (its live DB verify is NOT run). The turns whose
 // @build-cycle needs a real Lakebase branch/deploy (driver green/refactor/repair/refactor-deploy/
 // refactor-superseded/green-superseded, navigator assess-deploy) are tagged `cloud` for the live pass
@@ -83,7 +83,7 @@ function seedInput(consortDir: string, source: string, ac?: string): void {
     if (base === "acs") {
       cpSync(join(INTAKE, "features", FEATURE, "stories", STORY, "acs", `${AC}.json`), join(abs, `${AC}.json`));
     } else {
-      writeFileSync(join(abs, ".seed"), "seed\n"); // code/ or design/ , presence-only
+      writeFileSync(join(abs, ".seed"), "seed\n"); // code/ or design/ – presence-only
     }
     return;
   }
@@ -219,7 +219,7 @@ describe("every agent manifest dispatches through the executor (A-full #649)", (
           expect(existsSync(join(root, rel)), `${manifest.id} declared output ${out.id} at ${rel}`).toBe(true);
         }
         // (d) each declared precondition's PROJECTED block is present in the dispatched task, in
-        // its declared position , proving phase 2.5 (the formal precondition face) is the live
+        // its declared position – proving phase 2.5 (the formal precondition face) is the live
         // injector, not the old inline concat. Project the same block the preparer would and assert
         // the task CONTAINS it; for a prepend precondition (the green-failure advisory) assert it
         // rides BEFORE the base directive (the task does not start with the directive).

@@ -1,10 +1,10 @@
-// Replay a story's BUILD turn by turn from a recorded-build corpus , the engine
+// Replay a story's BUILD turn by turn from a recorded-build corpus – the engine
 // behind run-to-release-engineer. It is the build-stage analog of
 // replay-artifacts.ts (which replays each DESIGN role turn): instead of one
 // monolithic "skip to the release engineer", the deterministic driver VISITS
 // every Navigator/Driver turn and, instead of spawning the model, overlays that
 // turn's recorded artifact (the code it would have written, plus its cycle +
-// experiment records). Only the artifact DELIVERY is mocked , the events run
+// experiment records). Only the artifact DELIVERY is mocked – the events run
 // live: the experiment branch is cut from the feature branch for real, the
 // cycle-record CLIs stamp RED/GREEN against the overlaid code, reviews + refactors
 // drive off the overlaid verdicts. So the log shows every Navigator<->Driver
@@ -19,9 +19,9 @@ import { existsSync, cpSync, readdirSync, statSync, rmSync, readFileSync } from 
 import { join, relative } from "path";
 import { featuresDir, cyclesRootDir, ALL_ARTIFACT_ROOTS } from "../../consort/config/consort-paths.js";
 
-/** Project paths the scaffold owns , never overwrite them from the snapshot, or
+/** Project paths the scaffold owns – never overwrite them from the snapshot, or
  *  the fresh run's kit resolver / pin / hooks break (on replay), and never
- *  capture them into a snapshot (on record) , they are scaffold, not build output.
+ *  capture them into a snapshot (on record) – they are scaffold, not build output.
  *  Matched on the first path segment relative to the code root. The workflow
  *  bookkeeping roots (.consort + legacy) come from the single source of truth. */
 export const SCAFFOLD_OWNED = new Set<string>([
@@ -34,7 +34,7 @@ const JUNK_DIRS = new Set([
   ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".git", "node_modules",
 ]);
 /** Files to never capture/overlay: secrets + OS cruft, plus scaffold-owned root
- *  config the build never authors , the corpus must not clobber the fresh
+ *  config the build never authors – the corpus must not clobber the fresh
  *  scaffold's copy (e.g. Makefile/deploy-targets.yaml carry the run command; a
  *  stale `--reload` copy would re-break the deploy teardown). (.env.example IS kept.)
  *
@@ -79,7 +79,7 @@ function inScopeFiles(root: string): Set<string> {
   const walk = (abs: string): void => {
     for (const name of readdirSync(abs)) {
       const p = join(abs, name);
-      if (!keep(p)) continue; // scaffold-owned / junk / secret , never in scope
+      if (!keep(p)) continue; // scaffold-owned / junk / secret – never in scope
       if (statSync(p).isDirectory()) walk(p);
       else out.add(relative(root, p));
     }
@@ -90,7 +90,7 @@ function inScopeFiles(root: string): Set<string> {
 
 /** SYNC the project's working tree to a recorded `code/` snapshot: mirror it so the tree becomes
  *  byte-identical to record-time WITHIN the captured scope. Copies new/changed files from the
- *  snapshot AND DELETES files present in the project but ABSENT from the snapshot , but ONLY for
+ *  snapshot AND DELETES files present in the project but ABSENT from the snapshot – but ONLY for
  *  files codeTreeFilter includes (scaffold-owned top dirs, junk, secrets, lockfiles are never
  *  touched, exactly as the copy side skips them). An additive copy alone would leave a prior turn's
  *  abandoned file behind and break fidelity; the delete pass is what makes replay faithful. */
@@ -137,17 +137,17 @@ export interface ReplayBuildTurnArgs {
  *
  * Delivers the turn's CODE (the LLM's output) plus, for a REVIEW turn, the
  * Navigator's `review-verdict.json` (its actual artifact: refactor true/false).
- * The verdict is what drives the refactor turns , without it, the live review CLI
+ * The verdict is what drives the refactor turns – without it, the live review CLI
  * defaults to "looks good", the Driver never refactors, and the tree freezes at
  * the pre-refactor state instead of the corpus's FINAL state. We deliver ONLY
  * review-verdict.json from .tdd, NEVER the timestamped cycle-NNN.json (overlaying
- * those corrupts the live cycle state machine , mis-sequenced RED/GREEN). So the
+ * those corrupts the live cycle state machine – mis-sequenced RED/GREEN). So the
  * LIVE substrate still owns RED/GREEN + the experiment branch; we mock only the
  * two artifacts a turn actually produces (code, and the review verdict).
  */
 export function replayBuildTurn(args: ReplayBuildTurnArgs): boolean {
   const { replayBuildDir, projectDir, consortDir, featureId, story, turnIndex } = args;
-  // Replay EVERY recorded Navigator/Driver turn, each SYNCING its own snapshot , the honest
+  // Replay EVERY recorded Navigator/Driver turn, each SYNCING its own snapshot – the honest
   // per-turn model. Because the tree becomes byte-identical to record-time, the LIVE verify
   // reproduces the recorded verdict: a recorded GREEN failure re-fails, the router routes
   // assess -> repair on its own, and the repair turn's snapshot lands the code AT the turn it
@@ -167,7 +167,7 @@ export function replayBuildTurn(args: ReplayBuildTurnArgs): boolean {
   // later turn's absent-file (e.g. a page authored two turns on) is not left behind from a prior turn.
   syncTreeFromSnapshot(codeSrc, projectDir);
 
-  // Deliver the Navigator's recorded JUDGMENT markers , the role OUTPUTS the live cycle CLIs read
+  // Deliver the Navigator's recorded JUDGMENT markers – the role OUTPUTS the live cycle CLIs read
   // to route the recorded self-heal, exactly as they were decided at record time:
   //   - review-verdict.json      : the REVIEW turn's refactor decision (drives the refactor turns);
   //   - regression-assessment.json + superseded-tests.json : the ASSESS turn's classification
@@ -176,7 +176,7 @@ export function replayBuildTurn(args: ReplayBuildTurnArgs): boolean {
   //       and mis-routes a recorded driver-fixable regression to HIL, freezing the story before the
   //       repair turn that authors its code.
   // Everything ELSE in tdd/cycles (RED/GREEN timestamps, review.json, the bare green-failure) stays
-  // owned by the live cycle-record CLIs , the honest verify + @build-cycle stamps produce it.
+  // owned by the live cycle-record CLIs – the honest verify + @build-cycle stamps produce it.
   const REPLAYED_VERDICTS = ["review-verdict.json", "regression-assessment.json", "superseded-tests.json"];
   const cyclesSrc = join(turnDir, "tdd", "cycles");
   if (existsSync(cyclesSrc)) {
@@ -196,9 +196,9 @@ export function replayBuildTurn(args: ReplayBuildTurnArgs): boolean {
  *   - "pass" : a cycle whose `green_at` is set + no unassessed green-failure (the turn was GREEN);
  *   - "fail" : an unassessed `green-failure.json` present (a GREEN failure that drove assess->repair);
  *   - undefined : this recorded turn has no GREEN verdict (RED-only, review-verdict-only, or the
- *     turnIndex is out of range / the snapshot has no cycle state) , the guard skips it.
+ *     turnIndex is out of range / the snapshot has no cycle state) – the guard skips it.
  *  turnIndex is the 1-based Kth Navigator/Driver dispatch, mapped to the Kth NON-reflect recorded
- *  turn (reflect is verdict-only + not counted , same index space as replayBuildTurn). */
+ *  turn (reflect is verdict-only + not counted – same index space as replayBuildTurn). */
 /** Read a GREEN verdict from a story's cycles dir (`<root>/<F>/<S>/` holding per-AC dirs). Shared by
  *  the recorded oracle (snapshot's tdd/cycles) AND the live tree (consortDir's cycles) so both read
  *  the verdict IDENTICALLY. An unassessed green-failure (FAIL) dominates a greened cycle; a greened
@@ -238,7 +238,7 @@ export function recordedBuildVerdict(
   );
 }
 
-/** The LIVE GREEN verdict on the project tree after a build turn's @build-cycle verify ran , read
+/** The LIVE GREEN verdict on the project tree after a build turn's @build-cycle verify ran – read
  *  from `<consortDir>/cycles/<F>/<S>/`. Compared against recordedBuildVerdict by the divergence guard. */
 export function liveBuildVerdict(consortDir: string, featureId: string, story: string): "pass" | "fail" | undefined {
   return verdictFromStoryCyclesDir(join(cyclesRootDir(consortDir), featureId, story));
@@ -246,7 +246,7 @@ export function liveBuildVerdict(consortDir: string, featureId: string, story: s
 
 /** A faithful replay reproduces the RECORDED verdict at each turn (the tree is synced byte-identical
  *  to record-time, so the honest live verify must reach the same pass/fail). A live verdict that
- *  DIVERGES from the recording is a regression , the corpus + code no longer agree , and must HALT
+ *  DIVERGES from the recording is a regression – the corpus + code no longer agree – and must HALT
  *  the replay loudly rather than silently drift (mirrors ReplayCorpusMissError's discipline). */
 export class ReplayDivergenceError extends Error {
   constructor(message: string) {
@@ -258,10 +258,10 @@ export class ReplayDivergenceError extends Error {
 /** Guard: after a build turn's live @build-cycle verify ran, assert the LIVE verdict matches what the
  *  Kth recorded build turn captured. THROWS ReplayDivergenceError on a true divergence:
  *   - recorded PASS but live FAIL  (a regression the recording never had), or
- *   - recorded FAIL but live PASS  (the recorded self-heal turn won't be dispatched , the tree drifted).
- *  A MATCH (pass==pass, fail==fail) is silent , recorded-FAIL+live-FAIL is the NORMAL self-heal path
+ *   - recorded FAIL but live PASS  (the recorded self-heal turn won't be dispatched – the tree drifted).
+ *  A MATCH (pass==pass, fail==fail) is silent – recorded-FAIL+live-FAIL is the NORMAL self-heal path
  *  (the router will dispatch the recorded assess->repair). When either verdict is undefined (a RED-only
- *  / verdict-only turn, or no recorded cycle state) there is nothing to compare , no-op. Replay-only:
+ *  / verdict-only turn, or no recorded cycle state) there is nothing to compare – no-op. Replay-only:
  *  callers gate on REPLAY_BUILD_DIR being set. */
 export function assertReplayBuildVerdictMatch(args: {
   replayBuildDir: string;
@@ -276,8 +276,8 @@ export function assertReplayBuildVerdictMatch(args: {
   const live = liveBuildVerdict(args.consortDir, args.featureId, args.story);
   if (!live || live === recorded) return; // undefined = nothing produced yet; equal = match
   throw new ReplayDivergenceError(
-    `[drive] REPLAY DIVERGENCE: build turn ${args.turnIndex} (${args.role} ${args.story}) , recorded verdict was ${recorded.toUpperCase()} ` +
+    `[drive] REPLAY DIVERGENCE: build turn ${args.turnIndex} (${args.role} ${args.story}) – recorded verdict was ${recorded.toUpperCase()} ` +
       `but the live verify returned ${live.toUpperCase()}. The synced tree reproduces record-time, so a differing verdict means the ` +
-      `corpus + code have drifted (a regression). Halting , debug the turn's snapshot vs the live verify; do not silently continue.`,
+      `corpus + code have drifted (a regression). Halting – debug the turn's snapshot vs the live verify; do not silently continue.`,
   );
 }

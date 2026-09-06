@@ -1,6 +1,6 @@
 // optimize-gate: the DESIGN-handoff gate evaluator for the optimize harness. The
 // per-turn quality bar for a design handoff is the role SELF-CHECK
-// (response-formatter formatRoleResponse) , the SAME precheck the drive's
+// (response-formatter formatRoleResponse) – the SAME precheck the drive's
 // verify-artifact step enforces after every design turn. A candidate can never
 // pass a weaker check than baseline: its artifact must clear the identical
 // self-check. Pure (reads the .consort), hermetic.

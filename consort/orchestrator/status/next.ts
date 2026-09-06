@@ -92,13 +92,13 @@ export interface NextSnapshot {
   /** The decision menu: every valid next choice, each with its enact command +
    *  hil_prompt. Always includes a "hold" checkpoint option. */
   options: NextOption[];
-  /** TRUE when the next move requires a HUMAN decision , a gate, the planning backlog
-   *  commit, or a per-story accept/discard/revise , i.e. NO autonomous `resume` option
+  /** TRUE when the next move requires a HUMAN decision – a gate, the planning backlog
+   *  commit, or a per-story accept/discard/revise – i.e. NO autonomous `resume` option
    *  is offered. This is the SOLE signal a session / watcher / the extension should gate
    *  on: `false` ⇒ resume the drive; `true` ⇒ surface the decision to the human at once.
    *  Do NOT reverse-engineer it from `primary_action.kind` or `open_gates`: the planning
    *  `author-requests` pause is modeled as an `invoke-role` (product-owner) with EMPTY
-   *  open_gates, so those two miss it , which is exactly what left the session silent at
+   *  open_gates, so those two miss it – which is exactly what left the session silent at
    *  the backlog decision. */
   awaiting_human: boolean;
   /** A plain-language summary of where things stand + what the human is being
@@ -169,7 +169,7 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
 
   // Planning `author-requests`: the PO commits WHICH proposed features are in this
   // sprint. This has a dedicated CLI (`consort-sync-backlog`), so it is NOT a bare
-  // "resume" (the default) , surface the exact command HERE so a session reads it off
+  // "resume" (the default) – surface the exact command HERE so a session reads it off
   // consort-next (the authoritative surface) instead of grepping the kit to rediscover
   // how the backlog is recorded. The feature-request(s) are already authored (a staged
   // first-project, or a prior turn), so this is a COMMIT decision, not authoring.
@@ -184,7 +184,7 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
         enact: { bin: "consort-sync-backlog", args: ["--sprint", ctx.sprint ?? "<sprint>", "--features", "<id[,id...]>"] },
         note:
           "Pick the features from .consort/planning/feature-proposals.md and pass their FOLDER ids " +
-          "(e.g. F1-stock-visibility,F2-stock-adjustment) , NOT the proposal's `## F1` heading labels. " +
+          "(e.g. F1-stock-visibility,F2-stock-adjustment) – NOT the proposal's `## F1` heading labels. " +
           "A pure UI/shell story is not a feature; commit only the features this sprint delivers.",
       },
       holdOption(),
@@ -201,10 +201,10 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
         {
           id: "acceptance.accept",
           title: `Accept story ${story}`,
-          hil_prompt: `Accept story ${story}? I will merge its experiment into the feature branch, run its migrations, and tear the experiment down. First OFFER the human to SEE it working: the story's experiment branch is checked out + deployed, so \`./scripts/run-dev.sh\` serves the real app on its paired Lakebase branch , for a UI product point them at the client URL to click through this story; for a backend/service, give them the endpoint(s) + a curl/Postman example that exercises this story's ACs. Only then take the accept/discard/revise decision.`,
+          hil_prompt: `Accept story ${story}? I will merge its experiment into the feature branch, run its migrations, and tear the experiment down. First OFFER the human to SEE it working: the story's experiment branch is checked out + deployed, so \`./scripts/run-dev.sh\` serves the real app on its paired Lakebase branch – for a UI product point them at the client URL to click through this story; for a backend/service, give them the endpoint(s) + a curl/Postman example that exercises this story's ACs. Only then take the accept/discard/revise decision.`,
           kind: "gate",
           enact: gateEnact, // consort-pipeline accept ... (owns the merge)
-          note: "Before deciding, offer a working-software review , run `./scripts/run-dev.sh` (serves the checked-out experiment branch against its Lakebase branch) and hand the human the client URL (UI) or the API endpoint + a curl/Postman example for this story's ACs; stop the server when they're done. Also offer to GENERATE SEED DATA so it isn't an empty app: run-dev.sh auto-runs `scripts/seed_dev.py` on start (SEED=0 skips; idempotent); if none exists, generate one that inserts representative rows for this story's tables.",
+          note: "Before deciding, offer a working-software review – run `./scripts/run-dev.sh` (serves the checked-out experiment branch against its Lakebase branch) and hand the human the client URL (UI) or the API endpoint + a curl/Postman example for this story's ACs; stop the server when they're done. Also offer to GENERATE SEED DATA so it isn't an empty app: run-dev.sh auto-runs `scripts/seed_dev.py` on start (SEED=0 skips; idempotent); if none exists, generate one that inserts representative rows for this story's tables.",
         },
         {
           id: "acceptance.discard",
@@ -382,7 +382,7 @@ function blockersOf(state: DriveState): NextBlocker[] {
       source: e.source,
       reason: e.reason,
       ...(e.story_id ? { story: e.story_id } : {}),
-      // The deterministic clear is the resolve verb , NOT hand-editing state. `consort-resolve-escalation`
+      // The deterministic clear is the resolve verb – NOT hand-editing state. `consort-resolve-escalation`
       // clears BOTH the escalation file AND any blocking smell in one shot and KEEPS the audit trail. Emitting
       // the exact command here (and NOT telling the operator to rm/edit the files) is what stops a session
       // improvising a hand-edit of .consort/escalations/ or smells.json to move the run forward.
@@ -390,7 +390,7 @@ function blockersOf(state: DriveState): NextBlocker[] {
       resolver_hint:
         `Fix the root cause, then run: consort-resolve-escalation --id ${e.id} --resolution "<what you fixed>" ` +
         `(clears this escalation AND any blocking smell, keeps the audit trail), then resume the drive. ` +
-        `Do NOT hand-edit or delete the escalation file or smells.json to move forward , that desyncs on-disk state.`,
+        `Do NOT hand-edit or delete the escalation file or smells.json to move forward – that desyncs on-disk state.`,
     },
   ];
 }

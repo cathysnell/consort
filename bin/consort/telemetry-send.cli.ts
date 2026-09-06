@@ -3,14 +3,14 @@
 // Spawned DETACHED (setsid, stdio ignored, unref'd) by detachedHttpSink so telemetry
 // delivery SURVIVES the parent drive's process.exit WITHOUT the parent ever awaiting
 // or blocking on the network. Before this, the emitter POSTed in-process fire-and-forget
-// and `consort-drive` called process.exit() immediately after finish() , tearing down
+// and `consort-drive` called process.exit() immediately after finish() – tearing down
 // the in-flight socket before it landed. Result: every run's telemetry was silently
 // dropped (an empty telemetry.runs despite heavy use). The parent now hands the batch to
 // THIS process and exits at once; this process owns the POST with a generous, cold-start-
 // tolerant timeout.
 //
 // Node BUILTINS ONLY (no kit imports) so the bundle stays tiny and spawning is cheap,
-// and so a bundled entry never drags a heavier module. All errors are swallowed , a
+// and so a bundled entry never drags a heavier module. All errors are swallowed – a
 // telemetry send must never surface anything.
 
 import { readFileSync, unlinkSync } from "node:fs";

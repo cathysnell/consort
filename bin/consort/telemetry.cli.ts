@@ -6,7 +6,7 @@
 //   consort-telemetry disable              persist telemetry_enabled = false
 //
 // The enable/disable decision, the opt-in level, and the persistent install id
-// live in the home-dir config (~/.config/consort/telemetry.json, XDG-aware) , NOT
+// live in the home-dir config (~/.config/consort/telemetry.json, XDG-aware) – NOT
 // the repo-committed `.consort/`. Telemetry is OPT-OUT and armed by default:
 // `status` reports whether it WOULD emit right now (the full consent conjunction
 // against the live TTY + env), the resolved level, and whether the endpoint is
@@ -41,7 +41,7 @@ export interface TelemetryCliDeps extends HomeConfigDeps {
   isTTY?: boolean;
 }
 
-const HELP = `consort-telemetry , inspect + toggle Consort usage telemetry
+const HELP = `consort-telemetry – inspect + toggle Consort usage telemetry
 
 Usage:
   consort-telemetry status [--json]     Show consent state, level, install id, endpoint
@@ -58,7 +58,7 @@ only allowlisted enums / counts / durations (no paths, code, or names). Opt out
 any time with 'disable', CONSORT_TELEMETRY=0, or running non-interactively / in
 CI; un-arm the endpoint entirely with CONSORT_TELEMETRY_SIGNOFF=0.
 
-Level 2 is a SEPARATE, EXPLICIT opt-in (off by default) that captures more , per-
+Level 2 is a SEPARATE, EXPLICIT opt-in (off by default) that captures more – per-
 role turn timings + coarse repair/loop counts (still allowlisted, no free text).
 Turn it on with 'enable --level 2' (or CONSORT_TELEMETRY_LEVEL=2); go back with
 'enable --level 1'. See TELEMETRY.md.
@@ -171,14 +171,14 @@ export function runTelemetryCli(argv: string[], deps: TelemetryCliDeps = {}): nu
     case "ack": {
       // Record that the human has been briefed + keeps the current settings (the
       // `/consort:start` "keep defaults" path). Distinct from enable/disable: no
-      // consent change, only the acknowledgment flag , so the briefing stops firing.
+      // consent change, only the acknowledgment flag – so the briefing stops firing.
       markTelemetryAcknowledged(deps);
       const level = resolveTelemetryLevel(deps);
       const enabled = isTelemetryEnabled(deps);
       out(
         json
           ? JSON.stringify({ acknowledged: true, telemetry_enabled: enabled, level }, null, 2) + "\n"
-          : `telemetry acknowledged (enabled ${enabled}, level ${level}) , kept as-is\n`,
+          : `telemetry acknowledged (enabled ${enabled}, level ${level}) – kept as-is\n`,
       );
       return 0;
     }
@@ -193,7 +193,7 @@ export function runTelemetryCli(argv: string[], deps: TelemetryCliDeps = {}): nu
   }
 }
 
-/** `consort-telemetry beacon` , send the one-time install beacon (a random id + version + date).
+/** `consort-telemetry beacon` – send the one-time install beacon (a random id + version + date).
  *  Async (a network POST), so it is a separate entry from the sync runTelemetryCli. ALWAYS exits
  *  0: the beacon is best-effort and must never fail the caller (the `/consort:start` briefing runs
  *  it right after disclosing it). Idempotent + fires regardless of the opt-out (see install-beacon). */

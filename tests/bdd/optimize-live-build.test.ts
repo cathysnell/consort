@@ -1,7 +1,7 @@
 // P3-prep: the build-handoff leaves for the live champion walk. Build turns mutate
 // three things (git commit + paired Lakebase branch + branch DB rows), so the walk
-// needs (a) buildSnapshotDeps , capture the pre-turn git SHA, reset the tree to it,
-// and (only for GREEN/REFACTOR) re-fork a clean paired branch , and (b) a build gate
+// needs (a) buildSnapshotDeps – capture the pre-turn git SHA, reset the tree to it,
+// and (only for GREEN/REFACTOR) re-fork a clean paired branch – and (b) a build gate
 // that reads the honest post-turn signal (an unresolved story escalation = the
 // honest-GREEN verify failed / the turn halted). Both are hermetic here: git +
 // cutExperiment are injected, and the gate reads a temp .sftdd escalations dir.

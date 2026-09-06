@@ -19,7 +19,7 @@ export type WatchLineKind =
   | "escalation" // raised to HIL          (STOP, failure)
   | "done" // run / sprint complete   (STOP)
   | "stalled" // a turn stalled + is retrying (warn, continue)
-  | "notice" // a `[consort]` disclosure (telemetry L1/L2 briefing) , surfaced verbatim
+  | "notice" // a `[consort]` disclosure (telemetry L1/L2 briefing) – surfaced verbatim
   | "info"; // another `[drive]`/`[sprint]` line worth showing
 
 export interface WatchClass {
@@ -33,7 +33,7 @@ export interface WatchClass {
 }
 
 /** Classify a single log line. Returns null for lines that are not drive/sprint
- *  narration (raw tool output, blank lines, agent chatter) , the watcher skips them. */
+ *  narration (raw tool output, blank lines, agent chatter) – the watcher skips them. */
 export function classifyDriveLine(raw: string): WatchClass | null {
   const line = raw.replace(/\s+$/, "");
 
@@ -46,17 +46,17 @@ export function classifyDriveLine(raw: string): WatchClass | null {
   }
 
   // `[consort]` disclosures (the one-time telemetry L1/L2 briefing, written to the
-  // drive's stderr by onNotice) are NOT tooling noise , the orchestrator contract
+  // drive's stderr by onNotice) are NOT tooling noise – the orchestrator contract
   // requires surfacing them. They land in drive-live.log like everything else, so the
   // narrator MUST relay them; without this they were dropped by the guard below and
-  // the human was never briefed. The notice is multi-line , this classifies its FIRST
+  // the human was never briefed. The notice is multi-line – this classifies its FIRST
   // line; the watcher surfaces the indented continuation lines that follow (they carry
   // the opt-out + the Level-2 offer).
   if (line.startsWith("[consort]")) {
     return { kind: "notice", text: line.replace(/^\[consort\] /, ""), stop: false };
   }
 
-  // `lk:` install narration (a backgrounded `--refresh` , the kit download + heartbeat).
+  // `lk:` install narration (a backgrounded `--refresh` – the kit download + heartbeat).
   // The same relay follows create / refresh / drive, so surface these verbatim.
   if (/^lk: /.test(line)) {
     return { kind: "info", text: line.replace(/^lk: /, ""), stop: false };
@@ -64,7 +64,7 @@ export function classifyDriveLine(raw: string): WatchClass | null {
 
   const isDrive = line.startsWith("[drive]");
   const isSprint = line.startsWith("[sprint]");
-  // `lakebase-create-project` narrates provisioning as bracketed stage lines , e.g.
+  // `lakebase-create-project` narrates provisioning as bracketed stage lines – e.g.
   // "[Creating GitHub repository...]", "[Scaffolding project files...]", "[doctor] …",
   // "[Project created successfully!]". Relay ANY bracketed line, not just [drive]/[sprint],
   // so create's Part-1 stages surface through the same watcher. Non-bracketed noise
@@ -79,7 +79,7 @@ export function classifyDriveLine(raw: string): WatchClass | null {
     return { kind: "escalation", text: line.replace(/^\[(drive|sprint)\] /, ""), stop: true, outcome: "escalation" };
   }
   // An unexpected crash the drive could not classify (drive.cli's last-resort catch).
-  // A terminal failure , STOP so the watcher / a Monitor surfaces it instead of the
+  // A terminal failure – STOP so the watcher / a Monitor surfaces it instead of the
   // run looking still-in-flight (a bare error line would classify as `null` + be skipped).
   if (/^\[drive\] ABORTED\b/.test(line)) {
     return { kind: "escalation", text: line.replace(/^\[drive\] /, ""), stop: true, outcome: "escalation" };

@@ -418,7 +418,7 @@ describe("ensureDeployedAndVerify: GREEN-verify failure diagnostic", () => {
 
   it("enriches a verify FAILURE with the e2e-inline-regex-flag cause + file:line", async () => {
     // A project whose E2E test uses a Playwright matcher built from an inline-flag
-    // regex , the exact un-greenable shape that raises to HIL with a generic message.
+    // regex – the exact un-greenable shape that raises to HIL with a generic message.
     mkdirSync(join(dir, "tests", "e2e"), { recursive: true });
     writeFileSync(
       join(dir, "tests", "e2e", "test_file_bug.py"),
@@ -484,7 +484,7 @@ describe("deployToTarget: deploy-verify self-heal (contamination classify + one-
   // A verify that FAILS the full feature suite (reporting a FAILED node-id) but
   // PASSES when re-run in isolation (the classifier appends the node-id): the
   // shared-state contamination signature. projectDir has no project-instance file,
-  // so runVerifyMaybeEphemeral verifies IN PLACE (no ephemeral fork , hermetic).
+  // so runVerifyMaybeEphemeral verifies IN PLACE (no ephemeral fork – hermetic).
   const contaminated = (cmd: string) =>
     cmd.includes("::") ? { passed: true } : { passed: false, output: "FAILED tests/x.py::t1\n" };
 
@@ -526,7 +526,7 @@ describe("deployToTarget: deploy-verify self-heal (contamination classify + one-
     markDeployVerifyAssessed(consortDir, "F1", "S1", ["tests/x.py::t1"]);
 
     // The scope did not fix it: a SECOND deploy still fails as contamination. The
-    // one shot is spent, so it is NOT re-suppressed , it escalates to the HIL.
+    // one shot is spent, so it is NOT re-suppressed – it escalates to the HIL.
     await deployToTarget({ ...baseArgs(consortDir), runVerify: contaminated });
     const escs = readEscalations(consortDir).filter((e) => !e.resolved_at && e.source === "deploy-verify");
     expect(escs.length).toBeGreaterThan(0);
@@ -622,7 +622,7 @@ describe("stopLocal", () => {
 describe("defaultRunVerify: bounded timeout (a wedged verify FAILS the pass, never hangs)", () => {
   // The 4.5h driver-sweep stall: a green-cycle verify subprocess (pytest + client build / app server)
   // hung and execSync waited forever. defaultRunVerify now passes a `timeout` so a wedged pass is killed
-  // (SIGTERM) + returned as passed:false with a clear reason , the caller's finally then stops the app.
+  // (SIGTERM) + returned as passed:false with a clear reason – the caller's finally then stops the app.
   const prev = process.env.LAKEBASE_VERIFY_TIMEOUT_MS;
   afterEach(() => { if (prev === undefined) delete process.env.LAKEBASE_VERIFY_TIMEOUT_MS; else process.env.LAKEBASE_VERIFY_TIMEOUT_MS = prev; });
 
@@ -633,7 +633,7 @@ describe("defaultRunVerify: bounded timeout (a wedged verify FAILS the pass, nev
     const elapsed = Date.now() - t0;
     expect(r.passed).toBe(false);
     expect(r.output).toMatch(/TIMED OUT/i);
-    expect(elapsed).toBeLessThan(5000); // killed at ~0.4s, nowhere near 30s , proves it did not hang
+    expect(elapsed).toBeLessThan(5000); // killed at ~0.4s, nowhere near 30s – proves it did not hang
   });
 
   it("a fast passing command still returns passed:true (timeout does not false-fail a quick verify)", () => {
@@ -933,7 +933,7 @@ describe("ensureDeployedAndVerify: client Vitest pass on Python + client (Findin
       targetName: "localv",
       startProcess: () => 4242,
       reachable: async () => true,
-      // Backend (marked) passes; the client-only pass fails , the exact Finding 26 state.
+      // Backend (marked) passes; the client-only pass fails – the exact Finding 26 state.
       runVerify: (_cmd, _cwd, env) => env?.SFTDD_CLIENT_ONLY !== "1",
       stop: () => {},
       sleep: async () => {},
@@ -969,7 +969,7 @@ describe("ensureDeployedAndVerify: client Vitest pass on Python + client (Findin
 // experiment branch, one build turn's e2e writes bleed into the next turn's verify
 // (cross-run state on the shared branch), and a server started before a later story's
 // migration serves a stale schema. So the client pass must ISOLATE on an ephemeral
-// child branch , exactly like the two backend passes , not run in place. Guarded via
+// child branch – exactly like the two backend passes – not run in place. Guarded via
 // the injectable verifyBranchOps seam (hermetic; no real Lakebase). Staging
 // LAKEBASE_PROJECT_ID in .env makes readProjectInstance resolve an instance so the
 // fork path is taken.
@@ -1052,7 +1052,7 @@ describe("ensureDeployedAndVerify: client E2E pass isolates on an ephemeral bran
     const res = await ensureDeployedAndVerify({
       projectDir: dir,
       targetName: "localv",
-      // no lakebaseBranch , runVerifyMaybeEphemeral verifies in place.
+      // no lakebaseBranch – runVerifyMaybeEphemeral verifies in place.
       startProcess: () => 4242,
       reachable: async () => true,
       runVerify: (_cmd, _cwd, env) => {
@@ -1072,7 +1072,7 @@ describe("ensureDeployedAndVerify: client E2E pass isolates on an ephemeral bran
       },
     });
     expect(res.passed).toBe(true);
-    expect(created).toEqual([]); // no branch bound , no fork on any pass
+    expect(created).toEqual([]); // no branch bound – no fork on any pass
     expect(clientVerifyUrl).toBe("<unset>"); // client pass ran in place
   });
 });

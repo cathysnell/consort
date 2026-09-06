@@ -4,8 +4,8 @@
 //
 // Real spec-author turn via performViaExecutor: reads the story stub (story-scoped) + product-overview
 // (root), lands >=1 acs/<AC>.json under .consort at features/<F>/stories/<S>/acs/ (artifact channel,
-// a DIRECTORY primary , acsDirConformant) + the reconciled agent-log (meta). LEAN, no cloud. The spec
-// is the catalogue's shared entry (DESIGN_LIVE_SPECS.acs) , one source of truth for the role turn.
+// a DIRECTORY primary – acsDirConformant) + the reconciled agent-log (meta). LEAN, no cloud. The spec
+// is the catalogue's shared entry (DESIGN_LIVE_SPECS.acs) – one source of truth for the role turn.
 
 import { describe, it } from "vitest";
 import { runDesignExecutorDispatchLive, designSpec } from "./executor-dispatch-live-support.js";

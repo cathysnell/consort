@@ -1,6 +1,6 @@
 // The REVIEW step runs the deterministic UX gate (checkUxClean) and, on a dirty
 // UI-track project (an unreachable or bare feature page), flags the story-scoped
-// `ux-adherence` smell , with NO model cooperation. Because `ux-adherence` is
+// `ux-adherence` smell – with NO model cooperation. Because `ux-adherence` is
 // build-refactor-routable, the open smell then routes the Driver's REFACTOR turn
 // in-loop (covered by sftdd-layering-self-heal.test.ts, which shares the smell).
 // This guards the review-time WRITE: a dirty client -> smell written once

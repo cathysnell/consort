@@ -11,12 +11,12 @@
 // checkable chain. This file is the single source of the event kinds + their on-disk SCOPE.
 //
 // Scope matters: an event artifact lives at a SPECIFIC level of the .consort tree. green-failure
-// lives per-CYCLE (<F>/<S>/<AC>/green-failure.json), NOT per-story , declaring the scope here
+// lives per-CYCLE (<F>/<S>/<AC>/green-failure.json), NOT per-story – declaring the scope here
 // (once) is what lets the resolver + the pre-dispatch check look in the RIGHT place instead of
 // re-deriving a path per call site (the class of bug this whole model exists to prevent).
 //
 // Scope is ACTION-AWARE, not a static field: most events sit at a fixed scope regardless of the
-// action, but review-verdict is dual-scoped , per-CYCLE when the loop runs per-AC (the action
+// action, but review-verdict is dual-scoped – per-CYCLE when the loop runs per-AC (the action
 // carries an `ac`), per-STORY otherwise (matching `acReviewVerdictJson` vs `storyReviewVerdictJson`
 // in config/consort-paths.ts). So each event declares a `scopeFor(action)` resolver: the fixed-scope
 // events ignore the action, review-verdict keys off `action.ac`. One event kind, honest dual scope.
@@ -27,20 +27,20 @@ import type { WorkflowAction } from "../workflow/workflow-vocabulary.js";
  * The scope at which an event's artifact is written + read, relative to `.consort`. Mirrors the
  * path builders in `config/consort-paths.ts`: `feature` = the feature dir, `story` = `storyResolved`,
  * `ac`/`cycle` = `cycleDir(f, s, ac)` (an AC and its cycle share a dir; both names read naturally
- * at a call site). A consumer/producer never hard-codes the path , it resolves via `scopeFor`.
+ * at a call site). A consumer/producer never hard-codes the path – it resolves via `scopeFor`.
  */
 export type EventScope = "feature" | "story" | "ac" | "cycle";
 
 /**
  * The closed set of process events the build lane raises. Each is a marker one turn writes and a
  * later turn's ROUTE depends on:
- *   - green-failure          : the Driver's honest-GREEN verify FAILED , the Navigator ASSESS turn
+ *   - green-failure          : the Driver's honest-GREEN verify FAILED – the Navigator ASSESS turn
  *                              discriminates supersession vs regression from it.
- *   - superseded-tests       : the Navigator flagged prior tests the new AC supersedes , the Driver
+ *   - superseded-tests       : the Navigator flagged prior tests the new AC supersedes – the Driver
  *                              green-superseded turn permissively refactors them.
  *   - regression-assessment  : the Navigator diagnosed a genuine regression (+ optional fixDirective)
- *                              , the Driver repair turn acts on it.
- *   - review-verdict         : the Navigator's REVIEW verdict (refactor yes/no + notes) , the Driver
+ *                              – the Driver repair turn acts on it.
+ *   - review-verdict         : the Navigator's REVIEW verdict (refactor yes/no + notes) – the Driver
  *                              refactor turn consumes it.
  */
 export type TurnEventKind =
@@ -98,7 +98,7 @@ export const TURN_EVENTS = {
   "review-verdict": {
     kind: "review-verdict",
     // Dual-scoped: per-CYCLE when the loop runs per-AC (the action carries an `ac`), per-STORY
-    // otherwise , matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
+    // otherwise – matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
     scopeFor: (action) => (hasAc(action) ? "cycle" : "story"),
     filename: "review-verdict.json",
     description: "The Navigator's REVIEW verdict (refactor yes/no + notes) the Driver refactor consumes.",

@@ -6,7 +6,7 @@
 // the app emits SQL for a column the migrated DB no longer has and crashes at
 // runtime even though the migration "succeeded". The gate parses the migration's
 // net column drops + greps the code tree, so it both NOTICES and LOCALIZES the
-// residual references , the two things the Navigator assess used to do by judgment.
+// residual references – the two things the Navigator assess used to do by judgment.
 // On a hit the GREEN verify-failure self-heals DETERMINISTICALLY: it writes an
 // ASSESSED green-failure with a precise file:line fixDirective, routing a bounded
 // Driver REPAIR instead of a model assess.
@@ -245,7 +245,7 @@ describe("greenOpenCycle: contract-incompleteness self-heals deterministically",
 
     expect(r.recorded).toBe(false);
     // Routes the Navigator assess (which also handles superseded prior tests),
-    // enriched with the deterministic contract refs , NOT a contract-only repair.
+    // enriched with the deterministic contract refs – NOT a contract-only repair.
     expect(r.needsAssess).toBe(true);
     expect(r.escalated).toBeFalsy();
     const gf = readGreenFailure(tdd, F, S, "AC1");

@@ -339,7 +339,7 @@ export function designGuideHasComponents(consortDir: string): { ok: boolean; pro
       return {
         ok: false,
         problem:
-          "design-guide.json is missing a non-empty `components` object , name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML",
+          "design-guide.json is missing a non-empty `components` object – name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML",
       };
     }
   } catch {
@@ -351,10 +351,10 @@ export function designGuideHasComponents(consortDir: string): { ok: boolean; pro
 /** Whether a brand asset was STAGED (an image under `.consort/design/assets/`) but the
  *  design-guide omits `app_icon`. The staged asset is the ONLY thing that wires the brand
  *  mark in: the kit copies its real bytes to `install_to` (installBrandAsset) and the
- *  ux-adherence gate enforces the app shell (favicon + navbar) references it , BOTH keyed
+ *  ux-adherence gate enforces the app shell (favicon + navbar) references it – BOTH keyed
  *  on the guide's `app_icon`. Omitting the declaration means the icon SILENTLY never ships
  *  (it only lands if some AC happens to reference it, the "built app doesn't incorporate
- *  warehouse.png" gap). This catches it at the UX Designer's self-check , the source ,
+ *  warehouse.png" gap). This catches it at the UX Designer's self-check – the source ,
  *  rather than shipping a placeholder. Ok when nothing is staged (no obligation). */
 export function brandAssetDeclared(consortDir: string): { ok: boolean; problem?: string } {
   const assetsDir = designAssetsDir(consortDir);
@@ -365,7 +365,7 @@ export function brandAssetDeclared(consortDir: string): { ok: boolean; problem?:
   } catch {
     return { ok: true };
   }
-  if (staged.length === 0) return { ok: true }; // nothing staged , the guide need not declare an icon
+  if (staged.length === 0) return { ok: true }; // nothing staged – the guide need not declare an icon
   const file = designGuideJson(consortDir);
   if (existsSync(file)) {
     try {
@@ -379,10 +379,10 @@ export function brandAssetDeclared(consortDir: string): { ok: boolean; problem?:
   return {
     ok: false,
     problem:
-      `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` , ` +
+      `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` – ` +
       `declare it so the brand mark actually ships: ` +
       `"app_icon": { "source": ".consort/design/assets/${first}", "install_to": "client/public/${first}" }. ` +
-      `Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference , the icon ships only by luck.`,
+      `Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference – the icon ships only by luck.`,
   };
 }
 

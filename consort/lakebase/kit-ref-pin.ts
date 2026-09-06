@@ -4,18 +4,18 @@
 // (`~/.cache/consort/<ref>`). When the ref is the mutable `main`, a new release
 // moves main's tip but the cache key never changes, so a bin run keeps serving
 // the stale install it first cached (the fast path deliberately never re-checks
-// the remote , freshness is `--warm`'s job). The result: a project silently runs
+// the remote – freshness is `--warm`'s job). The result: a project silently runs
 // a months-old kit and newly-added bins go missing.
 //
 // The fix mirrors what the substrate already does for `.lakebase/scm-utils-ref`
 // (pinned to `v${substrateVersion()}`): pin the kit to an IMMUTABLE version tag.
 // A version tag never moves, so each release is a distinct cache key that installs
-// fresh on first use , deterministic, no drift. The substrate's create-project
+// fresh on first use – deterministic, no drift. The substrate's create-project
 // Step 7e writes `.lakebase/kit-ref` straight from `LAKEBASE_KIT_REF`, so the
 // consort create wrapper only has to DEFAULT that env var to its own version.
 //
 // An explicit `LAKEBASE_KIT_REF` (dev override, or a capture that pins a working
-// ref) always wins , this only fills the unset default that used to fall through
+// ref) always wins – this only fills the unset default that used to fall through
 // to `main`.
 
 import { fileURLToPath } from "node:url";
@@ -57,7 +57,7 @@ function findConsortPkg(fromDir: string): ConsortPkg | undefined {
         return pkg;
       }
     } catch {
-      // no package.json here (or unreadable) , keep walking up
+      // no package.json here (or unreadable) – keep walking up
     }
     const up = dirname(d);
     if (up === d) break;
@@ -72,7 +72,7 @@ export function readConsortVersion(fromDir: string): string | undefined {
 }
 
 /**
- * The substrate version THIS kit declares it depends on , the `vX.Y.Z` in
+ * The substrate version THIS kit declares it depends on – the `vX.Y.Z` in
  * `dependencies["@databricks-solutions/lakebase-scm-utils"]`
  * (e.g. `github:databricks-solutions/lakebase-scm-utils#v0.2.3` -> `"0.2.3"`).
  * This is the version the scaffold SHOULD run against; compare it to the actually-

@@ -1,5 +1,5 @@
 // optimize-report: the per-handoff before/after report over a champion-walk
-// result , the "same-quality artifacts, less wall-clock" evidence. Pure: it
+// result – the "same-quality artifacts, less wall-clock" evidence. Pure: it
 // joins the ChampionWalkResult (baseline vs winner medians per handoff) with the
 // candidate objects (to describe the WINNING lever, so a generalizable win can be
 // promoted into the kit) into a structured summary + a markdown table. No I/O.
@@ -15,7 +15,7 @@ import { BASELINE_CANDIDATE_ID } from "./optimize-candidates.js";
 
 /** TOTAL prompt tokens (fresh input + cache-read) at/above which a slow turn is
  *  worth a .md-trim candidate in pass 2. Prompts are cache-served, so this is total
- *  prompt weight, not fresh input. Coarse , RANKS trim targets, gates nothing. */
+ *  prompt weight, not fresh input. Coarse – RANKS trim targets, gates nothing. */
 const PROMPT_BOUND_MIN_INPUT_TOKENS = 100000;
 /** Baseline turn wall-clock at/above which a large prompt is worth trimming (a fast
  *  turn is not prompt-bound however big the prompt). */
@@ -32,11 +32,11 @@ export interface HandoffReportRow {
   /** Human-readable description of the winning candidate's levers. */
   winnerLevers: string;
   /** The baseline turn's TOTAL prompt tokens (fresh input + cache-read), when
-   *  measured , the prompt-weight signal for the two-pass plan. Total, because
+   *  measured – the prompt-weight signal for the two-pass plan. Total, because
    *  prompts are cache-served (fresh input is tiny), yet a big cached prompt still
    *  costs and trimming the .md shrinks it. */
   baselineInputTokens?: number;
-  /** Prompt-bound: the baseline turn has a LARGE total prompt AND is SLOW , the
+  /** Prompt-bound: the baseline turn has a LARGE total prompt AND is SLOW – the
    *  roles worth authoring a trimmed .md (agentOverlay candidate) for in pass 2. A
    *  fast turn (however big the prompt) or a small prompt is not. False when tokens
    *  were not measured. */
@@ -75,8 +75,8 @@ export function buildChampionWalkReport(result: ChampionWalkResult, candidates: 
       typeof freshInput === "number" || typeof cacheRead === "number"
         ? (freshInput ?? 0) + (cacheRead ?? 0)
         : undefined;
-    // Prompt-bound: a large total prompt AND a slow baseline turn , the roles worth
-    // authoring a .md trim for in pass 2. Coarse , RANKS trim targets, gates nothing.
+    // Prompt-bound: a large total prompt AND a slow baseline turn – the roles worth
+    // authoring a .md trim for in pass 2. Coarse – RANKS trim targets, gates nothing.
     const promptBound =
       typeof baselineInputTokens === "number" &&
       baselineInputTokens >= PROMPT_BOUND_MIN_INPUT_TOKENS &&
@@ -104,7 +104,7 @@ export function buildChampionWalkReport(result: ChampionWalkResult, candidates: 
 
 /** Describe a candidate's levers in one compact human-readable string, so the
  *  report names WHAT won (a per-turn model, an effort, a session-warmth knob, a
- *  content variant) , the input to promoting a generalizable win into the kit. */
+ *  content variant) – the input to promoting a generalizable win into the kit. */
 export function describeCandidateLevers(candidate: Candidate): string {
   if (candidate.id === BASELINE_CANDIDATE_ID) return "baseline (no overrides)";
   const parts: string[] = [];

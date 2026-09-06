@@ -19,7 +19,7 @@ export interface TurnUsage {
   /** Dollar cost of the turn, if reported. */
   costUsd?: number;
   /** Agent-side turn count the CLI reports on the result event (`num_turns`), if present. A
-   *  one-shot design turn is ~a handful; a retry-heavy / thrashing turn is many , the signal
+   *  one-shot design turn is ~a handful; a retry-heavy / thrashing turn is many – the signal
    *  that distinguishes "slow because big" from "slow because it looped". */
   numTurns?: number;
   /** The CLI-reported wall-clock for the whole turn (`duration_ms`), if present. The agent's
@@ -107,7 +107,7 @@ export function assistantTextFromLine(line: string): string {
  * Split one stream-json line into what a human trace should show: the assistant
  * TEXT blocks (joined) and a compact one-line summary of each tool_use (action +
  * target). The driver's tee shows the tool actions (liveness) + the turn's FINAL
- * text (the outcome) and drops the interstitial "now I'll..." prose , which no
+ * text (the outcome) and drops the interstitial "now I'll..." prose – which no
  * one reads and which bloats the run log. Non-assistant lines yield empties.
  */
 export function assistantEventSummary(line: string): { text: string; tools: string[] } {
@@ -126,7 +126,7 @@ export function assistantEventSummary(line: string): { text: string; tools: stri
     if (block?.type === "text" && typeof block.text === "string") {
       textParts.push(block.text);
     } else if (block?.type === "tool_use" && typeof block.name === "string") {
-      // Full-fidelity tool marker: the tool name + its COMPLETE input, never compacted , no
+      // Full-fidelity tool marker: the tool name + its COMPLETE input, never compacted – no
       // single-field pick and no length clip. The corpus + sidecar record exactly what the agent
       // invoked (every arg, full paths, full command/pattern/content), so a reader can reconstruct
       // the turn. (Previously this picked one of file_path/path/command/pattern and clipped to 80

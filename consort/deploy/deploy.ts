@@ -57,7 +57,7 @@ function readProjectInstance(projectDir: string): string | undefined {
  * app cannot connect at all.
  *
  * Authoritative source is the DATABASE_URL path segment (what the app actually
- * connects with; the last non-commented occurrence wins , the post-checkout
+ * connects with; the last non-commented occurrence wins – the post-checkout
  * hook appends a fresh line on each switch), then DB_NAME. Returns undefined
  * when neither is set, so callers fall back to the substrate default.
  */
@@ -80,7 +80,7 @@ export function readAppDatabaseName(projectDir: string): string | undefined {
       const db = new URL(raw.replace(/^postgresql\+[^:]+:/, "postgresql:")).pathname.replace(/^\//, "");
       if (db) return decodeURIComponent(db);
     } catch {
-      /* malformed URL , fall through to DB_NAME */
+      /* malformed URL – fall through to DB_NAME */
     }
   }
   const m = env.match(/^\s*DB_NAME\s*=\s*(.+?)\s*$/m);
@@ -92,7 +92,7 @@ export function readAppDatabaseName(projectDir: string): string | undefined {
  * Run the feature-verify, by DEFAULT on a DISPOSABLE child branch. Whenever the
  * deploy is bound to an experiment branch (`lakebaseBranch`) of a resolvable
  * Lakebase project, fork a short-lived child off that branch, point the verify
- * at it (VERIFY_DATABASE_URL), and delete it after , so the suite's migration
+ * at it (VERIFY_DATABASE_URL), and delete it after – so the suite's migration
  * up/down fixtures mutate a throwaway DB instead of leaving the shared branch
  * half-migrated for the next story's verify (the thrash fix; Lakebase branching
  * makes the fork + teardown ~instant). Set `LAKEBASE_CONSORT_EPHEMERAL_VERIFY=0` to opt
@@ -247,8 +247,8 @@ export async function probeReachable(url: string): Promise<boolean> {
  * Gate-deploy smoke check: the app is REACHABLE only if the health path answers
  * with a NON-5xx status. A bare `probeReachable` treats any response as "up", so
  * an app that boots but 500s on every request (e.g. bound to an unmigrated
- * branch , `relation does not exist`) would be certified "reachable" at the
- * acceptance gate , hollow working-software. A 5xx here means the process is up
+ * branch – `relation does not exist`) would be certified "reachable" at the
+ * acceptance gate – hollow working-software. A 5xx here means the process is up
  * but broken; return false so the gate records reachable=false + escalates
  * instead of green-lighting a stale server. Connection error = not up yet.
  */
@@ -285,7 +285,7 @@ export interface ReleaseEngineerLogCtx extends AgentLogIoOpts {
  * The deterministic deploy (`consort-deploy`) is what actually starts +
  * verifies the app; the RE role model that invokes it may stay silent (a haiku
  * RE wrote zero log events while the deploy ran). So the deploy emits the RE's
- * own lifecycle , the same orchestrator-as-code logging principle , into the ONE
+ * own lifecycle – the same orchestrator-as-code logging principle – into the ONE
  * central `.tdd/agent-log.jsonl`, so the RE's work is in the stream regardless of
  * which model ran the role. Best-effort: a logging failure never blocks deploy.
  */
@@ -398,7 +398,7 @@ function hasClientWorkspace(projectDir: string): boolean {
 }
 
 /** Wall-clock bound (ms) for ONE verify pass (pytest / client build / migration). A wedged verify
- *  subprocess , an app server that never returns, a client build stuck on a watcher/socket , must
+ *  subprocess – an app server that never returns, a client build stuck on a watcher/socket – must
  *  FAIL the pass (non-zero), NOT hang the caller forever (the 4.5h driver-sweep stall, 2026-08-08).
  *  execSync's `timeout` sends SIGTERM on expiry; the throw is caught below => passed:false. Read at
  *  CALL time (not module load) so it is overridable via LAKEBASE_VERIFY_TIMEOUT_MS + testable; default
@@ -414,11 +414,11 @@ export function defaultRunVerify(cmd: string, cwd: string, env?: NodeJS.ProcessE
     return { passed: true, output: out?.toString() ?? "" };
   } catch (err) {
     const e = err as { stdout?: Buffer; stderr?: Buffer; killed?: boolean; signal?: string; code?: string };
-    // A timeout kill (killed/signal SIGTERM, or ETIMEDOUT) is a FAILED verify with a clear reason , not a
+    // A timeout kill (killed/signal SIGTERM, or ETIMEDOUT) is a FAILED verify with a clear reason – not a
     // silent hang. Surface it distinctly so a wedged pass is obvious in the log.
     const timedOut = e.killed === true || e.signal === "SIGTERM" || e.code === "ETIMEDOUT";
     const output = `${e.stdout?.toString() ?? ""}${e.stderr?.toString() ?? ""}`.trimEnd()
-      + (timedOut ? `\n[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) , failing this pass rather than hanging.` : "");
+      + (timedOut ? `\n[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) – failing this pass rather than hanging.` : "");
     const tail = output.split("\n").slice(-30).join("\n");
     process.stderr.write(`\n[deploy] feature-verify ${timedOut ? "TIMED OUT" : "failed"}; last output:\n${tail}\n`);
     return { passed: false, output };
@@ -496,7 +496,7 @@ export interface DeployArgs {
    * intentionally leaves OUR app running on the port for PO review, so a
    * re-issued gate deploy (or a resumed run) legitimately finds our own prior
    * instance there. We stop our recorded instance (pidfile) and re-probe; only
-   * if the port is STILL held , a process we do NOT own (truly foreign) , does
+   * if the port is STILL held – a process we do NOT own (truly foreign) – does
    * the deploy fail honestly (reachable=false, verify failed) + escalate, instead
    * of false-positiving. Off by default so the per-cycle reuse path
    * (ensureDeployedAndVerify) is unaffected.
@@ -542,7 +542,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
   // squatter would record bogus evidence. But FIRST self-heal: the per-story
   // await-acceptance deploy intentionally LEAVES our app running on the port for
   // PO review (deployToTarget records its pid + does not stop it), so a re-issued
-  // gate deploy , or a resumed run , legitimately finds OUR OWN prior instance
+  // gate deploy – or a resumed run – legitimately finds OUR OWN prior instance
   // there. Stop our recorded instance (pidfile process group) and wait for the
   // socket to release; only refuse when the port is STILL held by a process we do
   // NOT own (truly foreign). This brings the gate deploy to parity with
@@ -558,7 +558,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
       now: args.now,
     });
     if (released.outcome === "done") {
-      // Our own stale instance is gone and the port is free , fall through to a
+      // Our own stale instance is gone and the port is free – fall through to a
       // clean deploy of this turn's code.
     } else {
     const reason = `target port still serving a foreign process at ${url} after stopping our own instance; refusing to verify against it. Stop it first (consort-deploy --target ${args.targetName} --stop, or free the port).`;
@@ -599,7 +599,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
   // Migrate the DEPLOYED branch to head BEFORE serving it. Honest-GREEN verify
   // migrates only a DISPOSABLE child branch (to isolate reversibility up/down
   // fixtures), so the experiment branch this app is bound to is otherwise never
-  // upgraded , the PO-review server then queries an unmigrated schema and the
+  // upgraded – the PO-review server then queries an unmigrated schema and the
   // write path 500s ("relation does not exist") even though every test passed.
   // Forward-only + idempotent (upgrade head), so no down-migration can leave the
   // branch half-migrated (the thrash the child-branch indirection guards against
@@ -754,7 +754,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
       // The self-heal fires whenever we can fork a clean child to isolate on: a
       // bound lakebaseBranch + a feature context. This covers BOTH the per-story
       // deploy (branch = the story's experiment branch, storyId set) AND the
-      // FEATURE-ship deploy (branch = the feature branch, no storyId) , the ship
+      // FEATURE-ship deploy (branch = the feature branch, no storyId) – the ship
       // was previously gated out (storyId required) and hard-raised to HIL on a
       // flaky shared-state test. storyId flows through as optional: undefined ->
       // the feature-scope marker (features/<F>/deploy-verify-assess.json).
@@ -777,7 +777,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
           // One-shot: suppress the escalation into the self-heal marker ONLY on the
           // FIRST detection. If a marker is already ASSESSED (the Navigator scope
           // turn ran and the Driver's re-deploy STILL fails), the one attempt is
-          // spent , do NOT re-suppress; fall through to the terminal escalation so
+          // spent – do NOT re-suppress; fall through to the terminal escalation so
           // the run halts to the HIL instead of spinning assess -> scope -> re-deploy.
           if (verdict === "contamination") {
             const prior = readDeployVerifyAssessMarker(consortDir, args.featureId, args.storyId);
@@ -801,7 +801,7 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
     } else if (args.featureId) {
       // The deploy verified. If a deploy-verify-assess marker exists, the
       // Navigator ASSESS + Driver SCOPE self-heal WORKED (the re-verify now
-      // passes), so clear it , the story (or the feature ship) proceeds with a
+      // passes), so clear it – the story (or the feature ship) proceeds with a
       // clean slate. storyId undefined clears the feature-scope marker.
       clearDeployVerifyAssessMarker(consortDir, args.featureId, args.storyId);
     }
@@ -832,7 +832,7 @@ export interface CycleVerifyArgs {
   sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
   /** Injectable Lakebase ops for the ephemeral verify-branch fork (hermetic tests).
-   *  Omitted in production , withEphemeralVerifyBranch uses the real Lakebase CLI ops. */
+   *  Omitted in production – withEphemeralVerifyBranch uses the real Lakebase CLI ops. */
   verifyBranchOps?: EphemeralVerifyOps;
 }
 
@@ -848,11 +848,11 @@ export interface CycleVerifyResult {
 
 /**
  * Honestly confirm a cycle is GREEN by running the project's verify suite against
- * the running app , deploy-during-build (follow-up): the per-cycle GREEN
+ * the running app – deploy-during-build (follow-up): the per-cycle GREEN
  * used to be FAKED (`recordRunnerOutcome({passed:true})`), which shipped a
  * false-green to the deploy gate. This ensures the local app is up (idempotent:
  * reuses a reachable one, else starts it + polls), then runs the SAME verify
- * command the Release Engineer uses , so a cycle whose test breaks a sibling test
+ * command the Release Engineer uses – so a cycle whose test breaks a sibling test
  * (a contradictory test list) fails here, at GREEN, not three roles later. Does
  * NOT write deploy-evidence (that is the Release Engineer's gate artifact); it
  * only returns pass/fail for the cycle recorder.
@@ -880,8 +880,8 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
   };
   // Deploy-during-build serves a FRESH app on THIS turn's code. Every build turn
   // overlays new code, so we do NOT reuse a running app (it would serve stale
-  // code). Stop any prior instance first , that also frees the port, so a
-  // `uvicorn --reload` caught mid-reload can't cause a double-bind race , then
+  // code). Stop any prior instance first – that also frees the port, so a
+  // `uvicorn --reload` caught mid-reload can't cause a double-bind race – then
   // start fresh, poll until reachable, run verify, and ALWAYS stop after, so
   // nothing lingers on the port between turns or after the run.
   stop(args.projectDir, targetName);
@@ -916,9 +916,9 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
   let passed: boolean;
   let migrationFailed = false;
   let clientFailed = false;
-  // The combined output of whichever verify pass FAILED , the pytest/vitest failure lines
+  // The combined output of whichever verify pass FAILED – the pytest/vitest failure lines
   // (failing node-ids + top error). Captured so the assess turn can start from the real
-  // failure; empty when everything passed. Best-effort , only the failing pass's output.
+  // failure; empty when everything passed. Best-effort – only the failing pass's output.
   let failOut = "";
   try {
     if (isPython) {
@@ -966,7 +966,7 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
       // schema. runVerifyMaybeEphemeral forks a throwaway child off the experiment branch
       // and points VERIFY_DATABASE_URL at it (run-tests.sh then exports
       // DATABASE_URL=childDsn, so alembic + the Playwright webServer both hit the fresh
-      // child), then deletes it , every client-E2E pass gets a pristine DB at the
+      // child), then deletes it – every client-E2E pass gets a pristine DB at the
       // committed schema, matching the backend passes. (This isolates ACROSS verifies; a
       // suite that piles up rows WITHIN one run without per-test cleanup is the suite's
       // own concern, not this fork's.) Falls back in-place when there is no experiment
@@ -1020,7 +1020,7 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
       : "GREEN verify FAILED against the running app";
   const summary = regexLint.clean
     ? base
-    : `${base}: e2e-inline-regex-flag , ${summarizeE2eRegexViolations(regexLint.violations)}. ${E2E_REGEX_REMEDIATION}`;
+    : `${base}: e2e-inline-regex-flag – ${summarizeE2eRegexViolations(regexLint.violations)}. ${E2E_REGEX_REMEDIATION}`;
   // Carry the failing pass's captured output (bounded) so the ASSESS turn starts from the real
   // failure lines. Tail-bounded: the last ~4000 chars hold the failing node-ids + top error.
   const failureOutput = failOut ? failOut.slice(-4000) : undefined;

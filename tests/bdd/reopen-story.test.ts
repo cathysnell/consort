@@ -64,7 +64,7 @@ describe("reopenStoryForRedesign", () => {
   });
 
   it("reopening a DONE + merged + ACCEPTED story resets the pipeline entry, deploy gate, and coarse phase", () => {
-    // An accepted+merged story + its feature at the deploy gate , the case hand-surgery got wrong.
+    // An accepted+merged story + its feature at the deploy gate – the case hand-surgery got wrong.
     write(`features/${F}/stories/${S}/story.json`, { id: S, acs: ["AC1-a"] });
     write(`features/${F}/stories/${S}/acs/AC1-a.json`, { id: "AC1-a", given: "g", when: "w", then: "t" });
     write(`features/${F}/pipeline.json`, {
@@ -86,7 +86,7 @@ describe("reopenStoryForRedesign", () => {
 
     const res = reopenStoryForRedesign(tdd, F, S, { now: () => new Date("2026-08-27T00:00:00Z") });
 
-    // The entry is reset to a bare `designing` , spec gate, experiment, AND acceptance dropped ,
+    // The entry is reset to a bare `designing` – spec gate, experiment, AND acceptance dropped ,
     // and pulled off the build lane, so deriveFeaturePhase no longer reads the feature as complete.
     const pl = JSON.parse(readFileSync(join(tdd, `features/${F}/pipeline.json`), "utf8")) as {
       stories: Record<string, unknown>;

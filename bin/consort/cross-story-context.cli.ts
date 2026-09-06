@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // consort-cross-story-context: print the design-lane cross-story review context for a
-// story , the feature's OTHER stories' acceptance criteria + the architecture's
+// story – the feature's OTHER stories' acceptance criteria + the architecture's
 // open_decisions. The architect-reviewer and the navigator reflect turn run this so they
 // review a story AGAINST its siblings, not in isolation (hardening for the cross-story AC
 // conflict where a later story silently contradicted an earlier, already-gated one).
@@ -32,7 +32,7 @@ function parseArgs(argv: string[]): Args {
       case "--tdd-dir": case "--consort-dir": out.consortDir = argv[++i]; break;
       case "-h": case "--help":
         process.stdout.write(
-          "consort-cross-story-context , the feature's OTHER stories' ACs + the architecture's open_decisions.\n\n" +
+          "consort-cross-story-context – the feature's OTHER stories' ACs + the architecture's open_decisions.\n\n" +
             "  consort-cross-story-context --feature <F> --story <S> [--json]\n\n" +
             "Run it in the architect-reviewer + navigator reflect turns to review a story AGAINST its\n" +
             "siblings: flag any AC that contradicts a gated sibling AC, or silently resolves an open decision.\n",
@@ -48,7 +48,7 @@ export function renderContext(ctx: CrossStoryContext): string {
   const lines: string[] = [];
   lines.push(`Cross-story review context for ${ctx.current_story}:`);
   if (!ctx.sibling_stories.length) {
-    lines.push("  (no sibling stories with ACs yet , this is the feature's first designed story)");
+    lines.push("  (no sibling stories with ACs yet – this is the feature's first designed story)");
   }
   for (const s of ctx.sibling_stories) {
     lines.push(`  ${s.story}:`);

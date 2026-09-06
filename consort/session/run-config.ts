@@ -112,8 +112,8 @@ export function buildRunConfig(inputs: RunConfigInputs): RunConfig {
 }
 
 /**
- * Write the run-config snapshot to `.consort/run-config.json`, and , when recording
- * (LAKEBASE_CONSORT_RECORD_DIR set) , mirror a copy to the corpus root so a replay
+ * Write the run-config snapshot to `.consort/run-config.json`, and – when recording
+ * (LAKEBASE_CONSORT_RECORD_DIR set) – mirror a copy to the corpus root so a replay
  * carries its own provenance. Best-effort: a write failure never breaks a run
  * (the snapshot is observability, like the agent log).
  */

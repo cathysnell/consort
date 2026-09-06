@@ -1,16 +1,16 @@
-// Guard: environment PREPARATION lives in ONE family , consort/orchestrator/provisioning/. Both
+// Guard: environment PREPARATION lives in ONE family – consort/orchestrator/provisioning/. Both
 // tests and interactive runs defer to it for setting up environments (workspaces / Lakebase projects
 // via the lifecycle catalogue, host+auth via the credential seam, product/artifact/meta output roots
 // via the channel model, and workspace seeding via the bundle primitive). This is the anti-recurrence
 // gate: it fails if any of those prep primitives gets DEFINED outside the family again, or if the
 // two load-bearing prep rules (host-from-profile via `databricks auth describe`, the channel-root
-// ternary) get re-implemented elsewhere , exactly the scatter this consolidation removed.
+// ternary) get re-implemented elsewhere – exactly the scatter this consolidation removed.
 
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
 
 const FAMILY = "consort/orchestrator/provisioning/";
-/** This guard's own path , it names the auth-describe literal in a grep pattern, so exclude it. */
+/** This guard's own path – it names the auth-describe literal in a grep pattern, so exclude it. */
 const SELF = "tests/bdd/provisioning-family-single-home.test.ts";
 
 /** git grep -l for a fixed string across the tracked tree; [] when there are zero matches. */
@@ -44,7 +44,7 @@ describe("provisioning family: environment-prep primitives live in ONE home", ()
       const offenders = grepFiles(token).filter((f) => !f.startsWith(FAMILY) && !f.startsWith("dist/") && f !== SELF);
       expect(
         offenders,
-        `"${token}" is defined outside the provisioning family , move it under ${FAMILY}:\n  ${offenders.join("\n  ")}`,
+        `"${token}" is defined outside the provisioning family – move it under ${FAMILY}:\n  ${offenders.join("\n  ")}`,
       ).toEqual([]);
     });
   }

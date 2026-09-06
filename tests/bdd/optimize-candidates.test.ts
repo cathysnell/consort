@@ -1,5 +1,5 @@
 // P2b optimize-candidates: the PURE candidate model. A Candidate is one point in
-// the sweep space , a set of CONFIG overrides (Family 1: model/effort/scope/loop,
+// the sweep space – a set of CONFIG overrides (Family 1: model/effort/scope/loop,
 // merged into a sftdd-config.json) plus optional CONTENT/SCOPE variants (Family 2:
 // agent-.md overlay, task/context suffixes, tool scope). This module has NO I/O:
 // it generates the candidate list from a sweep spec and merges a candidate's
@@ -78,7 +78,7 @@ describe("applyCandidateConfig (deep merge onto a base config)", () => {
   });
 
   it("merges a per-turn model override without dropping sibling role settings", () => {
-    // An explicit base with per-turn maps , this exercises applyCandidateConfig's merge semantics
+    // An explicit base with per-turn maps – this exercises applyCandidateConfig's merge semantics
     // directly (defaultConsortConfig no longer carries per-turn maps; the manifest is that home now).
     const base = {
       version: 1 as const,

@@ -144,7 +144,7 @@ describe("topology — lane integrity", () => {
     for (const lane of LANE_IDS) {
       for (const s of WORKFLOW.lanes[lane].steps) {
         // Human gates and the per-lane raise-to-HIL escalation terminals are the only steps that
-        // never light from an event (match:null) , their state comes from the human / an escalation.
+        // never light from an event (match:null) – their state comes from the human / an escalation.
         if (s.match === null) expect(s.gate === true || s.escalation === true, s.id).toBe(true);
       }
     }
@@ -775,7 +775,7 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       const tsSteps = ts.steps.filter((s) => !added.has(s.id));
       // Edges collapse through the added steps back to the fixture chain. The ported lanes are LINEAR
       // (each edge joins consecutive steps), so with the added steps removed the fixture edges are
-      // exactly the consecutive pairs of the remaining steps , IN ORDER (robust to multiple added
+      // exactly the consecutive pairs of the remaining steps – IN ORDER (robust to multiple added
       // steps, unlike a filter-then-append which loses order). With no added steps this equals ts.edges.
       const tsEdges = added.size
         ? tsSteps.slice(0, -1).map((s, i) => [s.id, tsSteps[i + 1].id])
@@ -863,9 +863,9 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       expect(idx, `${a.step} must sit directly after ${a.after}`).toBe(afterIdx + 1);
       const step = steps[idx];
       if (step.gate) {
-        // A GATE step (null match) lights from gate state, not an event phase , so it has no phase to
+        // A GATE step (null match) lights from gate state, not an event phase – so it has no phase to
         // route. It must be a real gate (gate:true + match:null), consistent with the ported gates.
-        expect(step.match, `${a.step} is a gate , match must be null`).toBeNull();
+        expect(step.match, `${a.step} is a gate – match must be null`).toBeNull();
       } else {
         // An event-lit added step's phase must route to its own lane in phaseToNode (a real lane phase).
         const phases = [step.match?.phase, ...(step.match?.phaseAny ?? [])].filter(Boolean) as string[];

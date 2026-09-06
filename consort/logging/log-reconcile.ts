@@ -58,7 +58,7 @@ function discoverArtifacts(consortDir: string, featureId: string): ArtifactSpec[
   // produced/inherited it would log nothing for it.
   add(architectureConventionsJson(consortDir), "architect-reviewer", "architecture conventions (project)");
 
-  // UX design system , PROJECT-level, under .tdd/design/ (NOT the feature dir).
+  // UX design system – PROJECT-level, under .tdd/design/ (NOT the feature dir).
   // The ux-designer writes design-guide.{md,json} + ia.md there (designGuideJson
   // resolves tdd/design/design-guide.json); reconciling them at the feature dir
   // found nothing, so a ux-designer turn logged a phase.start but no
@@ -120,7 +120,7 @@ export function reconcileArtifactLog(opts: ReconcileOpts): AgentLogEvent[] {
   // Deterministically establish the project architecture conventions from this
   // feature's architecture.json (a no-op once they exist, or when the feature is
   // not service-backed). When it fires, code-EMIT the architect's layout decision
-  // as a `reasoning` event , the architect ran but its substantive output (the
+  // as a `reasoning` event – the architect ran but its substantive output (the
   // canonical role -> module layout) otherwise left no trace, so the design log
   // showed it as silent. This makes the decision observable without depending on
   // the role model remembering to emit (the same structural-observability intent

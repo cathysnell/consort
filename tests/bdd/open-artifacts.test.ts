@@ -1,5 +1,5 @@
 // The review-artifact opener (consort-open + consort-watch's gate hook). It resolves
-// the Consort roles' reviewable artifacts and opens them in Cursor/Code , but ONLY
+// the Consort roles' reviewable artifacts and opens them in Cursor/Code – but ONLY
 // when the session is inside the editor's terminal, and never launches an editor
 // uninvited. The `spawn` seam lets us assert what would open without spawning.
 
@@ -52,11 +52,11 @@ describe("reviewArtifacts", () => {
   });
 });
 
-describe("reviewArtifacts COVERS the artifact channel (single source , no drift)", () => {
+describe("reviewArtifacts COVERS the artifact channel (single source – no drift)", () => {
   // The invariant: whatever a role writes to the `artifact` channel (declared in the
   // step manifests) MUST be opened by reviewArtifacts. This test derives the truth
   // from SHIPPED_MANIFESTS, so adding an artifact-channel output that reviewArtifacts
-  // does not open fails the build , the review set can't silently drift from the channel.
+  // does not open fails the build – the review set can't silently drift from the channel.
   it("opens every artifact-channel manifest output", async () => {
     const { SHIPPED_MANIFESTS } = await import("../../consort/orchestrator/steps/manifest");
     const artifactOutputs = [
@@ -87,7 +87,7 @@ describe("reviewArtifacts COVERS the artifact channel (single source , no drift)
 
     for (const fn of artifactOutputs) {
       if (fn === "acs") {
-        expect(parentDirs.has("acs"), `artifact-channel dir output "acs" , no AC file opened (drift)`).toBe(true);
+        expect(parentDirs.has("acs"), `artifact-channel dir output "acs" – no AC file opened (drift)`).toBe(true);
       } else {
         const base = fn.split("/").pop()!;
         expect(basenames.has(base), `artifact-channel output "${fn}" is NOT opened by reviewArtifacts (drift)`).toBe(true);
@@ -141,7 +141,7 @@ describe("openArtifactsInEditor", () => {
 
 describe("openArtifactsInEditor per-turn delta (changedSinceMs)", () => {
   // The per-turn open (consort-watch, after each role's turn-done) reveals ONLY what that
-  // turn produced , the reviewable artifacts modified since the previous turn boundary ,
+  // turn produced – the reviewable artifacts modified since the previous turn boundary ,
   // instead of re-opening the whole review set. Left unset, behavior is unchanged.
   const editorEnv = { PATH: "", TERM_PROGRAM: "vscode" } as NodeJS.ProcessEnv;
 

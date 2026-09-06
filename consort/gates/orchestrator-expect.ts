@@ -1,7 +1,7 @@
 // Handoff EXPECTATION protocol for the deterministic driver.
 //
 // Every time the orchestrator hands off to a role (an invoke-role "call"), it
-// knows precisely who must respond and WHAT that responder must return , a
+// knows precisely who must respond and WHAT that responder must return – a
 // non-null, conformant artifact. This module makes that contract explicit and
 // enforceable in code, not on paper:
 //
@@ -11,7 +11,7 @@
 //     false, so the contract is UNMET.
 //   - ExpectationLedger holds the outstanding expectations. reconcile(state) is
 //     the in-order head fast-path (single-threaded driver); processCallback(from,
-//     state) is the general intake , it matches a callback to the outstanding
+//     state) is the general intake – it matches a callback to the outstanding
 //     entry by RESPONDER IDENTITY (+ scope) and removes it from any position, so
 //     concurrent callbacks discharge out of order. A null / nonconformant return
 //     is a PROTOCOL VIOLATION; a callback from a role we do not await is an
@@ -66,7 +66,7 @@ export class ProtocolViolationError extends Error {
   }
 }
 
-/** Raised when a callback arrives from a role we are NOT awaiting , a wrong /
+/** Raised when a callback arrives from a role we are NOT awaiting – a wrong /
  *  unexpected caller (or a callback when nothing is outstanding). Under
  *  concurrency this is the "call back from someone other than the expected
  *  caller" abort: pop the queue to find who we expect; no match => abort. */
@@ -78,7 +78,7 @@ export class UnexpectedCallbackError extends Error {
   ) {
     const where = scope.story ? ` (story ${scope.story}${scope.ac ? `/${scope.ac}` : ""})` : "";
     super(
-      `PROTOCOL VIOLATION: unexpected callback from ${from}${where} , no outstanding handoff awaits it ` +
+      `PROTOCOL VIOLATION: unexpected callback from ${from}${where} – no outstanding handoff awaits it ` +
         `(awaiting: ${expected.length ? expected.join(", ") : "nothing"}). Aborting workflow.`,
     );
     this.name = "UnexpectedCallbackError";
@@ -99,7 +99,7 @@ function storyOf(action: WorkflowAction): string | undefined {
  * NOT external calls (gate surfaces, experiment cut, deploy, accept, complete ,
  * the driver's own deterministic substrate, which has no separate responder to
  * wait on). For invoke-role, the predicate is the SAME state advance the
- * transition requires to move past this role , so an unmet contract is exactly
+ * transition requires to move past this role – so an unmet contract is exactly
  * the case where the driver would otherwise silently re-dispatch the same role.
  */
 export function expectationFor(action: WorkflowAction): Handoff | null {
@@ -131,7 +131,7 @@ export function expectationFor(action: WorkflowAction): Handoff | null {
     return { ...base, expected: "drafted acceptance criteria (non-empty)", satisfiedBy: (s) => storyView(s)?.design.hasAcs === true };
   }
   // PLANNING-mode architect turns (estimate + estimate-committed) produce t-shirt sizes in
-  // planning/estimates.json , NOT per-AC design notes. They are sprint-scoped (no story), so they
+  // planning/estimates.json – NOT per-AC design notes. They are sprint-scoped (no story), so they
   // must NOT inherit the per-story DESIGN expectation below (layer/NFR-annotated ACs), or the ledger
   // fails them right after the plan gate (the estimate turn wrote no ACs) and aborts the planning
   // drive. estimate-committed re-sizes the committed features, still satisfied by planning.estimated.
@@ -163,12 +163,12 @@ export function expectationFor(action: WorkflowAction): Handoff | null {
   }
 
   // Build-lane roles (navigator / driver). ONLY the per-AC review/refactor turns
-  // get a contract here , their predicates (reviewAc / refactorAc) are precise
+  // get a contract here – their predicates (reviewAc / refactorAc) are precise
   // per-AC DriveState fields. The per-CYCLE RED (navigator) + GREEN (driver) turns
   // are deliberately NOT enforced by the ledger: DriveState only carries the
   // coarse, story-level booleans testsWritten / codeWritten (true once the WHOLE
   // story is written / all-green), so a single RED/GREEN turn mid-story cannot be
-  // expressed , codeWritten stays false while T2..Tn are pending, which would
+  // expressed – codeWritten stays false while T2..Tn are pending, which would
   // false-abort a healthy build right after the first GREEN. The tight RED/GREEN
   // loop is covered by the generic stall detector (a truly stuck turn repeats its
   // signature) + the honest-green runner contract; the ledger stays precise.
@@ -233,7 +233,7 @@ export function handbackMessage(h: Handoff, attempt: number): string {
  * uses the in-order head fast-path (reconcile), which is why a queue was the
  * original mental model; under concurrency it is a match-and-remove ledger.
  * An unmet contract is RETRIED `maxRetries` times (handing the violation back to
- * the responder) before aborting , one informed second chance, not a silent
+ * the responder) before aborting – one informed second chance, not a silent
  * re-dispatch nor an instant abort.
  */
 export class ExpectationLedger {
@@ -264,7 +264,7 @@ export class ExpectationLedger {
   }
 
   /**
-   * INTAKE PROCESSOR , process a callback from a SPECIFIC responder against the
+   * INTAKE PROCESSOR – process a callback from a SPECIFIC responder against the
    * outstanding expectations (the caller-identity half of the protocol; the part
    * that becomes load-bearing once dispatch is concurrent / multi-threaded):
    *   - find the first outstanding handoff whose responder === `from` (and, when
@@ -299,7 +299,7 @@ export class ExpectationLedger {
       throw new ProtocolViolationError(
         h,
         `the expected artifact did not satisfy its contract across ${attempt} attempts ` +
-          `(it is absent, empty, OR present-but-nonconformant on disk , the orchestrator re-checked it and it still fails)` +
+          `(it is absent, empty, OR present-but-nonconformant on disk – the orchestrator re-checked it and it still fails)` +
           (h.remediation ? `. To satisfy it: ${h.remediation}` : ""),
       );
     }
@@ -307,7 +307,7 @@ export class ExpectationLedger {
   }
 
   /**
-   * Reconcile the realized state against the HEAD expectation , the deterministic
+   * Reconcile the realized state against the HEAD expectation – the deterministic
    * (single-outstanding, in-order) specialization of processCallback. The
    * single-threaded driver dispatches one role at a time, so the only possible
    * responder IS the head's, and reconcile delegates with that identity:

@@ -1,6 +1,6 @@
 // Reconstitute the agent-log into ONE coherent recording after a design-REPLAYED
 // capture, so the log faithfully reproduces the original run (token counts + cost)
-// AND reads as a single continuous timeline , not a mix of the original design
+// AND reads as a single continuous timeline – not a mix of the original design
 // dates and this run's wall-clock build dates, and not the thin synthetic
 // "present on disk (reconciled)" placeholders.
 //
@@ -14,9 +14,9 @@
 // Output (rewrites the project agent-log.jsonl, returns the events):
 //   1. DESIGN entries = the corpus originals, verbatim (original timestamps, real
 //      cost). These REPLACE the live design entries (intake / product-owner /
-//      orchestrator / replayed roles) , so their retroactive date + cost win.
+//      orchestrator / replayed roles) – so their retroactive date + cost win.
 //   2. LIVE non-design entries (the build/deploy turns, and any design turn that
-//      had to run LIVE this run , e.g. F6's spec-author breakdown the original
+//      had to run LIVE this run – e.g. F6's spec-author breakdown the original
 //      lacked) are KEPT with their real token/cost, but their timestamps are
 //      SHIFTED onto the original capture's timeline (continuing right after the
 //      last design turn), so the whole log shares the original date.
@@ -93,7 +93,7 @@ export function reconstituteAgentLog(opts: ReconstituteOpts): AgentLogEvent[] {
   const final = [...design, ...reanchored];
 
   // Rewrite the log verbatim (truncate + write every line as-is, preserving exact
-  // token/cost fields , the normal emit path would re-render + drop them).
+  // token/cost fields – the normal emit path would re-render + drop them).
   writeFileSync(projectLog, final.map((e) => JSON.stringify(e)).join("\n") + "\n", "utf8");
   return final;
 }

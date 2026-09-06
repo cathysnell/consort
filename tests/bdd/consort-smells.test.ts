@@ -311,7 +311,7 @@ describe("composeReviseBrief: the revise hand-back is smell-aware", () => {
     // AC1-3 on the reflect revise). Guard both signals.
     expect(brief).toMatch(/PRESERVE/i);
     expect(brief).toMatch(/keep all existing[\s\S]*intact/i);
-    // The permissive escape hatch must NOT appear , it is what let the author omit
+    // The permissive escape hatch must NOT appear – it is what let the author omit
     // again. The brief may FORBID the escape ("do NOT ... defer it to an open
     // question"), but must not INVITE it ("say so ... rather than fabricating").
     expect(brief).not.toMatch(/rather than fabricating/i);
@@ -323,7 +323,7 @@ describe("composeReviseBrief: the revise hand-back is smell-aware", () => {
     const brief = composeReviseBrief({ smell: "reflect-spec-defect", gate: "spec", reason });
     expect(brief).toMatch(/ADD the specific coverage/i);
     expect(brief).toMatch(/acceptance criteria/);
-    // ADDITIVE revise , must preserve the story's existing ACs (the run-14 AC-loss guard).
+    // ADDITIVE revise – must preserve the story's existing ACs (the run-14 AC-loss guard).
     expect(brief).toMatch(/PRESERVE/i);
     expect(brief).toMatch(/keep all existing[\s\S]*intact/i);
     expect(brief).not.toMatch(/rather than fabricating/i);

@@ -1,5 +1,5 @@
 // optimize-candidates: the PURE candidate model for the per-handoff optimize
-// harness. A Candidate is one point in the sweep space , a set of CONFIG
+// harness. A Candidate is one point in the sweep space – a set of CONFIG
 // overrides (Family 1: model / effort / session-scope / loop granularity, merged
 // into a consort-config.json + a few env knobs) plus optional CONTENT/SCOPE
 // variants (Family 2: an agent-.md overlay, a task/context suffix, a tool scope).
@@ -155,7 +155,7 @@ export interface HandoffLike {
 
 /** The model tiers to try against `model`: EVERY OTHER tier, both cheaper AND more
  *  capable. A cheaper model that still passes the gate is a wall-clock/cost win; a
- *  MORE capable model can ALSO be a wall-clock win , it may finish in far fewer
+ *  MORE capable model can ALSO be a wall-clock win – it may finish in far fewer
  *  round-trips (the driver-GREEN lesson: haiku thrashed 93 tool calls where sonnet
  *  finished quickly, so a "more expensive" model was faster in wall-clock). The gate
  *  is the same structural bar either way, so try all possibilities and let wall-clock
@@ -168,21 +168,21 @@ function otherModels(model: string): string[] {
 /** The cheaper effort rungs worth trying below the model default: `low` (the
  *  floor) + `medium` (a safety rung, in case low under-thinks and degrades the
  *  artifact but medium is still faster than the default). `low` is the lowest
- *  rung EffortLevel offers , there is no "minimal" below it. */
+ *  rung EffortLevel offers – there is no "minimal" below it. */
 const CHEAPER_EFFORTS: EffortLevel[] = ["low", "medium"];
 
-/** Per-role default candidates for a LANE sweep , TRY ALL POSSIBILITIES from an
+/** Per-role default candidates for a LANE sweep – TRY ALL POSSIBILITIES from an
  *  identical pre-turn state: (1) EVERY OTHER MODEL tier (cheaper AND more capable ,
  *  a bigger model can win wall-clock via fewer round-trips), (2) each cheaper EFFORT
  *  rung (low, medium), (3) the model x effort CROSS at low for EVERY other model
- *  (model change AND less thinking together , often the biggest single win, invisible
+ *  (model change AND less thinking together – often the biggest single win, invisible
  *  when tried in isolation), (4) a HARD scan-tighten content variant (deny Grep/Glob).
  *  DESIGN roles carry a SCALAR model/effort; BUILD roles (navigator/driver) use the
  *  per-turn map keyed by the turn. Both get the IDENTICAL lever set (design uses
  *  scalar overrides, build wraps each in `{ [turn]: v }`). The gate is the same
  *  structural bar for every candidate, so wall-clock alone decides among gate-passers.
  *  The navigator REFLECT turn is a critic GATE (flags defects, authors nothing), so
- *  it is never swept , baseline only. Baseline is always first. */
+ *  it is never swept – baseline only. Baseline is always first. */
 /** The BuildTurn a navigator/driver handoff optimizes, or undefined for a non-build
  *  (design) role or the reflect critic. Mirrors turnKeyForAction's build-mode collapse
  *  so the sweep keys the SAME turn the drive will resolve: specialized buildModes fold
@@ -219,7 +219,7 @@ export function buildTurnForHandoff(handoff: HandoffLike): BuildTurn | undefined
 export function defaultLaneCandidates(handoff: HandoffLike): Candidate[] {
   const baseline: Candidate = { id: BASELINE_CANDIDATE_ID, configOverrides: {} };
 
-  // The reflect critic is not an authoring turn , do not optimize it.
+  // The reflect critic is not an authoring turn – do not optimize it.
   if (handoff.role === "navigator" && handoff.buildMode === "reflect") return [baseline];
 
   const role = handoff.role;
@@ -228,7 +228,7 @@ export function defaultLaneCandidates(handoff: HandoffLike): Candidate[] {
   // BUILD roles set model/effort under a per-turn key ({ green: "haiku" }); DESIGN
   // roles set them as scalars ("haiku"). `wrap` bridges the two so one lever list
   // serves both. `turn` is the resolved build turn (review/refactor/assess/repair/
-  // green/red), so EVERY build turn type , not just red/green , is swept per-turn.
+  // green/red), so EVERY build turn type – not just red/green – is swept per-turn.
   const wrapModel = (m: string) => (isBuild ? { [turn as BuildTurn]: m } : m);
   const wrapEffort = (e: EffortLevel) => (isBuild ? { [turn as BuildTurn]: e } : e);
   const idPrefix = isBuild ? `${role}-${turn}` : role;

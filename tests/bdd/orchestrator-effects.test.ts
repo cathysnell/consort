@@ -123,7 +123,7 @@ describe("commandsForAction: invoke-role -> claude", () => {
 
   it("resume scoping: non-build roles warm across the feature; build roles warm PER STORY (P5)", () => {
     // spec-author / architect-reviewer / etc. resume across the whole feature
-    // (keyed by role). The build roles (navigator/driver) resume per STORY , a
+    // (keyed by role). The build roles (navigator/driver) resume per STORY – a
     // fresh session each story bounds context growth (the per-story spec gate
     // keeps stories small); the detailed scoping is covered in the build-lane
     // perf describe below.
@@ -161,9 +161,9 @@ describe("commandsForAction: invoke-role -> claude", () => {
     expect(task).toMatch(/write/i);
   });
 
-  it("propose (capture: recorded requests) is DETERMINISTIC , projects proposals via the Human Proxy, no LLM", () => {
+  it("propose (capture: recorded requests) is DETERMINISTIC – projects proposals via the Human Proxy, no LLM", () => {
     const cmds = commandsForAction({ kind: "invoke-role", role: "spec-author", mode: "propose" }, cfg({ recordedRequests: true }));
-    // No claude spawn , the artifact is code-emitted from the recorded requests.
+    // No claude spawn – the artifact is code-emitted from the recorded requests.
     expect(cmds.some((c) => (c as { kind?: string }).kind === "claude")).toBe(false);
     expect(cmds[0]).toMatchObject({ kind: "cli", bin: "consort-human-proxy" });
     expect((cmds[0] as { args: string[] }).args[0]).toBe("supply-proposals");
@@ -171,7 +171,7 @@ describe("commandsForAction: invoke-role -> claude", () => {
 
   // livePropose (capture with a LIVE plan lane): even with recorded requests
   // present (so the proxy-as-PO still commits the recorded request at
-  // author-requests), the spec-author's PROPOSE runs LIVE , it reads
+  // author-requests), the spec-author's PROPOSE runs LIVE – it reads
   // product-overview.md + nfrs.md and authors feature-proposals.md itself,
   // instead of projecting deterministically. The proposal set is guided by the
   // product overview's own feature framing.
@@ -346,7 +346,7 @@ describe("commandsForAction: invoke-role -> claude", () => {
 
   it("sprint-scoped planning roles (propose/author-requests) do NOT reconcile", () => {
     // No feature artifacts to reconcile at planning time. propose is [claude,
-    // verify-artifact (FEIP-8006 guard)] , neither is a reconcile (log) step.
+    // verify-artifact (FEIP-8006 guard)] – neither is a reconcile (log) step.
     const propose = commandsForAction({ kind: "invoke-role", role: "spec-author", mode: "propose" }, cfg());
     expect(propose).toHaveLength(2);
     expect(propose[0]).toMatchObject({ kind: "claude", role: "spec-author" });
@@ -578,8 +578,8 @@ describe("commandsForAction: state transitions -> kit CLIs", () => {
     expect(task).toMatch(/design-guide\.md/);
     expect(task).toMatch(/design-guide\.json/);
     // Exhaustive brief coverage (the fix for intermittent 0.80 semantic scores): the
-    // task forces enumerating + realizing EVERY brief element , status states, assets,
-    // token levels, components , not a representative subset.
+    // task forces enumerating + realizing EVERY brief element – status states, assets,
+    // token levels, components – not a representative subset.
     expect(task).toMatch(/EXHAUSTIV/i);
     expect(task).toMatch(/every status\/state variant|each badge\/pill state/i);
     expect(task).toMatch(/favicon/i);
@@ -734,7 +734,7 @@ describe("buildDriveEffects", () => {
     mkdirSync(featureDir, { recursive: true });
     writeFileSync(join(consortDir, "workflow-state.json"), JSON.stringify({ phase: "planning" }));
     // Intake present + APPROVED (product-overview.md + nfrs.md + the intake-gate marker) so the drive
-    // is past the PO intake turn AND its gate , the state under test is "proposed + estimated,
+    // is past the PO intake turn AND its gate – the state under test is "proposed + estimated,
     // awaiting author-requests".
     writeFileSync(join(consortDir, "product-overview.md"), "# Overview\n\nA product.\n");
     writeFileSync(join(consortDir, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
@@ -763,8 +763,8 @@ describe("buildDriveEffects", () => {
     // --dry-run + the interactive 'what's next' preview is a prompt constructor back to the human: it
     // must show what the drive WILL do. perform resolves an agent turn via
     // `commandsFromManifest(action,cfg) ?? commandsForAction(action,cfg)` (useManifestSteps default on).
-    // planNextAction MUST use that SAME resolution , identical today (the breakdown manifest is
-    // golden-equivalent), and , the point of J3 , still correct after J5 deletes commandsForAction's
+    // planNextAction MUST use that SAME resolution – identical today (the breakdown manifest is
+    // golden-equivalent), and – the point of J3 – still correct after J5 deletes commandsForAction's
     // agent arm (planNextAction then resolves via the manifest, not a deleted arm).
     const featureDir = join(consortDir, "features", "F1");
     mkdirSync(featureDir, { recursive: true });
@@ -786,7 +786,7 @@ describe("buildDriveEffects", () => {
   it("J4: the optimize sweep resolver (commandsForActionResolved) builds the pinned agent command IDENTICALLY to commandsForAction today", () => {
     // The optimize sweep runs a PINNED handoff's OWN role turn via commandsForActionResolved (the
     // drive's one resolver). With useManifestSteps on + a golden-equivalent manifest, that view is
-    // byte-identical to the legacy commandsForAction , so the swept command is unchanged today, and
+    // byte-identical to the legacy commandsForAction – so the swept command is unchanged today, and
     // the sweep survives J5 (the resolver's fallback becomes deterministic-only, manifest wins for agents).
     const swept: WorkflowAction[] = [
       { kind: "invoke-role", role: "spec-author", mode: "breakdown" } as WorkflowAction,
@@ -969,7 +969,7 @@ describe("commandsForAction: build-lane perf (P2 review rubric / P5 session scop
     expect(claudeCmd({ kind: "invoke-role", role: "navigator", story: "S2" }).resumeKey).toBe("navigator:S2");
   });
 
-  it("buildSessionScope=cycle cold-spawns every build turn (no resumeKey) , the overflow safety valve", () => {
+  it("buildSessionScope=cycle cold-spawns every build turn (no resumeKey) – the overflow safety valve", () => {
     expect(claudeCmd(red, { buildSessionScope: "cycle" }).resumeKey).toBeUndefined();
     expect(claudeCmd(green, { buildSessionScope: "cycle" }).resumeKey).toBeUndefined();
   });
@@ -1189,7 +1189,7 @@ describe("commandsForAction: assess directive scans fitness/migration tests for 
     // superseded set (56 lines / 8 files), but the prompt still said "scan
     // COMPREHENSIVELY", so the agent re-read every candidate to verify instead of
     // flagging. When the advisory is present it is authoritative (a deterministic
-    // grep of the migration's dropped symbol) , flag exactly it in ONE call.
+    // grep of the migration's dropped symbol) – flag exactly it in ONE call.
     const tmp = mkdtempSync(join(tmpdir(), "effects-assess-adv-"));
     const tdd = join(tmp, ".tdd");
     mkdirSync(join(tdd, "features", "F1", "stories", "S3", "acs"), { recursive: true });

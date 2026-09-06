@@ -37,11 +37,11 @@ export function parseFailedNodeIds(output: string): string[] {
 export interface DeployVerifyAssessMarker {
   version: 1;
   /** The story this contamination marker belongs to, or absent for a
-   *  FEATURE-ship deploy (no story , the merged-increment verify). The marker
+   *  FEATURE-ship deploy (no story – the merged-increment verify). The marker
    *  then lives at features/<F>/deploy-verify-assess.json instead of the story dir. */
   story_id?: string;
   /** The pytest node-ids that failed in the full suite but the classifier found
-   *  pass in isolation , the contamination-fragile tests to scope. */
+   *  pass in isolation – the contamination-fragile tests to scope. */
   failing_node_ids: string[];
   /** True once the Navigator has assessed this failure (flagged the tests to
    *  scope or declared a genuine regression). Set by the assess-finalize step. */
@@ -81,7 +81,7 @@ function scopePath(consortDir: string, featureId: string, storyId?: string): str
     : path.join(fdir, "deploy-verify-scope.json");
 }
 
-/** Read the Navigator's scope directives (undefined when it wrote none , its veto). */
+/** Read the Navigator's scope directives (undefined when it wrote none – its veto). */
 export function readDeployVerifyScope(
   consortDir: string,
   featureId: string,
@@ -191,7 +191,7 @@ export function deployVerifyRefactorPending(
   return !!m && m.assessed === true && (m.flagged_tests?.length ?? 0) > 0 && m.refactored !== true;
 }
 
-/** Clear the marker (the re-verify passed , the scope worked). */
+/** Clear the marker (the re-verify passed – the scope worked). */
 export function clearDeployVerifyAssessMarker(
   consortDir: string,
   featureId: string,

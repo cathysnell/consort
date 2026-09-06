@@ -1,6 +1,6 @@
 // FEIP-8023: driving a feature whose recorded SCM claim names a DIFFERENT
 // feature (a prior feature shipped out-of-band, .lakebase/workflow-state.json
-// never reconciled) must be refused loud , otherwise the drive derives the
+// never reconciled) must be refused loud – otherwise the drive derives the
 // experiment's parent from the stale predecessor branch and commits build output
 // onto the wrong branch.
 //

@@ -126,7 +126,7 @@ export function runAgentLogCli(argv: string[]): number {
   if (a.help) { process.stdout.write(`${HELP}\n`); return 0; }
 
   if (a.reconstitute) {
-    // Post-capture: rewrite the agent-log into ONE coherent recording , the design
+    // Post-capture: rewrite the agent-log into ONE coherent recording – the design
     // lane verbatim from the recorded design log (original token counts + cost, on
     // the original capture date), the live build/breakdown turns kept (real cost)
     // but re-dated onto that same timeline, and the synthetic "reconciled"

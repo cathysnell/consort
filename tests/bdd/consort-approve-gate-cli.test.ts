@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe("required --approver (the production distinction from the Human Proxy)", () => {
-  it("refuses (exit 2) when --approver is missing , no silent default identity", () => {
+  it("refuses (exit 2) when --approver is missing – no silent default identity", () => {
     expect(runApproveGateCli(["--sprint", SPRINT, "--tdd-dir", tdd])).toBe(2);
   });
 
@@ -57,7 +57,7 @@ describe("sprint plan gate approval records the named human", () => {
 });
 
 // FEIP-8008: the one human-facing door also approves the PER-STORY spec gate
-// (the pipeline gate the design lane blocks on), via --feature --story , routing
+// (the pipeline gate the design lane blocks on), via --feature --story – routing
 // to the SAME shared helper the headless pipeline approve-gate uses. Before this,
 // the drive told humans to approve the feature-level gates.json spec gate, which
 // recorded the wrong gate and never advanced the per-story stop.

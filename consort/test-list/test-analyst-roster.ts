@@ -6,7 +6,7 @@
 // roster + each analyst's focus prompt + declared inputs as a fenced JSON block appended to the
 // supervisor's task. The supervisor spawns ONE general-purpose Task subagent per listed analyst with
 // the given focus_prompt, then reconciles + assembles. Pure projection (no disk writes), so it can't
-// drift from the catalogue , the single source of truth.
+// drift from the catalogue – the single source of truth.
 
 import { enabledAnalysts, type AnalystEnablementContext } from "./test-analyst-catalogue.js";
 
@@ -54,17 +54,17 @@ export function renderTestAnalystRoster(ctx: AnalystEnablementContext, opts: Ren
   if (analysts.length === 0) return "";
   const payload = JSON.stringify({ analysts }, null, 2);
   return (
-    `<<TEST-ANALYST ROSTER , spawn ONE Task subagent (subagent_type general-purpose) per entry below, ` +
+    `<<TEST-ANALYST ROSTER – spawn ONE Task subagent (subagent_type general-purpose) per entry below, ` +
     `passing its focus_prompt VERBATIM + the story inputs it declares. You MUST set the Task's model to ` +
-    `the entry's "model" EXACTLY , never substitute your own model choice. When an entry gives "effort" ` +
-    `or "tool_scope", you MUST RESTATE them VERBATIM at the top of that spawn's prompt , "Think at ` +
-    `<effort> effort." and "Confine your work to these tools: <tool_scope>." , since the Task tool takes ` +
+    `the entry's "model" EXACTLY – never substitute your own model choice. When an entry gives "effort" ` +
+    `or "tool_scope", you MUST RESTATE them VERBATIM at the top of that spawn's prompt – "Think at ` +
+    `<effort> effort." and "Confine your work to these tools: <tool_scope>." – since the Task tool takes ` +
     `no effort/tool parameters (the analyst self-paces/self-limits on your instruction); do not paraphrase ` +
     `or omit them. For EACH analyst you spawn, first log a one-line reasoning event naming the analyst + ` +
     `the model/effort/tool_scope you applied (so the levers in effect are auditable). These are the ` +
     `ENABLED analysts for THIS project (a no-frontend project omits "client"). Collect each analyst's ` +
     `returned UNORDERED slice, then RECONCILE (discrepancies / overlaps / omissions), ASSEMBLE + ORDER ` +
-    `the feature master, and assign the final feature-flat T-ids , see your role prompt for the ` +
+    `the feature master, and assign the final feature-flat T-ids – see your role prompt for the ` +
     `reconciliation contract.>>\n` +
     "```json\n" + payload + "\n```\n" +
     `<<END TEST-ANALYST ROSTER>>\n`

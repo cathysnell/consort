@@ -225,7 +225,7 @@ describe("composeAssessedGreenFailure preserves the self-heal counter across the
     const prior = { assessed: false, summary: "verify FAILED", fixAttempts: 2 };
     const out = composeAssessedGreenFailure(prior, { diagnosis: "orphan file", fixDirective: "git rm app/models.py" });
     expect(out.assessed).toBe(true);
-    expect(out.fixAttempts).toBe(2); // NOT reset , the bug that made the loop unbounded
+    expect(out.fixAttempts).toBe(2); // NOT reset – the bug that made the loop unbounded
     expect(out.summary).toBe("verify FAILED");
     expect(out.diagnosis).toBe("orphan file");
     expect(out.fixDirective).toBe("git rm app/models.py");

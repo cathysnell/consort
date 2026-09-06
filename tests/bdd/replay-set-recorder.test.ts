@@ -46,7 +46,7 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 const action: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" } as WorkflowAction;
 
 /** A fake inner agent that, when invoked, writes a NEW file (so we can prove the pre-state snapshot
- *  was taken BEFORE this mutation , the snapshot must NOT contain this file). */
+ *  was taken BEFORE this mutation – the snapshot must NOT contain this file). */
 function fakeAgent(): StepAgent {
   return {
     async invoke(inv: AgentInvocation) {
@@ -55,7 +55,7 @@ function fakeAgent(): StepAgent {
   };
 }
 
-/** A transcript stub , a complete agent turn records transcript.md (the per-turn audit requires it).
+/** A transcript stub – a complete agent turn records transcript.md (the per-turn audit requires it).
  *  Returns the outcome once, mirroring takeLastAgentTranscript's take-once contract. */
 function transcriptStub(): () => { prompt: string; role?: string; model?: string; finalText: string; tools: string[] } | undefined {
   let taken = false;
@@ -89,14 +89,14 @@ describe("wrapWithRecorder: the per-agent-turn replay set", () => {
     const setDir = join(recordDir, "turns", "0000-spec-author-breakdown", "replay-set");
     expect(existsSync(setDir), "replay-set/ dir exists in the turn dir").toBe(true);
 
-    // pre-project/ , the code tree BEFORE the turn (models.py + test_stock.py), NOT the produced file.
+    // pre-project/ – the code tree BEFORE the turn (models.py + test_stock.py), NOT the produced file.
     expect(readFileSync(join(setDir, "pre-project", "app", "models.py"), "utf8")).toContain("class Stock");
     expect(readFileSync(join(setDir, "pre-project", "tests", "test_stock.py"), "utf8")).toContain("def test()");
     expect(existsSync(join(setDir, "pre-project", "app", "produced-after.py")), "pre-state must NOT contain the file the turn produced").toBe(false);
     // .consort is NOT snapshotted into the pre-project CODE tree (that is code-only).
     expect(existsSync(join(setDir, "pre-project", ".consort")), ".consort excluded from pre-project").toBe(false);
 
-    // pre-consort/ , the full pre-turn .consort STATE tree, laid verbatim by a replay.
+    // pre-consort/ – the full pre-turn .consort STATE tree, laid verbatim by a replay.
     expect(readFileSync(join(setDir, "pre-consort", "product-overview.md"), "utf8")).toBe("the product\n");
     expect(readFileSync(join(setDir, "pre-consort", "smells.json"), "utf8")).toBe("[]\n");
     expect(readFileSync(join(setDir, "pre-consort", "features", "F1", "workflow-state.json"), "utf8")).toContain('"phase":"build"'); // nested state kept
@@ -106,11 +106,11 @@ describe("wrapWithRecorder: the per-agent-turn replay set", () => {
     expect(existsSync(join(setDir, "pre-consort", "agent-live.log")), "liveness sidecar excluded").toBe(false);
     expect(existsSync(join(setDir, "pre-consort", "deploy.pid")), "pid ephemera excluded").toBe(false);
 
-    // inputs/<id> , the resolved contents handed to the step.
+    // inputs/<id> – the resolved contents handed to the step.
     expect(readFileSync(join(setDir, "inputs", "product-overview"), "utf8")).toBe("the product\n");
     expect(readFileSync(join(setDir, "inputs", "feature-request"), "utf8")).toContain("stock tracking");
 
-    // prompt.txt + guidelines.json + levers.json , the invocation conditions.
+    // prompt.txt + guidelines.json + levers.json – the invocation conditions.
     expect(readFileSync(join(setDir, "prompt.txt"), "utf8")).toContain("Break the feature into stories");
     expect(readFileSync(join(setDir, "prompt.txt"), "utf8")).toContain("context-pack"); // preconditions inlined
     expect(JSON.parse(readFileSync(join(setDir, "guidelines.json"), "utf8"))).toEqual(["be terse"]);

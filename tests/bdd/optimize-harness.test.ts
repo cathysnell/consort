@@ -6,8 +6,8 @@
 // experiments/; only the winner advances.
 //
 // The engine is pure orchestration over INJECTED steps (runTrial + a
-// snapshot factory), so the walk's decision logic , trials per candidate, median
-// selection, gate-failure discarding, winner selection + tie-breaks , is unit-
+// snapshot factory), so the walk's decision logic – trials per candidate, median
+// selection, gate-failure discarding, winner selection + tie-breaks – is unit-
 // tested with no cloud, no model, no git. The real steps are wired by the CLI.
 
 import { describe, expect, it } from "vitest";
@@ -46,7 +46,7 @@ function scriptedDeps(
         trialCursor[key] = i + 1;
         log.push(`trial:${handoff.id}:${candidate.id}:${trial}`);
         const outcome = script[handoff.id][candidate.id][i];
-        // A THROWN trial (not a fail RESULT): the candidate's turn crashed , the
+        // A THROWN trial (not a fail RESULT): the candidate's turn crashed – the
         // real ArtifactOutOfRootError / spawn failure. The engine must treat this
         // like a disqualification, not let it kill the whole walk.
         if (outcome === THROWS) throw new Error("simulated candidate crash (ArtifactOutOfRootError)");

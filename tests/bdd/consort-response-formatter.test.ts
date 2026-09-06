@@ -141,7 +141,7 @@ describe("response-formatter: spec-author + architect-reviewer contracts", () =>
   });
 
   // Prose-vs-schema drift regression: spec-author.md FORBIDS the spec-author
-  // from writing `layer` ("Architect's, next phase") , yet ac.schema once listed
+  // from writing `layer` ("Architect's, next phase") – yet ac.schema once listed
   // `layer` in `required`, so the spec-author's OWN conformance self-check
   // rejected every prompt-obedient (layer-less) AC. In a single-role run (before
   // the architect stamps layer) that DQ'd the spec-author uniformly. `layer` is
@@ -153,7 +153,7 @@ describe("response-formatter: spec-author + architect-reviewer contracts", () =>
       when: "w",
       then: "t",
       status: "draft",
-      // NO layer / architectural_notes , those are the architect's, next phase.
+      // NO layer / architectural_notes – those are the architect's, next phase.
     });
     const r = formatRoleResponse({ role: "spec-author", consortDir: tdd, featureId: F, story: S });
     expect(r.ok).toBe(true);
@@ -170,7 +170,7 @@ describe("response-formatter: spec-author + architect-reviewer contracts", () =>
   // The self-check must enforce what the GATE enforces: every AC carries a
   // non-empty `architectural_notes` (the architect's distinctive per-AC output;
   // the spec-author's bare `layer` does NOT count). Without this, the architect
-  // wrote `layer` on every AC, saw the self-check pass, returned , then the
+  // wrote `layer` on every AC, saw the self-check pass, returned – then the
   // design gate rejected the story for missing notes on some ACs (the live
   // PROTOCOL VIOLATION halt). Pin the self-check to the gate.
   it("architect-reviewer FLAGS an AC that has `layer` but NO architectural_notes", () => {

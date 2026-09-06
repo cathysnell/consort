@@ -1,9 +1,9 @@
 // Guard: the deterministic driver resolves the child-CLIs it emits through a
 // package.json `bin` map (drive.cli's resolveKitBinJs), NOT a hand-maintained
 // list. Every bin the effects layer can emit as a `cli` command MUST be declared
-// in SOME resolvable bin map , the kit's own (for sftdd/tdd bins) or the installed
+// in SOME resolvable bin map – the kit's own (for sftdd/tdd bins) or the installed
 // substrate's (for scm-* bins, which the kit no longer redeclares after Track C
-// Phase 4) , otherwise the driver falls back to a bare `spawn(<bin>)` which is not
+// Phase 4) – otherwise the driver falls back to a bare `spawn(<bin>)` which is not
 // on PATH under lk and dies with ENOENT (this is exactly what happened when
 // consort-log was emitted but missing from the old hardcoded map).
 //

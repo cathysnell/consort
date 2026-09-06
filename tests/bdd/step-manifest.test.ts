@@ -1,4 +1,4 @@
-// step-manifest: a per-step JSON manifest is the DATA face of a step , its logical
+// step-manifest: a per-step JSON manifest is the DATA face of a step – its logical
 // inputs, its outputs (+ validator NAMES), its routing map, its agent levers, and any
 // post-turn CLIs. The Template Method (StepExecutor) reads the manifest to drive the
 // fixed phases; only validator fn bodies + the agent spawn stay code. This slice pins the
@@ -155,16 +155,16 @@ describe("agentOptionsForStep (per-step config-directory layer for the resolver)
   it("collapsed buildModes resolve ONE lever set (the three assess* share the assess key)", () => {
     // assess / assess-deploy / assess-refactor all map to turnKey "assess"; their manifests must
     // agree, so the lookup returns a single {model,effort} without throwing. All three carry the
-    // applied optimize winner (opus , the regression-fidelity panel: opus holds the assessment and is
+    // applied optimize winner (opus – the regression-fidelity panel: opus holds the assessment and is
     // ~18% faster than the sonnet default on the heavy regression-assess variant).
     expect(agentOptionsForStep("navigator", "assess", turnKeyForAction)).toEqual({ model: "opus", effort: "default" });
-    // driver refactor / refactor-deploy / refactor-superseded all carry the tuning winner (opus) , they must
+    // driver refactor / refactor-deploy / refactor-superseded all carry the tuning winner (opus) – they must
     // agree so the collapsed lookup returns one lever set without throwing.
     expect(agentOptionsForStep("driver", "refactor", turnKeyForAction)).toEqual({ model: "opus", effort: "default" });
   });
 
   it("THROWS when two manifests for the same resolved (role, turnKey) declare different levers", () => {
-    // Two navigator "review" manifests disagreeing on effort , a manifest-authoring bug the
+    // Two navigator "review" manifests disagreeing on effort – a manifest-authoring bug the
     // resolver must not silently paper over.
     const a = { role: "navigator", match: { kind: "invoke-role", role: "navigator", buildMode: "review" }, agentOptions: { model: "sonnet", effort: "low" } } as unknown as StepManifest;
     const b = { role: "navigator", match: { kind: "invoke-role", role: "navigator", buildMode: "review" }, agentOptions: { model: "sonnet", effort: "high" } } as unknown as StepManifest;

@@ -1,6 +1,6 @@
 // P2c optimize-report: the per-handoff before/after report over a champion-walk
 // result. Pure: it turns the ChampionWalkResult (+ the candidate objects, for the
-// winning lever description) into a structured summary + a markdown table , the
+// winning lever description) into a structured summary + a markdown table – the
 // "same-quality artifacts, less wall-clock" evidence. No I/O.
 
 import { describe, expect, it } from "vitest";

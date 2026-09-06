@@ -27,9 +27,9 @@ export interface SweepRow {
 function classificationNote(classification?: string): string {
   switch (classification) {
     case "equivalent":
-      return "  [converged clean , no self-heal needed]";
+      return "  [converged clean – no self-heal needed]";
     case "superseded-shift":
-      return "  [superseded-shift , permissive refactor (viable)]";
+      return "  [superseded-shift – permissive refactor (viable)]";
     case "regression":
       return "  [driver-fixable regression (viable)]";
     default:
@@ -80,7 +80,7 @@ export function reportRoleSweep(trials: SweepTrial[], baselineMsOverride?: numbe
   const role = baseline?.telemetry?.role ?? trials.find((t) => t.telemetry)?.telemetry?.role ?? "unknown";
 
   // Winner-eligible = conformance PASSED and (no quality gate ran OR quality PASSED). A candidate
-  // that is conformant but FAILED the quality gate is conformant-but-thinner-than-baseline , it
+  // that is conformant but FAILED the quality gate is conformant-but-thinner-than-baseline – it
   // must NOT win on speed alone (the whole point of the quality gate). It still appears ranked
   // (with its score) for transparency, but is excluded from winner selection + flagged rejected.
   const eligible = trials.filter((t) => t.gatePassed && t.telemetry && t.qualityPassed !== false);
@@ -126,17 +126,17 @@ export function formatRoleSweepReport(r: SweepReport): string {
     // Surface a BUILD discriminator classification as a POSITIVE: a clean "equivalent" verdict is
     // the best outcome (converged with no self-heal), not merely "passed". superseded-shift +
     // regression(+fix) are viable routings; annotate them so the report reads as the assess turn would.
-    lines.push(`  ${row.candidateId}: ${secs(row.outerDurationMs)}${cost}${delta} , ${lever}${classificationNote(row.classification)}`);
+    lines.push(`  ${row.candidateId}: ${secs(row.outerDurationMs)}${cost}${delta} – ${lever}${classificationNote(row.classification)}`);
   }
   if (r.winner) {
     const cd = r.winner.costDeltaUsd;
     lines.push(
-      `WINNER: ${r.winner.candidateId} , ${r.winner.speedupPct.toFixed(0)}% faster (${secs(r.winner.outerDurationMs)} vs ${secs(r.baselineMs)})` +
+      `WINNER: ${r.winner.candidateId} – ${r.winner.speedupPct.toFixed(0)}% faster (${secs(r.winner.outerDurationMs)} vs ${secs(r.baselineMs)})` +
         (cd !== undefined ? `, ${cd <= 0 ? "cheaper" : "pricier"} by $${Math.abs(cd).toFixed(2)}` : "") +
-        ` , levers ${JSON.stringify(r.winner.levers)}`,
+        ` – levers ${JSON.stringify(r.winner.levers)}`,
     );
   } else {
-    lines.push(`WINNER: none , no candidate beat the baseline (the role's default levers stand).`);
+    lines.push(`WINNER: none – no candidate beat the baseline (the role's default levers stand).`);
   }
   if (r.rejected.length) {
     lines.push(`rejected:`);

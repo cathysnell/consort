@@ -24,7 +24,7 @@ describe("parseTurnUsage", () => {
     expect(u!.cacheReadTokens).toBe(10172);
     expect(u!.cacheCreationTokens).toBe(3150);
     expect(u!.costUsd).toBeCloseTo(0.0948, 4);
-    // num_turns + duration_ms from the result event , the agent-side turn count + wall-clock
+    // num_turns + duration_ms from the result event – the agent-side turn count + wall-clock
     // the CLI reports (num_turns is what distinguishes a one-shot turn from a retry-heavy one,
     // e.g. why a role's turn was slow).
     expect(u!.numTurns).toBe(7);
@@ -86,7 +86,7 @@ describe("assistantEventSummary: compact tool actions + text, drop nothing struc
       '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"uv run pytest"}}]}}',
     );
     expect(bash.tools).toEqual(['Bash {"command":"uv run pytest"}']);
-    // A LONG input is NOT clipped , the whole thing is preserved.
+    // A LONG input is NOT clipped – the whole thing is preserved.
     const longPath = "app/" + "x".repeat(200) + ".py";
     const long = assistantEventSummary(
       `{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"${longPath}"}}]}}`,

@@ -3,9 +3,9 @@
 // A step is producers→consumers, inputs→outputs. This module defines the single
 // contract that carries all three faces of a step together, so each step can be
 // invoked and unit-tested in isolation:
-//   - inputs(action)  : the INPUT contract  , what must exist on disk before it runs.
-//   - outputs(action) : the OUTPUT expectation , what artifact it must produce.
-//   - route(completed): the ROUTING proposal , where it proposes to go next on
+//   - inputs(action)  : the INPUT contract  – what must exist on disk before it runs.
+//   - outputs(action) : the OUTPUT expectation – what artifact it must produce.
+//   - route(completed): the ROUTING proposal – where it proposes to go next on
 //                       completion of its agent call.
 //
 // The orchestrator does NOT blindly follow the routing proposal: `validateAndBound`
@@ -23,7 +23,7 @@ import type { DriveState, WorkflowAction } from "../workflow/workflow-vocabulary
 import type { TurnEventKind, TurnEventSpec } from "./turn-events.js";
 
 /**
- * A step's INPUT contract, declared as LOGICAL descriptors , NOT filesystem paths. The
+ * A step's INPUT contract, declared as LOGICAL descriptors – NOT filesystem paths. The
  * step is dumb + contained: it knows it needs "the PO's product overview", not WHERE that
  * lives. The ORCHESTRATOR (which owns .consort) reads the descriptor, resolves it to the
  * real artifact, and PROVIDES its contents to the step. `id` is the key the provided
@@ -34,7 +34,7 @@ export interface StepInputSpec {
   id: string;
   /** Human description of what the step needs (for the orchestrator + diagnostics). */
   description: string;
-  /** OPTIONAL input: a missing source is SKIPPED, not a turn failure , mirrors the manifest's
+  /** OPTIONAL input: a missing source is SKIPPED, not a turn failure – mirrors the manifest's
    *  `optional` and resolveInputs' skip. Must be carried here so ManifestStep.run's own
    *  `spec.id in inputs` re-check does not fail loud on an optional-absent input (e.g. review's
    *  `code` project-tree input, which resolveInputs legitimately omits on the live lane). */
@@ -42,7 +42,7 @@ export interface StepInputSpec {
 }
 
 /**
- * A step's PRE-CONDITION contract, declared as LOGICAL descriptors , the deterministic
+ * A step's PRE-CONDITION contract, declared as LOGICAL descriptors – the deterministic
  * CONTEXT a turn must be PRE-CONDITIONED with before dispatch (the pre-extracted design
  * rubric + module layout; the green-failure advisory). Distinct from `inputs`: an input's
  * CONTENTS are resolved + handed back under its id; a precondition names a PREPARER the
@@ -55,12 +55,12 @@ export interface StepInputSpec {
 export interface StepPrecondition {
   /** Stable id the prepared block is keyed under (e.g. "context-pack", "green-failure-advisory"). */
   id: string;
-  /** Which preparer to run , the orchestrator maps this kind to a registered pure projection. */
+  /** Which preparer to run – the orchestrator maps this kind to a registered pure projection. */
   kind: "context-pack" | "green-failure-advisory" | string;
   /** Human description (diagnostics + the empty-preparer warning). */
   description: string;
   /** WHERE the prepared block sits relative to the step's base instruction prompt. The legacy
-   *  inline injection was POSITIONED per turn , the design context-pack rides AFTER the directive
+   *  inline injection was POSITIONED per turn – the design context-pack rides AFTER the directive
    *  ("append"), the green-failure advisory rides BEFORE the "ASSESS ..." directive ("prepend"). To
    *  keep the executor-assembled prompt BYTE-IDENTICAL to that inline assembly when a turn moves to
    *  the declared face, a precondition carries its position. Default "append" (the majority). */
@@ -71,7 +71,7 @@ export interface StepPrecondition {
 
 /**
  * A conformance validator EXPOSED TO THE AGENT as a callable it can invoke on its own draft
- * output before returning , so a fixable defect is caught IN-TURN instead of round-tripping
+ * output before returning – so a fixable defect is caught IN-TURN instead of round-tripping
  * back to the agent with follow-up instructions. The `docstring` tells the agent what the
  * function checks + how to call it; the prompt adds any further instruction. `fn` is the
  * same deterministic in-code check the orchestrator also runs on the produced artifact.
@@ -79,13 +79,13 @@ export interface StepPrecondition {
 export interface ConformanceValidator {
   /** The output id this validator validates (matches a StepOutputSpec.id). */
   outputId: string;
-  /** What the validator verifies + how to call it , handed to the agent verbatim. */
+  /** What the validator verifies + how to call it – handed to the agent verbatim. */
   docstring: string;
   /** The deterministic check (given the artifact's path in the workspace). */
   fn: OutputValidator;
 }
 
-/** The result of an in-code output conformance check , deterministic, no agent round-trip. */
+/** The result of an in-code output conformance check – deterministic, no agent round-trip. */
 export interface OutputValidationResult {
   ok: boolean;
   /** Specific, actionable violations when !ok (empty when ok). */
@@ -97,7 +97,7 @@ export interface OutputValidationResult {
  * absolute path (in the provided workspace), it deterministically validates the artifact
  * against the output's contract and returns pass/fail + specific violations. This is what
  * lets the orchestrator ACCEPT or REJECT an output without going back to the agent for a
- * follow-up , every expected output ships its validator.
+ * follow-up – every expected output ships its validator.
  */
 export type OutputValidator = (producedPath: string) => OutputValidationResult;
 
@@ -107,7 +107,7 @@ export type OutputValidator = (producedPath: string) => OutputValidationResult;
 // written into the real, shared, uncontained code tree (each build turn reads the prior
 // turn's code, so the driver's `app/` and the navigator's `tests/` accumulate at the
 // project root and get committed / migrated / deployed). Others are per-turn bookkeeping
-// or per-feature design docs that the orchestrator wants to CONTAIN , place under a
+// or per-feature design docs that the orchestrator wants to CONTAIN – place under a
 // dedicated root it owns, so a turn can be sandboxed (a per-experiment worktree, a scratch
 // dir) without polluting the shared tree. The channel model is the one rule that lets a
 // manifest declare WHICH kind each output is, without the step (or the manifest author)
@@ -115,22 +115,22 @@ export type OutputValidator = (producedPath: string) => OutputValidationResult;
 // "the file X lives HERE for this run".
 //
 // THE THREE CHANNELS:
-//   product  , the application deliverable: app/ , tests/ , migrations. ALWAYS UNCONTAINED
+//   product  – the application deliverable: app/ – tests/ – migrations. ALWAYS UNCONTAINED
 //              (resolves to workspaceDir = the real code tree). It accumulates across build
 //              turns and ships, so it can never be sandboxed away from the tree the next
 //              turn reads. e.g. the driver's `code` (app/), the navigator's `tests`.
-//   artifact , the .consort design documents the design roles author (feature-spec,
+//   artifact – the .consort design documents the design roles author (feature-spec,
 //              architecture, db-design, test-list, design-guide, acs, estimates,
 //              proposals). Small + per-feature, so MAY be contained: resolves under
 //              `artifactDir` when the orchestrator provisions one, else the workspace.
-//   meta     , the orchestrator's bookkeeping ABOUT the turn (the reconciled agent-log,
+//   meta     – the orchestrator's bookkeeping ABOUT the turn (the reconciled agent-log,
 //              a reflect verdict, an assess marker). CONTAINED: resolves under `metaDir`
 //              when provisioned, else the workspace.
 //
 // HOW A MANIFEST USES IT (the rule for every step):
 //   1. Set `channel` to the kind of output it is (omit only for a legacy single-root turn;
 //      absent === product/workspaceDir, byte-identical to a pre-channel turn).
-//   2. Keep `filename` CHANNEL-RELATIVE , the path WITHIN that channel's root
+//   2. Keep `filename` CHANNEL-RELATIVE – the path WITHIN that channel's root
 //      (e.g. "feature-spec.json", "features/<F>/feature-spec.json", "agent-log.jsonl",
 //      "app", "tests"). NEVER prefix it with ".consort/" or the project root; the
 //      orchestrator prepends the channel root. A leading ".consort/" double-encodes the
@@ -138,19 +138,19 @@ export type OutputValidator = (producedPath: string) => OutputValidationResult;
 //   3. The orchestrator resolves the placement: `resolveChannelRoot(channel, roots)` joins
 //      the file under product→workspaceDir / artifact→artifactDir / meta→metaDir (each
 //      falling back to workspaceDir when its contained root is not provisioned). A run that
-//      provisions neither contained root is byte-identical to a single-root turn , which is
+//      provisions neither contained root is byte-identical to a single-root turn – which is
 //      why an untagged / un-provisioned manifest keeps working.
 //
 // So a step stays dumb + contained: it declares "I produce the design-guide (artifact) and
 // an agent-log (meta)"; the orchestrator decides those land under `.consort` for a normal
-// run, or under a sandboxed artifact/meta root for a parallel-experiment run , the manifest
+// run, or under a sandboxed artifact/meta root for a parallel-experiment run – the manifest
 // never changes. See provisioning/channels.ts for the resolver + ChannelRoots.
 //
 /**
  * A step's OUTPUT declaration, also LOGICAL. The step produces "the feature breakdown
  * index" into its provided workspace; the ORCHESTRATOR maps that id to a .consort path,
  * runs the output's `check` (in-code conformance), and PERSISTS it on pass. The step
- * never resolves .consort or validates , the validator is code the orchestrator runs.
+ * never resolves .consort or validates – the validator is code the orchestrator runs.
  */
 export interface StepOutputSpec {
   /** Stable logical id (e.g. "feature-spec"). */
@@ -158,24 +158,24 @@ export interface StepOutputSpec {
   /** Human description of the produced artifact. */
   description: string;
   /** The artifact's filename WITHIN the output's channel root (what the agent writes),
-   *  CHANNEL-RELATIVE , never prefixed with ".consort/" or the project root (the
+   *  CHANNEL-RELATIVE – never prefixed with ".consort/" or the project root (the
    *  orchestrator prepends the channel root; a leading ".consort/" double-encodes it). */
   filename: string;
   /** WHICH channel this output lands in (see the "OUTPUT CHANNELS" note above; absent =
    *  the primary workspace root, byte-identical to a single-root turn):
    *  `product` = the application deliverable (app/tests/migrations) resolved under the code
-   *  tree (ALWAYS uncontained , it accumulates + ships); `artifact` = the .consort design
-   *  documents, resolved under artifactDir when provisioned (else the workspace , MAY be
+   *  tree (ALWAYS uncontained – it accumulates + ships); `artifact` = the .consort design
+   *  documents, resolved under artifactDir when provisioned (else the workspace – MAY be
    *  contained); `meta` = orchestration bookkeeping resolved under the contained metaDir
    *  when provisioned. */
   channel?: "product" | "artifact" | "meta";
   /** OPTIONAL output: the turn LEGITIMATELY may not produce it. A self-heal turn writes its marker
-   *  ONLY on one branch of its judgment , the assess turn writes a superseded/regression marker when
+   *  ONLY on one branch of its judgment – the assess turn writes a superseded/regression marker when
    *  it can localize the failure, but writes NO file when it judges a genuine regression it must
    *  ESCALATE to a human; a review turn may decide refactor:false with no artifact. For such an
    *  output: ABSENT is a clean PASS (not a violation, so the escalation/no-op route is preserved);
    *  PRESENT still runs `validate` and a nonconformant present output is a hard reject. A REQUIRED
-   *  output (optional absent/false) that is absent stays a hard reject , the design-lane default. */
+   *  output (optional absent/false) that is absent stays a hard reject – the design-lane default. */
   optional?: boolean;
   /** In-code conformance validator for this output. The orchestrator runs it on the
    *  produced artifact; a failure is a hard reject with named violations, NOT an
@@ -185,7 +185,7 @@ export interface StepOutputSpec {
 
 /**
  * A DETERMINISTIC pipeline hook the orchestrator runs AROUND the agent turn (never the
- * agent itself) , e.g. breakdown's `reset-breakdown` (before) / `sync-breakdown` (after).
+ * agent itself) – e.g. breakdown's `reset-breakdown` (before) / `sync-breakdown` (after).
  * Mirrors a manifest `postTurn` entry. This is a real thing a step DOES beyond
  * inputs/outputs/route, so the canonical model names it. Empty list = no hooks.
  */
@@ -199,7 +199,7 @@ export interface PostTurnHook {
 }
 
 /**
- * The per-step AGENT SPAWN configuration , the model/effort/session levers that drive the
+ * The per-step AGENT SPAWN configuration – the model/effort/session levers that drive the
  * `claude -p` spawn for this step. Mirrors a manifest `agentOptions` block. Every step that
  * dispatches an agent carries one, so the canonical model names it (it is a thing the step
  * DECLARES, distinct from what it produces or where it routes). The optimize sweep patches
@@ -216,7 +216,7 @@ export interface AgentOptions {
   resumeKeyFrom?: string;
 }
 
-/** What a step reports about its own completion , the routing intent, not the action. */
+/** What a step reports about its own completion – the routing intent, not the action. */
 export type StepOutcome =
   /** The step produced its artifact; proceed to the proposed next step. */
   | "produced"
@@ -229,7 +229,7 @@ export type StepOutcome =
 
 /**
  * A step's emitted routing proposal. `proposedNext` is where the STEP thinks the
- * orchestrator should go , advisory. `reason` is required for anything but a clean
+ * orchestrator should go – advisory. `reason` is required for anything but a clean
  * `produced` (it becomes the revise/escalate/handback message).
  */
 export interface RouteProposal {
@@ -249,7 +249,7 @@ export interface StepRouteContext {
  * be invoked and unit-tested in isolation:
  *   - inputs(action):  the input contract (what must exist before it runs).
  *   - outputs(action): the output expectation (what it must produce; null when the step
- *                      produces no static artifact , e.g. a build turn verified by cycle
+ *                      produces no static artifact – e.g. a build turn verified by cycle
  *                      records, or a critic gate).
  *   - route(completed, ctx): the routing proposal emitted on completion.
  * The first implementation is `MockStepContract` (below); real roles implement this next.
@@ -273,7 +273,7 @@ export interface StepContract {
    *  regression-assessment / review-verdict). Declared as full specs so the coverage guard can
    *  confirm every REQUIRED event is raised somewhere. Empty = an affirmative "raises nothing". */
   raises(action: WorkflowAction): TurnEventSpec[];
-  /** The process EVENTS a ROUTE to this step depends on , the markers a prior turn must have raised
+  /** The process EVENTS a ROUTE to this step depends on – the markers a prior turn must have raised
    *  before this turn is dispatched. Declared as KINDS (scope resolves through TURN_EVENTS, one
    *  scope-truth); the pre-dispatch route-satisfiable check asserts each exists. Empty = "requires
    *  no event" (the plain RED/GREEN turns). This is the face that ties a route to its inputs. */
@@ -285,7 +285,7 @@ export interface StepContract {
  * The EXACT set of faces the canonical StepContract names, pinned to the interface at COMPILE
  * time: `satisfies Record<keyof StepContract, true>` fails tsc if a face is added to the
  * interface without being listed here, OR if a key here is not a real face. This is the single
- * source the runtime exactness guard reads , the allowlist can never silently drift from the
+ * source the runtime exactness guard reads – the allowlist can never silently drift from the
  * interface. To ADD a face: add it to StepContract AND here (that IS "update the canonical
  * model"). See `assertExactStepContract`.
  */
@@ -303,7 +303,7 @@ export const STEP_CONTRACT_MEMBERS = {
 /**
  * OUTRIGHT FAIL a StepContract implementation that declares a member the canonical model does
  * NOT name. TypeScript's `implements` is a structural LOWER bound (an extra method is legal +
- * invisible to tsc), so exactness is not compiler-enforceable , this is the runtime backstop.
+ * invisible to tsc), so exactness is not compiler-enforceable – this is the runtime backstop.
  * It walks the instance + its prototype for own members and rejects any not in
  * STEP_CONTRACT_MEMBERS. The rule this enforces: a StepContract impl keeps private helpers as
  * MODULE-LEVEL functions, not methods (matching the "step is dumb + contained" design), so the
@@ -334,7 +334,7 @@ const signature = (a: WorkflowAction): string => JSON.stringify(a);
  * The contract's first implementation: a scripted contract keyed by action signature.
  * Tests (and the mock-only wiring slice) drive exact inputs/outputs/proposals with no
  * cloud/model/roles. Missing input contract defaults to `{requires:[]}`; missing output
- * defaults to `null`; a missing routing proposal THROWS , the mock must be told every
+ * defaults to `null`; a missing routing proposal THROWS – the mock must be told every
  * step it is asked to route, so a missing case is a loud test failure, not a silent
  * default.
  */
@@ -390,7 +390,7 @@ export class MockStepContract implements StepContract {
 }
 
 /**
- * The bounds `validateAndBound` reuses , injected so the policy is unit-tested without
+ * The bounds `validateAndBound` reuses – injected so the policy is unit-tested without
  * touching disk. In the real wiring these are backed by the existing machinery:
  *  - `allowed`: the pure `nextTransition(state)` (the allowlist + fallback).
  *  - `reviseBudgetAvailable`: the existing revise-budget check (priorReviseCount /
@@ -426,9 +426,9 @@ const raiseToHil = (reason: string, source: string, story?: string): WorkflowAct
  * orchestrator VALIDATES + BOUNDS. Never lets a step drive the machine off the allowed
  * graph.
  *   - produced: honor `proposedNext` iff it equals the pure allowed transition; else
- *     FALL BACK to the allowed action (recorded mismatch , the step cannot invent a move).
+ *     FALL BACK to the allowed action (recorded mismatch – the step cannot invent a move).
  *   - revise: honor the revise-route iff the revise budget has room; else convert to
- *     raise-to-hil (budget exhausted , a human decides).
+ *     raise-to-hil (budget exhausted – a human decides).
  *   - blocked: a sanctioned retry of the same step while the retry ledger allows it;
  *     `recordRetry` throws (ProtocolViolationError) once exhausted.
  *   - escalate: straight to raise-to-hil.
@@ -449,7 +449,7 @@ export function validateAndBound(
     case "revise": {
       if (proposal.proposedNext.kind !== "revise-route") {
         // A revise outcome must carry a revise-route; anything else is a malformed
-        // proposal , fall back to the allowed transition rather than trust it.
+        // proposal – fall back to the allowed transition rather than trust it.
         const allowed = deps.allowed(state);
         return { action: allowed, sanctionedRetry: false, note: "revise proposal was not a revise-route; fell back to allowed transition" };
       }

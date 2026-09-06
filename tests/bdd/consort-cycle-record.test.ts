@@ -1,7 +1,7 @@
 // Cycle recording is an ORCHESTRATION concern: the deterministic driver calls
 // beginNextPendingCycle (after the pure Navigator writes the test) and
 // greenOpenCycle (after the pure Driver makes it pass). These stamp the SAME
-// red_at / green_at the probe reads , the contract the live smoke broke when
+// red_at / green_at the probe reads – the contract the live smoke broke when
 // the Navigator hand-wrote a cycle with `status:"red"` (no red_at) and the
 // driver re-dispatched it forever.
 
@@ -161,7 +161,7 @@ describe("cycle-record: orchestration stamps RED/GREEN the probe can read", asyn
     await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: pass });
     expect(beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S }).testId).toBe("T2");
     await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: pass });
-    // Both tests have green cycles now , nothing pending.
+    // Both tests have green cycles now – nothing pending.
     const after = beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
     expect(after.recorded).toBe(false);
     expect(cyclesFor("AC1").length).toBe(2);
@@ -194,7 +194,7 @@ describe("cycle-record: orchestration stamps RED/GREEN the probe can read", asyn
     expect(firstReviewPendingAc(tdd, F, S)).toBeNull(); // reviewed
     expect(firstRefactorPendingAc(tdd, F, S)).toBe("AC1"); // refactor pending
     await refactorAc(tdd, F, S, "AC1", { verify: pass });
-    expect(firstRefactorPendingAc(tdd, F, S)).toBeNull(); // refactored , AC fully done
+    expect(firstRefactorPendingAc(tdd, F, S)).toBeNull(); // refactored – AC fully done
   });
 
   it("REVIEW + REFACTOR emit cycle.review + cycle.refactored to the central log (closes the RED->GREEN->REVIEW->REFACTOR trail)", async () => {
@@ -245,7 +245,7 @@ describe("cycle-record: orchestration stamps RED/GREEN the probe can read", asyn
     const p = storyTestProgress(tdd, F, S);
     expect(p.total).toBe(2);
     expect(p.openRed.length).toBe(0);
-    expect(p.allGreen).toBe(false); // NOT done , T2 unbuilt
+    expect(p.allGreen).toBe(false); // NOT done – T2 unbuilt
     expect(p.pending.map((i) => i.id)).toEqual(["T2"]);
   });
 
@@ -253,7 +253,7 @@ describe("cycle-record: orchestration stamps RED/GREEN the probe can read", asyn
     // The seeded list has no `kind` on T1/T2 (a behavior AC test): undefined.
     expect(pendingItemKind(tdd, F, S)).toBeUndefined();
     // A fitness-kind item that is already done, then a pending fitness guard,
-    // then a pending behavior test , pendingItemKind reads the FIRST pending.
+    // then a pending behavior test – pendingItemKind reads the FIRST pending.
     const perStory = join(tdd, "features", F, "stories", S, "test-list-per-story.json");
     writeJson(perStory, {
       feature_id: F,

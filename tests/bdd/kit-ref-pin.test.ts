@@ -13,7 +13,7 @@ describe("kitRefPin", () => {
     expect(kitRefPin({}, "0.3.16")).toBe("v0.3.16");
   });
 
-  it("leaves the ref alone (undefined) when LAKEBASE_KIT_REF is already set , explicit wins", () => {
+  it("leaves the ref alone (undefined) when LAKEBASE_KIT_REF is already set – explicit wins", () => {
     expect(kitRefPin({ LAKEBASE_KIT_REF: "feature-x" }, "0.3.16")).toBeUndefined();
     expect(kitRefPin({ LAKEBASE_KIT_REF: "v0.3.10" }, "0.3.16")).toBeUndefined();
   });

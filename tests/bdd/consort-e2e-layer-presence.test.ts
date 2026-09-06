@@ -1,10 +1,10 @@
 // E2E-layer PRESENCE guard. checkE2ECoverage only bites once an AC is tagged layer:"E2E",
 // so a design lane that mis-classifies every client-facing AC as API/Infra ships a feature
-// with ZERO E2E ACs that passes the coverage guard vacuously , exactly how the actor-less
+// with ZERO E2E ACs that passes the coverage guard vacuously – exactly how the actor-less
 // pick form shipped (the design lane flattened even a rewritten "operator submits the form
 // in the browser" premise into a backend "the pick is saved" API AC). checkE2eLayerPresent
 // closes it: a client-facing feature MUST carry >=1 E2E AC. It reads TWO signals so the
-// mis-classification cannot dodge it , the architect's own renders_via boundary AND the
+// mis-classification cannot dodge it – the architect's own renders_via boundary AND the
 // architect-independent React-UI-track project signal. The gate wiring defers until every
 // declared story is designed (the streaming design lane), then hard-blocks the spec gate.
 
@@ -21,7 +21,7 @@ const REACT_BOUNDARY = JSON.stringify({
   service_backed: true,
   layers: [{ role: "boundary", module: "app/routes", renders_via: "react" }],
 });
-// A plain API boundary , the shape the mis-classification produces when it ALSO drops renders_via.
+// A plain API boundary – the shape the mis-classification produces when it ALSO drops renders_via.
 const API_BOUNDARY = JSON.stringify({
   feature_id: "F4-pick",
   service_backed: true,
@@ -106,7 +106,7 @@ describe("e2eLayerPresentReason (gate wiring: streaming deferral + spec-gate blo
     projectConfig("react");
     featureFile("feature-spec.json", { id: F, stories: ["S1-form", "S2-row"] });
     featureFile("architecture.json", JSON.parse(REACT_BOUNDARY));
-    ac("S1-form", "AC1-save", "API"); // S2 has no acs/ yet , design incomplete
+    ac("S1-form", "AC1-save", "API"); // S2 has no acs/ yet – design incomplete
     expect(e2eLayerPresentReason(consortDir, F)).toBeNull();
   });
 
@@ -179,7 +179,7 @@ describe("storyRequiresE2eReason (human-authoritative per-story lever, flatten-p
 
 describe("approveStoryGateFromDisk enforces requires_e2e (fail-closed at the per-story spec gate)", () => {
   const F = "F4-pick";
-  const S = "S1-record-actor"; // first story , no independence determination needed
+  const S = "S1-record-actor"; // first story – no independence determination needed
   let tdd: string;
   beforeEach(() => { tdd = mkdtempSync(join(tmpdir(), "requires-e2e-gate-")); });
   afterEach(() => rmSync(tdd, { recursive: true, force: true }));

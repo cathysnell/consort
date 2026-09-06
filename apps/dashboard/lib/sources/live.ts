@@ -11,7 +11,7 @@
 // One path: a recorded corpus can be replayed, a live build can be seen. A live build now records
 // every turn into its OWN `.consort/` (drive.cli/executor: turns/ + transcripts + a produced/deleted
 // INDEX; NO content snapshot), so this source reads its own turns exactly as a ReplaySource reads a
-// corpus , the companion IS `.consort` (or an external RECORD_DIR capture when one is set).
+// corpus – the companion IS `.consort` (or an external RECORD_DIR capture when one is set).
 //
 //   Before the first turn lands — `agent-log.jsonl` + produced artifacts only. transcripts /
 //     correspondence stay off (no turns/index.json yet); the FidelityBanner shows "not captured yet".
@@ -19,7 +19,7 @@
 //     turn()/transcript()/correspondence to a ReplaySource over `.consort`. Two content differences
 //     from a full capture, because the live record is index-only: turn FILE content is read at HEAD
 //     (readProjectFileAtHead) rather than a frozen per-turn copy, and stepOutputs reads the live
-//     `.consort/` tree at HEAD (no recorded-artifacts mirror). Not historically accurate , by design.
+//     `.consort/` tree at HEAD (no recorded-artifacts mirror). Not historically accurate – by design.
 //   artifactContent is HEAD-only throughout (the file `artifact.written` named, as it is NOW).
 
 import { existsSync, statSync } from "node:fs";
@@ -53,7 +53,7 @@ const LIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   "artifactContent", // HEAD-only; see the header note
   "planningBacklog",
   // A lifecycle step's deliverables, served from the live project's `.consort/` tree at HEAD (see
-  // stepOutputs below). Unlike transcripts/correspondence , which genuinely need a per-turn corpus ,
+  // stepOutputs below). Unlike transcripts/correspondence – which genuinely need a per-turn corpus ,
   // the deliverables a step produced live ON DISK, so "click a role/node → read what it produced"
   // works on ANY live board, not only one with a companion recording. This is what makes clicking
   // the product-owner surface its intake docs (product-overview / nfrs / design-brief).
@@ -96,7 +96,7 @@ export class LiveSource implements DashboardSource {
   // "not captured yet" rather than the drill-down opening onto nothing.
   private companion(): ReplaySource | null {
     // The turns corpus to read: an explicit external RECORD_DIR (a full capture), ELSE the project's
-    // OWN `.consort` , which the live build now always records into (turns/ + transcripts; index
+    // OWN `.consort` – which the live build now always records into (turns/ + transcripts; index
     // only, no content snapshot). One path: a live board reads its own turns exactly as replay reads
     // a corpus. Volatile because `.consort/turns/` is GROWING while we watch. Surfaced only once
     // there's a readable turns/index.json (before the first turn lands, available() is false → the
@@ -176,7 +176,7 @@ export class LiveSource implements DashboardSource {
 
   // A lifecycle step's deliverables, read from the live project's `.consort/` tree at HEAD. Always
   // HEAD, even though the companion is now the project's own `.consort` corpus: the live record is
-  // INDEX-only (no recorded-artifacts mirror), and the deliverables live on disk at HEAD anyway , so
+  // INDEX-only (no recorded-artifacts mirror), and the deliverables live on disk at HEAD anyway – so
   // HEAD is both the only source and the right one. An empty list is honest (the step hasn't produced
   // them yet). An external CAPTURE (RECORD_DIR) is the historically-accurate path; a live board is not.
   stepOutputs(node: string, feature?: string | null): StepOutputs {
@@ -233,7 +233,7 @@ export class LiveSource implements DashboardSource {
   file(ordinal: number, rel: string): { kind: "code" | "artifact"; content: string | null; reason: string | null } {
     const rec = this.companion();
     if (!rec) return { kind: classify(rel), content: null, reason: "(no companion recording)" };
-    // A LIVE-INDEX turn (snapshotted:false) copied no content , read the produced file at HEAD (may
+    // A LIVE-INDEX turn (snapshotted:false) copied no content – read the produced file at HEAD (may
     // have changed since; not historically accurate, by design). A CAPTURE turn (external RECORD_DIR)
     // has the frozen per-turn snapshot, so read that.
     const turn = rec.turn(ordinal) as (TurnDetail & { snapshotted?: boolean }) | null;
@@ -245,8 +245,8 @@ export class LiveSource implements DashboardSource {
   //
   // A live build now records its turns into its OWN `.consort/turns/` (index + transcripts), so the
   // companion is that corpus once its first turn lands (or an external RECORD_DIR capture, if set).
-  // Keyed off the companion being readable , the same condition that adds transcripts/correspondence
-  // , so `recording:true` and the drill-down move together and the FidelityBanner (keyed on missing
+  // Keyed off the companion being readable – the same condition that adds transcripts/correspondence
+  // – so `recording:true` and the drill-down move together and the FidelityBanner (keyed on missing
   // capabilities) hides exactly when a turns corpus exists. Before the first turn, available() is
   // false → recording:false → the banner shows "not captured yet".
   fidelity(): NonNullable<SourceMeta["fidelity"]> {

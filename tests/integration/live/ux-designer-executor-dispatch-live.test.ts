@@ -5,7 +5,7 @@
 // Real ux-designer turn via performViaExecutor: reads design/design-brief.md (the design/-scoped
 // source fix) + product-overview, lands design-guide.json under .consort at design/ (artifact channel)
 // + the reconciled agent-log (meta). LEAN, no cloud. The spec is the catalogue's shared entry
-// (DESIGN_LIVE_SPECS.ux) , one source of truth for the role turn.
+// (DESIGN_LIVE_SPECS.ux) – one source of truth for the role turn.
 
 import { describe, it } from "vitest";
 import { runDesignExecutorDispatchLive, designSpec } from "./executor-dispatch-live-support.js";

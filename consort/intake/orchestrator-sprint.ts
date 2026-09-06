@@ -99,7 +99,7 @@ export function deriveSprintPlanningState(
  *  later claim hits `already-claimed-other` on the still-open feature). */
 export interface DriveStepResult {
   pendingGate?: WorkflowAction;
-  /** Paused awaiting HUMAN INPUT the machine cannot synthesize , the Product
+  /** Paused awaiting HUMAN INPUT the machine cannot synthesize – the Product
    *  Owner's feature-request(s) at `author-requests`. Distinct from `pendingGate`
    *  (which is an APPROVAL of already-produced work): here NOTHING has been
    *  produced yet, so the step did not finish and the sprint must stop. In proxy
@@ -150,7 +150,7 @@ export interface RunSprintResult {
   /** The HITL gate the run halted at (interactive mode), awaiting the human. */
   pendingGate?: WorkflowAction;
   /** The run halted awaiting HUMAN INPUT (the PO's feature-request(s) at
-   *  `author-requests`) , nothing was produced yet, so the sprint did not run. */
+   *  `author-requests`) – nothing was produced yet, so the sprint did not run. */
   pendingInput?: WorkflowAction;
   /** Set when the run halted because a step RAISED TO HIL (a blocking failure,
    *  not a clean interactive pause). The caller exits non-zero. */
@@ -174,7 +174,7 @@ export interface RunSprintResult {
  * This closes the sprint-resume trap (the shared SCM state pollutes an earlier feature's
  * promote-phase derive): once F2 is claimed, deriving F1's own next-action reads F2's SCM
  * ladder and never returns `done`, so `isFeatureShipped(F1)` was false and the loop
- * re-claimed F1 , tripping `already at feature-claimed for F2`. Compared case-insensitively
+ * re-claimed F1 – tripping `already at feature-claimed for F2`. Compared case-insensitively
  * on the feature id. Returns false for an absent/empty/self/earlier claim, or an id not in
  * the backlog (then the caller falls back to the own-workflow `done` derive).
  */
@@ -197,7 +197,7 @@ export function shippedBecauseLaterFeatureClaimed(
  * in-flight) yet this feature's stories are ALL done+accepted (`featurePhase === "complete"`).
  * The single SCM claim frees ONLY at merge, so a cleared claim proves every feature that was
  * driven released its claim (== deployed + promoted). A feature that reached "complete" (all
- * stories accepted) with the claim now clear therefore SHIPPED , you cannot have a
+ * stories accepted) with the claim now clear therefore SHIPPED – you cannot have a
  * merged/claim-cleared feature that was not deployed, and mid-flight (accepted but not yet
  * deployed) the claim is still HELD.
  *

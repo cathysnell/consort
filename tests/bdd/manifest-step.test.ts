@@ -1,5 +1,5 @@
 // Step: the GENERIC StepContract driven ENTIRELY by a manifest + the validator
-// registry + an injected agent. It is the ONLY step implementation , the runner path builds
+// registry + an injected agent. It is the ONLY step implementation – the runner path builds
 // `new Step(manifest, agent)` for every turn; there is no bespoke concrete StepContract
 // class (the original SpecAuthorBreakdownStep was proven equivalent to this and then removed).
 // This slice pins Step's inputs/outputs/conformanceValidators/route/run contract.
@@ -182,7 +182,7 @@ describe("Step: route()", () => {
 
   it("emits a REVISE proposal when the state carries a ROUTABLE spec smell (escalationPreempt)", () => {
     // A routable spec-level smell (revise budget left) routes the verdict back to the owning
-    // author , the same authority nextTransition uses (escalationPreempt), not re-derived.
+    // author – the same authority nextTransition uses (escalationPreempt), not re-derived.
     const state = {
       phase: "feature",
       escalation: {

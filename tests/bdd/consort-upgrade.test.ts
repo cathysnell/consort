@@ -12,7 +12,7 @@ import { quiesceGate, pinBoth, rollbackPins, refreshSurface } from "../../consor
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-describe("quiesceGate , only upgrade at a clean stop, never under a running drive", () => {
+describe("quiesceGate – only upgrade at a clean stop, never under a running drive", () => {
   it("REFUSES while a drive pid is alive (never hot-swap mid-turn)", () => {
     expect(quiesceGate({ pidAlive: true, atStop: true }).safe).toBe(false);
     expect(quiesceGate({ pidAlive: true, atStop: false }).safe).toBe(false);
@@ -32,7 +32,7 @@ describe("quiesceGate , only upgrade at a clean stop, never under a running driv
   });
 });
 
-describe("pinBoth + rollbackPins , dual-pin in lockstep, reversible", () => {
+describe("pinBoth + rollbackPins – dual-pin in lockstep, reversible", () => {
   let proj: string;
   beforeEach(() => {
     proj = mkdtempSync(join(tmpdir(), "upgrade-"));
@@ -47,7 +47,7 @@ describe("pinBoth + rollbackPins , dual-pin in lockstep, reversible", () => {
     writeFileSync(join(proj, ".lakebase", "kit-ref.local"), "v0.3.40\n");
     const r = pinBoth(proj, "v0.3.42");
     expect(read("kit-ref.local")).toBe("v0.3.42");
-    expect(read("kit-ref")).toBe("v0.3.42"); // committed moved in lockstep , no more drift
+    expect(read("kit-ref")).toBe("v0.3.42"); // committed moved in lockstep – no more drift
     expect(r.previousLocal).toBe("v0.3.40");
     expect(r.previousCommitted).toBe("v0.3.36");
     expect(r.changed).toBe(true);
@@ -79,7 +79,7 @@ describe("pinBoth + rollbackPins , dual-pin in lockstep, reversible", () => {
   });
 });
 
-describe("refreshSurface , brings agents + commands to the target + stamps the sync marker", () => {
+describe("refreshSurface – brings agents + commands to the target + stamps the sync marker", () => {
   let proj: string;
   beforeEach(() => {
     proj = mkdtempSync(join(tmpdir(), "upgrade-surf-"));

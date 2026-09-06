@@ -1,7 +1,7 @@
 // manifest-runner: the bridge that takes a step MANIFEST and hands it to the orchestrator
 // (the StepExecutor / Template Method). It builds the Step, assembles the
 // orchestrator-owned seams (resolve inputs from the shared workspace, provision it, source
-// instructions, reconcile routing), and runs the fixed 7 phases , so a caller drives a
+// instructions, reconcile routing), and runs the fixed 7 phases – so a caller drives a
 // manifest without hand-wiring StepCtx/StepExecutorDeps every turn.
 //
 // runManifestStep runs ONE manifest. runManifestChain follows each turn's routing to the
@@ -72,7 +72,7 @@ function deps(): ManifestRunnerDeps {
 }
 
 describe("runManifestStep: one manifest -> the orchestrator (StepExecutor)", () => {
-  it("runs turn 1 (PO seed) , materializes the recorded files, routes to spec-author", async () => {
+  it("runs turn 1 (PO seed) – materializes the recorded files, routes to spec-author", async () => {
     const manifests = loadStepManifests(MANIFEST_DIR);
     const res = await runManifestStep(PO_SEED, manifests, deps());
     expect(res.violations).toEqual([]);
@@ -190,7 +190,7 @@ describe("runManifestStep: probeEscalation reaches the revise/escalate route spa
 
   it("a ROUTABLE spec smell on disk routes the spec-author turn to a revise-route (Gate 1)", async () => {
     seedWorkspace();
-    // Plant a real reflect-spec-defect escalation in the workspace .sftdd , the disk probe
+    // Plant a real reflect-spec-defect escalation in the workspace .sftdd – the disk probe
     // classifies it routable (spec-author owns it, first revise allowed).
     writeEscalation(join(ws, ".sftdd"), {
       source: "smell:reflect-spec-defect",

@@ -6,7 +6,7 @@
 // NAMES) it validates, the routing map, the agent levers, and any post-turn CLIs. Only the
 // validator fn bodies (validator-registry.ts) and the agent spawn (ClaudeStepAgent) stay code.
 //
-// Validation reuses the shared Ajv loader (getValidator) , the SAME compilation truth every
+// Validation reuses the shared Ajv loader (getValidator) – the SAME compilation truth every
 // other artifact uses, no new Ajv instance. Resolving a validator NAME to its fn is the
 // registry's job (resolveValidator); an unknown name is caught THERE, not here (the schema
 // cannot know registry contents).
@@ -17,7 +17,7 @@ import { getValidator, formatSchemaErrors } from "../validators/schema-loader.js
 import type { WorkflowAction } from "../workflow/workflow-vocabulary.js";
 import type { TurnEventKind } from "./turn-events.js";
 // The SHIPPED manifests are imported as JSON modules so the bundler INLINES them into
-// the build , no runtime fs read, no __dirname/dist path to keep in sync, no copy step.
+// the build – no runtime fs read, no __dirname/dist path to keep in sync, no copy step.
 // (resolveJsonModule is on.) External/scenario manifests are still loaded from a directory
 // the caller passes explicitly (loadStepManifests(dir)).
 import productOwnerIntakeManifest from "./manifests/product-owner-intake.json" with { type: "json" };
@@ -33,7 +33,7 @@ import uxDesignerManifest from "./manifests/ux-designer.json" with { type: "json
 // Build-turn manifests: every navigator/driver BUILD turn is now a declared step (config home
 // for its agentOptions). Their record-phase cycle CLI is DYNAMIC (loop/--ac/--repair/collapsed
 // buildMode verbs), so each declares a `@build-cycle` postTurn marker that commandsFromManifest
-// delegates to buildCycleCommand , the ONE derivation the legacy commandsForAction also calls.
+// delegates to buildCycleCommand – the ONE derivation the legacy commandsForAction also calls.
 import navigatorRedManifest from "./manifests/navigator-red.json" with { type: "json" };
 import navigatorReviewManifest from "./manifests/navigator-review.json" with { type: "json" };
 import navigatorReflectManifest from "./manifests/navigator-reflect.json" with { type: "json" };
@@ -46,19 +46,19 @@ import driverRefactorSupersededManifest from "./manifests/driver-refactor-supers
 import driverRepairManifest from "./manifests/driver-repair.json" with { type: "json" };
 import driverGreenSupersededManifest from "./manifests/driver-green-superseded.json" with { type: "json" };
 
-/** A step's logical input , resolved from .consort by the orchestrator and provided by id. */
+/** A step's logical input – resolved from .consort by the orchestrator and provided by id. */
 export interface StepManifestInput {
   id: string;
   /** .consort source locator, e.g. "feature:product-overview.md". */
   source: string;
-  /** When true, a MISSING source is skipped (not handed back) instead of failing the turn , for an
+  /** When true, a MISSING source is skipped (not handed back) instead of failing the turn – for an
    *  input that legitimately may be absent (e.g. design-guide.json on a no-frontend project).
    *  Default false: a missing required input fails loud. */
   optional?: boolean;
   description?: string;
 }
 
-/** A step's declared PRE-CONDITION , a preparer the orchestrator runs to project a context
+/** A step's declared PRE-CONDITION – a preparer the orchestrator runs to project a context
  *  block into the prompt before dispatch (context-pack / green-failure-advisory). */
 export interface StepManifestPrecondition {
   id: string;
@@ -72,7 +72,7 @@ export interface StepManifestPrecondition {
   options?: Record<string, unknown>;
 }
 
-/** A step's produced output , validated by an in-code validator resolved from the registry. */
+/** A step's produced output – validated by an in-code validator resolved from the registry. */
 export interface StepManifestOutput {
   id: string;
   /** Filename within the provided workspace the agent writes. */
@@ -121,7 +121,7 @@ export interface StepManifestPostTurn {
 }
 
 /**
- * WHICH concrete StepAgent this step uses + that agent's config , DATA in the manifest, so
+ * WHICH concrete StepAgent this step uses + that agent's config – DATA in the manifest, so
  * the choice of agent is not hardcoded in any script. `kind` names a catalogue entry
  * (claude | replay | mock); `config` is that kind's knobs (claude levers / replay seeds /
  * mock fixtures). The ENV a kind needs (corpus root, kit dir) is supplied by the runner as a
@@ -166,7 +166,7 @@ export interface StepManifest {
   agent?: StepManifestAgent;
 }
 
-/** The result of a shape validation , shape mirrors OutputValidationResult for consistency. */
+/** The result of a shape validation – shape mirrors OutputValidationResult for consistency. */
 export interface ManifestValidateResult {
   ok: boolean;
   violations: string[];
@@ -182,7 +182,7 @@ export function validateStepManifest(manifest: StepManifest): ManifestValidateRe
 }
 
 /**
- * The SHIPPED step manifests , inlined at build time via the JSON imports above. This is the
+ * The SHIPPED step manifests – inlined at build time via the JSON imports above. This is the
  * default manifest set the orchestrator resolves against; adding a shipped step = add a JSON
  * file under ./manifests/ AND an import line here. No runtime fs, no dist path.
  */
@@ -234,14 +234,14 @@ export function actionFromManifestMatch(match: Record<string, unknown>, role: st
 
 /**
  * The per-step agent levers (model/effort) DECLARED for a (role, turnKey) across the shipped
- * manifests , the config-directory face resolveConsortSettings reads as its per-step BASE layer
+ * manifests – the config-directory face resolveConsortSettings reads as its per-step BASE layer
  * (below the project consort-config.json + the applied-winners overlay, above RECOMMENDED_MODELS).
  * The (role, turnKey) index is derived from each manifest's `match` via the SAME turnKeyForAction
  * the drive uses (reconstructing a representative action from the match), so the manifest's
  * declared key is exactly the key the drive looks it up under.
  *
  * Several manifests collapse onto ONE key (the three assess* buildModes -> "assess", refactor*
- * -> "refactor"); they MUST declare identical {model,effort} for that key , a disagreement is a
+ * -> "refactor"); they MUST declare identical {model,effort} for that key – a disagreement is a
  * manifest-authoring bug this THROWS on, since the resolver cannot pick between two truths.
  * Returns undefined when no shipped manifest declares that (role, turnKey) (the caller falls
  * through to RECOMMENDED_MODELS + the model-default effort).
@@ -259,7 +259,7 @@ export function agentOptionsForStep(
     const cur = { model: m.agentOptions.model, effort: m.agentOptions.effort };
     if (hit && (hit.model !== cur.model || (hit.effort ?? "default") !== (cur.effort ?? "default"))) {
       throw new Error(
-        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) , two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`,
+        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) – two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`,
       );
     }
     hit = cur;
@@ -268,11 +268,11 @@ export function agentOptionsForStep(
 }
 
 /**
- * Load step manifests from a DIRECTORY , for EXTERNAL manifest sets (scenario/demo manifests
+ * Load step manifests from a DIRECTORY – for EXTERNAL manifest sets (scenario/demo manifests
  * a caller keeps outside the shipped set, e.g. examples/.../step-manifests). The shipped
  * manifests are NOT loaded this way (they are inlined; see SHIPPED_MANIFESTS). Passing a dir
- * is required , there is no default. Missing dir -> empty (absence must not throw). Each file
- * is parsed but NOT shape-validated here , callers validate.
+ * is required – there is no default. Missing dir -> empty (absence must not throw). Each file
+ * is parsed but NOT shape-validated here – callers validate.
  */
 export function loadStepManifests(dir: string): StepManifest[] {
   if (!existsSync(dir)) return [];
@@ -287,7 +287,7 @@ export function loadStepManifests(dir: string): StepManifest[] {
  * the same field on `action`. Extra action fields are ignored (the match is a subset). A
  * field absent from the action never matches a present match field.
  *
- * The `null` sentinel means "this field must be ABSENT (undefined) on the action" , the
+ * The `null` sentinel means "this field must be ABSENT (undefined) on the action" – the
  * minimal, precise way to select a PLAIN turn from a family that adds discriminating fields.
  * E.g. `{kind:"invoke-role", role:"driver", buildMode:null, ac:null}` matches the default
  * story-loop driver GREEN turn but NOT a refactor/repair (buildMode present) or per-AC
@@ -334,7 +334,7 @@ export function manifestForAction(
   if (hits.length > 1) {
     const ids = hits.map((m) => m.id).join(", ");
     throw new Error(
-      `step-manifest: ambiguous match , ${hits.length} manifests match action ${JSON.stringify(action)}: ${ids}. Each action must map to exactly one manifest; tighten a match.`,
+      `step-manifest: ambiguous match – ${hits.length} manifests match action ${JSON.stringify(action)}: ${ids}. Each action must map to exactly one manifest; tighten a match.`,
     );
   }
   return hits[0];

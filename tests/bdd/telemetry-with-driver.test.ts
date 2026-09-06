@@ -219,9 +219,9 @@ describe("withTelemetry over the driver loop", () => {
     const root = spans.filter(isRunSpan)[0] as RunSpan;
     // A went through the executor (defined route, NOT perform); B fell through to
     // perform; `done` is the terminal perform (no span). cut-experiment must NOT
-    // reach perform , that is the whole point of the executor path.
+    // reach perform – that is the whole point of the executor path.
     expect(performedKinds).toEqual(["prepare-pr", "done"]);
-    // EXACTLY one span per action , B is NOT double-counted.
+    // EXACTLY one span per action – B is NOT double-counted.
     expect(children.map((c) => c.gate)).toEqual(["cut-experiment", "prepare-pr"]);
     expect(children).toHaveLength(2);
     expect(children.filter((c) => c.gate === "prepare-pr")).toHaveLength(1);
@@ -400,7 +400,7 @@ describe("withTelemetry over the driver loop", () => {
     expect(payload.resource.level).toBe(1);
     expect(payload.spans.some(isTurnSpan)).toBe(false);
     const root = payload.spans.filter(isRunSpan)[0] as RunSpan;
-    // Loop/repair counts are now L1 (aggregate health) , present even on a level-1 run.
+    // Loop/repair counts are now L1 (aggregate health) – present even on a level-1 run.
     expect(typeof root.red_green_cycles).toBe("number");
     expect(typeof root.hil_escalations).toBe("number");
     // Project shape + the per-turn spans stay Level-2 only.

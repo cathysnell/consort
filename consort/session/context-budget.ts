@@ -41,7 +41,7 @@ export function requiredFreeFraction(env: NodeJS.ProcessEnv = process.env): numb
  * / REVIEW / REFACTOR. The REACTIVE guard is the backstop: `resumeFitsBudget`
  * starts a turn FRESH when the prior context would not leave the required free
  * window fraction, and the mid-turn prompt-too-long retry catches a turn that
- * balloons anyway , so context growth stays bounded without paying the fresh-start
+ * balloons anyway – so context growth stays bounded without paying the fresh-start
  * tax on every turn. Set `LAKEBASE_CONSORT_HEAVY_ROLES=driver,navigator` (or any
  * comma list) to restore the proactive always-FRESH cap for those roles.
  */
@@ -95,7 +95,7 @@ export function resumeFitsBudget(
  * Signatures claude emits when a SINGLE turn overflows the model context window
  * (it ballooned within the turn, the failure the resume-time guard above cannot
  * pre-empt). The driver scans a failed turn's output for these and, when matched,
- * retries the turn on a FRESH session instead of aborting the drive , the
+ * retries the turn on a FRESH session instead of aborting the drive – the
  * on-disk artifacts a failed attempt already wrote persist, so the retry resumes
  * from them with a clean context.
  */
@@ -110,7 +110,7 @@ export function isPromptTooLongSignal(line: string): boolean {
 /**
  * TRANSIENT infrastructure failures: the API dropped the connection mid-stream,
  * was overloaded, rate-limited, or returned a 5xx / network error. These are NOT
- * the agent's fault and NOT a workflow problem , the same turn re-run a moment
+ * the agent's fault and NOT a workflow problem – the same turn re-run a moment
  * later usually succeeds. A long unattended capture must not hard-halt on one
  * blip (an expired auth session is deliberately EXCLUDED: it needs a human
  * /login, so retrying is futile and it should surface). The driver retries a

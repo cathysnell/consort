@@ -21,7 +21,7 @@ const F = "F6";
 const S = "S3";
 const AC = "AC1-split-fields-shown";
 
-/** Seed a conventions.json (the LAYOUT source) directly , same shape the effects suite uses. */
+/** Seed a conventions.json (the LAYOUT source) directly – same shape the effects suite uses. */
 function seedConventions(): void {
   mkdirSync(join(tdd, "architecture"), { recursive: true });
   writeFileSync(

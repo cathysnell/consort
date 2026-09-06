@@ -1,4 +1,4 @@
-// P0.1: the run-config snapshot , the model + option matrix written once per
+// P0.1: the run-config snapshot – the model + option matrix written once per
 // driver run so timing reports are self-describing and A/B-comparable. These
 // pin: buildRunConfig resolves the matrix (models + the perf knobs + kit ref);
 // writeRunConfig persists to .tdd/run-config.json and mirrors to the corpus root

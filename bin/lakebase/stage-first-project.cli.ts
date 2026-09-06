@@ -48,7 +48,7 @@ export interface StageResult {
 
 /**
  * Copy the bundled first-project seed into <projectDir>/.consort/. Returns what was
- * staged. Throws only if the seed itself is missing (a packaging fault) , the callers
+ * staged. Throws only if the seed itself is missing (a packaging fault) – the callers
  * (bin + start.md) surface that clearly rather than half-staging silently.
  */
 export function stageFirstProject(opts: { projectDir?: string; seedDir?: string } = {}): StageResult {

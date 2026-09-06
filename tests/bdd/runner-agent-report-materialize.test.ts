@@ -7,8 +7,8 @@
 //   2. the runner's recordRetry was unbounded ({sanctioned:true} always), so that blocked
 //      loop re-spawned FOREVER (9x to timeout live). Fix: a chain-shared retry budget that
 //      THROWS past MAX_STEP_RETRIES.
-// These run hermetically with a mock agent that reports via its final text , no cloud, no
-// spawn , and would have caught the live failure.
+// These run hermetically with a mock agent that reports via its final text – no cloud, no
+// spawn – and would have caught the live failure.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync } from "fs";
@@ -27,7 +27,7 @@ afterEach(() => rmSync(ws, { recursive: true, force: true }));
 const SPEC_AUTHOR: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" };
 const GOOD_SPEC = JSON.stringify({ id: "F1-x", name: "Feature X", status: "draft", tdd_mode: "N=1", stories: ["S1-a"] }) + "\n";
 
-/** A mock agent whose lastResult.finalText carries a fenced agent-report block , exactly the
+/** A mock agent whose lastResult.finalText carries a fenced agent-report block – exactly the
  *  live claude path. It writes ONLY feature-spec.json; the agent-log is the orchestrator's to
  *  materialize from the report (the agent never writes agent-log.jsonl). */
 function reportingAgent(reportBlock: string, opts: { writeSpec?: boolean } = {}): StepAgent & { lastResult?: { finalText?: string } } {
@@ -69,7 +69,7 @@ function deps(agent: StepAgent): ManifestRunnerDeps {
 describe("runner: orchestrator-materialized agent-log counts as produced (no false blocked loop)", () => {
   const goodReport = "```agent-report\n" + JSON.stringify([{ level: "info", event: "artifact.written", message: "wrote feature-spec.json + 1 story" }]) + "\n```";
 
-  it("a clean turn produces feature-spec + a materialized agent-log , NO violation, routes to design-complete", async () => {
+  it("a clean turn produces feature-spec + a materialized agent-log – NO violation, routes to design-complete", async () => {
     const res = await runManifestStep(SPEC_AUTHOR, [specAuthorManifest()], deps(reportingAgent(goodReport)));
     expect(res.violations, `unexpected violations: ${res.violations.join("; ")}`).toEqual([]);
     // the agent wrote the spec; the ORCHESTRATOR materialized the log from the report.
@@ -88,7 +88,7 @@ describe("runner: orchestrator-materialized agent-log counts as produced (no fal
       async invoke(inv) { invocations++; await agent.invoke(inv); counting.lastResult = agent.lastResult; },
     };
     const turns = await runManifestChain(SPEC_AUTHOR, [specAuthorManifest()], deps(counting));
-    expect(invocations).toBe(1);           // exactly one spawn , the live bug spawned 9
+    expect(invocations).toBe(1);           // exactly one spawn – the live bug spawned 9
     expect(turns).toHaveLength(1);
     expect(turns[0].result.violations).toEqual([]);
   });
@@ -96,7 +96,7 @@ describe("runner: orchestrator-materialized agent-log counts as produced (no fal
   it("materializes the agent-log at the DECLARED nested path (outputPaths remap), not the workspace root", async () => {
     // The exact live-run bug: provisionWorkspace remaps agent-log -> .sftdd/agent-log.jsonl
     // (a real spec-author turn nests its outputs). The formatter must write THERE, not at the
-    // workspace root, or validate-outputs looks under .sftdd/ , misses it , and wrongly blocks.
+    // workspace root, or validate-outputs looks under .sftdd/ – misses it – and wrongly blocks.
     const SPEC_REL = ".sftdd/features/F1-x/feature-spec.json";
     const LOG_REL = ".sftdd/agent-log.jsonl";
     const nestedAgent = reportingAgent(goodReport, { writeSpec: false });
@@ -123,7 +123,7 @@ describe("runner: orchestrator-materialized agent-log counts as produced (no fal
     expect(res.bounded.action).toEqual({ kind: "design-complete" });
   });
 
-  it("a PERSISTENTLY failing step aborts after the retry budget , does NOT re-spawn forever", async () => {
+  it("a PERSISTENTLY failing step aborts after the retry budget – does NOT re-spawn forever", async () => {
     // Agent reports nothing usable (no agent-report block) => agent-log never materializes =>
     // validation fails => blocked. The chain must THROW after the bounded retry, not loop.
     let invocations = 0;
@@ -131,7 +131,7 @@ describe("runner: orchestrator-materialized agent-log counts as produced (no fal
       async invoke(inv) { invocations++; writeFileSync(join(inv.workspaceDir, "feature-spec.json"), GOOD_SPEC); badAgent.lastResult = { finalText: "no report block here" }; },
     };
     await expect(runManifestChain(SPEC_AUTHOR, [specAuthorManifest()], deps(badAgent))).rejects.toThrow(/retry budget|blocked/i);
-    // bounded: the initial turn + one sanctioned retry, then abort , NOT unbounded.
+    // bounded: the initial turn + one sanctioned retry, then abort – NOT unbounded.
     expect(invocations).toBeLessThanOrEqual(2);
   });
 });

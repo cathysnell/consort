@@ -266,7 +266,7 @@ export function diskArtifactProbe(
       // the feature architecture.json already exists (an earlier story's architect
       // authored it, with its feature-specific layers/invariants), the project
       // canon is established, and the story is NOT novel (every AC maps onto a
-      // known canon layer). Otherwise the architect is dispatched , to author
+      // known canon layer). Otherwise the architect is dispatched – to author
       // architecture.json on the feature's first story, or clean a novel story +
       // amend the canon. An AC missing its layer is not projectable (nothing to
       // anchor a note on), so it also dispatches.
@@ -459,7 +459,7 @@ export function diskArtifactProbe(
         const story = e.story_id ?? buildActive ?? undefined;
         // Build-level self-heal: a refactor-fixable build smell (layering-violation,
         // ux-adherence, import-time-build-coupling) whose owning story/AC ALREADY has
-        // a refactor pending is NOT a terminal halt , the Driver's refactor turn is
+        // a refactor pending is NOT a terminal halt – the Driver's refactor turn is
         // the remediation the Navigator's REVIEW just prescribed. Suppress the
         // escalation so the build dispatches that refactor instead of raising to
         // HIL. refactorStory/refactorAc preserves behavior + resolves the smell; if
@@ -492,7 +492,7 @@ export function diskArtifactProbe(
           // findings needs several re-designs (each full design re-run co-heals
           // the findings currently open, then the critic may reveal a NEW one). A
           // re-design is allowed as long as (a) we are under REFLECT_REVISE_CAP and
-          // (b) the PRIOR revise actually changed the test-list , real progress.
+          // (b) the PRIOR revise actually changed the test-list – real progress.
           // A revise that produced NO change (the strategist is stuck, re-emitting
           // the same list) hard-halts instead of looping. Other spec smells keep
           // their simple per-(smell,story) budget.

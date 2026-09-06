@@ -12,7 +12,7 @@ type BuildFamily = "red" | "green" | "review" | "refactor" | "assess" | "repair"
 
 /** Parse a recorded-build turn dir label (`<NNN>-<role>[-<mode>][-<ac...>]`) into its role + the
  *  BuildTurn family, faithful to labelForAction + turnKeyForAction. Returns null when the leading
- *  token is not a build role (navigator/driver) , i.e. not a build turn at all. */
+ *  token is not a build role (navigator/driver) – i.e. not a build turn at all. */
 export function parseBuildTurnLabel(dirName: string): { role: string; family: BuildFamily | undefined } | null {
   const withoutOrdinal = dirName.replace(/^\d+-/, "");
   const tokens = withoutOrdinal.split("-");

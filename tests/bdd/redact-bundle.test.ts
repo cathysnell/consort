@@ -37,6 +37,6 @@ describe("redactSecrets", () => {
     const clean = "relation \"stock_levels\" does not exist";
     expect(redactSecrets(clean)).toBe(clean);
     const once = redactSecrets("postgresql://u:tok@h/db");
-    expect(redactSecrets(once)).toBe(once); // idempotent , re-redacting a masked value is a no-op
+    expect(redactSecrets(once)).toBe(once); // idempotent – re-redacting a masked value is a no-op
   });
 });

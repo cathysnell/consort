@@ -2,7 +2,7 @@
 //
 // When a SPEC-level blocking smell still has its one-revise-per-(smell,story)
 // budget, the driver (orchestrator-drive `revise-route`) sends the story back to
-// its owning author and resumes , instead of hard-halting to the HIL. That
+// its owning author and resumes – instead of hard-halting to the HIL. That
 // circle-back is a pure workflow transition over pipeline.json + the design
 // artifacts, so it lives here in the state-machine layer, NOT in the smoke-only
 // Human Proxy. The Human Proxy (or a real human) only makes the yes/no gate
@@ -13,7 +13,7 @@
 // via reviseStory (discard the experiment, reopen the gate, free the lane), (3)
 // STALE the owning author's artifact + deliver the verdict as a smell-aware
 // hand-back brief so the author actually RE-AUTHORS (without this the design lane
-// re-approves the identical artifact and the same smell re-fires , the revise
+// re-approves the identical artifact and the same smell re-fires – the revise
 // heals nothing), and (4) resolve the smell as `revised`, spending the budget so
 // a second escape of the SAME smell on the SAME story hard-halts.
 
@@ -200,7 +200,7 @@ export function applyReviseSelfHeal(args: ReviseSelfHealArgs): ReviseSelfHealRes
   // design lane regenerates a same-id test-list those cycles re-match and the
   // story reads allGreen, so the drive skips RED/GREEN straight back to deploy and
   // re-fails on the same stale build. Clearing the cycles makes it genuinely
-  // re-drive , the SAME reset the `experiment discard --revise` door already does.
+  // re-drive – the SAME reset the `experiment discard --revise` door already does.
   resetStoryBuildState(consortDir, args.featureId, args.story);
 
   // 2b. Force the owning author to actually RE-AUTHOR: stale its artifact so the
@@ -364,7 +364,7 @@ export interface RebuildStoryResult {
  * otherwise make the re-drive skip the build or immediately re-halt:
  *   1. the build cycle records + test-list statuses (resetStoryBuildState), so the
  *      story reads pending again and the lane re-runs RED/GREEN;
- *   2. the story's explicit HIL escalation files AND its blocking smells , the two
+ *   2. the story's explicit HIL escalation files AND its blocking smells – the two
  *      escalation sources, either of which alone would pin it back to raise-to-hil;
  *   3. the prior experiment record (-> discarded), so the drive re-cuts a FRESH
  *      experiment branch (with --reset-stale-branch) instead of reusing the

@@ -47,7 +47,7 @@ const markUiProject = (): void => {
 };
 
 /** Mark the project a NON-UI project explicitly (uiTrack defaults ON, so a no-frontend
- *  project must opt out via its config , the single source). */
+ *  project must opt out via its config – the single source). */
 const markNonUiProject = (): void => {
   mkdirSync(join(proj, ".lakebase"), { recursive: true });
   writeFileSync(

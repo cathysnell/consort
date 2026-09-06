@@ -1,7 +1,7 @@
 // The diagnostic-bundle source resolver (consort-diagnose). Given a project's
 // .consort/, it must enumerate the LOCAL forensic artifacts that troubleshoot a
-// failure , every escalation, every cycle's green-failure.json, plus the run-context
-// logs/state , and mark which exist. Only existing sources are collected.
+// failure – every escalation, every cycle's green-failure.json, plus the run-context
+// logs/state – and mark which exist. Only existing sources are collected.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";

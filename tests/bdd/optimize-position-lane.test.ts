@@ -3,7 +3,7 @@
 // (design: project-architect-notes / surface-gate / approve-gate; build: dispatch /
 // cut-experiment) to advance, and returns the next ROLE turn in that lane, or null
 // at the lane boundary (design-complete / left the lane). The reflect critic turn
-// is a role turn but not swept , the caller (defaultLaneCandidates) returns
+// is a role turn but not swept – the caller (defaultLaneCandidates) returns
 // baseline-only for it, so it is still "positioned on" and passes through as a
 // (trivial) sweep. Plan + perform injected -> hermetic.
 

@@ -31,7 +31,7 @@ describe("storyDesignFingerprint", () => {
     expect(storyDesignFingerprint(tdd, F, S)).toBeUndefined();
   });
 
-  it("is deterministic , the same design hashes to the same fingerprint", () => {
+  it("is deterministic – the same design hashes to the same fingerprint", () => {
     writeTestList([{ id: "T1", ac_id: "AC1", description: "a" }]);
     const first = storyDesignFingerprint(tdd, F, S);
     const second = storyDesignFingerprint(tdd, F, S);
@@ -47,7 +47,7 @@ describe("storyDesignFingerprint", () => {
     expect(pretty).toBe(compact);
   });
 
-  it("CHANGES when the design (test-list content) is re-authored , the redesign signal", () => {
+  it("CHANGES when the design (test-list content) is re-authored – the redesign signal", () => {
     writeTestList([{ id: "T1", ac_id: "AC1", description: "reject unknown SKU" }]);
     const before = storyDesignFingerprint(tdd, F, S);
     // A genuine redesign: different tests (the T32/T42.. -> T45.. supersession the bug hit).

@@ -35,7 +35,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-canon-notes , project a story's per-AC architectural_notes from the canon\n\n` +
+    `consort-canon-notes – project a story's per-AC architectural_notes from the canon\n\n` +
       `Usage:\n` +
       `  consort-canon-notes --feature <F> --story <S> [--tdd-dir <path>]\n`,
   );
@@ -52,7 +52,7 @@ const consortDir = p.consortDir ?? resolveConsortDir();
 
 // FAIL-TOWARD-PROJECTION with a reactive fallback: if the canon does NOT cover the
 // story (an AC layer / architecture dimension it has not seen), do NOT write a
-// blind note , raise the architect-canon-gap smell (spec-level, architect-owned).
+// blind note – raise the architect-canon-gap smell (spec-level, architect-owned).
 // The escalation machinery routes it to the architect (re-annotate + amend the
 // canon) via revise-routing, bounded to one revise then HITL. Otherwise project.
 const coverage = evaluateStoryCanon(consortDir, p.feature, p.story);

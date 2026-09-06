@@ -1,16 +1,16 @@
-// Shared support for the GATED driver-GREEN LIVE build check , the CLOUD sibling of build-support.ts
+// Shared support for the GATED driver-GREEN LIVE build check – the CLOUD sibling of build-support.ts
 // (which runs the LEAN navigator turns with no cloud). A driver GREEN writes product code that must
 // pass honest-GREEN (alembic upgrade + the project's tests against a live Lakebase branch), so it
-// CANNOT run lean , it needs a scaffolded project + a real experiment branch.
+// CANNOT run lean – it needs a scaffolded project + a real experiment branch.
 //
 // CONFIG-DRIVEN + built on the EXISTING orchestration machinery (no bespoke createProject/teardown,
 // no hand-picked profile):
 //   - the workspace host comes from the check's OWN run-config.json (driver-green-setup/run-config.json)
-//     read by loadRunConfig , its databricksHost is `${DATABRICKS_HOST:-…ecparr…}`, so the ecparr
+//     read by loadRunConfig – its databricksHost is `${DATABRICKS_HOST:-…ecparr…}`, so the ecparr
 //     default lives IN CONFIG and any operator overrides via DATABRICKS_HOST (run-all-live-tests.sh
 //     sets it from --profile). NO `databricks auth env` guessing here.
 //   - setup + teardown are the CATALOGUED lifecycle ops scaffold-project / remove-project
-//     (lifecycle-catalogue.ts) , the SAME never-leaking create + teardown the stockflow demo uses.
+//     (lifecycle-catalogue.ts) – the SAME never-leaking create + teardown the stockflow demo uses.
 //     We invoke them via catalogueLifecycleDeps, threading the scaffold handle into teardown.
 //   - BETWEEN scaffold and teardown we seed the pre-GREEN state from the self-contained SETUP BUNDLE
 //     (driver-green-setup/) and run ONE real driver GREEN on the uncontained live executor
@@ -18,7 +18,7 @@
 //     is uncontained (execRunner), so the turn runs on the proven runDriver path between the
 //     catalogued lifecycle ops rather than as a contained chain step.
 //
-// THE SETUP BUNDLE (self-contained, driver-green-setup/ , NO reach into the moving evaluation corpus):
+// THE SETUP BUNDLE (self-contained, driver-green-setup/ – NO reach into the moving evaluation corpus):
 //   - code-assets/ : the POST-RED F6/S3 app tree (app/ + alembic + client + the authored RED tests),
 //     overlaid onto the scaffold. POST-RED so the driver GREEN has a REAL failing test to pass.
 //   - design/ : architecture/db-design/test-list/AC + conventions the driver's context pack reads.
@@ -64,7 +64,7 @@ export const KIT = process.cwd();
 
 /** Runner-independent assertion. This module is imported BOTH by the vitest live test AND by the
  *  standalone optimize-role CLI (the driver-green sweep), so it must NOT import `expect` from vitest
- *  , that pulls in the test-runner's worker state and throws at import time outside a vitest run. A
+ *  – that pulls in the test-runner's worker state and throws at import time outside a vitest run. A
  *  local throw-on-false gives the same fail-loud behavior in both contexts. */
 class DriverGreenAssertionError extends Error {}
 function assert(cond: unknown, message: string): asserts cond {
@@ -76,7 +76,7 @@ function assertGt(actual: number, floor: number, message: string): void {
 function assertEq<T>(actual: T, expected: T, message: string): void {
   assert(actual === expected, `${message} (expected ${String(expected)}, got ${String(actual)})`);
 }
-/** The SELF-CONTAINED setup bundle for this check , NO reach into the moving evaluation corpus. All
+/** The SELF-CONTAINED setup bundle for this check – NO reach into the moving evaluation corpus. All
  *  pre-step assets live under here (see driver-green-setup/README.md), including its run-config.json. */
 const SETUP_DIR = join(KIT, "tests/integration/live/driver-green-setup");
 const RUN_CONFIG_PATH = join(SETUP_DIR, "driver-green.run.json");
@@ -85,7 +85,7 @@ const RUN_CONFIG_PATH = join(SETUP_DIR, "driver-green.run.json");
  *  experiment runs the turn on what the corpus recorded (per-role models, ui_track, loop granularity,
  *  deploy target, session scope, batch cap, gates, review effort), then a candidate's LEVERS override
  *  specific settings to test a perturbation. Read via the COMMON readRunConfig (the same reader the drive
- *  uses) into the COMMON RunConfig type , no bespoke resolver, no inverse mapper: the snapshot already
+ *  uses) into the COMMON RunConfig type – no bespoke resolver, no inverse mapper: the snapshot already
  *  holds the RESOLVED values, so we read them, never re-derive them. */
 function corpusRunConfig(): RunConfig {
   const rc = readRunConfig(SETUP_DIR);
@@ -124,21 +124,21 @@ function bundleFromDir(dir: string, feature: string, story: string, ac: string):
 }
 
 /** The recorded corpus root (the source of truth for replay experiments). Defaults to stockflow-full;
- *  LAKEBASE_SFTDD_CORPUS_DIR (absolute or KIT-relative) selects a different corpus , e.g. the pre-consort-
+ *  LAKEBASE_SFTDD_CORPUS_DIR (absolute or KIT-relative) selects a different corpus – e.g. the pre-consort-
  *  bearing stockflow-optimization-study, so a replay exercises the pre-consort prefer-path. */
 export const CORPUS_DIR = process.env.LAKEBASE_SFTDD_CORPUS_DIR
   ? (process.env.LAKEBASE_SFTDD_CORPUS_DIR.startsWith("/") ? process.env.LAKEBASE_SFTDD_CORPUS_DIR : join(KIT, process.env.LAKEBASE_SFTDD_CORPUS_DIR))
   : join(KIT, "examples/replay/corpora/stockflow-full");
 export const CORPUS_TURNS = join(CORPUS_DIR, "turns");
 export const CORPUS_RA = join(CORPUS_DIR, "recorded-artifacts");
-/** The feature the shipped lean chain manifests bake into their paths , the token generateLeanReplayManifest
+/** The feature the shipped lean chain manifests bake into their paths – the token generateLeanReplayManifest
  *  swaps for the replayed turn's actual feature (a no-op when they match, e.g. an F6 turn). */
 const BUILD_FEATURE_TEMPLATE = "F6-split-tracking-code";
 
 /** Build a bundle from an actual CORPUS turn: the pre-turn CODE is the recorded pre-project, the design
  *  artifacts are the corpus recorded-artifacts, and the recorded prompt/levers ride along (replay). This
  *  is how an optimization experiment holds the recorded preconditions constant and perturbs only a lever
- *  , see [[feedback_experiments_replay_corpus_preconditions]]. `turnLabel` = the corpus turn dir name. */
+ *  – see [[feedback_experiments_replay_corpus_preconditions]]. `turnLabel` = the corpus turn dir name. */
 export function replayBundleFromTurn(turnLabel: string, ac: string): DriverGreenBundle {
   const rs = readReplaySet(join(CORPUS_TURNS, turnLabel));
   const feature = String((rs.action as { feature?: string }).feature ?? deriveFeatureForStory(rs.story ?? ""));
@@ -155,14 +155,14 @@ export function replayBundleFromTurn(turnLabel: string, ac: string): DriverGreen
   };
 }
 
-/** The default REPLAY bundle per driver-turn kind , the actual corpus turn for the F6-S3 read-UI story
+/** The default REPLAY bundle per driver-turn kind – the actual corpus turn for the F6-S3 read-UI story
  *  (0156 green / 0158 repair / 0160 refactor). The AC identifies the story's primary AC for the artifact
  *  copy; the recorded per-story test-list covers the whole story regardless. */
 function replayBundleForTurn(driverTurn: "green" | "repair" | "refactor"): DriverGreenBundle {
   // Each driver turn kind has a recorded DEFAULT corpus turn whose replay-set is the full pre-state
   // (prompt + pre-project code) and whose recorded .consort + inputs are the pre-turn CYCLE state; the
   // `.consort` tree comes from layReplayPreconditions/recorded-artifacts (no driver turn snapshots it into
-  // pre-project). NOTHING needs reconstructing , every turn has pre + post recorded:
+  // pre-project). NOTHING needs reconstructing – every turn has pre + post recorded:
   //   GREEN    : design done + open RED (0156-driver).
   //   REPAIR   : the assessed green-failure + the navigator's fixDirective, recorded as
   //              replay-set/inputs/regression-assessment (0037-driver-repair).
@@ -193,7 +193,7 @@ function deriveFeatureForStory(story: string): string {
 }
 
 /** The DEFAULT setup bundle (S3-stock-shows-split-fields, the read-UI turn). A sweep can override it
- *  (opts.bundle) to target another pinned turn , e.g. the S2-drop-combined-code MIGRATION thrasher. */
+ *  (opts.bundle) to target another pinned turn – e.g. the S2-drop-combined-code MIGRATION thrasher. */
 export const DRIVER_GREEN_BUNDLE: DriverGreenBundle = bundleFromDir(
   SETUP_DIR,
   "F6-split-tracking-code",
@@ -228,11 +228,11 @@ function hasSourceFile(dir: string): boolean {
  *  run-tests.sh / alembic env / Makefile (the package preconditions honest-GREEN needs).
  *  The artifact-root segment is DERIVED from the caller's resolved `consortDir` (relative to
  *  projectDir), so the bundle lands in the EXACT dir the reads (storyTestProgress, beginNextPendingBatch)
- *  use , no re-derivation, no path string to drift from what the caller already resolved. */
+ *  use – no re-derivation, no path string to drift from what the caller already resolved. */
 /** Lay a corpus turn's REPLAY preconditions: the recorded design system + the recorded pre-project code
  *  tree + the recorded-artifacts build inputs (architecture/db-design/conventions/story.json + acs/ + the
  *  recorded per-story test-list + the narrative .md the prompt cites). This is the SHARED preconditions
- *  primitive BOTH substrates use , the cloud driver AND the lean navigator/design turns , so every
+ *  primitive BOTH substrates use – the cloud driver AND the lean navigator/design turns – so every
  *  optimization experiment replays the SAME recorded state off ONE function (no per-lane seed). The turn's
  *  recorded prompt drives it separately via cfg.instructionsOverride; cloud-only routing (pipeline/cut-
  *  experiment/Lakebase) is layered by the cloud runner AFTER this. */
@@ -244,7 +244,7 @@ export function layReplayPreconditions(
   const artifactRel = relative(projectDir, consortDir);
   const featureRel = join(artifactRel, "features", spec.feature);
   const storyRel = join(featureRel, "stories", spec.story);
-  // Design system , satisfies the ux-designer gate (uiTrack && breakdownDone && !designGuideReady); UI
+  // Design system – satisfies the ux-designer gate (uiTrack && breakdownDone && !designGuideReady); UI
   // stories build to it. Feature-agnostic project design system.
   overlayBundle(projectDir, { trees: [{ from: spec.designDir, to: join(artifactRel, "design") }] });
   // Pre-turn CODE = recorded pre-project (the exact tree the agent ran against); build-input artifacts =
@@ -275,7 +275,7 @@ export function layReplayPreconditions(
 }
 
 /** The LEAN substrate runner: replay a NON-driver corpus turn (navigator / design role) from its recorded
- *  replay-set , no Lakebase, no honest-GREEN. It runs the SAME shared machinery as everything else: a
+ *  replay-set – no Lakebase, no honest-GREEN. It runs the SAME shared machinery as everything else: a
  *  throwaway workspace seeded by layReplayPreconditions (the recorded pre-turn state), the recorded
  *  prompt.txt as the turn's base body (recordedPromptFor → instructionsOverride, phase-2.5 gated), the
  *  swept agent (agentFor from the sweep), and the shared `execute` step-executor via runIntegrationChain.
@@ -286,7 +286,7 @@ export function layReplayPreconditions(
  *  feature/story/ac. The shipped chain manifest is baked to ONE curated story (its `match` +
  *  input/output PATHS), so replaying an ARBITRARY corpus turn needs the story/ac swapped throughout. We
  *  read the live manifest, replace its recorded story/ac (+ feature) tokens with the actual ones, and
- *  write ONLY that manifest to a fresh dir (the seed manifest is intentionally omitted , seedWorkspace
+ *  write ONLY that manifest to a fresh dir (the seed manifest is intentionally omitted – seedWorkspace
  *  lays the pre-turn state instead). Returns the new manifest dir. */
 function generateLeanReplayManifest(chainManifestDir: string, feature: string, story: string, ac: string): string {
   const files = readdirSync(chainManifestDir).filter((f) => f.endsWith(".json"));
@@ -320,7 +320,7 @@ function generateLeanReplayManifest(chainManifestDir: string, feature: string, s
     cfg.allowedTools = Array.from(new Set([...(cfg.allowedTools ?? []), "Bash"]));
   }
   // FAITHFUL RED input: the reference-assets chain manifest sources test-list at FEATURE scope
-  // (feature:.consort/features/F6/test-list.json) + a single curated AC file , both laid by its seed
+  // (feature:.consort/features/F6/test-list.json) + a single curated AC file – both laid by its seed
   // manifest. The REPLAY drops that seed and lays the corpus turn's recorded pre-turn state via
   // layReplayPreconditions, which puts the STORY-level test-list-per-story.json + the story's real acs/ at
   // .consort/features/<feature>/stories/<story>/. resolveInputs strips `feature:`, expands {feature}/{story}
@@ -331,17 +331,17 @@ function generateLeanReplayManifest(chainManifestDir: string, feature: string, s
   // green is driver).
   if (mf.match?.role === "navigator" && mf.match.story && !mf.match.buildMode && !mf.match.ac) {
     mf.inputs = [
-      { id: "test-list", source: "feature:.consort/features/{feature}/stories/{story}/test-list-per-story.json", description: "The story's ordered test list , every item must be covered + faithfully asserted." },
+      { id: "test-list", source: "feature:.consort/features/{feature}/stories/{story}/test-list-per-story.json", description: "The story's ordered test list – every item must be covered + faithfully asserted." },
     ];
   }
-  // Drop the `agent-log` output from the REPLAY manifest , evidence-based, not a shortcut. In the REAL
+  // Drop the `agent-log` output from the REPLAY manifest – evidence-based, not a shortcut. In the REAL
   // drive the agent-log.jsonl is written by the RECORDER from turn events; the recorded navigator prompt
   // (0157) instructs `lk consort-cycle` (write the assess MARKER) but has NO consort-log / agent-log
-  // instruction , the navigator does not author the log, the recorder does. The reference-assets chain's
+  // instruction – the navigator does not author the log, the recorder does. The reference-assets chain's
   // `*LoggedAuthoring` output fits ITS prompt (which asks the agent for a report); it does not fit a
   // faithful replay of a turn whose recorded prompt never asked for one, and the lean substrate has no
-  // recorder. So the replay validates + judges the navigator's ACTUAL output , the assess marker
-  // (assessMarkerWritten stays required) , not a recorder artifact the replayed turn never produced.
+  // recorder. So the replay validates + judges the navigator's ACTUAL output – the assess marker
+  // (assessMarkerWritten stays required) – not a recorder artifact the replayed turn never produced.
   if (Array.isArray(mf.outputs)) mf.outputs = mf.outputs.filter((o) => o.id !== "agent-log");
   liveRaw = JSON.stringify(mf, null, 2);
   const dir = mkdtempSync(join(tmpdir(), "replay-manifest-"));
@@ -358,7 +358,7 @@ export async function runLeanReplayTurn(
   if (!rs) throw new Error("runLeanReplayTurn requires a replay bundle (bundle.replay is unset)");
   // Per-turn manifest generation: the chain's LIVE manifest is baked to ONE curated story/ac (its match +
   // input/output paths). Template it to THIS corpus turn's actual feature/story/ac so an ARBITRARY turn
-  // replays , the SEED manifest is dropped (we seed via seedWorkspace). Written to a throwaway dir.
+  // replays – the SEED manifest is dropped (we seed via seedWorkspace). Written to a throwaway dir.
   const replayManifestDir = generateLeanReplayManifest(manifestDir, bundle.feature, bundle.story, bundle.ac);
   const { turns, producedArtifacts } = await runIntegrationChain({
     manifestDir: replayManifestDir,
@@ -378,7 +378,7 @@ export async function runLeanReplayTurn(
         designDir: bundle.designDir,
       });
       // Lay the PRE-TURN cycle INPUT (green-failure.json = the failed green an assess turn evaluates)
-      // from the corpus turn's recorded .consort , NOT the assess OUTPUT markers (regression-assessment/
+      // from the corpus turn's recorded .consort – NOT the assess OUTPUT markers (regression-assessment/
       // superseded-tests: those are what the candidate produces + the judge's recorded reference). So the
       // assess turn has the failing state it assesses, faithful to the recording. Best-effort (absent for
       // a turn with no failed green).
@@ -389,7 +389,7 @@ export async function runLeanReplayTurn(
         mkdirSync(dstDir, { recursive: true });
         writeFileSync(join(dstDir, "green-failure.json"), readFileSync(gf, "utf8"));
       }
-      // Provide the `lk` shim so the agent logs the way it recorded , `./scripts/lk consort-log ...` (the
+      // Provide the `lk` shim so the agent logs the way it recorded – `./scripts/lk consort-log ...` (the
       // recorded prompt instructs it). The shim resolves the kit via LAKEBASE_KIT_DIR (runIntegrationChain
       // sets it to this kit, which has dist/), so consort-log runs + writes agent-log.jsonl into the
       // workspace .consort. This is why the manifest restores Bash (generateLeanReplayManifest): agent-
@@ -429,10 +429,10 @@ function layBundle(projectDir: string, consortDir: string, driverTurn: "green" |
     });
     // PRE-TURN `.consort` STATE (repair/refactor routing). layReplayPreconditions lays design + code +
     // test-list + acs, but NOT the pre-turn CYCLE state the drive reads to route repair/refactor. The
-    // recorder snapshots the full pre-turn `.consort` STATE into replay-set/pre-consort/ , lay it VERBATIM
+    // recorder snapshots the full pre-turn `.consort` STATE into replay-set/pre-consort/ – lay it VERBATIM
     // (it carries the cycle + review/green-failure/regression markers for every turn kind, no
     // reconstruction). A repair/refactor turn whose recording predates the recorder change has no
-    // pre-consort and can no longer be replayed here , the handroll that used to synthesise this state is
+    // pre-consort and can no longer be replayed here – the handroll that used to synthesise this state is
     // RETIRED (validated by the pre-consort prefer-path against stockflow-optimization-study). Fail loud,
     // pointing at a pre-consort corpus. GREEN needs no pre-consort (its open-RED cycle is opened fresh by
     // beginNextPendingBatch), so it returns without one.
@@ -444,19 +444,19 @@ function layBundle(projectDir: string, consortDir: string, driverTurn: "green" |
     } else if (driverTurn === "repair" || driverTurn === "refactor") {
       throw new Error(
         `${driverTurn} replay requires replay-set/pre-consort/ (the recorder snapshot), absent at ${preConsortDir || "(no turnDir)"}. ` +
-          `This turn's corpus predates the recorder change , replay a pre-consort corpus, e.g. ` +
+          `This turn's corpus predates the recorder change – replay a pre-consort corpus, e.g. ` +
           `LAKEBASE_SFTDD_CORPUS_DIR=examples/replay/corpora/stockflow-optimization-study.`,
       );
     }
     return;
   }
 
-  // ── LEGACY hand-curated seed (SETUP_DIR bundles) , GREEN ONLY. The repair/refactor legacy seeds
+  // ── LEGACY hand-curated seed (SETUP_DIR bundles) – GREEN ONLY. The repair/refactor legacy seeds
   //    (DRIVER_TURN_SEEDS) are retired: repair/refactor replay their pre-turn `.consort` from
   //    replay-set/pre-consort/ (the replay branch above), so a non-replay repair/refactor bundle is
   //    unsupported. Green seeds the post-RED bundle + opens its own cycle via the pipeline. ──
   if (driverTurn !== "green") {
-    throw new Error(`non-replay ${driverTurn} bundles are retired , use a replay bundle whose replay-set carries pre-consort/`);
+    throw new Error(`non-replay ${driverTurn} bundles are retired – use a replay bundle whose replay-set carries pre-consort/`);
   }
   overlayBundle(projectDir, { trees: [{ from: b.designDir, to: join(artifactRel, "design") }] });
   overlayBundle(projectDir, {
@@ -495,7 +495,7 @@ export function resolveDriverGreenRunConfig(): { host: string; scaffoldConfig: R
 /** Context handed to an afterGreen hook: everything needed to judge the driver's produced code (the
  *  live project dir + the bundle's feature + the pin story index) BEFORE teardown removes the tree. */
 export interface DriverGreenContext {
-  /** The scaffolded project dir , the driver's app/ product code lives at its root. */
+  /** The scaffolded project dir – the driver's app/ product code lives at its root. */
   projectDir: string;
   /** The feature the bundle built (F6-split-tracking-code). */
   featureId: string;
@@ -514,7 +514,7 @@ export interface RunDriverGreenOptions {
    *  Must be unique per concurrent candidate. */
   branch?: string;
   /** Per-candidate deploy port. When set, the worktree's deploy-targets.yaml is rewritten so the
-   *  honest-GREEN verify binds + polls THIS port instead of the shared :8000 , the concurrency-safety
+   *  honest-GREEN verify binds + polls THIS port instead of the shared :8000 – the concurrency-safety
    *  fix for --concurrency > 1 (each candidate owns a distinct port, deterministic by index). */
   port?: number;
   /** Override the setup bundle (default S3). Pass DRIVER_GREEN_BUNDLE_S2 to sweep the S2-drop-combined
@@ -546,7 +546,7 @@ export interface RunDriverGreenOptions {
     batchCap?: number;
   };
   /** Which driver turn to exercise (each seeded to its own flagged pre-turn state, then evaluated by the
-   *  navigator turn that follows it): "green" (default , post-RED seed -> driver GREEN -> navigator
+   *  navigator turn that follows it): "green" (default – post-RED seed -> driver GREEN -> navigator
    *  assess), "repair" (post-assess regression seed -> driver REPAIR -> navigator assess), "refactor"
    *  (post-review refactor:true seed -> driver REFACTOR -> navigator review-for-resolution). */
   driverTurn?: "green" | "repair" | "refactor";
@@ -583,11 +583,11 @@ export interface RunDriverGreenResult {
 
 /**
  * The ONE setup routine + live driver-GREEN run + teardown, driven through the EXISTING
- * orchestration lifecycle catalogue + the check's run-config. GATED , the caller (the test file)
+ * orchestration lifecycle catalogue + the check's run-config. GATED – the caller (the test file)
  * only invokes this behind RUN_LIVE_STEP + LAKEBASE_TEST_E2E. Lifecycle bracket:
  *   scaffold-project (catalogue) -> [overlay bundle + cut branch + seed open-RED + live driver GREEN]
  *   -> remove-project (catalogue, finally).
- * An optional afterGreen hook runs against the produced code (before teardown) , the CODE-equivalence
+ * An optional afterGreen hook runs against the produced code (before teardown) – the CODE-equivalence
  * comparison drives this to judge the driver's app/ tree against the pin's recorded-build reference.
  * When leverOverride is provided, only the DRIVER turn's config is patched; navigator and other
  * roles run with their defaults. Returns a RunDriverGreenResult; when options are absent, returns
@@ -599,7 +599,7 @@ export interface RunDriverGreenResult {
 export interface ScaffoldedDriverProject {
   /** The scaffold's project root (.git HEAD is the pristine committed tree each worktree checks out). */
   projectDir: string;
-  /** The shared Lakebase project id , every candidate's branch is cut off it. */
+  /** The shared Lakebase project id – every candidate's branch is cut off it. */
   lakebaseProjectId: string;
   /** The Databricks workspace host. */
   host: string;
@@ -640,7 +640,7 @@ export async function scaffoldDriverGreenProject(): Promise<ScaffoldedDriverProj
   await sweepDriverGreenOrphans();
   const { scaffoldConfig } = resolveDriverGreenRunConfig();
   // The scaffold-project op scaffolds the client only when uiTrack is on. Take uiTrack from the RECORDED
-  // corpus run-config (full-stack => true), not the run-config template's default , so the scaffolded
+  // corpus run-config (full-stack => true), not the run-config template's default – so the scaffolded
   // project + its honest-GREEN verify include the client, matching the recording.
   scaffoldConfig.uiTrack = corpusRunConfig().ui_track;
   const setupCtx: LifecycleRunContext = { workspaceDir: KIT };
@@ -671,24 +671,24 @@ export async function scaffoldDriverGreenProject(): Promise<ScaffoldedDriverProj
 export async function teardownDriverGreenProject(project: ScaffoldedDriverProject): Promise<void> {
   try {
     // remove-project is best-effort (it collects step failures, never throws), so a FAILED Lakebase
-    // delete would otherwise be SILENT , exactly what leaked an orphan project on the Stage-5 run with
+    // delete would otherwise be SILENT – exactly what leaked an orphan project on the Stage-5 run with
     // no teardown line in the log. SURFACE ok:false loudly so the next failure is visible (+ the orphan
-    // sweep below is the safety net that actually reclaims it). Do NOT throw , teardown must not mask a
+    // sweep below is the safety net that actually reclaims it). Do NOT throw – teardown must not mask a
     // sweep result, and the orphan sweep still runs in the finally.
     const res = await catalogueLifecycleDeps.run({ kind: "remove-project", config: {} }, project.teardownCtx);
     if (!res.ok) {
       // eslint-disable-next-line no-console
-      console.log(`[driver-green] ⚠️ remove-project reported failures for ${project.lakebaseProjectId}: ${res.error ?? "unknown"} , confirming below.`);
+      console.log(`[driver-green] ⚠️ remove-project reported failures for ${project.lakebaseProjectId}: ${res.error ?? "unknown"} – confirming below.`);
     }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log(`[driver-green] ⚠️ remove-project THREW for ${project.lakebaseProjectId}: ${e instanceof Error ? e.message : String(e)} , confirming below.`);
+    console.log(`[driver-green] ⚠️ remove-project THREW for ${project.lakebaseProjectId}: ${e instanceof Error ? e.message : String(e)} – confirming below.`);
   } finally {
-    // CONFIRM the Lakebase project is ACTUALLY gone , not just that delete-project returned exit 0.
+    // CONFIRM the Lakebase project is ACTUALLY gone – not just that delete-project returned exit 0.
     // `databricks postgres delete-project` is ASYNC/eventually-consistent: it accepts the request
     // (exit 0 => remove-project reports ok, deletes the local dir), but the project can LINGER
     // (a candidate branch still being torn down, or plain propagation delay). Both Stage-5 runs left a
-    // live dg-live project despite an ok teardown + no error , and the orphan sweep couldn't reclaim it
+    // live dg-live project despite an ok teardown + no error – and the orphan sweep couldn't reclaim it
     // because remove-project had already removed the local dir it keys off. So VERIFY via getProjectInfo
     // and RE-DELETE (using the id+host we hold, no local-dir dependency) until it's confirmed gone.
     await confirmLakebaseProjectDeleted(project.lakebaseProjectId, project.host);
@@ -713,7 +713,7 @@ async function confirmLakebaseProjectDeleted(projectId: string, host: string, at
       try {
         stillThere = (await scm.getProjectInfo({ projectId, host } as never)) !== undefined;
       } catch {
-        stillThere = false; // treat a probe error as "cannot confirm alive" , don't spin
+        stillThere = false; // treat a probe error as "cannot confirm alive" – don't spin
       }
       if (!stillThere) {
         if (i > 1) {
@@ -728,7 +728,7 @@ async function confirmLakebaseProjectDeleted(projectId: string, host: string, at
       await new Promise((r) => setTimeout(r, 3000));
     }
     // eslint-disable-next-line no-console
-    console.log(`[driver-green] ⚠️ ${projectId} STILL present after ${attempts} delete attempts , run the orphan sweep / delete by hand.`);
+    console.log(`[driver-green] ⚠️ ${projectId} STILL present after ${attempts} delete attempts – run the orphan sweep / delete by hand.`);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.log(`[driver-green] confirm-deleted skipped for ${projectId}: ${e instanceof Error ? e.message : String(e)}`);
@@ -827,7 +827,7 @@ export async function runDriverGreenOnScaffold(
     writeFileSync(join(consortDir, "workflow-state.json"), JSON.stringify({ phase: "implementation", phase_feature_id: b.feature }));
     // green: begin the open-RED batch so nextTransition routes to driver GREEN + assert it opened.
     // repair/refactor: the recorded pre-turn cycle markers (overlaid by layBundle) ALREADY carry the
-    // routing state (assessed green-failure + regression / refactor:true review-verdict) , beginning a
+    // routing state (assessed green-failure + regression / refactor:true review-verdict) – beginning a
     // fresh batch would clobber it, so we do NOT re-batch; the drive resumes from the seeded cycles.
     if (driverTurn === "green") {
       beginNextPendingBatch({ consortDir, featureId: b.feature, story: b.story }, { cap: Number.MAX_SAFE_INTEGER });
@@ -852,12 +852,12 @@ export async function runDriverGreenOnScaffold(
     // re-pin here (the whole sweep shares the one scaffold + its single-source cache slot).
 
     // ── DRIVE one real driver GREEN on the uncontained live executor (performViaExecutor). Driver
-    //    tool-scope is WIDER than navigator RED , it needs Bash to run the project's tests.
+    //    tool-scope is WIDER than navigator RED – it needs Bash to run the project's tests.
     //    When leverOverride is provided, patch the driver turn's model/effort/tools. ──
     // EVERY setting the turn runs under comes from the RECORDED corpus run-config (corpusRunConfig, read
-    // via the common readRunConfig into the common RunConfig type) , the snapshot already holds the
+    // via the common readRunConfig into the common RunConfig type) – the snapshot already holds the
     // RESOLVED per-role models + options, so we READ them, never re-derive. A candidate's LEVER then
-    // OVERRIDES specific settings to test a perturbation (?? , so a falsy override like uiTrack:false
+    // OVERRIDES specific settings to test a perturbation (?? – so a falsy override like uiTrack:false
     // wins). This is the ONE path for every optimization experiment: corpus settings, lever overrides.
     const rc = corpusRunConfig();
     const lever = opts.leverOverride;
@@ -893,7 +893,7 @@ export async function runDriverGreenOnScaffold(
       // turn, which the navigator EVAL below pins to opus/high explicitly.)
       effortForTurn: (role) => (role === "driver" && driverEffort ? (driverEffort === "default" ? "" : driverEffort) : ""),
       // REPLAY: drive the TARGET driver turn from the corpus turn's recorded prompt.txt verbatim (the exact
-      // context the agent saw), rehydrated to this worktree , so the recorded context is held constant and
+      // context the agent saw), rehydrated to this worktree – so the recorded context is held constant and
       // the lever is the only perturbation. The navigator EVAL turn that follows returns undefined here, so
       // it derives its determination normally (the discriminator). Context levers append via contextPackSuffix.
       ...(b.replay
@@ -907,7 +907,7 @@ export async function runDriverGreenOnScaffold(
           }
         : {}),
       // CONTEXT-APPEND lever: a candidate's ctxPack (e.g. ["failing-test"]) APPENDS those context blocks
-      // AFTER the (recorded) base body , leverage-what-was-there, never a substitute. Only for the target
+      // AFTER the (recorded) base body – leverage-what-was-there, never a substitute. Only for the target
       // driver turn; the eval turn gets none. This is how ctx-test's marginal effect is measured on top of
       // the recorded prompt (the recorded green prompt carries NO test body, so this adds exactly it).
       ...(lever?.ctxPack && lever.ctxPack.length
@@ -945,13 +945,13 @@ export async function runDriverGreenOnScaffold(
     const result = await runDriver(buildDriveEffects(cfg), { stopWhen: (a: WorkflowAction) => !isTargetDriverTurn(a), maxSteps: 4 });
     const durationMs = Date.now() - startTime;
     // Capture the DRIVER turn's prompt + reasoning + tool trace (peek, before the eval turn overwrites
-    // it) so each experiment preserves what the driver was told + how it reasoned , the new judge can be
+    // it) so each experiment preserves what the driver was told + how it reasoned – the new judge can be
     // re-run against this offline, no re-execution.
-    // Peek BY the candidate's worktree (cwd) , concurrency-safe: a parallel sibling must NOT clobber
+    // Peek BY the candidate's worktree (cwd) – concurrency-safe: a parallel sibling must NOT clobber
     // this candidate's transcript (the driver spawns with cwd=cfg.projectDir=projectDir=wtDir).
     const driverTx = peekLastAgentTranscript(projectDir);
     // The DRIVER turn's usage (cost + tokens + numTurns + duration) + tool-call count, peeked BY cwd
-    // before the eval turn overwrites it , so EVERY experiment run records cost with the consistent
+    // before the eval turn overwrites it – so EVERY experiment run records cost with the consistent
     // TurnUsage attribute set (parity with the design-lane sweep). toolCalls comes from the transcript.
     const driverUsage: TurnUsage | undefined = peekLastAgentUsage(projectDir);
     const driverToolCalls = driverTx?.tools.length;
@@ -962,7 +962,7 @@ export async function runDriverGreenOnScaffold(
     const allGreen = storyProgress.allGreen;
     assert(productCodeExists, "driver wrote product code under app/");
     // SINGLE-TURN measurement: this is ONE driver turn's worth of function, NOT the whole story. We do
-    // NOT require the story to be all-green , that is a MULTI-turn property (a 41-turn story like
+    // NOT require the story to be all-green – that is a MULTI-turn property (a 41-turn story like
     // S2-drop-combined can never green in one bounded turn, and requiring it wrongly DQ'd every
     // candidate). A FAILING green is a valid, scorable turn: it flows to the navigator assess below,
     // and the judge scores that determination SAME/BETTER/WORSE vs the recorded original turn. `allGreen`
@@ -987,27 +987,27 @@ export async function runDriverGreenOnScaffold(
     const producedArtifactsRaw: Record<string, string> = {
       ...snapshotTree(join(projectDir, "app"), projectDir),
       ...snapshotTree(join(projectDir, "tests"), projectDir),
-      // CLIENT surface: on a UI story (uiTrack on , e.g. the S3 read-UI repair), the repair work lands
-      // under client/, so the judge MUST see it , without this the client story was scored blind to its
+      // CLIENT surface: on a UI story (uiTrack on – e.g. the S3 read-UI repair), the repair work lands
+      // under client/, so the judge MUST see it – without this the client story was scored blind to its
       // own code (the confounder that made the driver-repair ladder plateau). Scope to client/src +
       // client/tests ONLY: snapshotTree does not filter, and the whole client/ tree includes
       // node_modules/.vite/dist (thousands of files) which would swamp the produced artifacts + judge.
       ...(cfg.uiTrack ? snapshotTree(join(projectDir, "client", "src"), projectDir) : {}),
       ...(cfg.uiTrack ? snapshotTree(join(projectDir, "client", "tests"), projectDir) : {}),
     };
-    // Drop build junk (compiled bytecode) so the preserved artifacts are source-only , consistent across
+    // Drop build junk (compiled bytecode) so the preserved artifacts are source-only – consistent across
     // candidates + not swamped by machine-specific .pyc noise. snapshotTree does not filter.
     const producedArtifacts: Record<string, string> = Object.fromEntries(
       Object.entries(producedArtifactsRaw).filter(([p]) => !p.includes("__pycache__") && !p.endsWith(".pyc")),
     );
 
-    // ── THE NEXT-STEP NAVIGATOR EVALUATION: after the driver turn, run ONE more live turn , the navigator
+    // ── THE NEXT-STEP NAVIGATOR EVALUATION: after the driver turn, run ONE more live turn – the navigator
     //    ASSESSMENT the drive routes to (assess for a green that tripped the full-suite verify; REVIEW for a
     //    resolved repair/refactor). This is the QUALITY discriminator: the navigator's ACTUAL assessment
     //    (its prompts already gauge code quality) gauges the driver turn's output, and the judge compares
     //    its determination to the RECORDED next-step determination (two-turn review). The navigator runs with
     //    its ACTUAL CONFIGURED model (resolveConsortSettings on the workspace = the applied-winner lever per
-    //    turn: assess=opus, review=sonnet/low, ...), NOT a pinned opus-high , an artificially strong evaluator
+    //    turn: assess=opus, review=sonnet/low, ...), NOT a pinned opus-high – an artificially strong evaluator
     //    was STRICTER than the recorded reviewer and failed correct repairs on smells the recording passed.
     //    The driver lever is untouched (it already ran). Its marker lands in the AC/story cycle dir under the
     //    RESOLVED consortDir; captured below for the judge (evaluateNextStepDetermination). ──
@@ -1017,7 +1017,7 @@ export async function runDriverGreenOnScaffold(
       typeof (a as { buildMode?: unknown }).buildMode === "string" &&
       ["assess", "review", "assess-refactor", "reflect"].includes(String((a as { buildMode?: unknown }).buildMode));
     // ── REFACTOR turn: FORCE a post-refactor RE-REVIEW. The recorded refactor flow routes refactor ->
-    //    acceptance (turn 0040), with NO natural re-review , yet the tuning target for driver-refactor is
+    //    acceptance (turn 0040), with NO natural re-review – yet the tuning target for driver-refactor is
     //    "the refactor completes CLEANLY in this one step" (a clean refactor needs no follow-on refactor
     //    loop). To gauge that, reset the STORY review state to "green, unreviewed" so the drive's
     //    `reviewStoryPending` (allTestsGreen && !reviewed) routes a FRESH navigator review of the just-
@@ -1031,7 +1031,7 @@ export async function runDriverGreenOnScaffold(
       rmSync(join(storyCyc, "review-verdict.json"), { force: true });
     }
     // The navigator eval uses its ACTUAL configured model (the applied-winner lever), resolved from the
-    // workspace config , NOT a pinned opus-high. The driver lever stays untouched.
+    // workspace config – NOT a pinned opus-high. The driver lever stays untouched.
     const evalSettings = resolveConsortSettings({ projectDir });
     const evalCfg: DriveEffectsConfig = {
       ...cfg,
@@ -1040,7 +1040,7 @@ export async function runDriverGreenOnScaffold(
       effortForTurn: (role, turn) => (role === "navigator" ? evalSettings.effortFor("navigator", turn) : cfg.effortForTurn!(role, turn)),
     } as DriveEffectsConfig;
     evalCfg.runner = execRunner(evalCfg);
-    // Run the ONE navigator-eval turn, then STOP , whether the drive hands back to a driver turn (a repair/
+    // Run the ONE navigator-eval turn, then STOP – whether the drive hands back to a driver turn (a repair/
     // refactor whose review still requests refactor) OR ADVANCES past the eval. A CLEAN review (refactor:false)
     // routes to acceptance -> promote (`git checkout production`), which the scaffold has no branch for and
     // would throw + DQ the candidate; we only need the captured review-verdict, so stopping right after the
@@ -1057,7 +1057,7 @@ export async function runDriverGreenOnScaffold(
     const markerDirAbs = cycleDir(consortDir, b.feature, b.story, b.ac);
     const nextStepMarker = snapshotTree(markerDirAbs, markerDirAbs);
     // A next-step REVIEW (the natural route after a RESOLVED repair) writes its verdict at the STORY cycle
-    // dir, not the AC dir , merge review-verdict.json in so the repair-turn discriminator (review) sees it.
+    // dir, not the AC dir – merge review-verdict.json in so the repair-turn discriminator (review) sees it.
     const storyCycleDir = join(consortDir, "cycles", b.feature, b.story);
     const rv = join(storyCycleDir, "review-verdict.json");
     if (existsSync(rv)) nextStepMarker["review-verdict.json"] = readFileSync(rv, "utf8");
@@ -1079,7 +1079,7 @@ export async function runDriverGreenOnScaffold(
     }
 
     // `afterGreen` remains for the standalone equivalence test (which judges + asserts in-hook before
-    // teardown). The SWEEP does NOT use it , it judges via the shared engine's mandatory judgeCandidate.
+    // teardown). The SWEEP does NOT use it – it judges via the shared engine's mandatory judgeCandidate.
     if (opts.afterGreen) await opts.afterGreen({ projectDir, featureId: b.feature, storyIndex: 1 });
 
     // Return the result when called with options (sweep scenario); void when called with defaults (test scenario).
@@ -1099,7 +1099,7 @@ export async function runDriverGreenOnScaffold(
   } finally {
     // ── PER-CANDIDATE TEARDOWN: drop THIS candidate's Lakebase branch (paired delete) + remove its
     //    worktree. The SHARED scaffold (Lakebase project + repo) is torn down once by
-    //    teardownDriverGreenProject. Best-effort , both are also swept at scaffold teardown. ──
+    //    teardownDriverGreenProject. Best-effort – both are also swept at scaffold teardown. ──
     try {
       await deleteExperiment({
         instance: lakebaseProjectId,
@@ -1121,9 +1121,9 @@ export async function runDriverGreenOnScaffold(
 /**
  * The ONE-CALL driver-GREEN live run (backwards-compatible): scaffold a project, run ONE candidate on it,
  * tear the scaffold down. Preserves the single-call full-lifecycle contract the standalone live tests rely
- * on (driver-code-equivalence-live.test.ts, driver-green-executor-dispatch-live.test.ts). GATED , the
+ * on (driver-code-equivalence-live.test.ts, driver-green-executor-dispatch-live.test.ts). GATED – the
  * caller only invokes this behind RUN_LIVE_STEP + LAKEBASE_TEST_E2E. Returns a RunDriverGreenResult when
- * called with options (sweep-shaped), void with defaults. The SWEEP does NOT call this , it scaffolds ONCE
+ * called with options (sweep-shaped), void with defaults. The SWEEP does NOT call this – it scaffolds ONCE
  * and calls runDriverGreenOnScaffold per candidate (share one scaffold across the whole sweep).
  */
 export async function runDriverGreenLive(opts: RunDriverGreenOptions = {}): Promise<RunDriverGreenResult | void> {

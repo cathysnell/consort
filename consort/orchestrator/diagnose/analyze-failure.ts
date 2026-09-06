@@ -1,4 +1,4 @@
-// Analyze a failed run from its LOCAL forensics , the deterministic half of
+// Analyze a failed run from its LOCAL forensics – the deterministic half of
 // `consort-diagnose`. It reads the escalation(s) + every cycle's green-failure.json
 // and classifies the failure, extracts the real reason/assertion, and suggests a
 // remediation the driving session can ATTEMPT (troubleshoot). The session does the
@@ -49,7 +49,7 @@ function remediationFor(cls: FailureClass, source?: string): string {
     case "deploy-verify":
       return (
         "The deploy gate's verify failed serving the app. Most common cause: the served branch DB was not " +
-        "migrated , DB-backed routes 500 with `relation \"...\" does not exist` even though honest-GREEN verify " +
+        "migrated – DB-backed routes 500 with `relation \"...\" does not exist` even though honest-GREEN verify " +
         "(which migrates a disposable child) passed. Check that `deploy-targets.yaml` `local` has a `migrate:` " +
         "command, and that the served branch is on head; also check for a port conflict on the deploy port. " +
         "See the green-failure output below for the exact error."
@@ -68,7 +68,7 @@ function remediationFor(cls: FailureClass, source?: string): string {
       );
     case "protocol":
       return (
-        "A protocol violation , a malformed or missing artifact the driver expected. Check the named artifact " +
+        "A protocol violation – a malformed or missing artifact the driver expected. Check the named artifact " +
         "(often an AC or test-list JSON) is well-formed, then re-run."
       );
     default:

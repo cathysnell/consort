@@ -116,7 +116,7 @@ export function markRefactorVerifyRefactored(consortDir: string, featureId: stri
   fs.writeFileSync(file, JSON.stringify(m, null, 2) + "\n", "utf8");
 }
 
-/** Clear the marker (the re-verify passed , the supersession refactor worked). */
+/** Clear the marker (the re-verify passed – the supersession refactor worked). */
 export function clearRefactorVerifyAssessMarker(consortDir: string, featureId: string, storyId: string): void {
   const file = markerPath(consortDir, featureId, storyId);
   if (file && fs.existsSync(file)) fs.rmSync(file);

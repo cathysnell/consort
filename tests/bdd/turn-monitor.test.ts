@@ -1,9 +1,9 @@
 // turn-monitor: the liveness/timeout capability for a step's dispatch-agent phase. It does
-// NOT own a stream or a child process , it is a small, pure state machine over an injected
+// NOT own a stream or a child process – it is a small, pure state machine over an injected
 // clock, so it is unit-tested with no spawn. The real wiring (feed it spawnClaudeStreaming's
 // per-line events; map its timeout to a transient ClaudeTurnError) is Slice 3. Here we pin
 // the controller: it emits progress, fires a heartbeat after inactivity, and fires a timeout
-// after the hard deadline , and is a total no-op when no monitor is supplied (the
+// after the hard deadline – and is a total no-op when no monitor is supplied (the
 // byte-identical default).
 
 import { describe, it, expect, vi } from "vitest";

@@ -1,5 +1,5 @@
 // P3-prep: positionToBuildHandoff. From the design-complete boundary, the build
-// lane's next actions are SUBSTRATE (dispatch, then cut-experiment , which forks
+// lane's next actions are SUBSTRATE (dispatch, then cut-experiment – which forks
 // the paired branch), NOT role turns. To sweep the first build turn the CLI must
 // auto-PERFORM those substrate actions (the fork is the pre-turn state the snapshot
 // captures) and land ON the first invoke-role build turn (navigator RED). This is

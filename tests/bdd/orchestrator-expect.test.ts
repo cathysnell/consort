@@ -1,6 +1,6 @@
 // The handoff EXPECTATION protocol: every role handoff records the non-null
 // artifact its responder owes, and the queue aborts (ProtocolViolationError)
-// when that artifact is absent/null/empty , the precise, attributed failure
+// when that artifact is absent/null/empty – the precise, attributed failure
 // that replaces a silent re-dispatch / generic stall. The S2 live stall (a
 // test-strategist that left an EMPTY per-story test list) is the canonical case.
 
@@ -106,7 +106,7 @@ describe("expectationFor: each role handoff declares its non-null return contrac
   it("architect-reviewer PLANNING modes (estimate + estimate-committed) expect a t-shirt size, NOT per-AC design notes", () => {
     // Regression (J2 planning drive): estimate-committed is a sprint-scoped PLANNING turn (no story)
     // that writes planning/estimates.json. It must inherit the ESTIMATE expectation (satisfied by
-    // planning.estimated), not the per-story DESIGN expectation , else the ledger fails it right after
+    // planning.estimated), not the per-story DESIGN expectation – else the ledger fails it right after
     // the plan gate (it wrote no ACs) and aborts the planning drive.
     for (const mode of ["estimate", "estimate-committed"]) {
       const exp = expectationFor({ kind: "invoke-role", role: "architect-reviewer", mode } as unknown as WorkflowAction)!;

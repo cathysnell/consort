@@ -1,8 +1,8 @@
 // P2c/P2d optimize-live: the factory that assembles the REAL champion-walk deps
 // (snapshot + runTrial + recordWinner) over the drive, with only the cloud/model
 // LEAVES injected (spawnTurn spawns a role subprocess; forkBranch re-forks a paired
-// branch). Everything else , config write, agent overlay, gate evaluation, state
-// restore , is real, so this validates the full composition HERMETICALLY: a design
+// branch). Everything else – config write, agent overlay, gate evaluation, state
+// restore – is real, so this validates the full composition HERMETICALLY: a design
 // handoff needs no cloud, so with a fake spawnTurn that seeds the artifact + a fake
 // clock, we prove the walk applies each candidate, gates it, keeps the fastest, and
 // restores byte-identically between candidates.
@@ -102,7 +102,7 @@ describe("makeChampionWalkDeps: hermetic DESIGN handoff", () => {
       writeFileSync(join(acDir, "AC1.json"), JSON.stringify({ id: "AC1", layer: "API", given: "g", when: "w", then: "t", status: "draft" }));
     };
     // spawn writes a marker file named for the handoff+candidate, ON TOP of whatever
-    // is already on disk (never wipes) , so a surviving marker proves that winner's
+    // is already on disk (never wipes) – so a surviving marker proves that winner's
     // artifacts persisted. Faster candidate ("fast") wins each handoff.
     const spawn: SpawnTurn = async ({ handoff, candidate }) => {
       seedSpec(); // keep the spec conformant so evaluateDesignGate passes each turn
@@ -119,7 +119,7 @@ describe("makeChampionWalkDeps: hermetic DESIGN handoff", () => {
 
     // H1's WINNER (fast) marker survived through H2's sweep + its winner-restore...
     expect(existsSync(join(fdir, "mark-H1-spec-author-fast.txt"))).toBe(true);
-    // ...and H2's winner (fast) marker is present too , the chain preserved BOTH.
+    // ...and H2's winner (fast) marker is present too – the chain preserved BOTH.
     expect(existsSync(join(fdir, "mark-H2-spec-author-fast.txt"))).toBe(true);
     // The LOSER's marker (baseline) must NOT survive as the winner state (it was a
     // discarded trial, restored away).
@@ -154,10 +154,10 @@ describe("makeChampionWalkDeps: hermetic DESIGN handoff", () => {
 
     const result = await runChampionWalk({ handoffs: [handoff], candidates, trials: 1, alwaysAdvance: true }, deps);
     expect(result.walk[0].winner.candidateId).toBe("fast");
-    // The WINNER's artifacts are on disk , restored from the winning trial, NOT a re-run.
+    // The WINNER's artifacts are on disk – restored from the winning trial, NOT a re-run.
     const spec = JSON.parse(readFileSync(join(consortDir, "features", featureId, "feature-spec.json"), "utf8"));
     expect(spec.by).toBe("fast");
-    // Exactly ONE spawn per candidate (2 total) , recordWinner restored, did NOT re-spawn.
+    // Exactly ONE spawn per candidate (2 total) – recordWinner restored, did NOT re-spawn.
     expect(spawnCount).toBe(2);
   });
 
@@ -260,7 +260,7 @@ describe("makeChampionWalkDeps: hermetic DESIGN handoff", () => {
 
     // The override was live during the haiku-green turn...
     expect(seenConfigs).toContain("haiku");
-    // ...and the on-disk config is back to the baseline after (no green=haiku override left , the
+    // ...and the on-disk config is back to the baseline after (no green=haiku override left – the
     // baseline carries no per-turn model map now, so driver.model is simply absent, which is correct).
     const finalCfg = loadConsortConfig(projectDir);
     const finalModel = finalCfg?.roles?.driver?.model as Record<string, string> | undefined;
@@ -322,7 +322,7 @@ describe("makeLiveSpawnTurn: recording is gated on the `record` flag (only winne
     else process.env[RECORD_ENV] = priorEnv;
   });
 
-  it("does NOT set RECORD_DIR during a trial (record:false) , trials never touch the corpus", async () => {
+  it("does NOT set RECORD_DIR during a trial (record:false) – trials never touch the corpus", async () => {
     delete process.env[RECORD_ENV];
     let seen: string | undefined = "unset-sentinel";
     const spawn = makeLiveSpawnTurn(featureId, seams("/corpus/dir", (v) => (seen = v)) as never);
@@ -330,7 +330,7 @@ describe("makeLiveSpawnTurn: recording is gated on the `record` flag (only winne
     expect(seen).toBeUndefined(); // no record dir visible to the turn
   });
 
-  it("DOES set RECORD_DIR for the winner capture (record:true) , only winners record", async () => {
+  it("DOES set RECORD_DIR for the winner capture (record:true) – only winners record", async () => {
     delete process.env[RECORD_ENV];
     let seen: string | undefined;
     const spawn = makeLiveSpawnTurn(featureId, seams("/corpus/dir", (v) => (seen = v)) as never);
@@ -348,10 +348,10 @@ describe("makeLiveSpawnTurn: recording is gated on the `record` flag (only winne
 
 describe("makeLiveSpawnTurn: dispatches the PINNED turn THROUGH the executor, never re-plans", () => {
   // The wrong-role bug: the spawn used to call planNextAction, which reads CURRENT
-  // disk state and, once the turn's artifact lands, returns the NEXT role , a
+  // disk state and, once the turn's artifact lands, returns the NEXT role – a
   // spec-author sweep then ran a ux-designer turn that flaked + crashed the sweep.
   // Fix (J4): the spawn dispatches handoff.action's OWN turn through the executor
-  // (eff.performViaExecutor) , the SAME primitive the live drive + lean chains use ,
+  // (eff.performViaExecutor) – the SAME primitive the live drive + lean chains use ,
   // so the sweep survives J5's deletion of commandsForAction. It never re-plans, and
   // it IGNORES the returned BoundedRoute (it runs one turn, it does not route).
   const specAuthorAction = { kind: "invoke-role", role: "spec-author", story: "S1" } as never;

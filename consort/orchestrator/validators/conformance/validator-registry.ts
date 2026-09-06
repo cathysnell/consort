@@ -1,7 +1,7 @@
-// validator-registry: the CODE face of a step's outputs , named, deterministic
+// validator-registry: the CODE face of a step's outputs – named, deterministic
 // OutputValidator fns a manifest references BY NAME. The manifest is DATA (it carries the
 // validator name); this registry maps that name to the actual in-code check. A manifest
-// typo (an unknown name) is a HARD failure at resolve time, never a silent skip , the
+// typo (an unknown name) is a HARD failure at resolve time, never a silent skip – the
 // same fail-loud philosophy as MockStepContract's missing-route throw.
 //
 // The validators themselves live here so both the orchestrator (validate-outputs phase) and
@@ -18,7 +18,7 @@ import type { OutputValidator, OutputValidationResult } from "../../steps/step-c
 /**
  * feature-spec validator: the produced feature-spec.json must parse + conform to
  * feature.schema.json AND carry a non-empty stories[] (the breakdown deliverable).
- * Deterministic , the orchestrator ACCEPTS/REJECTS on this, never a follow-up to the agent.
+ * Deterministic – the orchestrator ACCEPTS/REJECTS on this, never a follow-up to the agent.
  */
 export function featureSpecNonEmptyStories(producedPath: string): OutputValidationResult {
   let content: string;
@@ -82,7 +82,7 @@ export function agentLogHasRoleEvent(producedPath: string, role = "spec-author")
 
 /**
  * nonEmptyFile validator: the produced file exists and carries non-whitespace content. The
- * generic "the human/agent actually authored something here" check , used for the PO's
+ * generic "the human/agent actually authored something here" check – used for the PO's
  * seed markdown (product-overview.md / nfrs.md / design-brief.md), where the deliverable is
  * prose, not a schema-validated artifact.
  */
@@ -102,7 +102,7 @@ export function nonEmptyFile(producedPath: string): OutputValidationResult {
 /**
  * design-guide validator: the produced design-guide.json must parse + conform to
  * design-guide.schema.json (the token + component shape the UX Designer emits, which the
- * downstream design-adherence gate checks). Deterministic , the same conformance the response
+ * downstream design-adherence gate checks). Deterministic – the same conformance the response
  * self-check runs. Used for the ux-designer step's output.
  */
 export function designGuideConformant(producedPath: string): OutputValidationResult {
@@ -165,9 +165,9 @@ export function navigatorTestsAuthored(producedPath: string): OutputValidationRe
 
 /**
  * driverCodePresent validator: the Driver's GREEN turn writes PRODUCT code (app/) to make the open
- * RED pass. The deterministic FLOOR is "a non-empty app/ tree exists" , the primary produced-signal
+ * RED pass. The deterministic FLOOR is "a non-empty app/ tree exists" – the primary produced-signal
  * the agent writes IN-TURN (mirrors navigatorTestsAuthored's tests/ floor). The real correctness
- * judgment is NOT this check , it is the post-turn @build-cycle honest-GREEN verify (alembic upgrade
+ * judgment is NOT this check – it is the post-turn @build-cycle honest-GREEN verify (alembic upgrade
  * + the project's test suite against a live branch), which flips codeWritten for the route. This
  * floor just proves the driver produced code so the produced-gate is meaningful (an empty turn is a
  * real defect). producedPath is the app/ dir. Passes iff it holds >=1 source file (.py/.ts/.tsx).
@@ -195,7 +195,7 @@ export function driverCodePresent(producedPath: string): OutputValidationResult 
 
 /**
  * assessMarkerWritten validator: the Navigator's ASSESS turn discriminates the driver's failed
- * GREEN and writes EXACTLY ONE marker into the AC cycle dir , either superseded-tests.json
+ * GREEN and writes EXACTLY ONE marker into the AC cycle dir – either superseded-tests.json
  * {tests,reason} (the AC supersedes prior tests) OR regression-assessment.json {diagnosis,
  * fixDirective?} (a genuine regression). producedPath is the AC cycle dir. Passes iff one is
  * present + well-formed (the ALIGNMENT-vs-oracle judgment is the live test's job, not this floor).
@@ -233,7 +233,7 @@ export function assessMarkerWritten(producedPath: string): OutputValidationResul
 
 /**
  * acsDirConformant validator: the spec-author's per-story output is the `acs/` DIRECTORY (one
- * acs/<AC>.json per acceptance criterion), NOT a fixed filename , the agent names each file after
+ * acs/<AC>.json per acceptance criterion), NOT a fixed filename – the agent names each file after
  * the AC it authors (AC1-file-stock-record.json, ...). producedPath is the acs/ dir (existsSync
  * passes for a dir). The deterministic floor mirrors the legacy verify-artifact (the acs/ dir is
  * non-empty) PLUS the design gate's per-file check: every acs/*.json must conform to ac.json. Used
@@ -269,7 +269,7 @@ export function acsDirConformant(producedPath: string): OutputValidationResult {
  * the first shipped consumer of the optional-output contract (Stage F): the turn writes the file
  * ONLY when it confirms contamination-fragile tests; when it judges the classifier wrong it writes
  * NOTHING (its veto -> the orchestration escalates to a human). So ABSENT is a clean pass (the
- * executor's phase 5 owns that); this validator only runs when the file is PRESENT , and then it
+ * executor's phase 5 owns that); this validator only runs when the file is PRESENT – and then it
  * must be a well-formed scope marker: version 1 + a directives[] array of {node_id, directive}.
  * A present-but-malformed marker is a hard reject (a garbled scope would misdirect the Driver).
  */
@@ -315,7 +315,7 @@ export const designBriefConformant = conformsTo("design-brief.md");
 
 /**
  * The named-validator registry a manifest resolves against. Add an entry here (code) and
- * reference it by name in a manifest (data). Every OutputValidator is (path) => result , the
+ * reference it by name in a manifest (data). Every OutputValidator is (path) => result – the
  * role-parameterized agent-log validator binds its default role so it matches the signature.
  */
 export const VALIDATOR_REGISTRY: Record<string, OutputValidator> = {
@@ -362,7 +362,7 @@ export const VALIDATOR_REGISTRY: Record<string, OutputValidator> = {
 };
 
 /**
- * Resolve a validator name to its fn. THROWS loud on an unknown name , a manifest typo is a
+ * Resolve a validator name to its fn. THROWS loud on an unknown name – a manifest typo is a
  * hard failure surfaced at load/validate time, not a silently-skipped output check.
  */
 export function resolveValidator(name: string): OutputValidator {

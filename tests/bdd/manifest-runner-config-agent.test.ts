@@ -1,5 +1,5 @@
 // The runner resolves each turn's agent FROM the manifest's `agent: {kind, config}` via the
-// agent catalogue , no injected agentFor, no per-script decision. The demo/caller supplies
+// agent catalogue – no injected agentFor, no per-script decision. The demo/caller supplies
 // only the ENV (agentContext: corpusRoot/kitDir) + the shared workspace; WHICH agent each
 // step uses is DATA in the manifest.
 
@@ -25,7 +25,7 @@ afterEach(() => {
 const PO_SEED: WorkflowAction = { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
 const SPEC_AUTHOR: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" };
 
-/** A PO-seed manifest whose agent is a `replay` kind , the agent choice is IN THE MANIFEST. */
+/** A PO-seed manifest whose agent is a `replay` kind – the agent choice is IN THE MANIFEST. */
 function poSeedManifest(): StepManifest {
   return {
     id: "cfg-po-seed",
@@ -46,7 +46,7 @@ function poSeedManifest(): StepManifest {
 }
 
 /** A spec-author manifest whose agent is a `mock` kind (stands in for claude in a hermetic
- *  test) , again, the agent choice is DATA in the manifest, not code. */
+ *  test) – again, the agent choice is DATA in the manifest, not code. */
 function specAuthorManifest(): StepManifest {
   const spec = JSON.stringify({ id: "F1-x", name: "Feature X", status: "draft", tdd_mode: "N=1", stories: ["S1-a"] }) + "\n";
   const log = JSON.stringify({ timestamp: "2026-08-03T12:00:00Z", level: "info", role: "spec-author", event: "artifact.written", message: "wrote feature-spec.json" }) + "\n";
@@ -70,7 +70,7 @@ function deps(): ManifestRunnerDeps {
     workspaceDir: ws,
     cfg: { projectDir: ws, consortDir: join(ws, ".sftdd"), featureId: "F1-x" } as ManifestRunnerDeps["cfg"],
     agentContext: { corpusRoot: corpus, kitDir: process.cwd() },
-    // NOTE: no agentFor , the runner resolves the agent from manifest.agent.
+    // NOTE: no agentFor – the runner resolves the agent from manifest.agent.
   };
 }
 

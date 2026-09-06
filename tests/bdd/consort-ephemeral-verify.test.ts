@@ -34,7 +34,7 @@ describe("ephemeralVerifyBranchName", () => {
 });
 
 describe("withEphemeralVerifyBranch", () => {
-  it("forks a child, hands its DSN to run, and deletes it , in order", async () => {
+  it("forks a child, hands its DSN to run, and deletes it – in order", async () => {
     const calls: string[] = [];
     const result = await withEphemeralVerifyBranch(
       {

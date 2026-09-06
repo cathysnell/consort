@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(tdd, { recursive: true, force: true }));
 
-describe("shippedBecauseLaterFeatureClaimed , the sprint-resume skip fix", () => {
+describe("shippedBecauseLaterFeatureClaimed – the sprint-resume skip fix", () => {
   const backlog = ["F1-stock-visibility", "F2-stock-adjustment", "F3-audit"];
 
   it("SKIPS an earlier feature when a LATER backlog feature holds the SCM claim", () => {
@@ -60,7 +60,7 @@ describe("shippedBecauseLaterFeatureClaimed , the sprint-resume skip fix", () =>
   });
 });
 
-describe("shippedByClearedClaim , the last-feature / complete-sprint skip fix", () => {
+describe("shippedByClearedClaim – the last-feature / complete-sprint skip fix", () => {
   it("is TRUE when the claim is cleared AND the feature is fully complete (shipped)", () => {
     // The final feature shipped: claim freed at merge, stories all done+accepted.
     expect(shippedByClearedClaim(undefined, "complete")).toBe(true);
@@ -112,7 +112,7 @@ describe("deriveSprintPlanningState", () => {
     writeFileSync(join(fdir, "feature-request.md"), "# request\n");
   }
 
-  it("nothing on disk => all planning flags false (incl. intakeReady , no product-overview/nfrs)", () => {
+  it("nothing on disk => all planning flags false (incl. intakeReady – no product-overview/nfrs)", () => {
     const s = deriveSprintPlanningState(tdd, SPRINT);
     expect(s.phase).toBe("planning");
     // intakeReady false with nothing on disk: the sprint drive dispatches the PO intake turn FIRST.
@@ -182,7 +182,7 @@ describe("deriveSprintPlanningState", () => {
   });
 
   it("committedEstimated is true only when every committed backlog feature is sized under its OWN id", () => {
-    // The re-plan fix: candidate (FP) estimates do NOT satisfy this , the committed
+    // The re-plan fix: candidate (FP) estimates do NOT satisfy this – the committed
     // feature must be sized by its real id. Drives the estimate-committed turn.
     writeProposal();
     writeSprintBacklog(tdd, { sprint: SPRINT, features: [{ id: "F6-split-tracking-code" }] });
@@ -281,7 +281,7 @@ describe("runSprint (pure over SprintEffects)", () => {
     expect(calls).toEqual(["plan", "skip:F1-a", "claim:F2-b", "drive:F2-b"]);
   });
 
-  it("a fully-shipped sprint (EVERY feature shipped) skips all and reports complete , no re-drive, no error", async () => {
+  it("a fully-shipped sprint (EVERY feature shipped) skips all and reports complete – no re-drive, no error", async () => {
     // Re-pointing --sprint at a finished sprint: with the claim cleared, isFeatureShipped
     // returns true for every backlog feature (see shippedByClearedClaim). runSprint must
     // skip them ALL and return cleanly (no pendingGate/pendingInput/escalation), so the CLI
@@ -300,7 +300,7 @@ describe("runSprint (pure over SprintEffects)", () => {
     expect(result.pendingGate).toBeUndefined();
     expect(result.pendingInput).toBeUndefined();
     expect(result.escalated).toBeUndefined();
-    // NOTHING claimed or driven , all skipped.
+    // NOTHING claimed or driven – all skipped.
     expect(calls).toEqual(["plan", "skip:F1-a", "skip:F2-b"]);
   });
 

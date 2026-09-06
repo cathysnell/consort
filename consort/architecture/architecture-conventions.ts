@@ -75,7 +75,7 @@ export function conventionsReady(consortDir: string): boolean {
 /**
  * Project the persistable conventions from a feature's architecture.json.
  * Returns undefined when the feature is NOT service-backed or declares no
- * layers , a trivial feature pins no layout, so conventions wait for the first
+ * layers – a trivial feature pins no layout, so conventions wait for the first
  * service-backed feature. `established_by` is the feature id; `now` is injectable
  * for deterministic tests.
  */
@@ -159,7 +159,7 @@ export type ConformanceResult = { ok: true } | { ok: false; violations: string[]
  *
  * Exempt (ok) when the feature is not service-backed or declares no layers (a
  * trivial feature inherits no layout obligation). The FIRST feature is exempt by
- * construction , there are no conventions to conform to until it establishes them.
+ * construction – there are no conventions to conform to until it establishes them.
  */
 export function assertArchitectureConforms(
   conventions: ArchitectureConventions,

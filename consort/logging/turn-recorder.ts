@@ -3,22 +3,22 @@
 // recording the artifacts that turn produced as a replayable timeline.
 //
 // This generalizes the build-only recorder (recordBuildTurn) to the whole
-// machine , the design lane in particular had no recorder, so the design corpus
+// machine – the design lane in particular had no recorder, so the design corpus
 // used to be hand-assembled. Wired via `withTurnRecording` (drive.cli.ts), gated
 // on LAKEBASE_CONSORT_RECORD_DIR, fired AFTER each turn's effect lands.
 //
 // Layout under recordDir (the answer to "record every step, replayably"):
-//   turns/<NNNN>-<label>/turn.json   , manifest {step, kind, role, mode, story, ac, action, produced[], deleted[]}
-//   turns/<NNNN>-<label>/files/<rel> , the .consort + code DELTA this turn produced
-//   turns/index.json                 , the ordered list of every recorded turn
-//   recorded-artifacts/<rel under .consort> , the CUMULATIVE .consort mirror, so the
+//   turns/<NNNN>-<label>/turn.json   – manifest {step, kind, role, mode, story, ac, action, produced[], deleted[]}
+//   turns/<NNNN>-<label>/files/<rel> – the .consort + code DELTA this turn produced
+//   turns/index.json                 – the ordered list of every recorded turn
+//   recorded-artifacts/<rel under .consort> – the CUMULATIVE .consort mirror, so the
 //                                          existing replayDesignTurn(replayDir=
 //                                          recorded-artifacts) consumes it as-is
-//   .recorder-state.json             , internal file-hash map for delta computation
+//   .recorder-state.json             – internal file-hash map for delta computation
 //
 // recorded-build/ (the per-turn code corpus replayBuildTurn reads) is populated
 // by the existing recordBuildTurn, which `withTurnRecording` calls for build
-// turns , so design + build replay both round-trip from one recordDir.
+// turns – so design + build replay both round-trip from one recordDir.
 
 import { createHash } from "node:crypto";
 import {
@@ -51,7 +51,7 @@ export function relativizeProjectPaths(text: string, projectDir: string): string
   if (!text || !projectDir) return text;
   const root = projectDir.replace(/\/+$/, "");
   if (!root) return text;
-  // Replace the root (with an optional trailing slash) , longest-match first so `<root>/x` becomes
+  // Replace the root (with an optional trailing slash) – longest-match first so `<root>/x` becomes
   // `<PROJECT_ROOT>/x` and a bare `<root>` becomes `<PROJECT_ROOT>`. Plain string split/join (not regex)
   // so path characters never need escaping.
   return text.split(root + "/").join(PROJECT_ROOT_TOKEN + "/").split(root).join(PROJECT_ROOT_TOKEN);
@@ -82,7 +82,7 @@ export interface RecordedTranscript {
 }
 
 export interface RecordTurnArgs {
-  /** LAKEBASE_CONSORT_RECORD_DIR , the corpus root. */
+  /** LAKEBASE_CONSORT_RECORD_DIR – the corpus root. */
   recordDir: string;
   /** Project working tree root (dirname of consortDir). */
   projectDir: string;
@@ -90,7 +90,7 @@ export interface RecordTurnArgs {
   consortDir: string;
   /** The action just performed. */
   action: WorkflowAction;
-  /** The driver loop iteration (per-process; not globally unique , the recorder
+  /** The driver loop iteration (per-process; not globally unique – the recorder
    *  assigns its own monotonic ordinal from the on-disk index). */
   step: number;
   /** The agent turn's transcript (invoke-role turns only); persisted as
@@ -99,11 +99,11 @@ export interface RecordTurnArgs {
   transcript?: RecordedTranscript;
   /**
    * Whether to SNAPSHOT the content of the files this turn produced (copy them into
-   * turns/<NNNN>/files/ + the recorded-artifacts mirror). Default true , a recorded corpus is
+   * turns/<NNNN>/files/ + the recorded-artifacts mirror). Default true – a recorded corpus is
    * historically accurate and replayable. Set FALSE for the always-on LIVE record into `.consort`:
    * the turn's transcript + the INDEX of files it added/modified/removed are still written (so a
    * live board shows every turn with its prompt/tools/reasoning and its file listing), but the
-   * files' content is NOT copied , clicking one reads the REAL file at HEAD, which may have changed
+   * files' content is NOT copied – clicking one reads the REAL file at HEAD, which may have changed
    * since (not historically accurate, by design). One recorder, two fidelities.
    */
   snapshotContent?: boolean;
@@ -125,7 +125,7 @@ export interface RecordedTurn {
 const NON_ARTIFACT_CONSORT = new Set(["agent-log.jsonl"]);
 
 /** The recorder's OWN output, which lands under `.consort/` when the LIVE record targets the project
- *  itself (recordDir === consortDir). It must never be scanned as a produced artifact , otherwise the
+ *  itself (recordDir === consortDir). It must never be scanned as a produced artifact – otherwise the
  *  recorder would record its own turns/ + state each turn (compounding churn). A no-op when recordDir
  *  is an external corpus (these paths don't exist under `.consort/` then). Matched on the
  *  `.consort/`-relative path: the `turns/` tree, the delta state, and the two append-only streams. */
@@ -140,7 +140,7 @@ function isRecorderOwned(relUnderConsort: string): boolean {
   );
 }
 
-/** The build state-bag booleans/ids the router read to CHOOSE this iteration's action , the
+/** The build state-bag booleans/ids the router read to CHOOSE this iteration's action – the
  *  routing "why" the turn recorder does not persist. Extracted from the DriveState's active
  *  story build view (the same fields §4 of MASTER-CANONICAL-PROCESS.md graphs). All optional:
  *  a non-build phase (planning/deploy/promote) simply has no active build story. */
@@ -172,7 +172,7 @@ export interface RoutingDecisionRecord {
   at: string;
 }
 
-/** Project a RoutingStateBag from a DriveState-shaped value , the active build story's bag plus
+/** Project a RoutingStateBag from a DriveState-shaped value – the active build story's bag plus
  *  the phase. Defensive (state shapes vary across lanes); reads only what is present. */
 export function projectRoutingStateBag(state: unknown): RoutingStateBag {
   const s = (state ?? {}) as Record<string, unknown>;
@@ -196,7 +196,7 @@ export function projectRoutingStateBag(state: unknown): RoutingStateBag {
 
 /** Append one routing-decision record to routing-decisions.jsonl under the record dir. This is the
  *  diagnostic stream the turn recorder lacks: it captures the ROUTING INPUTS (the state bag), so a
- *  recorded run can answer "why did this turn route here" , not just "what was chosen". */
+ *  recorded run can answer "why did this turn route here" – not just "what was chosen". */
 export function recordRoutingDecision(
   recordDir: string,
   action: WorkflowAction,
@@ -220,7 +220,7 @@ export function recordRoutingDecision(
 // the orchestrator's QUESTIONS/requests (the /sprint kickoff, the intake interview, a gate
 // presentation) and the HIL's ANSWERS/SUBMISSIONS (interview answers, the artifact it supplied, an
 // approve/reject decision). correspondence.jsonl records BOTH sides + the outcome, so a recorded run
-// reads like the interactive session it mimics , what was asked, what the (proxy) human answered, and
+// reads like the interactive session it mimics – what was asked, what the (proxy) human answered, and
 // whether it validated/approved. One entry per exchange, correlated to the drive iteration.
 
 /** One question the orchestrator asked + the HIL's answer (an intake-interview Q/A pair). */
@@ -230,9 +230,9 @@ export interface CorrespondenceQA {
 }
 
 /** What the HIL SUBMITTED in response (an artifact it authored/supplied). `contentRef` points into
- *  the turn's files/ delta (or recorded-artifacts) where the full content lives , the entry carries
+ *  the turn's files/ delta (or recorded-artifacts) where the full content lives – the entry carries
  *  the reference, not a duplicate copy of the bytes. `binary: true` marks a non-text asset (e.g. the
- *  brand icon warehouse.png) recorded BY REFERENCE only , its bytes are never inlined (they are not
+ *  brand icon warehouse.png) recorded BY REFERENCE only – its bytes are never inlined (they are not
  *  UTF-8), so a consumer follows contentRef to the file rather than expecting content in the log. */
 export interface CorrespondenceSubmission {
   artifact: string;
@@ -241,11 +241,11 @@ export interface CorrespondenceSubmission {
   binary?: boolean;
 }
 
-/** The RICH PRESENTATION of a correspondence side , what was actually SHOWN/EXCHANGED, with its
+/** The RICH PRESENTATION of a correspondence side – what was actually SHOWN/EXCHANGED, with its
  *  formatting preserved, so a renderer can reproduce the interactive session faithfully (not just
  *  plain text). Captures the source markdown (which carries headings/bold/lists/tables/etc.), any
  *  terminal styling as raw ANSI, and structured highlight spans (offset+length+style) over the text
- *  , whichever the surface produced. All optional: a surface fills what it has. */
+ *  – whichever the surface produced. All optional: a surface fills what it has. */
 export interface CorrespondencePresentation {
   /** The formatting the content is authored in (drives how a renderer reproduces it). */
   format?: "markdown" | "ansi" | "plain";
@@ -260,7 +260,7 @@ export interface CorrespondencePresentation {
 /** Which way the exchange flows. `hil-to-orch` = the HIL asked-and-answered (kickoff/intake/gate/
  *  author-requests: the orchestrator poses a request, the HIL submits/decides). `orch-to-hil` = the
  *  orchestrator NARRATES progress back to the HIL (the `progress` kind: a status notice per recorded
- *  turn, no response expected) , the running commentary a human sees scroll by in an interactive run. */
+ *  turn, no response expected) – the running commentary a human sees scroll by in an interactive run. */
 export type CorrespondenceDirection = "hil-to-orch" | "orch-to-hil";
 
 /** One recorded exchange between the orchestrator and the HIL (human or proxy). */
@@ -311,7 +311,7 @@ export interface CorrespondenceEntry {
 }
 
 /** Append one correspondence exchange to correspondence.jsonl under the record dir. This is the
- *  run-level HIL transcript the recorder otherwise lacks , the orchestrator's question paired with the
+ *  run-level HIL transcript the recorder otherwise lacks – the orchestrator's question paired with the
  *  proxy's answer/submission + outcome, so a recorded capture reads like the interactive session it
  *  mimics. Seq is the caller's monotonic counter (kickoff = 0). */
 export function recordCorrespondence(recordDir: string, entry: CorrespondenceEntry): void {
@@ -320,23 +320,23 @@ export function recordCorrespondence(recordDir: string, entry: CorrespondenceEnt
 }
 
 /**
- * The PRE-STATE + levers an agent turn needs to be replayed IN ISOLATION , the "replay set" bundled
+ * The PRE-STATE + levers an agent turn needs to be replayed IN ISOLATION – the "replay set" bundled
  * per manifest step for optimization experiments. Distinct from the turn's OUTPUT delta (recordTurn):
  * this captures what the step CONSUMED, so a sweep can re-run the SAME turn under different levers.
  *
  * Written under the turn dir as `replay-set/`:
- *   pre-project/        , FULL project code tree BEFORE the agent ran (codeTreeFilter: app/tests/
- *                         migrations, NEVER .consort/junk) , the exact tree the turn starts from, so
+ *   pre-project/        – FULL project code tree BEFORE the agent ran (codeTreeFilter: app/tests/
+ *                         migrations, NEVER .consort/junk) – the exact tree the turn starts from, so
  *                         the step replays without reconstructing it from prior turns. Agent turns are
  *                         the sole mutators of the project code tree (deploy/hooks touch only .consort
  *                         + pid), so a snapshot here is the complete code pre-state.
- *   inputs/<id>         , the resolved input CONTENTS the orchestrator handed the step (keyed by id).
- *   prompt.txt          , the FULLY ASSEMBLED prompt the agent saw (preconditions already inlined).
- *   guidelines.json     , the instruction guidelines (empty array when none).
- *   levers.json         , the RESOLVED agent levers (model/effort/session/toolScope) the turn ran
- *                         with , exactly what an optimization sweep varies.
- *   pre-consort/        , the FULL `.consort` STATE tree BEFORE the turn (cycles/features/experiments/
- *                         design/smells/workflow , everything the drive reads to DERIVE this turn's
+ *   inputs/<id>         – the resolved input CONTENTS the orchestrator handed the step (keyed by id).
+ *   prompt.txt          – the FULLY ASSEMBLED prompt the agent saw (preconditions already inlined).
+ *   guidelines.json     – the instruction guidelines (empty array when none).
+ *   levers.json         – the RESOLVED agent levers (model/effort/session/toolScope) the turn ran
+ *                         with – exactly what an optimization sweep varies.
+ *   pre-consort/        – the FULL `.consort` STATE tree BEFORE the turn (cycles/features/experiments/
+ *                         design/smells/workflow – everything the drive reads to DERIVE this turn's
  *                         routing), minus append-only event streams + runtime ephemera (see
  *                         preConsortKeep). A replay lays this verbatim as the starting `.consort`
  *                         instead of RECONSTRUCTING the pre-turn cycle state from prior turns' data (the
@@ -363,7 +363,7 @@ export function recordReplaySet(args: {
   const setDir = join(turnDir, "replay-set");
   mkdirSync(setDir, { recursive: true });
 
-  // pre-project/ , the full code tree BEFORE the turn (codeTreeFilter excludes .consort + junk).
+  // pre-project/ – the full code tree BEFORE the turn (codeTreeFilter excludes .consort + junk).
   const keep = codeTreeFilter(projectDir);
   const preDir = join(setDir, "pre-project");
   for (const abs of walk(projectDir, keep)) {
@@ -372,10 +372,10 @@ export function recordReplaySet(args: {
     mkdirSync(dirname(dst), { recursive: true });
     cpSync(abs, dst);
   }
-  // pre-consort/ , the full `.consort` STATE tree BEFORE the turn, laid verbatim by a replay so it never
+  // pre-consort/ – the full `.consort` STATE tree BEFORE the turn, laid verbatim by a replay so it never
   // has to reconstruct the pre-turn cycle/review state from prior turns' data. Excludes append-only event
-  // STREAMS (agent-log/correspondence , already mirrored into the corpus separately, and O(turns^2) if
-  // snapshotted every turn) + runtime ephemera (pid/lock/socket + the liveness sidecar) , none of which is
+  // STREAMS (agent-log/correspondence – already mirrored into the corpus separately, and O(turns^2) if
+  // snapshotted every turn) + runtime ephemera (pid/lock/socket + the liveness sidecar) – none of which is
   // pre-turn routing state. Same walk+cpSync primitive as pre-project.
   const preConsortDir = join(setDir, "pre-consort");
   for (const abs of walk(consortDir, preConsortKeep)) {
@@ -385,16 +385,16 @@ export function recordReplaySet(args: {
     cpSync(abs, dst);
   }
 
-  // inputs/<id> , the resolved contents handed to the step.
+  // inputs/<id> – the resolved contents handed to the step.
   const inDir = join(setDir, "inputs");
   mkdirSync(inDir, { recursive: true });
   for (const [id, content] of Object.entries(inputs)) {
-    // ids are logical (e.g. "product-overview", "feature-request") , filesystem-safe already, but
+    // ids are logical (e.g. "product-overview", "feature-request") – filesystem-safe already, but
     // guard a path separator so an id can never escape the inputs dir.
     writeFileSync(join(inDir, id.replace(/[/\\]/g, "_")), content);
   }
 
-  // prompt.txt + guidelines.json + levers.json , the invocation conditions. The prompt is stored with
+  // prompt.txt + guidelines.json + levers.json – the invocation conditions. The prompt is stored with
   // the ephemeral project root rewritten to PROJECT_ROOT_TOKEN so it stays resolvable after the
   // scaffold is reclaimed (the live prompt the agent received was the real absolute path; only the
   // RECORDED copy is relativized).
@@ -406,29 +406,29 @@ export function recordReplaySet(args: {
 /**
  * THE TEMPLATE: the files every AGENT turn (invoke-role, dispatched through the executor + record
  * wrapper) MUST have recorded, relative to its turn dir. This is the contract the per-turn audit
- * (assertTurnComplete) hard-fails on , so a turn that silently dropped an artifact (e.g. the
+ * (assertTurnComplete) hard-fails on – so a turn that silently dropped an artifact (e.g. the
  * transcript double-consume bug) aborts the capture at that turn instead of corrupting the corpus.
  *
  * An agent turn's complete set:
- *   turn.json                     , the manifest (action + produced/deleted delta) , recordTurn
- *   files/                        , the OUTPUT delta (code + .consort) this turn produced , recordTurn
- *   transcript.md                 , the prompt + final reasoning + tools , recordTurn (from takeTranscript)
- *   replay-set/pre-project/       , the code pre-state , recordReplaySet
- *   replay-set/inputs/            , the resolved inputs , recordReplaySet
- *   replay-set/prompt.txt         , the assembled prompt , recordReplaySet
- *   replay-set/guidelines.json    , the guidelines , recordReplaySet
- *   replay-set/levers.json        , the resolved levers , recordReplaySet
+ *   turn.json                     – the manifest (action + produced/deleted delta) – recordTurn
+ *   files/                        – the OUTPUT delta (code + .consort) this turn produced – recordTurn
+ *   transcript.md                 – the prompt + final reasoning + tools – recordTurn (from takeTranscript)
+ *   replay-set/pre-project/       – the code pre-state – recordReplaySet
+ *   replay-set/inputs/            – the resolved inputs – recordReplaySet
+ *   replay-set/prompt.txt         – the assembled prompt – recordReplaySet
+ *   replay-set/guidelines.json    – the guidelines – recordReplaySet
+ *   replay-set/levers.json        – the resolved levers – recordReplaySet
  * A NON-agent turn (gate / dispatch / cut-experiment: no agent ran) requires only turn.json + files/.
  *
  * `liveCapture` scopes the FULL agent bundle (transcript.md + replay-set) to a LIVE capture. The same
  * wrapper also records REPLAY agents (corpus migration) + test doubles, which have no live transcript
- * and no meaningful pre-state , they legitimately lack the bundle, so a non-live record requires only
+ * and no meaningful pre-state – they legitimately lack the bundle, so a non-live record requires only
  * the base set (turn.json + files/) even for an invoke-role turn.
  */
 export function expectedTurnFiles(action: WorkflowAction, opts: { liveCapture?: boolean; liveIndex?: boolean } = {}): string[] {
   // LIVE INDEX (a live build recording into `.consort`, snapshotContent:false): NO content is
   // copied, so there is no `files/` delta + no replay-set pre-state. The turn IS still a viewable
-  // timeline entry, so require its manifest + , for an agent turn , its transcript. This is the
+  // timeline entry, so require its manifest + – for an agent turn – its transcript. This is the
   // always-on record's set; the clicked files are read at HEAD, not from a frozen copy.
   if (opts.liveIndex) {
     return action.kind === "invoke-role" ? ["turn.json", "transcript.md"] : ["turn.json"];
@@ -449,7 +449,7 @@ export function expectedTurnFiles(action: WorkflowAction, opts: { liveCapture?: 
 /**
  * The PER-TURN AUDIT (hard-fail): after a turn is captured, assert EVERY file the template
  * (expectedTurnFiles) requires for this turn kind exists in its dir. Throws loud on the FIRST
- * missing one , naming the turn + the missing files , so a capture aborts at the defective turn
+ * missing one – naming the turn + the missing files – so a capture aborts at the defective turn
  * rather than silently producing an incomplete corpus (the failure mode that let 11/12 agent turns
  * record with no transcript.md unnoticed). Called at end-of-turn from the record wrapper.
  */
@@ -457,7 +457,7 @@ export function assertTurnComplete(turnDir: string, action: WorkflowAction, opts
   const missing = expectedTurnFiles(action, opts).filter((rel) => !existsSync(join(turnDir, rel)));
   if (missing.length > 0) {
     throw new Error(
-      `RECORD AUDIT FAILED , turn ${turnDir} (${labelForAction(action)}) is missing required recorded ` +
+      `RECORD AUDIT FAILED – turn ${turnDir} (${labelForAction(action)}) is missing required recorded ` +
         `file(s): ${missing.join(", ")}. The capture is aborting so the corpus is not silently ` +
         `incomplete. Every ${action.kind === "invoke-role" ? "agent" : ""} turn must record its full set ` +
         `(see expectedTurnFiles). Fix the recorder path that dropped it, then re-capture.`,
@@ -497,7 +497,7 @@ function sha1(abs: string): string {
  *  used in order, and its final reasoning (the outcome). */
 export function renderTranscriptMd(t: RecordedTranscript, label: string): string {
   const lines: string[] = [];
-  lines.push(`# ${label}${t.role ? ` (${t.role})` : ""}${t.model ? ` , ${t.model}` : ""}`, "");
+  lines.push(`# ${label}${t.role ? ` (${t.role})` : ""}${t.model ? ` – ${t.model}` : ""}`, "");
   lines.push("## Prompt", "", "```", t.prompt.trim() || "(empty)", "```", "");
   lines.push("## Tools used", "");
   if (t.tools.length === 0) {
@@ -512,10 +512,10 @@ export function renderTranscriptMd(t: RecordedTranscript, label: string): string
 
 /** Keep-predicate for the pre-`.consort` snapshot: the full STATE tree, minus what a replay never needs to
  *  lay and that would bloat or destabilise the corpus:
- *   - append-only event STREAMS (`agent-log.jsonl`, `correspondence.jsonl`) , not pre-turn routing state;
+ *   - append-only event STREAMS (`agent-log.jsonl`, `correspondence.jsonl`) – not pre-turn routing state;
  *     already captured/mirrored into the corpus separately, and snapshotting a growing log at EVERY turn
  *     is O(turns^2) storage.
- *   - runtime ephemera (`*.pid`, `*.lock`, `*.sock`, the `agent-live.log` liveness sidecar) , transient +
+ *   - runtime ephemera (`*.pid`, `*.lock`, `*.sock`, the `agent-live.log` liveness sidecar) – transient +
  *     non-deterministic, never state.
  *  Everything else (cycles/features/experiments/design/architecture/planning/sprints/deploy/escalations +
  *  smells/workflow/run-config/selection-log) is kept verbatim. */
@@ -555,7 +555,7 @@ function scan(projectDir: string, consortDir: string): Map<string, ScannedFile> 
     const rel = relative(projectDir, abs);
     const relConsort = relative(consortDir, abs);
     if (NON_ARTIFACT_CONSORT.has(relConsort)) continue;
-    if (isRecorderOwned(relConsort)) continue; // the LIVE record's own output under `.consort/` , never a turn's artifact
+    if (isRecorderOwned(relConsort)) continue; // the LIVE record's own output under `.consort/` – never a turn's artifact
     map.set(rel, { abs, rel, underConsort: true, sha: sha1(abs) });
   }
   // The code tree (app/, tests/, alembic/, etc.) via the shared filter, which
@@ -583,7 +583,7 @@ function writeRecorderState(recordDir: string, cur: Map<string, ScannedFile>): v
 
 /**
  * Seed the delta baseline with the CURRENT project state, once, before the first
- * turn is recorded , so turn 0's delta reports only what that turn produced, not
+ * turn is recorded – so turn 0's delta reports only what that turn produced, not
  * the pre-existing scaffold + intake files. A no-op if a baseline already exists
  * (e.g. a later drive process in the same run, which must keep the running state
  * from the prior process). Call at recorder construction, after scaffold/intake.
@@ -688,7 +688,7 @@ export function recordTurn(args: RecordTurnArgs): RecordedTurn {
   const turnDir = join(recordDir, "turns", dirName);
   mkdirSync(turnDir, { recursive: true });
 
-  // Content snapshot , recorded corpus only. The LIVE record (snapshotContent:false) keeps just the
+  // Content snapshot – recorded corpus only. The LIVE record (snapshotContent:false) keeps just the
   // produced/deleted INDEX computed above; a clicked file is read at HEAD, not from a frozen copy.
   if (snapshotContent) {
     mkdirSync(join(turnDir, "files"), { recursive: true });
@@ -788,9 +788,9 @@ export function recordTurn(args: RecordTurnArgs): RecordedTurn {
   // orch->HIL PROGRESS (the running commentary a human sees in an interactive /sprint, made first-class
   // and recorded): one progress correspondence entry per recorded turn, keyed to THIS turn's ordinal, so
   // the correspondence stream mirrors turns/index.json and every progress entry has a STRUCTURAL FK to
-  // its turn (emitted HERE, from the post-turn seam where the ordinal is finalized , not stamped after
+  // its turn (emitted HERE, from the post-turn seam where the ordinal is finalized – not stamped after
   // the fact). Self-gated to a LIVE CAPTURE: only when correspondence.jsonl already exists (the drive
-  // wrote the kickoff at start), so hermetic recordTurn unit tests , which never write a kickoff , stay
+  // wrote the kickoff at start), so hermetic recordTurn unit tests – which never write a kickoff – stay
   // byte-identical (no correspondence side effect). Best-effort: progress is observability, never a gate.
   try {
     if (existsSync(join(recordDir, "correspondence.jsonl"))) {
@@ -817,7 +817,7 @@ export function recordTurn(args: RecordTurnArgs): RecordedTurn {
 }
 
 /** A one-line human-readable status for a recorded turn, the orch->HIL progress notice's prompt. Built
- *  purely from the manifest so it needs no extra state , "what just happened" a human would see scroll
+ *  purely from the manifest so it needs no extra state – "what just happened" a human would see scroll
  *  by: the role/kind + mode + story/ac scope + the size of the delta it produced. */
 function progressNarration(
   m: { kind: string; role?: string; mode?: string; story?: string; ac?: string; label: string },

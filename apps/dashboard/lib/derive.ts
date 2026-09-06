@@ -67,7 +67,7 @@ export function latestTurnOrdinalForRole(
 /**
  * The orchestrator's current activity: its LATEST event (carrying a message) over the full event
  * stream. The orchestrator narrates what it's doing as it does it — "orchestrator START build",
- * "dispatch driver for green", "GATE acceptance awaiting decision , story S4-…" — so its most
+ * "dispatch driver for green", "GATE acceptance awaiting decision – story S4-…" — so its most
  * recent such event is the honest "what is it on right now". RECENCY wins across event kinds: at a
  * gate the last orchestrator event is the gate.surfaced, so the card shows the gate rather than the
  * `START build` it logged many turns earlier. Scans the whole slice for the same reason — a long
@@ -625,7 +625,7 @@ export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; o
       // advanced. A genuinely BLOCKING issue HALTS the lane, so no later phase.start ever reaches
       // here and it stays red; and a live, still-open escalation is re-surfaced from next.json's
       // blockers regardless. Without this, a smell flagged on the LAST story a role touches pins
-      // that role red forever , its OWN next phase.start (the only other clear, below) never comes,
+      // that role red forever – its OWN next phase.start (the only other clear, below) never comes,
       // even after the lane deployed + verified. Widens the per-role clear below to the whole lane.
       for (const r of ROLES) if (r !== e.role && agents[r]) agents[r].issues = [];
       openTurns[e.role] = true;

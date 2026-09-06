@@ -1,7 +1,7 @@
 // The build-trial classifier: a build candidate is scored on whether it SELF-HEALS to
 // terminal-good through runDriver's raises/retries/route-backs. This is the load-bearing
-// unattended decision , self-heal = valid measurement, non-self-heal = DQ (not fatal),
-// infra = systemic halt , so it is exhaustively unit-tested.
+// unattended decision – self-heal = valid measurement, non-self-heal = DQ (not fatal),
+// infra = systemic halt – so it is exhaustively unit-tested.
 
 import { describe, expect, it } from "vitest";
 import { classifyBuildTrial, isViableBuildTrial } from "../../consort/optimize/optimize-build-trial";
@@ -18,7 +18,7 @@ describe("classifyBuildTrial", () => {
     expect(v.outcome).toBe("self-healed");
   });
 
-  it("not-viable: raised-to-HIL after retries (did NOT self-heal) , DQ, not systemic", () => {
+  it("not-viable: raised-to-HIL after retries (did NOT self-heal) – DQ, not systemic", () => {
     const v = classifyBuildTrial({ result: { escalated: true, escalation: { reason: "green failed 3x", source: "driver" } } });
     expect(v.outcome).toBe("not-viable");
     expect(isViableBuildTrial(v)).toBe(false);
@@ -29,7 +29,7 @@ describe("classifyBuildTrial", () => {
     }
   });
 
-  it("not-viable: DriverStalledError (route-back could not converge) , DQ", () => {
+  it("not-viable: DriverStalledError (route-back could not converge) – DQ", () => {
     const v = classifyBuildTrial({ error: { name: "DriverStalledError", message: "action repeated without advancing" } });
     expect(v.outcome).toBe("not-viable");
     if (v.outcome === "not-viable") expect(v.reason).toMatch(/did not converge/);
@@ -46,7 +46,7 @@ describe("classifyBuildTrial", () => {
     if (v.outcome === "not-viable") expect(v.reason).toMatch(/unresolved escalation/);
   });
 
-  it("systemic: an infra error (auth expiry) , HALTS, not a candidate DQ", () => {
+  it("systemic: an infra error (auth expiry) – HALTS, not a candidate DQ", () => {
     const v = classifyBuildTrial({ error: { name: "Error", message: "OAuth token expired minting Lakebase credentials" } });
     expect(v.outcome).toBe("systemic");
     expect(isViableBuildTrial(v)).toBe(false);

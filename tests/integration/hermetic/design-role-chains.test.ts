@@ -89,7 +89,7 @@ describe.each(CHAINS)("design-role LIVE chain: $dir", ({ dir, liveRole }) => {
 
 // EVERY per-role sweep must be able to QUALITY-score its candidates, which requires a recorded
 // baseline artifact for the role's primary output. Preservation is always-on (the whole .sftdd
-// tree is snapshotted), but the quality gate SKIPS silently when no baseline exists , so a role
+// tree is snapshotted), but the quality gate SKIPS silently when no baseline exists – so a role
 // added without one would run scoreless. Assert every chain in ROLE_CHAINS resolves a baseline on
 // disk, mirroring readReference: an explicit referenceFile is a RECORDED PER-TURN OUTPUT under the
 // CAMP (recorded-turns/, the #705 model); an absent one falls back to outputFile under the intake
@@ -102,7 +102,7 @@ describe("per-role sweep: every role has a recorded baseline for the quality gat
     (_dir, referenceFile, outputFile) => {
       // Same precedence as readReference: referenceFile -> camp; else outputFile -> intake.
       const resolved = referenceFile ? join(CAMP, referenceFile) : join(INTAKE, outputFile);
-      expect(existsSync(resolved), `missing recorded baseline (${referenceFile ?? outputFile}) , the quality gate would silently skip this role`).toBe(true);
+      expect(existsSync(resolved), `missing recorded baseline (${referenceFile ?? outputFile}) – the quality gate would silently skip this role`).toBe(true);
     },
   );
 });
@@ -120,7 +120,7 @@ describe("per-role sweep: every outputFile is under a SNAPSHOT_ROOT (else the qu
       const top = outputFile.split("/")[0];
       expect(
         (SNAPSHOT_ROOTS as readonly string[]).includes(top),
-        `outputFile "${outputFile}" top dir "${top}" is not in SNAPSHOT_ROOTS [${SNAPSHOT_ROOTS.join(", ")}] , producedArtifacts would not capture it and the quality gate would silently skip`,
+        `outputFile "${outputFile}" top dir "${top}" is not in SNAPSHOT_ROOTS [${SNAPSHOT_ROOTS.join(", ")}] – producedArtifacts would not capture it and the quality gate would silently skip`,
       ).toBe(true);
     },
   );

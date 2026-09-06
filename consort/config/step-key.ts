@@ -1,5 +1,5 @@
 // The per-invocation KEY a role's effort/model config is applied on ("apply to the step, not
-// the role"): a BUILD turn OR a DESIGN step. These are PURE type unions with ZERO imports , the
+// the role"): a BUILD turn OR a DESIGN step. These are PURE type unions with ZERO imports – the
 // lowest config layer, so ANY layer (the config-file primitive, the settings resolver, the drive
 // effects) may name them without an import cycle. The action->key MAP (turnKeyForAction) needs a
 // WorkflowAction and so stays UP in drive/turn-key.ts, which re-exports these for its callers.
@@ -11,7 +11,7 @@
  *     contamination-fragile tests before a refactor/deploy).
  *   driver (code): green (implement), refactor (restructure code), repair (fix a
  *     regression a prior story's build broke).
- *  The specialized drive buildModes collapse onto these base families , they are the
+ *  The specialized drive buildModes collapse onto these base families – they are the
  *  same KIND of work, differing only in what triggered them:
  *   refactor-deploy / refactor-superseded -> refactor;  assess-deploy / assess-refactor
  *   -> assess;  green-superseded -> green.
@@ -23,7 +23,7 @@ export type BuildTurn = "red" | "green" | "review" | "refactor" | "assess" | "re
 /** The DESIGN/planning steps a role can be invoked for. A role runs different
  *  TASKS across these steps (spec-author BREAKDOWN vs per-story AC authoring;
  *  architect ESTIMATE vs per-story ARCHITECT notes), so a lever that wins on one
- *  step need not win on another , effort/model are keyed on the step, not the role. */
+ *  step need not win on another – effort/model are keyed on the step, not the role. */
 export type DesignStep =
   | "breakdown" // spec-author: enumerate the feature's stories
   | "propose" // spec-author: project feature-proposals (planning)
@@ -35,7 +35,7 @@ export type DesignStep =
   | "ux"; // ux-designer: the project style guide (once)
 
 /** The full per-invocation key effort/model can be applied on: a BUILD turn OR a
- *  DESIGN step. This is the "apply to the step, not the role" axis , the champion
+ *  DESIGN step. This is the "apply to the step, not the role" axis – the champion
  *  walk sweeps per invocation, so a winner is persisted keyed on the exact step it
  *  was measured on. A single-turn role with no key falls back to its scalar. */
 export type TurnKey = BuildTurn | DesignStep;

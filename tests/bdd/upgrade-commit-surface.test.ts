@@ -1,7 +1,7 @@
 // A mid-run kit upgrade must leave the working tree CLEAN, or the run's next experiment/feature
 // fork refuses (paired-branch rejects uncommitted tracked files that would ride onto the branch).
 // commitRefreshedSurface commits EXACTLY the kit-owned surface refreshSurface + pinBoth rewrite ,
-// never the app code or the .consort corpus , so the fork sees a clean tree. Real temp git repo.
+// never the app code or the .consort corpus – so the fork sees a clean tree. Real temp git repo.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
@@ -43,8 +43,8 @@ describe("commitRefreshedSurface (mid-run upgrade leaves a clean tree)", () => {
     // The upgrade rewrites the kit surface AND the run has its own dirt (app edit + corpus churn).
     write(dir, ".claude/commands/start.md", "new for v0.3.46");
     write(dir, ".lakebase/kit-ref", "v0.3.46\n");
-    write(dir, "server/app.py", "print('mid-edit')");   // untracked APP code , must NOT be committed
-    write(dir, ".consort/run-state.json", "{}");          // corpus churn , must NOT be committed
+    write(dir, "server/app.py", "print('mid-edit')");   // untracked APP code – must NOT be committed
+    write(dir, ".consort/run-state.json", "{}");          // corpus churn – must NOT be committed
 
     const res = commitRefreshedSurface(dir, "v0.3.46");
     expect(res.committed).toBe(true);

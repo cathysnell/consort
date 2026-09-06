@@ -86,7 +86,7 @@ export function runGateConformanceCli(argv: string[]): number {
     // from the authoritative story.md BEFORE scanning. story.md is the source of truth; a
     // minimal {id}-only stub (a story authored before the design-time sync-breakdown heal, or
     // on an older kit) then conforms without hand-editing. A story whose story.md GENUINELY
-    // lacks a parseable narrative is NOT healed and still fails the scan below , the real gap
+    // lacks a parseable narrative is NOT healed and still fails the scan below – the real gap
     // surfaces, we just stop failing on stubs the source already answers. Idempotent + only
     // backfills missing fields (never overwrites), so a fully-authored story.json is untouched.
     normalizeStoryJson(consortDir, args.feature);

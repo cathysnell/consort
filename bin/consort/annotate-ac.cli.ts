@@ -6,7 +6,7 @@
 //
 // Why this exists: the Architect Reviewer must ADD `layer` + `architectural_notes`
 // to acs/<AC>.json WITHOUT dropping any existing field (id/given/when/then/
-// independence/...). Hand-editing that JSON with Edit is corruption-prone , a
+// independence/...). Hand-editing that JSON with Edit is corruption-prone – a
 // dropped brace or comma yields malformed JSON that the orchestrator's conformance
 // re-check only catches two steps later, aborting the drive on a PROTOCOL
 // VIOLATION. This does the safe thing mechanically: read -> parse -> merge the two
@@ -28,7 +28,7 @@ interface ParsedArgs {
 
 const LAYERS = ["API", "E2E", "Infra"];
 
-const HELP = `consort-annotate-ac , safely add the Architect's layer + architectural_notes to an AC
+const HELP = `consort-annotate-ac – safely add the Architect's layer + architectural_notes to an AC
 
 Usage:
   consort-annotate-ac --feature <F> --story <S> --ac <AC> --layer <API|E2E|Infra> --notes "<text>" [--consort-dir <dir>]
@@ -57,7 +57,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
 /**
  * Merge the Architect's fields into an AC object, preserving every existing field.
- * Pure , the caller does the fs. Throws on malformed input JSON (a pre-existing
+ * Pure – the caller does the fs. Throws on malformed input JSON (a pre-existing
  * corruption we must not silently overwrite).
  */
 export function mergeAcAnnotation(
@@ -103,7 +103,7 @@ function main(argv: string[]): number {
     return 2;
   }
   fs.writeFileSync(file, merged, "utf8");
-  process.stderr.write(`annotated ${args.ac}${args.layer ? ` (layer ${args.layer})` : ""} , preserved all prior fields\n`);
+  process.stderr.write(`annotated ${args.ac}${args.layer ? ` (layer ${args.layer})` : ""} – preserved all prior fields\n`);
   return 0;
 }
 

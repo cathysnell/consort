@@ -1,15 +1,15 @@
-// credentials: the consort-side credential seam for a run's Databricks session , host resolution +
+// credentials: the consort-side credential seam for a run's Databricks session – host resolution +
 // the drive-startup auth preflight. The ACTUAL token minting + `--profile`-threading CLI wrapper live
 // in external scm-utils (@databricks-solutions/lakebase-scm-utils/lakebase); this module is the thin
 // consort-owned boundary that both tests and the interactive drive defer to for "which workspace /
-// is the session live". It lives in the provisioning family because auth is a prep concern , part of
+// is the session live". It lives in the provisioning family because auth is a prep concern – part of
 // setting up the environment a run targets.
 
 import { execFileSync } from "node:child_process";
 import { checkDatabricksAuth, databricksAuthPrereqMessage } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 
 /** Resolve a workspace host from a CLI profile via `databricks auth describe -o json` (the same
- *  degradation-tolerant call run-all-live-tests.sh uses , it reports the host from ~/.databrickscfg
+ *  degradation-tolerant call run-all-live-tests.sh uses – it reports the host from ~/.databrickscfg
  *  even when the token cache is stale, unlike the deprecated `auth env`). Tolerates a non-JSON
  *  preamble by trimming to the first `{`. Returns undefined on any failure. */
 export function resolveHostFromProfile(profile: string, timeoutMs = 15_000): string | undefined {
@@ -31,11 +31,11 @@ export function resolveHostFromProfile(profile: string, timeoutMs = 15_000): str
 // ── Drive-startup auth preflight (fail-fast on an expired Databricks session) ──────────────────────
 //
 // The drive spawns expensive LLM turns + does DB-backed verifies. If the Databricks OAuth refresh
-// token is expired, credential minting fails DEEP inside a test's DB connection , where it degrades
+// token is expired, credential minting fails DEEP inside a test's DB connection – where it degrades
 // into a hang, and the drive spins for hours (assess -> repair loops on a failure that can never
 // clear). This runs ONCE at drive startup and exercises the REFRESH token via scm-utils's
 // checkDatabricksAuth (`databricks auth token --force-refresh`), so a dead session halts the run
-// immediately with the `databricks auth login` remediation , BEFORE any agent spawn. It is the single
+// immediately with the `databricks auth login` remediation – BEFORE any agent spawn. It is the single
 // cheap gate that turns that latent multi-hour spin into a second-zero, actionable failure.
 
 export interface DriveAuthPreflightResult {

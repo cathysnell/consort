@@ -1,6 +1,6 @@
 // the kit is a Claude Code plugin. /consort:start launches
 // the workflow. The plugin ships the command + skills + MCP server; the role
-// agents are NOT shipped as plugin agents , the driver invokes them as
+// agents are NOT shipped as plugin agents – the driver invokes them as
 // `claude --agent <role>` against the agents scaffolded into each project's
 // .claude/agents/, so the manifest declares no `agents` field. Hermetic JSON/file checks.
 

@@ -12,7 +12,7 @@
 // The guardrail: stamp the experiment with a fingerprint of the design it was cut
 // to build (the test-list content) at cut time. When the drive would reuse an
 // active experiment whose stamped fingerprint no longer matches the CURRENT design
-// on disk, the story was re-authored under it , the experiment is STALE , so the
+// on disk, the story was re-authored under it – the experiment is STALE – so the
 // derivation treats it like a discarded one and forces a fresh re-cut (which drops
 // the stale paired branch and re-stamps the current design). The test-list is the
 // right source: a normal build never rewrites it, so a changed fingerprint reliably
@@ -27,7 +27,7 @@ import { storyTestListJson } from "../config/consort-paths.js";
  * its test-list. Normalized to canonical JSON so incidental formatting churn does
  * not read as a design change; the semantic content (the ordered test list) is
  * what is hashed. Returns `undefined` when there is no readable/parseable
- * test-list to hash , so a story with no design yet yields NO fingerprint, and an
+ * test-list to hash – so a story with no design yet yields NO fingerprint, and an
  * experiment carrying no stamped fingerprint (cut before this guardrail, or with
  * no test-list) is never falsely flagged stale.
  */

@@ -1,6 +1,6 @@
 // Structural guard: EVERY drive loop in the CLI must be telemetry-wrapped, so no
 // entry path / mode can silently emit nothing. Sprint mode (`/consort:start`) once
-// had NO telemetry at all , beginTelemetryRun + withTelemetry lived only in the
+// had NO telemetry at all – beginTelemetryRun + withTelemetry lived only in the
 // single-feature path, so every `--sprint` run (planning + each feature drive) was
 // invisible (an empty telemetry.runs despite heavy use). Telemetry is a property of
 // a drive RUN, not of which CLI path launched it: assert it here at the source, so a
@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 const SRC = readFileSync(join(__dirname, "..", "..", "bin", "consort", "drive.cli.ts"), "utf8");
 
-describe("drive.cli telemetry coverage , every drive loop is telemetry-wrapped", () => {
+describe("drive.cli telemetry coverage – every drive loop is telemetry-wrapped", () => {
   it("every runDriver(...) call wraps its effects in withTelemetry(...)", () => {
     // Find each call site `runDriver(<firstArg>` and assert the first argument begins
     // with `withTelemetry(`. Matches across the sprint planning drive, the sprint
@@ -44,7 +44,7 @@ describe("drive.cli telemetry coverage , every drive loop is telemetry-wrapped",
 
   it("sprint mode emits the authoritative next.json on every stop (parity with the feature path)", () => {
     // Without this, an interactive sprint stop (plan gate / backlog pause) left NO
-    // deterministic on-disk signal , the driving session was reduced to tailing the
+    // deterministic on-disk signal – the driving session was reduced to tailing the
     // transient drive-live.log and sat silent at the gate. Assert the sprint body writes
     // next.json from the sprint snapshot.
     const sprintBody = SRC.slice(SRC.indexOf("async function runSprintMode"), SRC.indexOf("function effectiveGates"));
@@ -57,7 +57,7 @@ describe("drive.cli telemetry coverage , every drive loop is telemetry-wrapped",
     expect(sprintBody).toMatch(/emitNextJson\(/);
   });
 
-  it("consort-spike (a non-drive command) also begins telemetry , every command emits", () => {
+  it("consort-spike (a non-drive command) also begins telemetry – every command emits", () => {
     // /spike runs its own bin (not consort-drive), so it would silently emit nothing
     // unless it opens its own run. It is not a role drive (no gate spans), so it emits a
     // root consort.run with command "spike".

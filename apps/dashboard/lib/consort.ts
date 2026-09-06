@@ -158,7 +158,7 @@ export function readArtifactAtHead(rel: string): ArtifactContent {
 // `rel` round-trips from turn.json's produced[], so it is still containment-guarded (rooted at the
 // project tree, one level up from readArtifactAtHead's `.consort/` root). classify uses the bare
 // project-relative path, which already carries the `.consort/` prefix for artifacts, so live + replay
-// agree on kind. NOTE: not historically accurate , the file may have changed since the turn (by design).
+// agree on kind. NOTE: not historically accurate – the file may have changed since the turn (by design).
 export function readProjectFileAtHead(rel: string): { kind: "code" | "artifact"; content: string | null; reason: string | null } {
   const root = projectDir();
   const kind = classify(rel);

@@ -1,9 +1,9 @@
 // Cross-story design-review context (hardening #1): the deterministic preparer that
 // gives the design-lane reviewers (architect-reviewer, navigator reflect) the ONE thing
-// they structurally lacked , sight of the FEATURE'S OTHER STORIES. A story was reviewed
+// they structurally lacked – sight of the FEATURE'S OTHER STORIES. A story was reviewed
 // in isolation, so a later story could author an AC that contradicts an earlier, already
 // gated story (e.g. S3 "reject a SKU not in stock_records" vs S1 "first receipt of a
-// fresh SKU establishes stock"), and no reviewer or gate compared across stories , the
+// fresh SKU establishes stock"), and no reviewer or gate compared across stories – the
 // contradiction surfaced only in the build lane. This assembles the sibling stories'
 // acceptance criteria + the architecture's open_decisions so the reviewer can catch the
 // conflict (and a story silently resolving a deferred decision) at design time.
@@ -40,7 +40,7 @@ export interface RequiredField {
   /** The `not_null` persistence-invariant id (e.g. PI2-pick-actor-not-null). */
   invariant_id: string;
   table?: string;
-  /** The invariant brief , names the mandated field + why (e.g. "actor is NOT NULL: every pick records who made it"). */
+  /** The invariant brief – names the mandated field + why (e.g. "actor is NOT NULL: every pick records who made it"). */
   brief?: string;
 }
 export interface CrossStoryContext {
@@ -50,10 +50,10 @@ export interface CrossStoryContext {
   sibling_stories: SiblingStory[];
   /** The architecture's deliberately-unresolved decisions (schema `open_decisions`). */
   open_decisions: OpenDecision[];
-  /** The feature's MANDATED fields , the architecture's `not_null` persistence invariants. A field
+  /** The feature's MANDATED fields – the architecture's `not_null` persistence invariants. A field
    *  the schema requires must reach the DB through some story's WRITE path; if that path is a user
    *  submit, the submit's AC must SUPPLY it. Surfaced so the reviewer can catch a story that adds a
-   *  required field (e.g. actor NOT NULL) that an earlier user-submit story never supplies , a
+   *  required field (e.g. actor NOT NULL) that an earlier user-submit story never supplies – a
    *  field-CONTRACT gap (missing supply), NOT a contradiction, so check #8's opposite-outcome test
    *  misses it (the actor-not-sent defect: a required column with no client path to fill it). */
   required_persistence_fields: RequiredField[];

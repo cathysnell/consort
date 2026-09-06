@@ -75,8 +75,8 @@ describe("latestTurnByRole — full-corpus role → latest reached turn", () => 
     { ordinal: 1, role: "spec-author" },
     { ordinal: 2, role: "product-owner" },
     { ordinal: 5, role: "navigator" },
-    { ordinal: 8, role: "navigator" }, // a later navigator turn , should win over #5
-    { ordinal: 9, role: null }, // no role , skipped
+    { ordinal: 8, role: "navigator" }, // a later navigator turn – should win over #5
+    { ordinal: 9, role: null }, // no role – skipped
   ];
 
   it("keeps each role's HIGHEST reached ordinal, across the whole index (not just a tail)", () => {

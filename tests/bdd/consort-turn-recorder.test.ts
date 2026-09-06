@@ -61,7 +61,7 @@ describe("recordTurn: per-turn timeline + cumulative .consort mirror", () => {
   it("records each turn's delta, mirrors .consort, and keeps an ordered index", () => {
     const { proj, consort, record } = mkProject();
 
-    // Turn 0 , a design turn writes a feature spec under .consort.
+    // Turn 0 – a design turn writes a feature spec under .consort.
     writeConsort(consort, "features/F1/feature-spec.json", JSON.stringify({ id: "F1" }));
     const t0 = recordTurn({ recordDir: record, projectDir: proj, consortDir: consort, step: 0, action: act({ kind: "invoke-role", role: "spec-author", mode: "breakdown", story: "S1" }) });
     expect(t0.ordinal).toBe(0);
@@ -74,7 +74,7 @@ describe("recordTurn: per-turn timeline + cumulative .consort mirror", () => {
     expect(existsSync(join(record, "turns", t0.dir, "files", ".consort/features/F1/feature-spec.json"))).toBe(true);
     expect(existsSync(join(record, "recorded-artifacts", "features/F1/feature-spec.json"))).toBe(true);
 
-    // Turn 1 , a build turn writes production code (NOT under .consort).
+    // Turn 1 – a build turn writes production code (NOT under .consort).
     writeFileSync(join(proj, "main.py"), "x = 1\n");
     const t1 = recordTurn({ recordDir: record, projectDir: proj, consortDir: consort, step: 1, action: act({ kind: "invoke-role", role: "driver", buildMode: "green" }) });
     expect(t1.ordinal).toBe(1);
@@ -83,7 +83,7 @@ describe("recordTurn: per-turn timeline + cumulative .consort mirror", () => {
     // code is NOT mirrored into recorded-artifacts (that is .consort-only; code -> recorded-build)
     expect(existsSync(join(record, "recorded-artifacts", "main.py"))).toBe(false);
 
-    // Turn 2 , modify an existing .consort artifact: delta picks up only the change.
+    // Turn 2 – modify an existing .consort artifact: delta picks up only the change.
     writeConsort(consort, "features/F1/feature-spec.json", JSON.stringify({ id: "F1", v: 2 }));
     const t2 = recordTurn({ recordDir: record, projectDir: proj, consortDir: consort, step: 2, action: act({ kind: "invoke-role", role: "architect-reviewer", story: "S1" }) });
     expect(t2.produced).toEqual([".consort/features/F1/feature-spec.json"]);
@@ -189,7 +189,7 @@ describe("recordTurn: agent transcript (demo/visualization)", () => {
         prompt: "Realize the physical schema for F1/S1 into db-design.json.",
         role: "dba",
         model: "opus",
-        finalText: "Done , db-design.json written with a unique (sku, location) constraint.",
+        finalText: "Done – db-design.json written with a unique (sku, location) constraint.",
         tools: ["Read .consort/features/F1/architecture.json", "Write db-design.json"],
       },
     });
@@ -252,7 +252,7 @@ describe("relativizeProjectPaths: recorded text never embeds the ephemeral proje
   });
 });
 
-describe("recordTurn: LIVE index (snapshotContent:false) , .consort as an always-on timeline", () => {
+describe("recordTurn: LIVE index (snapshotContent:false) – .consort as an always-on timeline", () => {
   it("records the transcript + produced/deleted INDEX but snapshots NO content", () => {
     const { proj, consort, record } = mkProject();
     seedRecorderBaseline({ recordDir: record, projectDir: proj, consortDir: consort });
@@ -288,7 +288,7 @@ describe("recordTurn: LIVE index (snapshotContent:false) , .consort as an always
     expect(idx.turns.at(-1)).toMatchObject({ ordinal: rec.ordinal, role: "product-owner", hasTranscript: true });
   });
 
-  it("default (snapshotContent omitted) still snapshots content , recorded corpora unchanged", () => {
+  it("default (snapshotContent omitted) still snapshots content – recorded corpora unchanged", () => {
     const { proj, consort, record } = mkProject();
     seedRecorderBaseline({ recordDir: record, projectDir: proj, consortDir: consort });
     writeConsort(consort, "design/ia.md", "# IA\n");

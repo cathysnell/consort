@@ -2,11 +2,11 @@
 // (design-equivalence, driver-green, ...) creates a real project dir (e.g. de-live-<ts>/,
 // dg-live-<ts>/) with a real Lakebase project, and normally tears it down in afterAll. But if the
 // process is KILLED before teardown (e.g. the ~55min background-task cap), the Lakebase project is
-// ORPHANED , it costs money and leaks until swept. This deterministic sweep finds such leftover
+// ORPHANED – it costs money and leaks until swept. This deterministic sweep finds such leftover
 // project dirs under a parent, reads each one's Lakebase project id + host from the metadata the
 // scaffold wrote (.env LAKEBASE_PROJECT_ID / DATABRICKS_HOST, cross-checked with
 // .lakebase/workflow-state.json project_id), deletes the Lakebase project via an INJECTED seam
-// (hermetic , the real caller wires scm-utils deleteLakebaseProject), then removes the local dir.
+// (hermetic – the real caller wires scm-utils deleteLakebaseProject), then removes the local dir.
 //
 // Bounded + safe: it only matches dirs whose name matches a known test-project prefix (the run-config
 // projectName templates: de-live-, dg-live-, and any caller-supplied prefix), and only touches a dir
@@ -64,7 +64,7 @@ export function readScaffoldProjectMeta(dir: string): { projectId: string; host:
       const ws = JSON.parse(readFileSync(wsPath, "utf8")) as { project_id?: unknown };
       if (typeof ws.project_id === "string" && ws.project_id && ws.project_id !== projectId) return null;
     } catch {
-      /* unparseable state , fall back to the .env id */
+      /* unparseable state – fall back to the .env id */
     }
   }
   return { projectId, host };
@@ -117,7 +117,7 @@ export async function sweepOrphanProjects(args: {
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-    // Only remove the local dir once the Lakebase project is gone , otherwise a later sweep can
+    // Only remove the local dir once the Lakebase project is gone – otherwise a later sweep can
     // still read the metadata and retry the delete (removing the dir first would strand the project).
     if (deleted) {
       try {

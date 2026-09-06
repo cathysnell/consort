@@ -17,7 +17,7 @@ const STORY = "S1-file-stock";
 const AC = "AC1-file-stock-record";
 
 // Reconstruct a representative action from a manifest's `match` (null = "field absent"), adding the
-// story/ac the story-scoped roles carry in the real drive , the SAME reconstruction the matrix uses.
+// story/ac the story-scoped roles carry in the real drive – the SAME reconstruction the matrix uses.
 const STORY_SCOPED = new Set(["dba", "test-strategist", "driver", "spec-author", "architect-reviewer", "navigator"]);
 function actionFromMatch(m: StepManifest): Extract<WorkflowAction, { kind: "invoke-role" }> {
   const a: Record<string, unknown> = {};
@@ -37,9 +37,9 @@ describe("executor dispatch coverage: allowlist <-> shipped manifests are in bij
     "%s: its action is executorDispatched AND resolves a shipped manifest",
     (_id, manifest) => {
       const action = actionFromMatch(manifest);
-      // (forward) the allowlist claims this agent action , it will take the executor path.
+      // (forward) the allowlist claims this agent action – it will take the executor path.
       expect(executorDispatched(action), `${manifest.id} action must be executorDispatched`).toBe(true);
-      // (reverse) the action resolves a shipped manifest , so the executor has one to run. This is
+      // (reverse) the action resolves a shipped manifest – so the executor has one to run. This is
       // what makes flipping useManifestSteps ON safe: no allowlisted action falls through to a
       // missing manifest (and, post-J5, to a deleted commandsForAction agent arm).
       expect(manifestForAction(action), `${manifest.id} action must resolve a shipped manifest`).toBeDefined();
@@ -59,7 +59,7 @@ describe("executor dispatch coverage: allowlist <-> shipped manifests are in bij
     // Intake is now a real, metered PO turn: it DRAFTS the intake docs from the human's gathered
     // answers, so it runs through the executor (turn.usage logs its tokens/cost; model from its
     // manifest agentOptions). It is therefore ON the executor allowlist and NOT deterministic-agentless
-    // , and the stranded-turn guard is satisfied because it IS executor-dispatched (has a manifest).
+    // – and the stranded-turn guard is satisfied because it IS executor-dispatched (has a manifest).
     const intake = { kind: "invoke-role", role: "product-owner", mode: "intake" } as unknown as WorkflowAction;
     expect(executorDispatched(intake)).toBe(true);
     expect(deterministicAgentless(intake)).toBe(false);

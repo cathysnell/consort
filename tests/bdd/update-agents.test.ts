@@ -36,7 +36,7 @@ function projectAgentsDir(p: string): string {
 const kitDba = (): string => fs.readFileSync(path.join(KIT_AGENTS_DIR, "dba.md"), "utf-8");
 
 describe("updateAgents: refresh scaffolded .claude/agents/ from the kit", () => {
-  it("force-overwrites a DRIFTED (stale) agent def by default , the bugfix reaches the project", () => {
+  it("force-overwrites a DRIFTED (stale) agent def by default – the bugfix reaches the project", () => {
     const p = mkProject();
     fs.mkdirSync(projectAgentsDir(p), { recursive: true });
     fs.writeFileSync(path.join(projectAgentsDir(p), "dba.md"), "STALE buggy dba prompt\n");
@@ -153,12 +153,12 @@ describe("resyncAgentsOnKitDrift: version-aware auto refresh", () => {
     const r = resyncAgentsOnKitDrift(p);
     expect(r.refreshed).toBe(true);
     expect(r.committed).toBe(true);
-    // No uncommitted tracked .claude/agents remain , the fork guard would NOT refuse.
+    // No uncommitted tracked .claude/agents remain – the fork guard would NOT refuse.
     const dirty = execFileSync("git", ["-C", p, "status", "--porcelain", "--", ".claude/agents"], { encoding: "utf8" }).trim();
     expect(dirty).toBe("");
   });
 
-  it("still refreshes (no throw) when the project is NOT a git repo , commit is a no-op", () => {
+  it("still refreshes (no throw) when the project is NOT a git repo – commit is a no-op", () => {
     const p = mkProject();
     fs.mkdirSync(projectAgentsDir(p), { recursive: true });
     fs.writeFileSync(path.join(projectAgentsDir(p), "dba.md"), "STALE\n");

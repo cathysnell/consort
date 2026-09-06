@@ -3,13 +3,13 @@
 // patched (model/effort/tool scope), gate the result on conformance (the SAME bar the live test
 // asserts), and record a RoleTelemetry trial. A crashing candidate is DISQUALIFIED + the sweep
 // continues (the optimize lesson: one bad candidate must not kill the run). The baseline is just
-// the first candidate (empty patch), measured under the same machinery , an apples-to-apples
+// the first candidate (empty patch), measured under the same machinery – an apples-to-apples
 // "before". Ranking is role-sweep-report's job; this only runs + gates + records.
 //
 // The chain RUNNER is injected (runChain) so the sweep is unit-testable hermetically (a fake
 // runner returns canned turns); the live CLI passes runRoleChainLive. Applying a candidate's
 // patch = build a ClaudeStepAgent from the live manifest's base agent.config MERGED with the
-// patch, and return it from agentFor for the live-role manifest (undefined elsewhere , the seed
+// patch, and return it from agentFor for the live-role manifest (undefined elsewhere – the seed
 // falls through to its replay).
 
 import { ClaudeStepAgent, type AgentLevers } from "../../consort/orchestrator/agents/claude-step-agent.js";
@@ -20,7 +20,7 @@ import type { ManifestTurn } from "../../consort/orchestrator/runners/manifest-r
 import type { RoleCandidate, RoleLeverPatch } from "./role-levers.js";
 import type { RoleTelemetry, RoleAgentUsage } from "../../consort/optimize/role-telemetry.js";
 
-/** The structural minimum a sweepable chain must expose , the subset the sweep engine reads (the
+/** The structural minimum a sweepable chain must expose – the subset the sweep engine reads (the
  *  manifest dir names the seed/live ids, outputFile is the primary artifact the gate + telemetry
  *  key on, prompt rides the telemetry transcript). Both the design `RoleChain` and the build
  *  `BuildRoleChain` satisfy this, so ONE engine sweeps either family (a build chain judges via a
@@ -32,26 +32,26 @@ export interface SweepableChain {
 }
 
 /** What one chain run returns: the turns PLUS the PRESERVED produced-artifact tree ({relpath ->
- *  contents}, every file the run wrote, captured before teardown). The whole tree is kept , a
+ *  contents}, every file the run wrote, captured before teardown). The whole tree is kept – a
  *  run's outputs must survive so the result is reproducible + re-judgeable, not just its
  *  telemetry (the preserve-experiment-artifacts rule). The quality gate scores the primary file. */
 export interface ChainRunResult {
   turns: ManifestTurn[];
   producedArtifacts: Record<string, string>;
   /** OPTIONAL conformance verdict supplied by the runner when the design/navigator-shaped derivation
-   *  (produced outputFile + no violations + terminated at design-complete) does NOT apply , e.g. a
+   *  (produced outputFile + no violations + terminated at design-complete) does NOT apply – e.g. a
    *  DRIVER-GREEN chain whose conformance is honest-GREEN (alembic + pytest vs a live branch), not a
    *  design-complete terminal. When present it IS the gate; when absent the template derives it from
    *  the turns. So the ONE sweep engine handles design, navigator, AND driver with no second engine. */
   gate?: { passed: boolean; reason?: string };
   /** OPTIONAL wall-clock duration (ms) supplied by the runner when the sweep cannot read it off a live
-   *  turn's telemetry , e.g. a DRIVER-GREEN chain that returns `turns: []` (its work is a full GREEN
+   *  turn's telemetry – e.g. a DRIVER-GREEN chain that returns `turns: []` (its work is a full GREEN
    *  cycle measured by the driver harness, not a single ManifestTurn). When present it OVERRIDES the
    *  turn-derived `outerDurationMs` so the report can RANK candidates (the winner is the fastest
    *  quality-holding candidate); absent => the turn-derived value stands (design/navigator chains). */
   durationMs?: number;
   /** OPTIONAL agent usage (cost + tokens + numTurns + agent duration) supplied by the runner when the
-   *  sweep cannot read it off a live ManifestTurn , e.g. a DRIVER-GREEN chain (turns: []). When present
+   *  sweep cannot read it off a live ManifestTurn – e.g. a DRIVER-GREEN chain (turns: []). When present
    *  it POPULATES telemetry.agent so EVERY run records cost with the consistent attribute set (parity
    *  with the design-lane sweep). Absent => the turn-derived usage stands. */
   usage?: RoleAgentUsage;
@@ -89,7 +89,7 @@ export interface QualityVerdict {
  *  design/red use the opus text judge, assess uses the marker-alignment discriminator, review/reflect
  *  use the verdict-alignment judge, driver-green uses the build-code discriminator. The judge is
  *  REQUIRED: a conformant candidate whose judge is absent, throws, or yields no verdict is DISQUALIFIED
- *  (never silently unscored) , an LLM judge is a hard requirement of every evaluation, the only thing
+ *  (never silently unscored) – an LLM judge is a hard requirement of every evaluation, the only thing
  *  that guarantees product-result equivalence. `producedArtifacts` is the candidate's captured output
  *  tree, so a judge that needs more than the primary file (a code/verdict tree) can read it. */
 export interface QualityGate {
@@ -107,7 +107,7 @@ export interface SweepTrial {
   qualityPassed?: boolean;
   telemetry?: RoleTelemetry;
   /** The PRESERVED produced-artifact tree for this candidate ({relpath -> contents}), so the
-   *  caller persists the actual outputs to a durable per-candidate dir , not just telemetry.
+   *  caller persists the actual outputs to a durable per-candidate dir – not just telemetry.
    *  Empty on a disqualified/crashed candidate that produced nothing. */
   producedArtifacts?: Record<string, string>;
   disqualified?: boolean;
@@ -180,31 +180,31 @@ function trialTelemetry(chain: SweepableChain, candidate: RoleCandidate, turns: 
  * Run a full per-role sweep: every candidate, in order (baseline first), each a real live chain
  * run with the candidate's levers patched onto the live-role agent. Returns one SweepTrial per
  * candidate. A candidate whose run THROWS (a crash, an infra error) is disqualified with the
- * error message + the sweep continues , never aborts the whole run on one bad candidate.
+ * error message + the sweep continues – never aborts the whole run on one bad candidate.
  */
 export interface SweepHooks {
   /** Called BEFORE each candidate runs (progress logging). */
   onStart?(candidate: RoleCandidate, index: number, total: number): void;
   /** Called AFTER each candidate completes (pass, gate-fail, or disqualify), with its trial.
-   *  The CLI persists the trial's telemetry HERE , incrementally , so a long sweep that is
+   *  The CLI persists the trial's telemetry HERE – incrementally – so a long sweep that is
    *  interrupted still has every completed candidate's record on disk (not batched at the end). */
   onDone?(trial: SweepTrial, index: number, total: number): void;
 }
 
 /** Options for a sweep: progress hooks + an OPTIONAL quality gate (score each conformant
- *  candidate's produced artifact against a recorded baseline). Both optional , omitting quality
+ *  candidate's produced artifact against a recorded baseline). Both optional – omitting quality
  *  is the conformance-only sweep (prior behavior). Back-compat: a bare SweepHooks is accepted.
  *  `concurrency` caps in-flight candidates: 1 (default) = the sequential loop, byte-identical to
  *  the prior behavior; >1 fans candidates out over runExperimentsInParallel. Safe to parallelize
  *  because each candidate's runChain (runIntegrationChain) mkdtemps its OWN isolated workspace and
- *  the candidate levers ride IN-MEMORY on the ClaudeStepAgent , no shared config file / env / .md. */
+ *  the candidate levers ride IN-MEMORY on the ClaudeStepAgent – no shared config file / env / .md. */
 export interface SweepOptions extends SweepHooks {
   quality?: QualityGate;
   concurrency?: number;
 }
 
 /** Run ONE candidate end to end: chain run + conformance telemetry + optional quality gate. NEVER
- *  throws , a crash (infra error, a chain that never reached the live turn) becomes a disqualified
+ *  throws – a crash (infra error, a chain that never reached the live turn) becomes a disqualified
  *  SweepTrial, so one bad candidate never aborts the sweep (the optimize lesson) and never rejects
  *  into the parallel pool. Pure w.r.t. shared state: the only mutation is inside runChain's own
  *  mkdtemp workspace. */
@@ -234,7 +234,7 @@ async function runOneCandidate(
     // PRESERVE the produced artifacts on the trial so the caller persists the actual outputs.
     const trial: SweepTrial = { candidateId: candidate.id, levers: candidate.levers, gatePassed, telemetry, producedArtifacts };
     // MANDATORY QUALITY JUDGE: every conformant candidate MUST be judged against the recorded
-    // reference , an LLM judge is a hard requirement of the evaluation (the only guarantee of
+    // reference – an LLM judge is a hard requirement of the evaluation (the only guarantee of
     // product-result equivalence). A judge that is absent, throws, or yields no verdict DISQUALIFIES
     // the candidate (never silently unscored). Only a candidate that failed the CONFORMANCE gate is
     // exempt (it produced nothing conformant to judge; it's already not winner-eligible).
@@ -242,7 +242,7 @@ async function runOneCandidate(
       const primary = producedArtifacts[chain.outputFile];
       if (!quality) {
         trial.disqualified = true;
-        trial.reason = "no judge configured , an LLM judge is required for every evaluation";
+        trial.reason = "no judge configured – an LLM judge is required for every evaluation";
         return trial;
       }
       let verdict: QualityVerdict;
@@ -283,7 +283,7 @@ export async function runRoleSweep(
   const concurrency = Math.max(1, options.concurrency ?? 1);
   const total = candidates.length;
 
-  // Sequential (concurrency 1): the prior behavior, byte-identical , baseline first, onStart then
+  // Sequential (concurrency 1): the prior behavior, byte-identical – baseline first, onStart then
   // onDone per candidate in order. Kept as its own path so the default sweep is unchanged.
   if (concurrency === 1) {
     const trials: SweepTrial[] = [];
@@ -316,6 +316,6 @@ export async function runRoleSweep(
       return trial;
     },
   });
-  // Re-sort into candidate (baseline-first) order , the pool returns completion order.
+  // Re-sort into candidate (baseline-first) order – the pool returns completion order.
   return candidates.map((_, i) => trialByIndex.get(i + 1)!);
 }

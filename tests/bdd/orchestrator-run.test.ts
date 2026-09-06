@@ -390,7 +390,7 @@ describe("runDriver: output-driven routing seam (options.contract)", () => {
 
   it("falls back to state-derivation when the contract proposes an OFF-GRAPH action", async () => {
     // A contract that proposes a never-allowed action; validateAndBound (via the loop)
-    // must NOT follow it off the allowed graph , it falls back to the pure transition
+    // must NOT follow it off the allowed graph – it falls back to the pure transition
     // every step and still reaches done. (The bound cases are exhaustive in
     // step-contract.test.ts.)
     const offGraphContract: import("../../consort/orchestrator/steps/step-contract").StepContract = {
@@ -426,7 +426,7 @@ describe("runDriver: onRoutingDecision fires per iteration with the state that c
     await runDriver(effects);
 
     // A routing decision is emitted for EVERY iteration (including the terminal `done`), and each
-    // carries the DriveState it was derived from (hadState) , the "why" the turn recorder omits.
+    // carries the DriveState it was derived from (hadState) – the "why" the turn recorder omits.
     expect(decisions.length).toBeGreaterThan(0);
     expect(decisions.every((d) => d.hadState)).toBe(true);
     expect(decisions.every((d) => d.source === "nextTransition")).toBe(true); // no contract wired

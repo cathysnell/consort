@@ -5,7 +5,7 @@
 // Real architect turn via performViaExecutor: reads the story's acs/ (story-scoped) + nfrs (root),
 // lands architecture.json under .consort at features/<F>/ (artifact channel) + the reconciled
 // agent-log under .consort (meta). See ./executor-dispatch-live-support.ts. LEAN, no cloud. The spec
-// is the catalogue's shared entry (DESIGN_LIVE_SPECS.architect) , one source of truth for the turn.
+// is the catalogue's shared entry (DESIGN_LIVE_SPECS.architect) – one source of truth for the turn.
 
 import { describe, it } from "vitest";
 import { runDesignExecutorDispatchLive, designSpec } from "./executor-dispatch-live-support.js";

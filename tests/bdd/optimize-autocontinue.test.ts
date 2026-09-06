@@ -1,5 +1,5 @@
 // The unattended auto-continue driver: pure control flow over injected steps. Because
-// it runs with NO human watching, its decisions are exhaustively tested , a viable
+// it runs with NO human watching, its decisions are exhaustively tested – a viable
 // winner is applied + advanced; a non-viable sweep advances at baseline and CONTINUES
 // (an un-optimizable role does not abandon the lane); a SystemicFailure HALTS (does not
 // burn on); a story bound stops cleanly; a non-advancing lane halts instead of spinning.

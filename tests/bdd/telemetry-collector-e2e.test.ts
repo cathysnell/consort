@@ -4,7 +4,7 @@
 //        two gate children) that all share one trace id.
 //   AC7: the collector tolerates an unknown field and still answers 202.
 //   AC10: telemetry is armed by default; with the sign-off flag explicitly OFF
-//        (CONSORT_TELEMETRY_SIGNOFF=0) the sink is the local no-op , no real POST
+//        (CONSORT_TELEMETRY_SIGNOFF=0) the sink is the local no-op – no real POST
 //        reaches the collector.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

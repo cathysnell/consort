@@ -65,7 +65,7 @@ describe("correspondence — parseCorrespondence", () => {
       at: "2026-08-09T15:59:00.000Z",
       direction: "orch-to-hil",
       ordinal: 4,
-      request: { kind: "gate", presentation: { rendered: "**HIL approval requested** , GATE plan APPROVED" } },
+      request: { kind: "gate", presentation: { rendered: "**HIL approval requested** – GATE plan APPROVED" } },
       response: { by: "orchestrator" },
       outcome: { approved: true, validated: true },
     });

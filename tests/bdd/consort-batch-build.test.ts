@@ -85,7 +85,7 @@ describe("beginNextPendingBatch: one RED cycle per layer-chunk", () => {
     expect(p.openRed).toHaveLength(1);
   });
 
-  it("respects the cap (DEFAULT_BATCH_CAP) , a 4th same-layer item stays pending", () => {
+  it("respects the cap (DEFAULT_BATCH_CAP) – a 4th same-layer item stays pending", () => {
     seedStory([
       ["AC1", "API", ["T1"]],
       ["AC2", "API", ["T2"]],
@@ -98,7 +98,7 @@ describe("beginNextPendingBatch: one RED cycle per layer-chunk", () => {
     expect(p.pending.map((i) => i.id)).toEqual(["T4"]);
   });
 
-  it("does NOT cross layers , an E2E AC is left for its own batch", () => {
+  it("does NOT cross layers – an E2E AC is left for its own batch", () => {
     seedStory([
       ["AC1", "API", ["T1"]],
       ["AC2", "API", ["T2"]],

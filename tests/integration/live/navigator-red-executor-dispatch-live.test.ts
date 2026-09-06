@@ -6,18 +6,18 @@
 // RED turn THROUGH the StepExecutor
 //   buildDriveEffects(cfg) -> runDriver -> effects.performViaExecutor -> execute()
 // with a REAL `claude -p` navigator turn that authors the story's FAILING tests. RED writes tests/
-// at the PROJECT ROOT , the `product` channel (the real accumulating code tree) , which is the ONE
+// at the PROJECT ROOT – the `product` channel (the real accumulating code tree) – which is the ONE
 // thing the design-lane 2b proof (spec-author breakdown, artifact channel) did NOT exercise.
 //
 // NO CLOUD. Navigator RED is LEAN (build-role-chains.ts): it authors tests, needs no running app or
 // DB, is tool-scoped to Write/Read, never runs ./scripts/lk. So the ONLY thing separating this from
 // the gated DRIVER product run is that RED does not honest-GREEN against a Lakebase branch. We seed
 // the pre-RED build state (an `active` experiment marker + an approved gate + the per-story test-list
-// + acs) as plain pipeline JSON , NO branch is actually cut , so nextTransition yields `navigator RED`
+// + acs) as plain pipeline JSON – NO branch is actually cut – so nextTransition yields `navigator RED`
 // as the first action and the lean turn runs offline.
 //
-// Contrast with navigator-red-live.test.ts (runIntegrationChain , the executor in ISOLATION): this
-// drives runDriver , the actual orchestrator loop , so it proves the loop consumes execute()'s
+// Contrast with navigator-red-live.test.ts (runIntegrationChain – the executor in ISOLATION): this
+// drives runDriver – the actual orchestrator loop – so it proves the loop consumes execute()'s
 // BoundedRoute and the post-turn `@build-cycle` (the RED cycle stamp) fires through the real
 // execRunner, flipping testsWritten so the loop advances.
 
@@ -67,7 +67,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: the production drive dispatch
     const storyDir = join(featureDir, "stories", STORY);
     mkdirSync(join(storyDir, "acs"), { recursive: true });
 
-    // 1. The pre-RED CODE tree at the PROJECT ROOT (app/, existing tests/, alembic, pyproject) , the
+    // 1. The pre-RED CODE tree at the PROJECT ROOT (app/, existing tests/, alembic, pyproject) – the
     //    real accumulating product tree the navigator writes its new tests alongside. This is the
     //    recorded state just before S3's first RED (the 001-navigator-reflect turn's code snapshot).
     cpSync(REC_PRE_RED_CODE, projectDir, { recursive: true });
@@ -78,7 +78,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: the production drive dispatch
       cpSync(join(REC_ARTIFACTS, f), join(featureDir, f));
     }
     cpSync(join(REC_ARTIFACTS, "stories", STORY, "acs", `${AC}.json`), join(storyDir, "acs", `${AC}.json`));
-    // conventions.json (the module LAYOUT the context-pack projects) , seed from the recorded design.
+    // conventions.json (the module LAYOUT the context-pack projects) – seed from the recorded design.
     mkdirSync(join(consortDir, "architecture"), { recursive: true });
     cpSync(join(FIXTURES, "recorded-artifacts/architecture/conventions.json"), join(consortDir, "architecture", "conventions.json"));
 
@@ -90,7 +90,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: the production drive dispatch
     expect(s3Items.length, "S3 has test-list items in the recorded master").toBeGreaterThan(0);
     writeFileSync(join(storyDir, "test-list-per-story.json"), JSON.stringify({ feature_id: FEATURE, story_id: STORY, items: s3Items }, null, 2) + "\n");
 
-    // 4. The pipeline: S3 gate-approved + an ACTIVE experiment marker (no branch actually cut , RED
+    // 4. The pipeline: S3 gate-approved + an ACTIVE experiment marker (no branch actually cut – RED
     //    is lean) + build_active on S3, so nextTransition routes STRAIGHT to `navigator RED` (its
     //    design gates are all satisfied by the seeded artifacts; the build lane's first pending step
     //    is !testsWritten -> navigator RED).
@@ -151,7 +151,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: the production drive dispatch
     try {
       // Drive the REAL loop, bounded to stop right AFTER the single RED turn: stopWhen fires on the
       // FIRST action that is NOT the plain navigator RED (the loop performs RED, then the next
-      // iteration's action , driver GREEN , trips the bound before it runs, since GREEN needs cloud).
+      // iteration's action – driver GREEN – trips the bound before it runs, since GREEN needs cloud).
       const isRed = (a: WorkflowAction): boolean =>
         a.kind === "invoke-role" && a.role === "navigator" && !("mode" in a) && !("buildMode" in a) && "story" in a && a.story === STORY;
       const result = await runDriver(buildDriveEffects(cfg), {

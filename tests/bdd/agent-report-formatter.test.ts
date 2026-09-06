@@ -1,7 +1,7 @@
 // agent-report-formatter: the record/log-phase seam that lets a SANDBOXED spawned agent
 // satisfy the agent-log requirement without executing a subprocess. The agent AUTHORS raw
-// content (.agent-report.json: what it did + any warn/error it surfaced) , a plain file write
-// it CAN do , and the ORCHESTRATOR formats that into conformant agent-log.jsonl entries
+// content (.agent-report.json: what it did + any warn/error it surfaced) – a plain file write
+// it CAN do – and the ORCHESTRATOR formats that into conformant agent-log.jsonl entries
 // (stamping timestamp + role, validating each vs agent-log-event.schema.json). Conformance is
 // guaranteed BY CONSTRUCTION: the agent never touches the schema; the provided formatter owns
 // it. Authorship stays the agent's (empty/absent report => a real, surfaced problem).
@@ -63,7 +63,7 @@ describe("formatAgentReport: agent-authored report -> conformant agent-log.jsonl
     expect(obj.event).toBe("artifact.written");
   });
 
-  it("FAILS (does not write a log) when the report is ABSENT , the agent surfaced nothing", () => {
+  it("FAILS (does not write a log) when the report is ABSENT – the agent surfaced nothing", () => {
     const r = formatAgentReport({ workspaceDir: ws, role: "spec-author" });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/report|absent|nothing/i);
@@ -84,7 +84,7 @@ describe("formatAgentReport: agent-authored report -> conformant agent-log.jsonl
   });
 
   describe("STDOUT channel (containment-proof: report in the agent's final message)", () => {
-    it("extracts a ```agent-report block from the final text and formats it , NO file needed", () => {
+    it("extracts a ```agent-report block from the final text and formats it – NO file needed", () => {
       const finalText = [
         "I broke the feature into 2 stories. Here is my report:",
         "```agent-report",
@@ -126,7 +126,7 @@ describe("formatAgentReport: agent-authored report -> conformant agent-log.jsonl
   it("writes the log at a NESTED logFile, creating the parent dir (the live .sftdd/ path)", () => {
     // The live-run block: the declared agent-log path is nested (.sftdd/agent-log.jsonl) and
     // writeFileSync does not create intermediate dirs. The formatter must mkdir the parent, or
-    // the write throws and validate-outputs never finds the log , wrongly blocking the turn.
+    // the write throws and validate-outputs never finds the log – wrongly blocking the turn.
     writeFileSync(join(ws, ".agent-report.json"), JSON.stringify({ message: "wrote it" }));
     const r = formatAgentReport({ workspaceDir: ws, role: "spec-author", logFile: ".sftdd/agent-log.jsonl" });
     expect(r.ok, r.error).toBe(true);

@@ -47,7 +47,7 @@ beforeEach(() => {
   // Turn 1 (navigator): the first failing test. Includes junk that must NOT copy.
   writeTurn("001-navigator", {
     "tests/test_ac1.py": "def test_ac1(): assert False\n",
-    "scripts/lk": "#stale snapshot lk , must NOT clobber the fresh scaffold\n",
+    "scripts/lk": "#stale snapshot lk – must NOT clobber the fresh scaffold\n",
     ".venv/bin/python": "binary-junk",
     "app/__pycache__/x.pyc": "bytecode-junk",
     ".env": "SECRET=should-not-copy\n",
@@ -136,7 +136,7 @@ describe("replayBuildTurn (per-turn build replay)", () => {
     replayBuildTurn({ replayBuildDir: corpus, projectDir: proj, consortDir: tdd, featureId: F, story: "S3-detour", turnIndex: 2 });
     expect(replayBuildTurn({ replayBuildDir: corpus, projectDir: proj, consortDir: tdd, featureId: F, story: "S3-detour", turnIndex: 3 })).toBe(true);
     expect(existsSync(join(proj, "app", "page.py"))).toBe(false); // NOT present before repair (faithful)
-    // The repair turn (4) authors the page , it lands HERE, at the step it was written.
+    // The repair turn (4) authors the page – it lands HERE, at the step it was written.
     expect(replayBuildTurn({ replayBuildDir: corpus, projectDir: proj, consortDir: tdd, featureId: F, story: "S3-detour", turnIndex: 4 })).toBe(true);
     expect(readFileSync(join(proj, "app", "page.py"), "utf8")).toMatch(/authored in repair/);
     // The review turn (5) is also replayed.
@@ -227,7 +227,7 @@ describe("replayBuildTurn (per-turn build replay)", () => {
       expect(liveBuildVerdict(tdd, F, S)).toBe("fail"); // an unassessed failure dominates
     });
 
-    it("MATCH (recorded FAIL + live FAIL) does NOT throw , the normal self-heal path", () => {
+    it("MATCH (recorded FAIL + live FAIL) does NOT throw – the normal self-heal path", () => {
       writeTurn("001-navigator", { "tests/t.py": "x\n" });
       writeRecordedCycle("001-navigator", "AC1", { red_at: "t" }, { assessed: false, summary: "recorded fail" });
       writeLiveCycle("AC1", { red_at: "t" }, { assessed: false, summary: "live fail too" });
@@ -242,7 +242,7 @@ describe("replayBuildTurn (per-turn build replay)", () => {
         .toThrow(ReplayDivergenceError);
     });
 
-    it("DIVERGENCE (recorded FAIL but live PASS) THROWS , the recorded self-heal turn won't be dispatched", () => {
+    it("DIVERGENCE (recorded FAIL but live PASS) THROWS – the recorded self-heal turn won't be dispatched", () => {
       writeTurn("001-navigator", { "app/main.py": "# recorded a failure here\n" });
       writeRecordedCycle("001-navigator", "AC1", { red_at: "t" }, { assessed: false, summary: "recorded fail" }); // recorded FAIL
       writeLiveCycle("AC1", { red_at: "t", green_at: "t2" }); // live PASS
@@ -268,7 +268,7 @@ describe("replayBuildTurn (per-turn build replay)", () => {
     expect(f("/p/.venv/bin/python")).toBe(false);
     expect(f("/p/.env")).toBe(false); // secret
     expect(f("/p/.env.example")).toBe(true); // template kept
-    expect(f("/p/Makefile")).toBe(false); // scaffold config , corpus must not clobber
+    expect(f("/p/Makefile")).toBe(false); // scaffold config – corpus must not clobber
     expect(f("/p/deploy-targets.yaml")).toBe(false); // scaffold config (run command)
     // Dependency manifests + lock files are scaffold-owned (carry the project
     // name + env-specific lock fields); overlaying a corpus copy dirties the

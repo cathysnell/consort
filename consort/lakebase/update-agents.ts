@@ -5,7 +5,7 @@
 // WHY THIS EXISTS: create-project seeds .claude/agents/ once (copyMissingMd,
 // which SKIPS any file already present). So a kit bugfix to a role prompt (e.g.
 // the DBA realizes_invariants prose fix) never reaches an already-scaffolded
-// project , the driver keeps spawning the stale agent. updateAgents is the
+// project – the driver keeps spawning the stale agent. updateAgents is the
 // fixer: it force-refreshes the agent defs from the running kit, so
 // `./scripts/lk lakebase-update-agents` (or a version-aware auto-resync) closes
 // the gap. Agent defs are kit-owned; unlike commands there are no placeholders
@@ -35,7 +35,7 @@ export interface UpdateAgentsArgs {
   /**
    * When false, a project agent file whose body has drifted from the kit is
    * LEFT untouched (reported "preserved") instead of overwritten. Default: true
-   * , the whole point is to propagate kit bugfixes, so the default overwrites.
+   * – the whole point is to propagate kit bugfixes, so the default overwrites.
    */
   force?: boolean;
 }

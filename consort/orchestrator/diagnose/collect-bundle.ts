@@ -1,4 +1,4 @@
-// Resolve the LOCAL forensic artifacts worth collecting when a run fails , the
+// Resolve the LOCAL forensic artifacts worth collecting when a run fails – the
 // bundle that actually troubleshoots (or is shared for) an error. Telemetry is
 // deliberately content-free (allowlisted enums/counts/durations); THIS is where the
 // error text, failing assertion, and reason live, and it is captured on disk at any
@@ -13,11 +13,11 @@ import * as path from "node:path";
 import { escalationsDir, cyclesRootDir } from "../../config/consort-paths.js";
 
 export type DiagnosticKind =
-  | "escalation" // escalations/<id>.json , the raise-to-HIL reason + source
-  | "green-failure" // cycles/**/green-failure.json , the verify-failure pre-localization
-  | "workflow-state" // workflow-state.json , where the run was
-  | "agent-log" // agent-log.jsonl , the structured event trail (tailed)
-  | "drive-live"; // drive-live.log , the live narration (tailed)
+  | "escalation" // escalations/<id>.json – the raise-to-HIL reason + source
+  | "green-failure" // cycles/**/green-failure.json – the verify-failure pre-localization
+  | "workflow-state" // workflow-state.json – where the run was
+  | "agent-log" // agent-log.jsonl – the structured event trail (tailed)
+  | "drive-live"; // drive-live.log – the live narration (tailed)
 
 export interface DiagnosticSource {
   kind: DiagnosticKind;

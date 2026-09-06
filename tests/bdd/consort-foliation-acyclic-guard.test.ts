@@ -8,15 +8,15 @@
 //
 // The bins COMPOSE the families (that is what an entrypoint does); a family library must NEVER reach
 // back UP into a bin. scripts/sftdd/ now holds ONLY schemas + docs (no source), and bin/ holds ONLY
-// .cli entrypoints , no library a family could depend on lives in either.
+// .cli entrypoints – no library a family could depend on lives in either.
 //
 // Three invariants:
 //   1. scripts/sftdd/ contains NO source module (the pile is fully foliated; only schemas + docs).
 //   2. No consort/ library imports a VALUE from a bin/ CLI (bins compose families, never the reverse)
-//      , the graph is fully one-way, no exceptions.
-//   3. bin/ holds ONLY *.cli.ts entrypoints , no library code leaked into the executables home.
+//      – the graph is fully one-way, no exceptions.
+//   3. bin/ holds ONLY *.cli.ts entrypoints – no library code leaked into the executables home.
 //
-// This retires the temporary Stage-0 guard (scripts-orchestrator-acyclic-guard) , the graph is now
+// This retires the temporary Stage-0 guard (scripts-orchestrator-acyclic-guard) – the graph is now
 // enforced from the consort/ side, which is where domain code lives.
 
 import { describe, it, expect } from "vitest";
@@ -51,7 +51,7 @@ describe("consort foliation + bin/ move: scripts holds no source, bin holds only
     expect(
       src,
       `scripts/sftdd/ should hold only schemas + docs after foliation + the bin/ move; these source ` +
-        `files resurfaced , put domain code in a consort/<family>/ and CLIs in bin/:\n  ${src.join("\n  ")}`,
+        `files resurfaced – put domain code in a consort/<family>/ and CLIs in bin/:\n  ${src.join("\n  ")}`,
     ).toEqual([]);
   });
 
@@ -83,7 +83,7 @@ describe("consort foliation + bin/ move: scripts holds no source, bin holds only
     expect(
       nonCli,
       `bin/ should hold only *.cli.ts entrypoints; these non-CLI files leaked into the executables ` +
-        `home , move library code to a consort/<family>/:\n  ${nonCli.join("\n  ")}`,
+        `home – move library code to a consort/<family>/:\n  ${nonCli.join("\n  ")}`,
     ).toEqual([]);
   });
 });

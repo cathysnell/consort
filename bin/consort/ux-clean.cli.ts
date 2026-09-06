@@ -17,7 +17,7 @@
 //
 // --design-class repeats the design guide's component-class vocabulary (page,
 // card, btn, ...); when omitted, ANY className counts as a design signal (the
-// conservative default , only truly class-less + var-less pages are flagged).
+// conservative default – only truly class-less + var-less pages are flagged).
 
 import { checkUxClean, summarizeUxViolations, UX_CLEAN_REMEDIATION } from "../../consort/architecture/design-adherence.js";
 
@@ -43,7 +43,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-ux-clean , prove feature pages are reachable + consume the design guide\n\n` +
+    `consort-ux-clean – prove feature pages are reachable + consume the design guide\n\n` +
       `Usage:\n` +
       `  consort-ux-clean [--project-dir <path>] [--client-src <path>] \\\n` +
       `                          [--design-class <name> ...] [--json]\n\n` +
@@ -62,7 +62,7 @@ const result = checkUxClean({
 if (p.json) {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 } else if (result.clean) {
-  process.stdout.write(`ux-clean: OK , every feature page is reachable + consumes the design guide (or no client workspace)\n`);
+  process.stdout.write(`ux-clean: OK – every feature page is reachable + consumes the design guide (or no client workspace)\n`);
 } else {
   const blocks: string[] = [];
   if (!result.reachability.ok) {
@@ -71,7 +71,7 @@ if (p.json) {
   if (!result.tokens.ok) {
     blocks.push(`  [token consumption]\n    bare (unstyled) feature pages: ${result.tokens.bare.join(", ")}` + (result.tokens.remediation ? `\n    -> ${result.tokens.remediation}` : ""));
   }
-  process.stderr.write(`ux-clean: FAILED , ${summarizeUxViolations(result)}.\n\n${blocks.join("\n\n")}\n\n${UX_CLEAN_REMEDIATION}\n`);
+  process.stderr.write(`ux-clean: FAILED – ${summarizeUxViolations(result)}.\n\n${blocks.join("\n\n")}\n\n${UX_CLEAN_REMEDIATION}\n`);
 }
 
 process.exit(result.clean ? 0 : 1);

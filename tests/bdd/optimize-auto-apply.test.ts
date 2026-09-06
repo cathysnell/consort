@@ -1,5 +1,5 @@
 // Auto-apply: the unattended champion walk bakes a winning candidate's per-turn CONFIG levers
-// (model/effort) into the ONE per-turn config home , the step-manifest `agentOptions`. No overlay
+// (model/effort) into the ONE per-turn config home – the step-manifest `agentOptions`. No overlay
 // file, no TS source rewrite: the manifest the resolver + lean/replay harness already read IS the
 // single source, so a win lands in exactly the manifest(s) whose (role, turnKey) it names. These
 // tests cover the writer (applyWinnerToManifests) against a temp kit manifest tree, incl. that it
@@ -90,7 +90,7 @@ describe("applyWinnerToManifests: bake a per-turn config winner into the manifes
     expect(read("driver-refactor.json")).toBe(before);
   });
 
-  it("is IDEMPOTENT , re-applying the same winner does not rewrite the file", () => {
+  it("is IDEMPOTENT – re-applying the same winner does not rewrite the file", () => {
     seedManifest("driver-refactor.json", "driver", { kind: "invoke-role", role: "driver", buildMode: "refactor" }, { model: "opus", effort: "default" });
     const winner: Candidate = { id: "w", configOverrides: { roles: { driver: { model: { refactor: "haiku" } } } } };
     expect(applyWinnerToManifests(kitDir, winner)).toBe(true);
@@ -109,7 +109,7 @@ describe("applyWinnerToManifests: bake a per-turn config winner into the manifes
 });
 
 describe("resolveConsortSettings reads the manifest as the single per-turn source (spec-author breakdown)", () => {
-  it("modelFor(spec-author, breakdown) === haiku with no project override , from the manifest, not an overlay", async () => {
+  it("modelFor(spec-author, breakdown) === haiku with no project override – from the manifest, not an overlay", async () => {
     // defaultConsortConfig no longer bakes per-turn model/effort; the resolver reads the shipped
     // manifest agentOptions. This asserts the single-source wiring end-to-end on the real kit config.
     const { resolveConsortSettings, defaultConsortConfig, writeConsortConfig } = await import("../../consort/orchestrator/settings/project-settings");

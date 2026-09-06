@@ -1,5 +1,5 @@
 // A contract/cleanup story (drop column / remove endpoint / rename) auto-drops
-// to the finest `ac` build granularity, regardless of the run default , its
+// to the finest `ac` build granularity, regardless of the run default – its
 // lockstep DB+code change is too heavy for one story-level GREEN turn (the
 // F6/S3-split-drop-old build ground for 20+ min without converging).
 

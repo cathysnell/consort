@@ -114,9 +114,9 @@ function assertBuildTurnsReplayable(corpusRoot: string, featureId: string): void
     //     boundary). Both reduce, after dropping the self-heal detours above, to a
     //     run of complete RED->GREEN cycles interspersed with review/refactor at
     //     cycle boundaries. Validate with a small state machine rather than a fixed
-    //     whitelist, so the guard still catches the real defects , an adjacent
+    //     whitelist, so the guard still catches the real defects – an adjacent
     //     red,red / green,green (a retry-duplicated turn), a dangling red with no
-    //     green, a leading green, or an unknown role , while allowing N cycles.
+    //     green, a leading green, or an unknown role – while allowing N cycles.
     const roles = kept.map((n) => n.replace(/^\d+-/, ""));
     const shape = roles.map((r) => {
       if (/^navigator-review/.test(r)) return "review";
@@ -269,7 +269,7 @@ describe("assertScenarioCorpus: build-turn replay-consistency guard", () => {
     // The stockflow-full (run17) cadence: a story built AC-by-AC records a red->green
     // per AC, each closed by a navigator-review at the AC boundary (self-heal detours
     // filtered out). The kept shape is [red,green,review, red,green,review, red,green,
-    // review] , many cycles, all complete , which the state-machine shape check accepts
+    // review] – many cycles, all complete – which the state-machine shape check accepts
     // while still rejecting an adjacent red,red / green,green.
     mkStory("F1-x", "S-perac", [
       "001-navigator-reflect",

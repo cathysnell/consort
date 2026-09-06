@@ -1,6 +1,6 @@
 // P2b optimize-gate: the design-handoff gate evaluator. It answers "did this
 // candidate's artifact pass the SAME check the baseline passed?" by reusing the
-// kit's own gates VERBATIM , the role self-check (formatRoleResponse) AND the
+// kit's own gates VERBATIM – the role self-check (formatRoleResponse) AND the
 // design gate (resolveArtifactInputs). A candidate can never pass a weaker check
 // than baseline: both must be clean for the trial to count. Pure (reads the
 // .sftdd), hermetic. Build-turn gating is the honest-GREEN cycle result, produced
@@ -34,7 +34,7 @@ describe("gateForDesignHandoff: role -> (selfCheck role, gate name)", () => {
     expect(gateForDesignHandoff({ role: "architect-reviewer", story: "S1" })?.selfCheckRole).toBe("architect-reviewer");
   });
 
-  it("returns null for a build turn (navigator/driver) , not a design gate", () => {
+  it("returns null for a build turn (navigator/driver) – not a design gate", () => {
     expect(gateForDesignHandoff({ role: "driver", story: "S1", buildMode: "green" })).toBeNull();
     expect(gateForDesignHandoff({ role: "navigator", story: "S1", buildMode: "review" })).toBeNull();
   });
@@ -49,7 +49,7 @@ describe("evaluateDesignGate", () => {
   });
 
   it("PASSES the per-turn bar when the role self-check is clean (>=1 conformant AC)", () => {
-    // A single conformant AC satisfies the per-story spec-author self-check , the
+    // A single conformant AC satisfies the per-story spec-author self-check – the
     // SAME bar the drive's verify-artifact step enforces after the turn.
     const acDir = join(consortDir, "features", featureId, "stories", "S1", "acs");
     mkdirSync(acDir, { recursive: true });
@@ -63,7 +63,7 @@ describe("evaluateDesignGate", () => {
 
   it("with requireGate, ALSO enforces the stricter feature-scope milestone gate", () => {
     // Self-check passes (one conformant AC) but the whole-feature spec gate needs
-    // feature-spec.json/md, which are absent , so requireGate blocks it.
+    // feature-spec.json/md, which are absent – so requireGate blocks it.
     const acDir = join(consortDir, "features", featureId, "stories", "S1", "acs");
     mkdirSync(acDir, { recursive: true });
     writeFileSync(

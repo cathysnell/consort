@@ -53,7 +53,7 @@ import { createPullRequest, mergePairedPullRequest } from "@databricks-solutions
 import { resolveTestEnv } from "../../consort/orchestrator/provisioning/test-env.js";
 
 // Test env from the ONE shared resolver (single config home: .env.local.test.config).
-// No `?? "DEFAULT"` profile guess , an unset profile leaves the suite gated off.
+// No `?? "DEFAULT"` profile guess – an unset profile leaves the suite gated off.
 const TENV = resolveTestEnv();
 const E2E = TENV.e2e;
 const DATABRICKS_HOST = TENV.host ?? "";

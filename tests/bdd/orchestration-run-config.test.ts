@@ -1,6 +1,6 @@
 // An orchestration RUN-CONFIG bundles a full run: an optional `setup` lifecycle op, the
 // ordered `steps` (references into a manifest set), and an optional `teardown` op. The runner
-// runs setup ONCE before the chain and teardown ONCE after , even if the chain throws , so a
+// runs setup ONCE before the chain and teardown ONCE after – even if the chain throws – so a
 // headless demo is self-contained: scaffold a project, drive the steps, tear it down.
 //
 // Lifecycle ops are catalogued by kind (like agents): `scaffold-project` (real createProject,

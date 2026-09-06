@@ -9,7 +9,7 @@
 // (<project>/experiments/<handoff>/<candidate>/trial-*/candidate.json), builds the
 // apply plan, APPLIES the agent-.md levers directly to
 // skills/consort/agents/<role>.md in the kit, and PRINTS the typed-source edit
-// proposals (model/effort/scope/loop defaults) for a reviewed change , it never
+// proposals (model/effort/scope/loop defaults) for a reviewed change – it never
 // regex-rewrites TS source. --dry-run prints the plan without writing.
 //
 // The kit edits are LOCAL working-tree changes; pushing/releasing them to
@@ -26,7 +26,7 @@ export interface ApplyCliArgs {
   projectDir?: string;
   handoff?: string;
   candidate?: string;
-  /** The kit checkout to edit (defaults to this kit , resolved from the module). */
+  /** The kit checkout to edit (defaults to this kit – resolved from the module). */
   kitDir?: string;
   dryRun?: boolean;
 }
@@ -104,7 +104,7 @@ async function main(): Promise<number> {
   }
   if (plan.sourceEdits.length) {
     process.stderr.write(
-      `[optimize-apply] ${plan.sourceEdits.length} typed-source default(s) to change (model/effort/scope/loop) , these are printed above for a REVIEWED edit, not auto-written. Make them + their regression test, then commit.\n`,
+      `[optimize-apply] ${plan.sourceEdits.length} typed-source default(s) to change (model/effort/scope/loop) – these are printed above for a REVIEWED edit, not auto-written. Make them + their regression test, then commit.\n`,
     );
   }
   return 0;

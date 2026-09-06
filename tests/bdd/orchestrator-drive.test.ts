@@ -176,7 +176,7 @@ describe("nextTransition: UX Designer prerequisite (hoisted above build dispatch
   });
 });
 
-describe("nextTransition: planning lane , intake precondition", () => {
+describe("nextTransition: planning lane – intake precondition", () => {
   // Intake FIRST: with product-overview.md/nfrs.md absent (a fresh interactive project) intakeReady
   // is false, so the drive surfaces the PO intake step BEFORE propose.
   it("intakeReady:false -> the PO intake step (before propose)", () => {
@@ -306,7 +306,7 @@ describe("nextTransition: build lane (after a story is gated)", () => {
   it("default 'story' granularity: one story-scoped REVIEW then REFACTOR (no ac), after the whole story is green", () => {
     // The whole story is green (testsWritten + codeWritten). Under the default
     // story granularity the Navigator REVIEWs the WHOLE story in one turn, then
-    // the Driver REFACTORs it in one turn , both story-scoped, no `ac` field.
+    // the Driver REFACTORs it in one turn – both story-scoped, no `ac` field.
     const v = gatedUnbuilt();
     v.build.experimentCut = true;
     v.build.testsWritten = true;
@@ -329,7 +329,7 @@ describe("nextTransition: build lane (after a story is gated)", () => {
     // -> assessGreenAc now null, greenSupersededAc set). The Driver's re-GREEN turn
     // must carry buildMode "green-superseded" so it records as a distinct dir and
     // both replay-build.ts + the corpus-integrity guard drop it (per-turn verify is
-    // trusted at replay, so this detour never re-dispatches) , exactly like repair.
+    // trusted at replay, so this detour never re-dispatches) – exactly like repair.
     // Without the label it records bare (`005-driver`) and the kept shape reads
     // [red,green,green,review], the drift this fix closes.
     const v = gatedUnbuilt();
@@ -398,7 +398,7 @@ describe("nextTransition: deploy + done", () => {
     // A feature-ship deploy whose verify failed on shared-state contamination: the
     // deploy wrote a feature-scope marker (no escalation). The deploy phase must
     // route the Navigator ASSESS-DEPLOY turn (feature scope, no story), then the
-    // Driver SCOPE turn , mirroring the per-story self-heal , BEFORE surfacing the
+    // Driver SCOPE turn – mirroring the per-story self-heal – BEFORE surfacing the
     // deploy gate. Both actions carry no `story` (feature scope).
     expect(
       nextTransition(ws({ phase: "deploy", deploy: { deployed: true, gateApproved: false, verifyAssessEligible: true } })),
@@ -464,7 +464,7 @@ describe("pauseBeforeMilestone (run-to-navigator / run-to-release-engineer)", ()
   it("navigator: matches the build kickoff, NOT the per-AC review/refactor or driver turns", () => {
     const at = pauseBeforeMilestone("navigator");
     expect(at(navKickoff)).toBe(true);
-    expect(at(navReview)).toBe(false); // carries buildMode , a later handoff
+    expect(at(navReview)).toBe(false); // carries buildMode – a later handoff
     expect(at(driverTurn)).toBe(false);
     expect(at(cut)).toBe(false);
     expect(at(awaitAccept)).toBe(false);

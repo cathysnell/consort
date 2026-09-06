@@ -4,11 +4,11 @@
 // role everywhere.
 //
 // Two lever kinds, split by safety:
-//   1. Agent-.md levers , prose/data that lives in skills/consort/agents/<role>.md:
+//   1. Agent-.md levers – prose/data that lives in skills/consort/agents/<role>.md:
 //      a taskSuffix directive (append to the body), a tool scope (rewrite the
 //      `tools:` frontmatter), or a whole agent-overlay (replace the file). These are
 //      APPLIED DIRECTLY by applyAgentMdLevers (safe, deterministic file writes).
-//   2. Config levers , model / effort / session-scope / loop live in TYPED SOURCE
+//   2. Config levers – model / effort / session-scope / loop live in TYPED SOURCE
 //      (consort-config-file.ts defaultConsortConfig + agent-models.ts RECOMMENDED_MODELS +
 //      the role .md frontmatter `model:`). We NEVER regex-rewrite TS source; instead
 //      buildApplyPlan emits a precise SourceEditProposal (file + exact target + a
@@ -26,7 +26,7 @@ import type { Candidate } from "./optimize-candidates.js";
 import { actionFromManifestMatch } from "../orchestrator/steps/manifest.js";
 import { turnKeyForAction } from "../orchestrator/drive/turn-key.js";
 
-/** Where the shipped step-manifests live under the kit dir , the ONE per-turn config home. */
+/** Where the shipped step-manifests live under the kit dir – the ONE per-turn config home. */
 const MANIFESTS_REL = join("consort", "orchestrator", "steps", "manifests");
 
 /** A directly-appliable edit to a role's skills/consort/agents/<role>.md. */
@@ -127,7 +127,7 @@ function modelDefaultEdit(role: string, turn: string | undefined, model: string)
   const where = turn ? `(${role}, ${turn})` : `(${role}, every turn)`;
   return {
     file: `${MANIFESTS_REL}/*.json (agentOptions.model)`,
-    rationale: `set agentOptions.model -> "${model}" in the step-manifest(s) whose (role, turnKey) is ${where} (mirror the role's frontmatter model: in skills/consort/agents/${role}.md + RECOMMENDED_MODELS in agent-models.ts if the BASE model changed). This is the ONE per-turn config home , applyWinnerToManifests writes it as data.`,
+    rationale: `set agentOptions.model -> "${model}" in the step-manifest(s) whose (role, turnKey) is ${where} (mirror the role's frontmatter model: in skills/consort/agents/${role}.md + RECOMMENDED_MODELS in agent-models.ts if the BASE model changed). This is the ONE per-turn config home – applyWinnerToManifests writes it as data.`,
     regressionTest: `assert resolveConsortSettings().modelFor("${role}"${turn ? `, "${turn}"` : ""}) === "${model}" with no project override (resolver reads the manifest).`,
   };
 }
@@ -191,7 +191,7 @@ export function applyAgentMdLevers(kitDir: string, plan: ApplyPlan): string[] {
 }
 
 /** AUTO-APPLY a winning candidate's per-turn CONFIG levers (model/effort) into the kit's
- *  step-manifest `agentOptions` , the ONE per-turn config home the resolver + lean/replay harness
+ *  step-manifest `agentOptions` – the ONE per-turn config home the resolver + lean/replay harness
  *  read. This replaces the old optimized-defaults.json overlay (a SECOND copy that shadowed the
  *  manifest): a win now lands in exactly the manifest(s) whose (role, turnKey) it names, so there is
  *  a single place per turn. Collapsed keys (e.g. the three assess* buildModes share turnKey "assess")
@@ -257,7 +257,7 @@ function patchAgentOptionValue(raw: string, key: "model" | "effort", value: stri
   if (re.test(block)) {
     return raw.slice(0, open) + block.replace(re, `$1"${value}"`) + raw.slice(close + 1);
   }
-  // Key absent , insert it right after the opening brace, matching the block's indentation.
+  // Key absent – insert it right after the opening brace, matching the block's indentation.
   const indentMatch = block.match(/\{\s*\n(\s*)"/);
   const indent = indentMatch ? indentMatch[1] : "    ";
   const inserted = block.replace(/\{\s*\n/, `{\n${indent}"${key}": "${value}",\n`);
@@ -275,7 +275,7 @@ export function formatApplyPlan(plan: ApplyPlan): string {
     lines.push("");
   }
   if (plan.sourceEdits.length) {
-    lines.push("## REVIEW , typed-source edits (I make these as normal reviewed edits, not auto-regex)");
+    lines.push("## REVIEW – typed-source edits (I make these as normal reviewed edits, not auto-regex)");
     for (const s of plan.sourceEdits) {
       lines.push(`- ${s.file}: ${s.rationale}`);
       lines.push(`    regression test: ${s.regressionTest}`);
@@ -288,7 +288,7 @@ export function formatApplyPlan(plan: ApplyPlan): string {
     lines.push("");
   }
   if (!plan.agentMdEdits.length && !plan.sourceEdits.length && !plan.notes.length) {
-    lines.push("(baseline won , nothing to persist)");
+    lines.push("(baseline won – nothing to persist)");
   }
   return lines.join("\n") + "\n";
 }

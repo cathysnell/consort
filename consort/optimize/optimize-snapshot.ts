@@ -6,7 +6,7 @@
 //   tree aside; restore replaces the live tree with the copy wholesale (so a
 //   candidate that ADDED files is fully undone). No git, no cloud.
 //
-//   BUILD turns mutate three things , the git experiment-branch commit, the
+//   BUILD turns mutate three things – the git experiment-branch commit, the
 //   paired Lakebase child branch, and that branch's DB rows. Snapshot records the
 //   pre-turn git SHA; restore resets the tree to it and, ONLY for GREEN/REFACTOR
 //   (the turns that run `alembic upgrade` and mutate the DB), re-forks a clean

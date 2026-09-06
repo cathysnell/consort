@@ -6,15 +6,15 @@
 // recorded turn round-trips: re-recording a replay reproduces the corpus.
 //
 // Proves: wrapping a `mock` agent records the turn (turn.json + files/ + agent-log); the wrapper is
-// a TRUE PASS-THROUGH (the inner agent's inputs are forwarded verbatim and its members , buildCommand,
-// lastResult , remain visible through the wrapper); and record→replay round-trips.
+// a TRUE PASS-THROUGH (the inner agent's inputs are forwarded verbatim and its members – buildCommand,
+// lastResult – remain visible through the wrapper); and record→replay round-trips.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/** The recorded TURN dirs under a corpus turns/ , directories only (turns/ also holds index.json). */
+/** The recorded TURN dirs under a corpus turns/ – directories only (turns/ also holds index.json). */
 function turnDirs(recordDirRoot: string): string[] {
   const t = join(recordDirRoot, "turns");
   return existsSync(t) ? readdirSync(t).filter((n) => statSync(join(t, n)).isDirectory()) : [];

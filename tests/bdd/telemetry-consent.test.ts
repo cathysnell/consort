@@ -2,7 +2,7 @@
 //   telemetry_enabled === true && !CI && CONSORT_TELEMETRY!=="0".
 // Env overrides only ever DISABLE, and they always win.
 //
-// TELEMETRY IS CAPTURED WHENEVER CONSORT IS USED , the launch method is
+// TELEMETRY IS CAPTURED WHENEVER CONSORT IS USED – the launch method is
 // irrelevant. The predicate does NOT gate on stdout.isTTY (an interactive
 // terminal): an agent-driven run (Claude Code spawning consort-drive) is non-TTY
 // yet fully human-driven, and it MUST emit. The old isTTY gate silently
@@ -18,7 +18,7 @@ describe("telemetry consent predicate", () => {
     expect(shouldEmitTelemetry(base)).toBe(true);
   });
 
-  it("emits regardless of launch method , there is NO TTY gate", () => {
+  it("emits regardless of launch method – there is NO TTY gate", () => {
     // The predicate has no isTTY input; a non-TTY (agent-driven / shell) run emits
     // exactly like an interactive one. This is the requirement: captured whenever used.
     expect(shouldEmitTelemetry({ telemetryEnabled: true, env: {} })).toBe(true);

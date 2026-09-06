@@ -24,7 +24,7 @@ import {
 } from "../../config/consort-config-file.js";
 // Re-export the config-file primitive's surface so callers that import these from the resolver
 // (their long-standing home) keep working unchanged. These are RE-EXPORTS, not definitions, so the
-// single-home guard (which matches definition tokens) still sees one home , the primitive.
+// single-home guard (which matches definition tokens) still sees one home – the primitive.
 export {
   loadConsortConfig,
   writeConsortConfig,
@@ -113,11 +113,11 @@ export function resolveConsortSettings(inputs: ResolveInputs): ResolvedSettings 
 
   // The per-step config home: the levers DECLARED for (role, turn) across the shipped step-manifests
   // (agentOptions), indexed by the SAME turnKeyForAction the drive uses. This is the SINGLE source of
-  // per-turn model/effort , below only what the PROJECT itself declares in its consort-config.json
+  // per-turn model/effort – below only what the PROJECT itself declares in its consort-config.json
   // (file scalar / file per-turn map, the override layer), above the per-role RECOMMENDED_MODELS base.
-  // Only consulted when a turn key is present (an undefined key means "no distinct step" , use the role
+  // Only consulted when a turn key is present (an undefined key means "no distinct step" – use the role
   // scalar, never a manifest). Applied optimization winners are written HERE (optimize-apply's
-  // applyWinnerToManifests), not to a separate overlay file , defaultConsortConfig no longer bakes any
+  // applyWinnerToManifests), not to a separate overlay file – defaultConsortConfig no longer bakes any
   // per-turn model/effort, so there is exactly one place per turn.
   const manifestStep = (role: string, turn?: TurnKey): { model?: string; effort?: string } | undefined =>
     turn ? agentOptionsForStep(role, turn, turnKeyForAction) : undefined;
@@ -137,7 +137,7 @@ export function resolveConsortSettings(inputs: ResolveInputs): ResolvedSettings 
   const effortFor = (role: string, turn?: TurnKey): EffortLevel => {
     // The file is the single source when present: a scalar applies to all steps; a map is
     // per-step. Absent, the per-step config directory (step-manifest agentOptions) declares it;
-    // absent there too, the model default (omit --effort). defaultEffort() is RETIRED , its three
+    // absent there too, the model default (omit --effort). defaultEffort() is RETIRED – its three
     // former entries (navigator review, spec-author breakdown, test-strategist test-list) are now
     // DECLARED in their step-manifests, so the config directory is the single per-step home.
     const rc = file?.roles?.[role as SpawnableAgentRole];

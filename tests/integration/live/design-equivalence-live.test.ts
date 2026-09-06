@@ -1,5 +1,5 @@
 // GATED LIVE (RUN_LIVE_STEP=1 + LAKEBASE_TEST_E2E=1): the DESIGN half of the shared regression
-// comparison suite , the corpus-comparison the A-full executor-dispatch proofs left open.
+// comparison suite – the corpus-comparison the A-full executor-dispatch proofs left open.
 //
 //   RUN_LIVE_STEP=1 LAKEBASE_TEST_E2E=1 npx vitest run tests/integration/live/design-equivalence-live.test.ts
 //
@@ -12,14 +12,14 @@
 // WHY SCAFFOLDED / UNCONSTRAINED (not lean): the production roleTaskBody ends each design turn with a
 // `./scripts/lk` self-check the agent must pass before returning, and `lk` runs only from the
 // unconstrained channel (Bash + the workspace scripts/lk shim). A lean tool-scoped (Write/Read)
-// throwaway .consort omits that self-correction step , it measured production-MINUS-self-check. So this
-// tier scaffolds ONE real project (Databricks + Lakebase, like driver-green , a Lakebase project is
+// throwaway .consort omits that self-correction step – it measured production-MINUS-self-check. So this
+// tier scaffolds ONE real project (Databricks + Lakebase, like driver-green – a Lakebase project is
 // created for consistency even though design roles never touch the DB), runs each role UNCONSTRAINED so
 // the real self-check runs, and RESETS the built .sftdd between roles (filesystem-only for design; the
 // build tier extends the reset with alembic downgrade + data purge). See design-equivalence-support.ts.
 //
 // DOUBLE-gated (needs the scaffold): RUN_LIVE_STEP=1 + LAKEBASE_TEST_E2E=1, and the config home must
-// resolve a host (resolveTestEnv) , an unconfigured env skips. NEVER interrupt before teardown (the
+// resolve a host (resolveTestEnv) – an unconfigured env skips. NEVER interrupt before teardown (the
 // remove-project in afterAll deletes the Lakebase project; an interrupt leaks it).
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";

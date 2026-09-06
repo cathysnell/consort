@@ -11,15 +11,15 @@
 //            path, so the workspace must be .sftdd-shaped and the orchestrator DECLARES the
 //            step's output path there (outputPaths);
 //        (b) the agent runs its self-check + logs via the shared `./scripts/lk` kit scripts,
-//            so the orchestrator must PROVIDE them , here by copying scripts/lk in + pointing
+//            so the orchestrator must PROVIDE them – here by copying scripts/lk in + pointing
 //            LAKEBASE_KIT_DIR at the kit (the dev override the shim honors). The prompt then
 //            instructs the agent to use them. This is "provide the checker to the agent".
 //   3. AGENT: a ClaudeStepAgent built from the levers (role/model/effort/session[+scope/
-//      fallback/budget]) , everything to start + manage the agent. Injected into the step.
+//      fallback/budget]) – everything to start + manage the agent. Injected into the step.
 //   4. RUN + VALIDATE: the step runs the agent contained to the workspace; the orchestrator
 //      then runs the output's OWN in-code conformance checker on the produced feature-spec.
 //
-// Local design turn only , no Lakebase, no GitHub.
+// Local design turn only – no Lakebase, no GitHub.
 
 import { describe, it, expect } from "vitest";
 import { mkdtempSync, mkdirSync, cpSync, readFileSync, existsSync, chmodSync } from "node:fs";
@@ -38,14 +38,14 @@ import { resolveKitSingleSource } from "../integration/live/kit-resolution.js";
 const KIT = process.cwd();
 const CORPUS = join(KIT, "examples/replay/corpora/stockflow/recorded-artifacts");
 const FEATURE = "F1-stock-visibility";
-// The agent's baked, cwd-relative output layout , the orchestrator knows + declares it.
+// The agent's baked, cwd-relative output layout – the orchestrator knows + declares it.
 const SPEC_REL = `.sftdd/features/${FEATURE}/feature-spec.json`;
 const LOG_REL = ".sftdd/agent-log.jsonl";
 
 const BREAKDOWN: WorkflowAction = { kind: "invoke-role", role: "spec-author", mode: "breakdown" };
 
 /** Provision an .sftdd-shaped workspace with the kit scripts provided, read the 3 PO input
- *  CONTENTS, and build the passed-through instruction bundle , exactly what the orchestrator
+ *  CONTENTS, and build the passed-through instruction bundle – exactly what the orchestrator
  *  does before a step runs. Shared by both the direct-step and the executor-path cases. */
 function setupLiveBreakdown(): { workspaceDir: string; inputs: Record<string, string>; instructions: { prompt: string; guidelines: string[] } } {
   const workspaceDir = mkdtempSync(join(tmpdir(), "live-step-ws-"));
@@ -77,7 +77,7 @@ function setupLiveBreakdown(): { workspaceDir: string; inputs: Record<string, st
       `${SPEC_REL} (id, name, status "draft", tdd_mode, NON-EMPTY stories[]) + a stub dir per ` +
       `story under .sftdd/features/${FEATURE}/stories/<S>/ (story.md + story.json). Then run your ` +
       `self-check: ./scripts/lk consort-response-formatter --role spec-author --feature ` +
-      `${FEATURE} --tdd-dir .sftdd , and FIX anything it flags before returning. Then log what you ` +
+      `${FEATURE} --tdd-dir .sftdd – and FIX anything it flags before returning. Then log what you ` +
       `did: ./scripts/lk consort-log --role spec-author --level info --event artifact.written ` +
       `--message "<what you wrote>" --tdd-dir .sftdd (use --level warn to surface any ambiguity). ` +
       `Read ONLY the provided inputs.`,
@@ -95,7 +95,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: Step + ClaudeStepAgent produc
   it("drives the breakdown through the StepExecutor (7-phase Template Method) with Step + ClaudeStepAgent", async () => {
     const { workspaceDir, inputs, instructions } = setupLiveBreakdown();
 
-    // The generic step from the shipped manifest + the real lever-built agent , no bespoke class.
+    // The generic step from the shipped manifest + the real lever-built agent – no bespoke class.
     const agent = new ClaudeStepAgent({ role: "spec-author", model: "sonnet", effort: "low", session: "fresh" });
     const step = new Step(manifestForAction(BREAKDOWN)!, agent);
 

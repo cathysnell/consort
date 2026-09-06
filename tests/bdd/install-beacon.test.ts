@@ -1,5 +1,5 @@
 // The one-time install beacon: sends a random id + version + date ONCE per install, idempotent,
-// best-effort, and , the whole point , REGARDLESS of the ongoing-telemetry opt-out (it records only
+// best-effort, and – the whole point – REGARDLESS of the ongoing-telemetry opt-out (it records only
 // that Consort was installed somewhere). The only suppressor is a total kill (CONSORT_TELEMETRY=0).
 // `beacon_sent` is set ONLY on a 2xx, so an offline first run retries until the marker lands once.
 
@@ -39,7 +39,7 @@ describe("sendInstallBeacon (one-time, opt-out-independent, disclosed marker)", 
     expect(readStoredConfig(deps())?.beacon_sent).toBe(true);
   });
 
-  it("is idempotent , a second call sends nothing", async () => {
+  it("is idempotent – a second call sends nothing", async () => {
     const calls: Array<{ url: string; body: string }> = [];
     await sendInstallBeacon({ version: "0.3.51", deps: deps(), env: {}, fetchImpl: stubFetch(calls, true) });
     const again = await sendInstallBeacon({ version: "0.3.51", deps: deps(), env: {}, fetchImpl: stubFetch(calls, true) });
@@ -47,11 +47,11 @@ describe("sendInstallBeacon (one-time, opt-out-independent, disclosed marker)", 
     expect(calls).toHaveLength(1); // only the first call hit the network
   });
 
-  it("fires REGARDLESS of the opt-out (telemetry disabled) , the whole point", async () => {
+  it("fires REGARDLESS of the opt-out (telemetry disabled) – the whole point", async () => {
     setTelemetryEnabled(false, deps()); // user opted out of ongoing telemetry
     const calls: Array<{ url: string; body: string }> = [];
     const r = await sendInstallBeacon({ version: "0.3.51", deps: deps(), env: {}, fetchImpl: stubFetch(calls, true) });
-    expect(r.sent).toBe(true); // still sent , the marker is opt-out-independent
+    expect(r.sent).toBe(true); // still sent – the marker is opt-out-independent
     expect(calls).toHaveLength(1);
   });
 
@@ -62,7 +62,7 @@ describe("sendInstallBeacon (one-time, opt-out-independent, disclosed marker)", 
     expect(calls).toHaveLength(0);
   });
 
-  it("a failed POST does NOT mark beacon_sent , it retries next run", async () => {
+  it("a failed POST does NOT mark beacon_sent – it retries next run", async () => {
     const calls: Array<{ url: string; body: string }> = [];
     const r = await sendInstallBeacon({ version: "0.3.51", deps: deps(), env: {}, fetchImpl: stubFetch(calls, false) });
     expect(r).toMatchObject({ sent: false, reason: "post-failed" });

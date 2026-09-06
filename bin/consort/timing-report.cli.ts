@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // CLI: per-turn timing report from the centralized agent log
 // (.tdd/agent-log.jsonl). The enabler (P0) for the agent-loop optimization plan
-// , prints where wall-clock actually goes so each change is A/B-measurable.
+// – prints where wall-clock actually goes so each change is A/B-measurable.
 //
 //   consort-timing [--tdd-dir <path>] [--feature <id>] [--top <n>] [--json]
 //

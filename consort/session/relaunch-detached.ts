@@ -2,7 +2,7 @@
 // launching turn/shell ending and (b) the harness's ~2min bash timeout. A foreground
 // call is killed at the timeout; a plain `&` background is reaped when the tool call's
 // process group is SIGTERMed at turn-end. `spawn(detached:true)` calls setsid(2) ,
-// a NEW session + process group the SIGTERM never reaches , and `.unref()` frees the
+// a NEW session + process group the SIGTERM never reaches – and `.unref()` frees the
 // parent's event loop so it can exit at once. macOS has no `setsid` binary, so this
 // node-level detach is the portable way. Shared by consort-drive and
 // lakebase-create-project (both expose `--detach`); each caller prints its own relay

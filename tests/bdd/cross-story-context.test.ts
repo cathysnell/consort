@@ -1,7 +1,7 @@
 // Cross-story review context (hardening #1): the design lane must review a story AGAINST
 // its siblings, not in isolation. This is the S1/S3 regression from the stockflow run where
 // S3's "reject a SKU not in stock_records" AC contradicted S1's already-gated "first receipt
-// of a fresh SKU establishes stock" , invisible to a story-scoped review, so it only blew up
+// of a fresh SKU establishes stock" – invisible to a story-scoped review, so it only blew up
 // in the build lane. The preparer is what makes the contradiction VISIBLE at design time.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -35,7 +35,7 @@ describe("buildCrossStoryContext (cross-story review context)", () => {
       when: "the operator records an inbound receipt of that SKU at that location",
       then: "a stock level is established at that location equal to the received quantity",
     });
-    // S3 (under review): its own AC , the one that would contradict S1.
+    // S3 (under review): its own AC – the one that would contradict S1.
     write(`features/${F}/stories/S3-validate-receipt-form/acs/AC2-unknown-sku-inline-error.json`, {
       id: "AC2-unknown-sku-inline-error",
       status: "draft",
@@ -46,7 +46,7 @@ describe("buildCrossStoryContext (cross-story review context)", () => {
 
     const ctx = buildCrossStoryContext(tdd, F, "S3-validate-receipt-form");
 
-    // S1's establish-stock AC is now VISIBLE to S3's review , the contradiction is catchable.
+    // S1's establish-stock AC is now VISIBLE to S3's review – the contradiction is catchable.
     const s1 = ctx.sibling_stories.find((s) => s.story.startsWith("S1"));
     expect(s1, "S1 must appear as a sibling of S3").toBeDefined();
     const s1ac = s1!.acs.find((a) => a.ac_id === "AC2-record-establishes-stock");
@@ -83,7 +83,7 @@ describe("buildCrossStoryContext (cross-story review context)", () => {
 
   it("surfaces the mandated fields (not_null invariants) so the field-contract gap is catchable", () => {
     // The actor-not-sent case: an audit story mandates `actor` NOT NULL, while the sibling
-    // operator-submit story's submit AC never captures it , a missing-supply (field-contract)
+    // operator-submit story's submit AC never captures it – a missing-supply (field-contract)
     // gap the reviewer must see (required_persistence_fields), NOT a contradiction.
     write(`features/${F}/stories/S2-submit-valid-pick/acs/AC1-valid-pick-recorded.json`, {
       id: "AC1-valid-pick-recorded",
@@ -113,7 +113,7 @@ describe("buildCrossStoryContext (cross-story review context)", () => {
     const actor = ctx.required_persistence_fields.find((f) => f.invariant_id === "PI2-pick-actor-not-null");
     expect(actor?.table).toBe("stock_picks");
     expect(actor?.brief).toContain("actor is NOT NULL");
-    // The sibling submit AC (which does NOT capture actor) is visible alongside , the reviewer
+    // The sibling submit AC (which does NOT capture actor) is visible alongside – the reviewer
     // now has both halves to flag the gap.
     const s2 = ctx.sibling_stories.find((s) => s.story.startsWith("S2"));
     expect(s2?.acs.some((a) => (a.then ?? "").includes("actor"))).toBe(false);

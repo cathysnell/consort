@@ -76,7 +76,7 @@ const DUP_CLASS_REMEDIATION =
   "package __init__ if a stable import path is needed. Duplicate ORM model classes also risk " +
   "a double table registration. See the `layering-violation` smell + DRY (one source of truth).";
 
-// Column-0 `class Name:` or `class Name(Base):` , a top-level definition only
+// Column-0 `class Name:` or `class Name(Base):` – a top-level definition only
 // (no leading whitespace, so nested Config/Meta classes are excluded).
 const TOP_LEVEL_CLASS = /^class\s+([A-Za-z_]\w*)\s*[:(]/;
 
@@ -267,7 +267,7 @@ export function layeringConfigFromArchitecture(architectureJson: string): {
 // module ending in "/" must be a package directory; one ending in ".py" must be
 // that file; a bare path may be either. A declared module the build put elsewhere
 // (e.g. a flat `app/services.py` where `app/services/` was declared) is a
-// layering-violation , the layering exists only on paper.
+// layering-violation – the layering exists only on paper.
 
 export interface PlacementResult {
   ok: boolean;

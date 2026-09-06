@@ -1,8 +1,8 @@
 // agent-catalogue: the catalogue of concrete StepAgent kinds a user can assemble into a
 // manifest by NAME. A manifest declares `agent: { kind, config }`; the runner resolves the
 // kind against this catalogue and builds the agent from `config` + a build CONTEXT (the
-// env: corpus root, kit dir, workspace , NOT part of the manifest). This decouples "which
-// agent" from any script , no hardcoded agentFor.
+// env: corpus root, kit dir, workspace – NOT part of the manifest). This decouples "which
+// agent" from any script – no hardcoded agentFor.
 //
 // Kinds: "claude" (the real live-spawn agent), "replay" (emits recorded artifacts), "mock"
 // (a test double writing configured fixtures). resolveAgentKind throws loud on an unknown
@@ -38,7 +38,7 @@ function ctx(over: Partial<AgentBuildContext> = {}): AgentBuildContext {
 }
 
 describe("agent-catalogue: the catalogue is a named, documented set of StepAgent kinds", () => {
-  it("catalogues claude, replay, and mock , each with a description + config summary", () => {
+  it("catalogues claude, replay, and mock – each with a description + config summary", () => {
     const kinds = Object.keys(AGENT_CATALOGUE).sort();
     expect(kinds).toEqual(["claude", "mock", "replay"]);
     for (const k of kinds) {
@@ -77,7 +77,7 @@ describe("agent-catalogue: buildAgent assembles a StepAgent from kind + config +
     expect(existsSync(join(ws, "agent-log.jsonl"))).toBe(true);
   });
 
-  it("kind:claude builds a ClaudeStepAgent from the config levers , WITHOUT spawning here", () => {
+  it("kind:claude builds a ClaudeStepAgent from the config levers – WITHOUT spawning here", () => {
     // We only assert construction + that its buildCommand reflects the configured levers;
     // no live spawn in a hermetic test.
     const agent = buildAgent({ kind: "claude", config: { role: "spec-author", model: "sonnet", effort: "low", session: "fresh" } }, ctx()) as {

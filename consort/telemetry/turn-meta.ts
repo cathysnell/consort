@@ -29,9 +29,9 @@ export function bucketModel(modelId: string | undefined): ModelValue | undefined
 }
 
 /** Normalize a reasoning-effort lever to the EFFORT_VALUES enum. An absent/empty
- *  lever yields undefined (no lever was set , the turn ran at the model default; the
+ *  lever yields undefined (no lever was set – the turn ran at the model default; the
  *  span omits the field, a null column). A lever we saw but cannot classify buckets
- *  as "unknown" , distinct from "no lever". */
+ *  as "unknown" – distinct from "no lever". */
 export function normalizeEffort(effort: string | undefined): EffortValue | undefined {
   if (!effort || !effort.trim()) return undefined;
   const e = effort.trim().toLowerCase();
@@ -39,7 +39,7 @@ export function normalizeEffort(effort: string | undefined): EffortValue | undef
 }
 
 /** Coarse token bands for a turn's PROCESSED tokens (input + output). Cache-read
- *  tokens are reused context, not fresh work, so they are EXCLUDED , the bucket
+ *  tokens are reused context, not fresh work, so they are EXCLUDED – the bucket
  *  reflects "how big was this turn's actual processing", the tuning signal for
  *  who is expensive/slow (a later step may split input vs output). Ordered ascending
  *  by exclusive upper bound; `xl` is the open-ended top. Named consts so the bands
@@ -54,7 +54,7 @@ export const TOKEN_BUCKET_THRESHOLDS: ReadonlyArray<{ bucket: TokenBucketValue; 
 
 /** Bucket a turn's usage into a TOKEN_BUCKET_VALUES band by its processed
  *  (input + output) tokens. Absent usage, or a non-positive/non-finite total,
- *  yields undefined (the span omits the field , a null column, distinct from `xs`
+ *  yields undefined (the span omits the field – a null column, distinct from `xs`
  *  which is a real, measured-small turn). */
 /** Bucket ONE non-negative token count into a TOKEN_BUCKET_VALUES band; undefined for an
  *  absent / non-positive / non-finite value. Shared by the combined + the per-component
@@ -85,7 +85,7 @@ export function turnSpanFieldsFromMeta(meta: TurnMeta | undefined): Partial<Turn
   const tokenBucket = bucketTokens(meta.usage);
   if (tokenBucket) out.token_bucket = tokenBucket;
   // L2 cost split: input (context read) vs output (generation) vs cache-read (reuse), each a
-  // coarse band , shows whether a turn is expensive because it READS a lot or WRITES a lot.
+  // coarse band – shows whether a turn is expensive because it READS a lot or WRITES a lot.
   if (meta.usage) {
     const bi = bucketCount(meta.usage.inputTokens);
     if (bi) out.token_bucket_input = bi;
@@ -95,7 +95,7 @@ export function turnSpanFieldsFromMeta(meta: TurnMeta | undefined): Partial<Turn
     if (bc) out.token_bucket_cache_read = bc;
   }
   // retry_count is a plain count, not an enum: carry it whenever the runner recorded a
-  // finite non-negative number, INCLUDING 0 (a measured clean turn , distinct from an
+  // finite non-negative number, INCLUDING 0 (a measured clean turn – distinct from an
   // omitted/null column meaning the runner surfaced no meta at all). This is the "who is
   // flaky" signal: mostly 0, occasionally >0 when a turn hit the overflow/transient budgets.
   if (typeof meta.retryCount === "number" && Number.isFinite(meta.retryCount) && meta.retryCount >= 0) {

@@ -1,5 +1,5 @@
 // Step: the GENERIC StepContract, driven entirely by a step manifest (DATA) + the
-// validator registry (CODE) + an injected agent. This is the NORM , a step is one JSON
+// validator registry (CODE) + an injected agent. This is the NORM – a step is one JSON
 // manifest + (only if a new output type appears) one registered validator fn. A bespoke
 // StepContract class is the escape hatch, for a step whose run() logic is genuinely custom.
 //
@@ -139,13 +139,13 @@ export class Step implements StepContract {
       docstring:
         `check ${o.filename} (validator "${o.validator}"): ${o.description ?? o.id}. ` +
         `Returns {ok, violations[]}. Run it on your written ${o.filename} and fix every ` +
-        `violation before returning , no orchestrator round-trip.`,
+        `violation before returning – no orchestrator round-trip.`,
       fn: resolveValidator(o.validator),
     }));
   }
 
   /**
-   * Run the step within the PROVIDED workspace , identical contract to SpecAuthorBreakdownStep:
+   * Run the step within the PROVIDED workspace – identical contract to SpecAuthorBreakdownStep:
    * verify every declared input was provided (fail loud, name the missing one, no agent call),
    * invoke the injected agent contained to the workspace, report the produced artifact path(s)
    * found at the orchestrator-declared output locations (fall back to the bare filename).
@@ -155,7 +155,7 @@ export class Step implements StepContract {
 
     for (const spec of this.inputs(action)) {
       // An OPTIONAL input that resolveInputs skipped (absent source on the live lane, e.g. review's
-      // `code` project-tree input) is legitimately NOT in the map , skipping it is correct, not a
+      // `code` project-tree input) is legitimately NOT in the map – skipping it is correct, not a
       // failure. Only a REQUIRED input absent from the map is a fail-loud missing input. (Before this,
       // an optional-absent input tripped this gate -> {produced:false, missingInput} -> phase-5
       // violation -> blocked -> retry -> abort: the SYSTEMIC navigator-review PROTOCOL VIOLATION,
@@ -173,7 +173,7 @@ export class Step implements StepContract {
       resolveChannelRoot(channel, { workspaceDir, artifactDir: provided.artifactDir, metaDir: provided.metaDir });
 
     const specs = this.outputs(action);
-    // A turn with NO declared outputs (a self-heal / judgment turn , assess / review / reflect ,
+    // A turn with NO declared outputs (a self-heal / judgment turn – assess / review / reflect ,
     // whose correctness is its @build-cycle record + state-derived route, not a static artifact)
     // has NO required primary: it PRODUCES by completing. Report produced:true so the executor's
     // phase 5 does not flag a nonexistent "primary output" and the turn routes on its cycle record.
@@ -203,7 +203,7 @@ export class Step implements StepContract {
 
   /**
    * The injected agent's result for its most recent turn (usage tokens/cost/num_turns + final
-   * text), read duck-typed , a live ClaudeStepAgent sets `lastResult` after each invoke; a
+   * text), read duck-typed – a live ClaudeStepAgent sets `lastResult` after each invoke; a
    * mock/replay agent has none (returns undefined). The executor calls this in phase 6 so the
    * turn's telemetry travels on the StepRecord + survives the (thrown-away) workspace. Read-only,
    * never affects routing or validation.
@@ -226,7 +226,7 @@ export class Step implements StepContract {
    *   - produced: no escalation -> the manifest's mapped `next` (a concrete WorkflowAction),
    *     or "state-derived" to defer entirely to the pure transition.
    *
-   * The escalate/revise split is NOT re-derived here , it reuses the real machine's
+   * The escalate/revise split is NOT re-derived here – it reuses the real machine's
    * escalationPreempt(state) (the same authority nextTransition uses), so the manifest path
    * and the legacy transition agree by construction. A manifest MAY still declare explicit
    * `routing.revise` / `routing.escalate` targets to override where those outcomes point; when

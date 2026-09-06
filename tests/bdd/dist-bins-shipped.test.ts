@@ -1,13 +1,13 @@
 // Release-artifact guard: every bin in package.json must be SHIPPED, i.e. its
 // dist/ target must be git-tracked. dist/ is .gitignore'd but the kit ships a
 // pre-built dist on every tag (force-added despite the ignore) because a consumer
-// install (npm install github:...#ref) skips the build , see scripts/prepare.mjs.
+// install (npm install github:...#ref) skips the build – see scripts/prepare.mjs.
 //
 // The defect this guards: when a new bin family landed (the sftdd/tdd CLIs), its
 // built output was gitignored and never force-added, so the shipped dist omitted
 // dist/scripts/sftdd/** entirely. `npm run build` produced the files locally, so
 // nothing on disk looked wrong, but a real consumer install was missing 48 of 75
-// bins , every /plan, /design, /build, /deploy backend. A disk-existence check
+// bins – every /plan, /design, /build, /deploy backend. A disk-existence check
 // would NOT have caught it (the dev clone builds them); only a git-tracked check
 // does. So this test asks git, not the filesystem.
 
@@ -56,7 +56,7 @@ describe("shipped release artifact: every package.json bin is git-tracked in dis
 // The shipped step MANIFESTS are runtime DATA, but unlike the bins they are NOT
 // standalone dist files: step-manifest.ts imports them as JSON modules, so the bundler
 // INLINES them into the built dist/scripts/sftdd/*.cli.js. There is therefore no
-// per-manifest dist twin to track , the guarantee that a consumer install can load them
+// per-manifest dist twin to track – the guarantee that a consumer install can load them
 // is that they are inlined into the shipped bundle. That is asserted where it belongs:
 // step-manifest.test.ts loads SHIPPED_MANIFESTS + validates each against the schema.
 // (A directory-scan guard here would be checking a path that no longer exists.)

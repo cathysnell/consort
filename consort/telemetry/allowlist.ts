@@ -1,7 +1,7 @@
 // The CLOSED telemetry attribute allowlist for schema "consort/v1".
 //
 // WHY THIS EXISTS (mirrors consort/logging/agent-log-events.ts): telemetry that
-// can ship an ARBITRARY attribute is a privacy hazard , a stray path, branch
+// can ship an ARBITRARY attribute is a privacy hazard – a stray path, branch
 // name, hostname, or error string leaks the moment someone adds a field. This
 // module is the single source of truth for EVERY field the emitter may ship:
 //   - the Resource attributes (RESOURCE_ATTR_KEYS),
@@ -30,7 +30,7 @@ export const TELEMETRY_LEVELS = [1, 2] as const;
 export type TelemetryLevel = (typeof TELEMETRY_LEVELS)[number];
 
 /** The Resource attributes shipped once per trace. All are enum / boolean /
- *  numeric / structured-id , never free text. `level` reflects the ACTIVE level
+ *  numeric / structured-id – never free text. `level` reflects the ACTIVE level
  *  (1 by default, 2 only when the operator opts in); its key never changes. */
 export const RESOURCE_ATTR_KEYS = [
   "schema",
@@ -58,8 +58,8 @@ export const RUN_SPAN_FIELDS_L1 = [
   "outcome",
   "exit_code",
   "gates_total",
-  // Repair & loop dynamics , PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
-  // signal (L1's job), and these are aggregate run-level COUNTS , no per-turn detail, no
+  // Repair & loop dynamics – PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
+  // signal (L1's job), and these are aggregate run-level COUNTS – no per-turn detail, no
   // content. Tallied on every run now, not just at level 2.
   "red_green_cycles",
   "refactor_iterations",
@@ -91,7 +91,7 @@ export type RunSpanField = (typeof RUN_SPAN_FIELDS)[number];
 /** The Level-1 child `consort.gate` span fields (one per performed action). `role` +
  *  `phase` are carried ONLY for an `invoke-role` action (undefined for every other gate
  *  kind); both are closed enums (no free text), so the DEFAULT (L1) telemetry can attribute
- *  duration to the specific role + phase , where the majority of a run's time goes , instead
+ *  duration to the specific role + phase – where the majority of a run's time goes – instead
  *  of lumping every role turn under `gate: "invoke-role"`. */
 export const GATE_SPAN_FIELDS_L1 = [
   "trace_id",
@@ -132,7 +132,7 @@ export const TURN_SPAN_FIELDS = [
   "name",
   "role",
   // Phase (same closed PHASE_VALUES enum as the gate span): lets the L2 turn view be a clean
-  // GROUP BY phase, role, model , build roles multiplex phases that model/effort alone can't tell.
+  // GROUP BY phase, role, model – build roles multiplex phases that model/effort alone can't tell.
   "phase",
   "model",
   "effort",
@@ -140,7 +140,7 @@ export const TURN_SPAN_FIELDS = [
   "retry_count",
   "token_bucket",
   // Cost split (each a coarse TOKEN_BUCKET_VALUES band): input = context read, output =
-  // generation, cache_read = reuse , WHY a turn is expensive (read-heavy vs write-heavy).
+  // generation, cache_read = reuse – WHY a turn is expensive (read-heavy vs write-heavy).
   "token_bucket_input",
   "token_bucket_output",
   "token_bucket_cache_read",
@@ -157,11 +157,11 @@ export type ShellValue = (typeof SHELL_VALUES)[number];
 export const RUN_OUTCOMES = ["completed", "aborted", "error"] as const;
 export type RunOutcome = (typeof RUN_OUTCOMES)[number];
 
-/** Map a drive's ACTUAL process exit code to the run outcome , the SINGLE source of truth
+/** Map a drive's ACTUAL process exit code to the run outcome – the SINGLE source of truth
  *  so `outcome` and `exit_code` can never disagree. `0` => completed; `3` => aborted (a
  *  HITL escalation); ANY other non-zero (`1` error, `2` a guard / empty-backlog /
  *  pending-input / CLI-effect failure, …) => error. The prior ad-hoc derivations only
- *  special-cased 3 and 1, so exit `2` fell through to "completed" , a failed run recorded
+ *  special-cased 3 and 1, so exit `2` fell through to "completed" – a failed run recorded
  *  as a success (seen on real installs). A non-zero exit is NEVER "completed". */
 export function outcomeForExit(code: number): RunOutcome {
   if (code === 0) return "completed";
@@ -174,9 +174,9 @@ export type GateOutcome = (typeof GATE_OUTCOMES)[number];
 // each per-feature drive under ONE root run); `plan` / `design` / `build` / `deploy` are
 // the per-phase feature-path runs (a Tier-2 bound maps to its slash command, a full
 // feature run reports `build`). Plus `spike`, the throwaway-branch op run by
-// `consort-spike` (outside the TDD loop , not a role drive, so it emits a root run with
+// `consort-spike` (outside the TDD loop – not a role drive, so it emits a root run with
 // zero gate spans). Every user-invoked command must emit telemetry regardless of which
-// bin serves it , so a dashboard can tell a whole-sprint run apart from a single phase.
+// bin serves it – so a dashboard can tell a whole-sprint run apart from a single phase.
 export const COMMANDS = ["sprint", "plan", "design", "build", "deploy", "spike"] as const;
 export type TelemetryCommand = (typeof COMMANDS)[number];
 
@@ -184,7 +184,7 @@ export type TelemetryCommand = (typeof COMMANDS)[number];
  *  `"complete"` | null) to the telemetry command for a plain, unbounded `--feature`
  *  drive. `/design`, `/build`, and `/deploy` ALL invoke `consort-drive --feature <F>`
  *  with no phase flag (the drive derives the phase from disk), so the run's command must
- *  come from the feature's phase, not a hardcoded default , else a design or deploy drive
+ *  come from the feature's phase, not a hardcoded default – else a design or deploy drive
  *  mislabels as `build` and a dashboard cannot tell them apart. A fully-accepted
  *  (`"complete"`) feature drive runs the deploy phase, so it maps to `deploy`. An
  *  explicit bound (`--plan-only` / `--only`) still wins upstream; this is only the
@@ -219,7 +219,7 @@ export const ROLE_VALUES = [
 ] as const;
 export type RoleValue = (typeof ROLE_VALUES)[number];
 
-/** The PHASE of a role invocation , WHAT KIND of turn it is , so the DEFAULT L1 gate span
+/** The PHASE of a role invocation – WHAT KIND of turn it is – so the DEFAULT L1 gate span
  *  can split the two roles that dominate runtime (navigator: reflect/red/review/assess;
  *  driver: green/refactor) instead of one coarse "invoke-role". Derived from the action's
  *  buildMode/mode, else the role's base phase; "other" catches any unmapped mode so a new
@@ -271,7 +271,7 @@ export const FAIL_CLASSES = [
 export type FailClass = (typeof FAIL_CLASSES)[number];
 
 /** The REVISE TAXONOMY: WHY a `revise-route` sent a gate's verdict back to its author (the
- *  categorized reason behind an L1 `revise_rounds` count). A closed enum , the recurring
+ *  categorized reason behind an L1 `revise_rounds` count). A closed enum – the recurring
  *  design-lane re-route causes + an `other` catch-all. Category ONLY, never the verdict text. */
 export const REVISE_CLASSES = [
   "nfr-coverage-gap",

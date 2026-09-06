@@ -50,12 +50,12 @@ describe("projectRoutingStateBag: extract the routing 'why' from a DriveState", 
       stories: { S3: { build: { reviewStoryPending: false, assessGreenAc: "AC1", codeWritten: false } } },
     };
     const bag = projectRoutingStateBag(state);
-    // This is exactly the state that routes to ASSESS, not review , the record must show it.
+    // This is exactly the state that routes to ASSESS, not review – the record must show it.
     expect(bag.assessGreenAc).toBe("AC1");
     expect(bag.reviewStoryPending).toBe(false);
   });
 
-  it("is defensive on a non-build phase (planning) , no active story, no crash", () => {
+  it("is defensive on a non-build phase (planning) – no active story, no crash", () => {
     const bag = projectRoutingStateBag({ phase: "planning", buildActive: null });
     expect(bag.phase).toBe("planning");
     expect(bag.buildActive).toBe(null);

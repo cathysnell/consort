@@ -1,10 +1,10 @@
 // turn-monitor: the wait/liveness capability for a step's dispatch-agent phase.
 //
 // Today the agent spawn is a blocking await with no heartbeat, no hard timeout, and no
-// structured progress signal , a hung turn looks identical to a slow one. This adds an
+// structured progress signal – a hung turn looks identical to a slow one. This adds an
 // OPTIONAL monitor: fed the agent stream's per-line events, it emits progress (liveness),
 // fires a heartbeat after a stretch of silence, and fires a hard timeout the caller maps to
-// a TRANSIENT failure so the EXISTING transient-retry envelope handles the re-run , no new
+// a TRANSIENT failure so the EXISTING transient-retry envelope handles the re-run – no new
 // retry logic, no second stream channel.
 //
 // The controller is a small, pure state machine over an INJECTED clock so it is unit-tested
@@ -25,7 +25,7 @@ export interface TurnProgress {
  *    re-arms after each beat + resets on any real progress.
  *  - inactivityTimeoutMs: SILENCE deadline; fires the caller's onTimeout after this long with
  *    NO progress, and RE-ARMS on every real event (so a turn that keeps streaming never trips,
- *    however long it runs , the wedge signature is silence, not duration). This is the primary
+ *    however long it runs – the wedge signature is silence, not duration). This is the primary
  *    guard against a stalled API stream (child alive, socket open, but no bytes ever arriving,
  *    so `close` never fires and the await hangs forever). Fires at most once.
  *  - timeoutMs: HARD deadline from start; fires onTimeout when reached regardless of activity.
@@ -40,7 +40,7 @@ export interface TurnMonitor {
   timeoutMs?: number;
 }
 
-/** The clock + timer seam , injected so the controller is tested with a fake clock. */
+/** The clock + timer seam – injected so the controller is tested with a fake clock. */
 export interface MonitorClock {
   now(): number;
   setTimer(fn: () => void, ms: number): ReturnType<typeof setTimeout>;

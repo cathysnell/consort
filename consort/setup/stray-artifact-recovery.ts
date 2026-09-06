@@ -1,6 +1,6 @@
 // FEIP-8038: a design subagent that resolves a MALFORMED absolute project root
 // writes its artifacts to a sibling directory whose name is the parent workspace
-// dir and the project dir joined with a HYPHEN instead of a slash , e.g.
+// dir and the project dir joined with a HYPHEN instead of a slash – e.g.
 // ~/code/app-dev-kit-demo/stockflow-interactive becomes
 // ~/code/app-dev-kit-demo-stockflow-interactive. The out-of-root guard then finds
 // nothing under the real root and bails, and the "re-run" recovery loops forever.
@@ -50,7 +50,7 @@ export interface StrayRelocation {
  * `projectDir`, merge it into the real project root (the stray files are the
  * agent's actual output; they win over any partial in the real root) and remove
  * the stray tree. Returns what moved. A no-op (relocated:false) when the sibling
- * or its artifact tree is absent. Only the artifact roots move , the rest of the
+ * or its artifact tree is absent. Only the artifact roots move – the rest of the
  * sibling is left untouched, and an empty sibling is cleaned up.
  */
 export function relocateStrayDesignArtifacts(projectDir: string): StrayRelocation {
@@ -59,7 +59,7 @@ export function relocateStrayDesignArtifacts(projectDir: string): StrayRelocatio
 
   const moved: string[] = [];
   // Every artifact-root name the kit recognises (.consort + legacy), from the single
-  // source of truth , so a stray tree under any historical root is recovered.
+  // source of truth – so a stray tree under any historical root is recovered.
   for (const artRoot of ALL_ARTIFACT_ROOTS) {
     const strayRoot = join(sibling, artRoot);
     if (!existsSync(strayRoot)) continue;

@@ -8,7 +8,7 @@
 // (or the sprint plan gate). That is a governance decision, so this CLI:
 //   - REQUIRES --approver <name> (no default): the deciding human must name
 //     themselves; there is no silent proxy identity.
-//   - records a GENUINE approval , the tool records ATTRIBUTION; the DECISION must
+//   - records a GENUINE approval – the tool records ATTRIBUTION; the DECISION must
 //     be the approver's. Only run it when the named human has actually reviewed
 //     and approved.
 //
@@ -16,7 +16,7 @@
 // for the sprint plan gate; drainGatesAsHumanProxy, which assembles each open
 // gate's artifact hashes and calls approveGate, for a feature's gates; and
 // approveStoryGateFromDisk for the per-story spec gate managed by the pipeline),
-// so the recorded approval is byte-for-byte what the workflow expects , only the
+// so the recorded approval is byte-for-byte what the workflow expects – only the
 // attribution and the required-human framing differ.
 //
 // This is the ONE human-facing gate door: --sprint approves the plan gate,
@@ -72,7 +72,7 @@ function parse(argv: string[]): Parsed {
 }
 
 const HELP =
-  `consort-approve-gate , record a HUMAN's HITL gate approval\n\n` +
+  `consort-approve-gate – record a HUMAN's HITL gate approval\n\n` +
   `Records a genuine approval into the workflow state. The DECISION must be the\n` +
   `approver's; this tool records ATTRIBUTION + the artifact hashes. Use the Human\n` +
   `Proxy (consort-human-proxy) instead ONLY for headless / smoke runs.\n\n` +
@@ -86,7 +86,7 @@ const HELP =
   `3 = per-story draft invariant violated.\n`;
 
 /** Run the CLI. Returns the process exit code (no process.exit inside), so it is
- *  unit-testable , mirroring runHumanProxyCli. */
+ *  unit-testable – mirroring runHumanProxyCli. */
 export function runApproveGateCli(argv: string[]): number {
   const p = parse(argv);
   if (p.help) {
@@ -95,7 +95,7 @@ export function runApproveGateCli(argv: string[]): number {
   }
   if (!p.approver || !p.approver.trim()) {
     process.stderr.write(
-      `consort-approve-gate: --approver <name> is REQUIRED , a gate approval attributes the\n` +
+      `consort-approve-gate: --approver <name> is REQUIRED – a gate approval attributes the\n` +
         `decision to a named human. (For headless/smoke runs use consort-human-proxy.)\n`,
     );
     return 2;
@@ -133,7 +133,7 @@ export function runApproveGateCli(argv: string[]): number {
       return 2;
     }
     process.stdout.write(
-      `approve-gate: ${p.feature}/${p.story} , per-story spec gate approved by ${p.approver}` +
+      `approve-gate: ${p.feature}/${p.story} – per-story spec gate approved by ${p.approver}` +
         ` (ready + queued: ${(r.queue ?? []).join(", ") || "none"})\n`,
     );
     return 0;
@@ -176,7 +176,7 @@ export function runApproveGateCli(argv: string[]): number {
     process.stdout.write(`${JSON.stringify({ ok: true, ...result })}\n`);
   } else {
     process.stdout.write(
-      `approve-gate: ${p.feature} , approved ${result.approved.length} gate(s) by ${p.approver}` +
+      `approve-gate: ${p.feature} – approved ${result.approved.length} gate(s) by ${p.approver}` +
         `${result.approved.length ? ": " + result.approved.join(", ") : ""}\n`,
     );
     for (const s of result.skipped) process.stdout.write(`  skipped ${s.gate} (${s.reason})\n`);

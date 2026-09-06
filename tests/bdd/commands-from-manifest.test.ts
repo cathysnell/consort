@@ -1,6 +1,6 @@
 // Golden equivalence for the manifest-driven command assembly. The Template Method's
 // commandsFromManifest(action, cfg) must produce a DriveCommand[] BYTE-IDENTICAL to the
-// legacy per-role branch of commandsForAction for the same action , that deep-equality is
+// legacy per-role branch of commandsForAction for the same action – that deep-equality is
 // what lets a legacy branch be retired safely (migrate one action at a time; delete a
 // branch only after its golden passes). This slice proves it for the spec-author breakdown
 // step, and that the opt-in cfg flag leaves the default drive untouched.
@@ -72,7 +72,7 @@ describe("commandsFromManifest ≡ commandsForAction: ux-designer design turn (e
     expect(fromManifest).toEqual(legacy);
   });
 
-  it("reproduces the ux-designer structural commands in order , NO reset/sync postTurn (the empty-postTurn case)", () => {
+  it("reproduces the ux-designer structural commands in order – NO reset/sync postTurn (the empty-postTurn case)", () => {
     const cmds = commandsFromManifest(UX_DESIGNER, cfg());
     expect(cmds).toBeDefined();
     // Unlike breakdown ([reset, claude, verify, sync, reconcile]), a design role with no
@@ -137,15 +137,15 @@ describe("commandsFromManifest ≡ commandsForAction: architect-reviewer per-sto
     expect(kinds(commandsFromManifest(ARCH, cfg()))).toEqual(["claude", "verify-artifact", "cli:consort-log"]);
   });
 
-  it("the mode:null sentinel keeps the PER-STORY manifest off the estimate turn , estimate routes to architect-estimator instead (byte-identical), not the per-story manifest", () => {
+  it("the mode:null sentinel keeps the PER-STORY manifest off the estimate turn – estimate routes to architect-estimator instead (byte-identical), not the per-story manifest", () => {
     const estimate: WorkflowAction = { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     // estimate now maps to a DIFFERENT shipped manifest (architect-estimator), so it is not
-    // undefined , but the per-story manifest (mode:null) does NOT hijack it (no ambiguous
+    // undefined – but the per-story manifest (mode:null) does NOT hijack it (no ambiguous
     // double-match; manifestForAction throws on that, so this resolving at all proves it).
     const cmds = commandsFromManifest(estimate, cfg());
     expect(cmds).toEqual(commandsForAction(estimate, cfg()));
     // The estimate shape is the planning shape [claude, verify-artifact], NOT the per-story
-    // [claude, verify, reconcile] , which confirms the estimator manifest matched, not the story one.
+    // [claude, verify, reconcile] – which confirms the estimator manifest matched, not the story one.
     expect(kinds(cmds)).toEqual(["claude", "verify-artifact"]);
   });
 });
@@ -157,7 +157,7 @@ describe("commandsFromManifest ≡ commandsForAction: dba per-story (no verify-a
     expect(commandsFromManifest(DBA, cfg())).toEqual(commandsForAction(DBA, cfg()));
   });
 
-  it("structural order: [claude, reconcile] , NO verify-artifact (an empty db-design is valid)", () => {
+  it("structural order: [claude, reconcile] – NO verify-artifact (an empty db-design is valid)", () => {
     expect(kinds(commandsFromManifest(DBA, cfg()))).toEqual(["claude", "cli:consort-log"]);
   });
 });
@@ -188,7 +188,7 @@ describe("commandsFromManifest ≡ commandsForAction: test-strategist per-story 
 
 // The sprint/plan lane's two design steps. Planning modes (propose/estimate) write
 // SPRINT-scoped artifacts (planning/*), so commandsFromManifest SKIPS the reconcile
-// (isPlanningMode) , the shape is just [claude, verify-artifact]. The default cfg has
+// (isPlanningMode) – the shape is just [claude, verify-artifact]. The default cfg has
 // no recordedRequests, so commandsForAction takes the LIVE propose path (not the
 // deterministic supply-proposals branch), which the golden byte-matches.
 describe("commandsFromManifest ≡ commandsForAction: spec-author propose (sprint plan lane)", () => {
@@ -198,7 +198,7 @@ describe("commandsFromManifest ≡ commandsForAction: spec-author propose (sprin
     expect(commandsFromManifest(PROPOSE, cfg())).toEqual(commandsForAction(PROPOSE, cfg()));
   });
 
-  it("structural order: [claude, verify-artifact] , NO reconcile (a sprint-scoped planning artifact)", () => {
+  it("structural order: [claude, verify-artifact] – NO reconcile (a sprint-scoped planning artifact)", () => {
     expect(kinds(commandsFromManifest(PROPOSE, cfg()))).toEqual(["claude", "verify-artifact"]);
   });
 });
@@ -210,7 +210,7 @@ describe("commandsFromManifest ≡ commandsForAction: architect t-shirt sizer (e
     expect(commandsFromManifest(ESTIMATE, cfg())).toEqual(commandsForAction(ESTIMATE, cfg()));
   });
 
-  it("structural order: [claude, verify-artifact] , NO reconcile", () => {
+  it("structural order: [claude, verify-artifact] – NO reconcile", () => {
     expect(kinds(commandsFromManifest(ESTIMATE, cfg()))).toEqual(["claude", "verify-artifact"]);
   });
 
@@ -258,7 +258,7 @@ describe("commandsFromManifest ≡ commandsForAction: driver GREEN build turn", 
 
 // Every navigator/driver BUILD turn now has a shipped manifest (the config home for its
 // agentOptions), and its record-phase cycle CLI is derived by the ONE buildCycleCommand both
-// paths call. Assert commandsFromManifest ≡ commandsForAction for each , the byte-identical
+// paths call. Assert commandsFromManifest ≡ commandsForAction for each – the byte-identical
 // contract that lets the executor eventually own dispatch (Stage 2) from a unified config.
 describe("commandsFromManifest ≡ commandsForAction: all build turns (full command-source)", () => {
   const STORY = "S1-record-stock";
@@ -290,9 +290,9 @@ describe("commandsFromManifest ≡ commandsForAction: all build turns (full comm
 
   it("driver refactor turns declare the opus model tier in agentOptions", () => {
     // The model-tier lever (REFACTOR on the tuning-winner model) is now DECLARED in the manifest, not
-    // only in defaultConsortConfig's per-turn map , the parity test guards the two agree.
+    // only in defaultConsortConfig's per-turn map – the parity test guards the two agree.
     const refactor: WorkflowAction = { kind: "invoke-role", role: "driver", story: STORY, buildMode: "refactor" };
-    // With a cfg whose modelForTurn tiers refactor->opus (as the real resolver does , the driver-refactor
+    // With a cfg whose modelForTurn tiers refactor->opus (as the real resolver does – the driver-refactor
     // tuning winner), the spawn command carries opus; byte-identity with legacy is the assertion above.
     // Here just sanity that the two paths agree under model tiering.
     const tiered = cfg({ modelForTurn: (r, t) => (r === "driver" && t === "refactor" ? "opus" : "sonnet") });

@@ -38,7 +38,7 @@ import { emitAgentLogEvent } from "../../consort/logging/agent-log";
 
 /** Best-effort experiment-lifecycle event to the central log. The discard/revise
  *  verbs have no deterministic driver action (they are HIL acceptance decisions
- *  applied via this CLI), so this is the substrate home for their events , the
+ *  applied via this CLI), so this is the substrate home for their events – the
  *  sibling of experiment.cut/accepted, which the orchestrator emits. */
 function logExperimentEvent(consortDir: string, event: "experiment.discarded" | "experiment.revised", story: string, reason: string): void {
   try {

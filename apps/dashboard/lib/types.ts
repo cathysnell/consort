@@ -368,7 +368,7 @@ export interface DashboardState {
   stories: StoryProgress[]; // per-story lifecycle for the sub-progress row
   // The orchestrator's current activity — its LATEST event (with a message) over the FULL event
   // stream. Recency wins across event kinds: at a gate it's
-  // the gate.surfaced ("GATE acceptance awaiting decision , story S4-…"), mid-build it's the last
+  // the gate.surfaced ("GATE acceptance awaiting decision – story S4-…"), mid-build it's the last
   // dispatch, at story start it's "orchestrator START build". A long build puts many turns between
   // any of these and the gate you're waiting at, so a tail lookup would go stale; deriving it in
   // the fold keeps the card showing what the orchestrator is on right now. Null before any activity.

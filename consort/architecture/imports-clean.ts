@@ -2,8 +2,8 @@
 // build artifact (client/dist) present.
 //
 // Why this exists: a build agent that mounts the compiled client at module load
-// time , e.g. FastAPI `app.mount("/assets", StaticFiles(directory=client/dist/assets))`
-// at import scope , greens its tests on a machine where the client is already
+// time – e.g. FastAPI `app.mount("/assets", StaticFiles(directory=client/dist/assets))`
+// at import scope – greens its tests on a machine where the client is already
 // built, then crashes at import the moment the app runs anywhere the client
 // has not been built (a backend-only test run, CI before the client build, a
 // fresh clone). The app becomes unimportable and every downstream step fails
@@ -56,7 +56,7 @@ export interface ImportsCleanResult {
   clean: boolean;
   /**
    * The entry the check imported, e.g. "app.main" (python). `null` when no
-   * conventional entry was found , nothing to check, treated as clean.
+   * conventional entry was found – nothing to check, treated as clean.
    */
   entry: string | null;
   lang: SchemaMigrationLanguage | null;
@@ -109,7 +109,7 @@ export function detectEntry(projectDir: string, lang: SchemaMigrationLanguage): 
 const defaultImporter: Importer = ({ projectDir, lang, entry }) => {
   // Run the import in the project's own interpreter so its dependencies resolve
   // (uv-managed venv for python, matching pr.yml's `uv run pytest`). A failure
-  // here, with deps present, means the module cannot be imported , the gate's
+  // here, with deps present, means the module cannot be imported – the gate's
   // whole point.
   let command: string;
   if (lang === "python") {
@@ -117,7 +117,7 @@ const defaultImporter: Importer = ({ projectDir, lang, entry }) => {
     command = `${py} -c "import ${entry}"`;
   } else if (lang === "nodejs") {
     // CommonJS require covers the kit's node template; ESM-only entries would
-    // need dynamic import , out of scope until a node SPA-mount case appears.
+    // need dynamic import – out of scope until a node SPA-mount case appears.
     command = `node -e "require('${entry}')"`;
   } else {
     return { code: 0, stderr: "" };

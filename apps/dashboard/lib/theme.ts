@@ -110,16 +110,16 @@ export const status = {
 // Distinct, stable color per agent role. Used by the cost bar, and by the topology graph
 // to stroke a node with the color of the role that owns it.
 export const roleColor: Record<Role, string> = {
-  orchestrator: "#64748B", // slate , the deterministic conductor's identity
+  orchestrator: "#64748B", // slate – the deterministic conductor's identity
   "spec-author": "#3B82F6",
   "ux-designer": "#EC4899",
   "architect-reviewer": "#8B5CF6",
   dba: "#F59E0B",
-  "test-strategist": "#EAB308", // yellow , matches the agent color
+  "test-strategist": "#EAB308", // yellow – matches the agent color
   navigator: "#FF7033",
   driver: "#10B981",
-  "product-owner": "#06B6D4", // cyan , matches the agent color
-  "release-engineer": "#2DD4BF", // mint (saturated) , blue-green, apart from driver green and PO cyan
+  "product-owner": "#06B6D4", // cyan – matches the agent color
+  "release-engineer": "#2DD4BF", // mint (saturated) – blue-green, apart from driver green and PO cyan
 };
 
 // Any string, so an unknown role from a future kit degrades to grey instead of undefined.

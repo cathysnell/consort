@@ -114,7 +114,7 @@ describe("makeStepReplayAgent: materializes the recorded turn matching the actio
     await expect(agent.invoke(invoke({ kind: "invoke-role", role: "spec-author", story: "S1" }))).rejects.toThrow(/no turns\/ timeline/i);
   });
 
-  // A navigator/driver BUILD turn is not a delta materialization , it SYNCS the cumulative recorded
+  // A navigator/driver BUILD turn is not a delta materialization – it SYNCS the cumulative recorded
   // -build snapshot for the story's Kth build turn (replayBuildTurn), so the working tree is
   // byte-identical to record-time and a repair-authored file lands AT its turn. Design turns keep
   // the delta path. This is the executor's build-lane replay (the live drive dispatches build turns

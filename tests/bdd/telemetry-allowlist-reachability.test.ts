@@ -77,7 +77,7 @@ describe("telemetry allowlist reachability (no unlisted / no silent field)", () 
     const listed = new Set<string>(GATE_KINDS);
     // Every source kind must be listed (a new action fails the build here).
     for (const k of inSource) {
-      expect(listed.has(k), `WorkflowAction kind "${k}" is not in GATE_KINDS , classify it`).toBe(true);
+      expect(listed.has(k), `WorkflowAction kind "${k}" is not in GATE_KINDS – classify it`).toBe(true);
     }
     // Every listed kind must still exist in the source (no stale entry).
     for (const k of listed) {
@@ -235,7 +235,7 @@ describe("telemetry allowlist reachability (no unlisted / no silent field)", () 
   });
 
   it("L2: every constrained field is a CLOSED enum (no free text), incl. an 'other'/'unknown' catch-all where a value may be novel", () => {
-    // The enums exist and are non-empty closed sets , the emitter can only ship a
+    // The enums exist and are non-empty closed sets – the emitter can only ship a
     // member (a novel value collapses to the catch-all, never a raw string).
     expect(ROLE_VALUES.length).toBeGreaterThan(0);
     expect(MODEL_VALUES).toContain("other"); // a model family the bucket does not know
@@ -268,7 +268,7 @@ describe("outcomeForExit: run outcome derives from the ACTUAL exit code (one sou
     expect(outcomeForExit(3)).toBe("aborted");
     expect(outcomeForExit(1)).toBe("error");
     // The regression: exit 2 (a guard / empty-backlog / pending-input / CLI-effect failure)
-    // must be `error`, NOT `completed` , the ad-hoc `code===3?aborted:code===1?error:completed`
+    // must be `error`, NOT `completed` – the ad-hoc `code===3?aborted:code===1?error:completed`
     // let 2 fall through to `completed`, recording a failed run as a success.
     expect(outcomeForExit(2)).toBe("error");
     expect(outcomeForExit(127)).toBe("error");

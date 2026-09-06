@@ -1,4 +1,4 @@
-// step-run-types: the contained per-run I/O contract a RunnableStep's run() speaks , what the
+// step-run-types: the contained per-run I/O contract a RunnableStep's run() speaks – what the
 // orchestrator PROVIDES to a step and what the step reports back. These are the load-bearing
 // containment types: the orchestrator owns .consort, resolves + provides the input CONTENTS + the
 // workspace + where each output lands; the step touches NONE of .consort itself. Step (the
@@ -9,7 +9,7 @@ import type { WorkflowAction } from "../workflow/workflow-vocabulary.js";
 import type { StepInstructions } from "../agents/agent-types.js";
 
 /**
- * What the orchestrator PROVIDES to run a step , everything the step is allowed to touch. The
+ * What the orchestrator PROVIDES to run a step – everything the step is allowed to touch. The
  * step reaches outside NONE of this.
  */
 export interface ProvidedStepRun {
@@ -21,11 +21,11 @@ export interface ProvidedStepRun {
    *  orchestrator provisions one. MAY be contained (design docs are small + per-feature).
    *  Absent => artifact falls back to workspaceDir. */
   artifactDir?: string;
-  /** The CONTAINED zone for `meta`-channel outputs (orchestration bookkeeping , raw report /
+  /** The CONTAINED zone for `meta`-channel outputs (orchestration bookkeeping – raw report /
    *  verdict / marker), when the orchestrator provisions one. Absent => meta falls back to
    *  workspaceDir. A `product` output always resolves under workspaceDir (the real code tree,
    *  uncontained). With neither artifactDir nor metaDir set, every channel resolves to
-   *  workspaceDir , byte-identical to the pre-channel behavior. */
+   *  workspaceDir – byte-identical to the pre-channel behavior. */
   metaDir?: string;
   /** The resolved input CONTENTS, keyed by input id. The orchestrator read these from .consort
    *  (interactive or filesystem) and hands them over; the step never fetches. */
@@ -45,7 +45,7 @@ export interface ProvidedStepRun {
 /** The contained result a step returns to the orchestrator (no validation verdict). */
 export interface ProvidedStepResult {
   /** True iff every declared input was provided AND the agent produced its output file in the
-   *  workspace. NOT a conformance verdict , the orchestrator validates that. */
+   *  workspace. NOT a conformance verdict – the orchestrator validates that. */
   produced: boolean;
   /** Missing provided-input id (when !produced because an input was not supplied). */
   missingInput?: string;

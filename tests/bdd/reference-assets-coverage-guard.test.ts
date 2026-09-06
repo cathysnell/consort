@@ -2,7 +2,7 @@
 // comparison judges score MUST have a resolvable reference in the SHIPPED pin
 // (consort/evaluation/reference-assets/stockflow), and the build-code reference must resolve too.
 // Without this, a role whose reference was never pinned would SILENTLY skip its comparison (the
-// gate passes when no reference exists) , the exact hole this suite closes. The guard reads the
+// gate passes when no reference exists) – the exact hole this suite closes. The guard reads the
 // REAL kit pin (no CONSORT_REFERENCE_CORPUS override), so it bites if the F1 design slice or the
 // build seed is ever dropped from the pin.
 
@@ -18,7 +18,7 @@ const DESIGN_STEPS: TurnKey[] = ["breakdown", "propose", "acs", "architect", "es
 
 describe("reference-assets pin coverage: every judged role resolves a reference (no silent skip)", () => {
   beforeEach(() => {
-    // The guard checks the SHIPPED pin , make sure no stray override is in effect.
+    // The guard checks the SHIPPED pin – make sure no stray override is in effect.
     delete process.env.CONSORT_REFERENCE_CORPUS;
   });
   afterEach(() => {
@@ -29,7 +29,7 @@ describe("reference-assets pin coverage: every judged role resolves a reference 
     "design step %s resolves a pinned reference artifact",
     (step) => {
       const ref = resolveStepReference({ kitRoot: KIT, step, featureId: FEATURE });
-      expect(ref, `design step "${step}" has NO reference in the pin , add its F1 artifact to consort/evaluation/reference-assets/stockflow/recorded-artifacts (else its comparison silently skips)`).not.toBeNull();
+      expect(ref, `design step "${step}" has NO reference in the pin – add its F1 artifact to consort/evaluation/reference-assets/stockflow/recorded-artifacts (else its comparison silently skips)`).not.toBeNull();
       expect(ref!.paths.length).toBeGreaterThan(0);
     },
   );
@@ -38,13 +38,13 @@ describe("reference-assets pin coverage: every judged role resolves a reference 
     // storyIndex 0 = the first recorded story under the pin's recorded-build (F6, the build seed
     // feature). code = the driver's app tree.
     const ref = resolveBuildReference({ kitRoot: KIT, featureId: "F6-split-tracking-code", storyIndex: 0, kind: "code" });
-    expect(ref, "no recorded-build CODE reference in the pin , the build discriminator would silently skip").not.toBeNull();
+    expect(ref, "no recorded-build CODE reference in the pin – the build discriminator would silently skip").not.toBeNull();
     expect(ref!.text.length).toBeGreaterThan(0);
   });
 
   it("build tests reference resolves (the navigator recorded tests tree)", () => {
     const ref = resolveBuildReference({ kitRoot: KIT, featureId: "F6-split-tracking-code", storyIndex: 0, kind: "tests" });
-    expect(ref, "no recorded-build TESTS reference in the pin , the RED coverage judge would silently skip").not.toBeNull();
+    expect(ref, "no recorded-build TESTS reference in the pin – the RED coverage judge would silently skip").not.toBeNull();
     expect(ref!.text.length).toBeGreaterThan(0);
   });
 });

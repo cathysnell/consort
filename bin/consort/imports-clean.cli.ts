@@ -3,7 +3,7 @@
 // optional build artifact (client/dist) present.
 //
 // Exit 0 = clean (entry imported, or no conventional entry to check).
-// Exit 1 = the entry could not be imported with the artifact hidden , the
+// Exit 1 = the entry could not be imported with the artifact hidden – the
 //          "import-time coupling to an optional build artifact" smell (or a
 //          genuine import bug). Prints the importer error + remediation.
 //
@@ -36,7 +36,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-imports-clean , import the app entry without a build artifact present\n\n` +
+    `consort-imports-clean – import the app entry without a build artifact present\n\n` +
       `Usage:\n` +
       `  consort-imports-clean [--project-dir <path>] [--lang python|nodejs] \\\n` +
       `                             [--artifact <rel> ...] [--json]\n\n` +
@@ -59,10 +59,10 @@ if (p.json) {
   const hid = result.hiddenArtifacts.length
     ? ` (artifacts hidden: ${result.hiddenArtifacts.join(", ")})`
     : "";
-  process.stdout.write(`imports-clean: OK , ${what}${hid}\n`);
+  process.stdout.write(`imports-clean: OK – ${what}${hid}\n`);
 } else {
   process.stderr.write(
-    `imports-clean: FAILED , \`${result.entry}\` could not import with build ` +
+    `imports-clean: FAILED – \`${result.entry}\` could not import with build ` +
       `artifact(s) hidden.\n\n${result.error}\n\nRemediation: ${result.remediation}\n`,
   );
 }

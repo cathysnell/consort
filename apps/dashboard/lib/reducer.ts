@@ -651,7 +651,7 @@ function deriveWaiting(
   if (pendingGate || openGates.length > 0 || gateOption) {
     const gateName = pendingGate?.gate ?? openGates[0] ?? null;
     // The role to light "waiting on you" is whoever SURFACED the gate. findPendingGate nulls out the
-    // moment ANY event follows the gate.surfaced , and the release-engineer's deploy/verify
+    // moment ANY event follows the gate.surfaced – and the release-engineer's deploy/verify
     // legitimately runs while an acceptance gate stays open (gate.surfaced → deploy.* → verify.* →
     // phase.end), so pendingGate.role is null and NO bubble got lit at a genuinely-open gate. When a
     // gate is still open, recover the surfacer from the LAST gate.surfaced event (the orchestrator

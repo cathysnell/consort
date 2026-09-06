@@ -66,7 +66,7 @@ describe("navigator-assess-refactor input ↔ refactor-verify-assess marker", ()
     expect(written).toBeDefined();
 
     // Derive the resolved input path the SAME way a story-scoped resolver does:
-    // the `story:` scope roots at features/<f>/stories/<s>/ (storyDir , the single
+    // the `story:` scope roots at features/<f>/stories/<s>/ (storyDir – the single
     // path source of truth), and `rel` is the filename within that scope. This
     // FAILS if the manifest source basename ≠ where the marker is actually written.
     const resolved = join(storyDir(consortDir, FEATURE, STORY), rel);

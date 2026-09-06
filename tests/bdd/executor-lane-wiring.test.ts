@@ -1,11 +1,11 @@
-// Stage G , performTurnViaExecutor derives the REPLAY / RECORD lane from ENV, through the SAME
+// Stage G – performTurnViaExecutor derives the REPLAY / RECORD lane from ENV, through the SAME
 // buildAgent seam:
 //   * LAKEBASE_CONSORT_REPLAY_DIR set  => the manifest's kind is swapped to "replay"; the step-aware
-//     corpus agent MATERIALIZES the turn's recorded slice into the workspace , NO claude command
+//     corpus agent MATERIALIZES the turn's recorded slice into the workspace – NO claude command
 //     reaches the runner (proven by the runner spy recording no "claude:*").
 //   * LAKEBASE_CONSORT_RECORD_DIR set  => the live agent runs, then the ReplayRecorderWrapper writes
 //     the turn's delta into the corpus (turns/NNNN-<label>/).
-// Both selected from env in the executor, not a bespoke lane , the modular point.
+// Both selected from env in the executor, not a bespoke lane – the modular point.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, readdirSync, statSync } from "fs";
@@ -101,7 +101,7 @@ describe("Stage G: REPLAY lane does NOT fail-loud on a missing declared input (r
     // PO intake docs (product-overview/nfrs/feature-request) a LIVE breakdown turn would read. Under
     // replay the step-aware agent materializes the recorded OUTPUT regardless, so a missing input must
     // NOT fail the turn (the live presence-gate stays for the non-replay path). Note: this test does
-    // NOT seed the breakdown inputs (unlike the others) , that absence is the point.
+    // NOT seed the breakdown inputs (unlike the others) – that absence is the point.
     const corpus = mkdtempSync(join(tmpdir(), "lane-noinput-"));
     const proj = mkdtempSync(join(tmpdir(), "lane-noinput-proj-"));
     const cd = join(proj, ".consort");

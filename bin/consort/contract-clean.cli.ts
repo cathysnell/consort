@@ -5,7 +5,7 @@
 // consort-layering-clean / consort-imports-clean.
 //
 // Exit 0 = clean (no migration drops, or every dropped symbol is gone from the code).
-// Exit 1 = production code still references a net-dropped symbol , the
+// Exit 1 = production code still references a net-dropped symbol – the
 //          `contract-incompleteness` smell. Prints the exact file:line list +
 //          remediation (the same precise directive the GREEN-verify self-heal feeds
 //          the Driver).
@@ -38,7 +38,7 @@ function parse(argv: string[]): Parsed {
 
 function help(): never {
   process.stdout.write(
-    `consort-contract-clean , prove no code references a column a migration dropped\n\n` +
+    `consort-contract-clean – prove no code references a column a migration dropped\n\n` +
       `Usage:\n` +
       `  consort-contract-clean [--project-dir <path>] [--migrations <rel> ...] [--code <rel> ...] [--json]\n\n` +
       `Exit 0 = clean (no drops, or all dropped symbols gone from code); exit 1 = residual references (hard rule 9).\n`,
@@ -59,9 +59,9 @@ if (p.json) {
   const what = r.droppedSymbols.length
     ? `dropped [${r.droppedSymbols.join(", ")}] no longer referenced in code`
     : "no migration column drops to check";
-  process.stdout.write(`contract-clean: OK , ${what}\n`);
+  process.stdout.write(`contract-clean: OK – ${what}\n`);
 } else {
-  process.stderr.write(`contract-clean: FAILED , ${r.violations.length} residual reference(s).\n\n${r.remediation}\n`);
+  process.stderr.write(`contract-clean: FAILED – ${r.violations.length} residual reference(s).\n\n${r.remediation}\n`);
 }
 
 process.exit(r.clean ? 0 : 1);

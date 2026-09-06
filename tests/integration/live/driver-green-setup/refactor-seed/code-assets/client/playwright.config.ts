@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
 // the conventional defaults. In CI (reuseExistingServer:false), a stale server
 // left on 8000/5173 by a prior run would otherwise make webServer hard-fail with
 // "port already used". So CI's E2E step allocates FREE ports (scripts/port-utils.sh,
-// the same probe run-dev.sh uses) and hands them in here , the run moves off a
+// the same probe run-dev.sh uses) and hands them in here – the run moves off a
 // busy port instead of colliding. The Vite proxy is pointed at the resolved
 // backend port via VITE_PROXY_TARGET so /api + /health still reach the backend.
 const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? "8000";

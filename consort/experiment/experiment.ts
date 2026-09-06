@@ -215,11 +215,11 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   const create = deps.createPairedBranch ?? createPairedBranch;
   const dropBranch = deps.deletePairedBranch ?? deletePairedBranch;
   // Persist the design/spec CORPUS on the CURRENT (feature) branch BEFORE forking. The build lane
-  // writes per-cycle status into .consort/features/ (test-list + AC status) , committed corpus per
-  // the scaffold template , but commitExperimentCode EXCLUDES .consort (to avoid experiment-branch
+  // writes per-cycle status into .consort/features/ (test-list + AC status) – committed corpus per
+  // the scaffold template – but commitExperimentCode EXCLUDES .consort (to avoid experiment-branch
   // divergence that breaks accept's checkout), so the interactive path otherwise leaves that corpus
-  // uncommitted and re-dirties the tree at the NEXT cut. Committing it here , pre-fork, on the
-  // feature branch , persists the corpus AND cleans the tree, with NO experiment-branch divergence
+  // uncommitted and re-dirties the tree at the NEXT cut. Committing it here – pre-fork, on the
+  // feature branch – persists the corpus AND cleans the tree, with NO experiment-branch divergence
   // (the fork below inherits the committed corpus). Only the committed-corpus paths are staged; the
   // TRANSIENT run-state (cycles/, experiments/, pipeline.json, next.json, logs) is gitignored and
   // intentionally left out. Best-effort: a non-repo (hermetic tests) or nothing-to-commit is fine.
@@ -242,14 +242,14 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
       }
     }
   } catch {
-    /* not a git repo (hermetic tests) or nothing to commit , the dirty check + fork below still run */
+    /* not a git repo (hermetic tests) or nothing to commit – the dirty check + fork below still run */
   }
-  // FAIL-CLOSED on uncommitted TRACKED changes OUTSIDE .consort/ , the harmful case: a tracked-source
+  // FAIL-CLOSED on uncommitted TRACKED changes OUTSIDE .consort/ – the harmful case: a tracked-source
   // edit silently rides onto the experiment fork (git checkout -b carries it), leaving the tree
   // building on the feature branch's uncommitted state (the "cut refused but the Navigator ran anyway"
   // PROTOCOL VIOLATION). But TOLERATE untracked files (a new design artifact, an unrelated tool's
   // config like .isaac/) and .consort/ workflow-metadata churn (next.json, workflow-state.json, the
-  // design corpus mid-authoring): those do not corrupt the fork , this mirrors createPairedBranch's
+  // design corpus mid-authoring): those do not corrupt the fork – this mirrors createPairedBranch's
   // own tracked-source-only guard, so the normal design->build handoff is NOT blocked by a blanket
   // dirty check. Refuse BEFORE any mutation/record so experimentCut stays false and the lane halts.
   let dirtyTracked = "";
@@ -320,7 +320,7 @@ export async function cutExperiment(args: CutExperimentArgs, deps: CutExperiment
   // paired-cut's git side resolves its start-point preferring `origin/<parentBranch>`,
   // so a stale remote (behind the LOCAL feature tip that carries the just-accepted
   // merges) makes the git experiment fork from an OLDER commit than the Lakebase
-  // fork tier , a two-way split-brain: the committed alembic head + models are a
+  // fork tier – a two-way split-brain: the committed alembic head + models are a
   // prior story's, while the DB already has the later story's schema. Every
   // DB-touching test then fails ("column does not exist" / unknown alembic head) and
   // the driver CANNOT fix it in code, so it burns the whole regression-fix budget and

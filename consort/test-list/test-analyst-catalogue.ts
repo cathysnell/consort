@@ -1,13 +1,13 @@
 // The test-analyst catalogue: the CONFIGURABLE roster of per-kind test analysts the test-strategist
 // SUPERVISOR fans out to (behavior / fitness / client), each with its own focus prompt. This is the
-// SINGLE SOURCE OF TRUTH for the analyst kinds , adding a kind = adding an entry here (+ its prompt).
+// SINGLE SOURCE OF TRUTH for the analyst kinds – adding a kind = adding an entry here (+ its prompt).
 // Mirrors the kit's other catalogues (agent-catalogue, lifecycle-catalogue, validator-registry): a
 // Record<kind, entry> + a fail-loud resolveTestAnalystKind that lists the known kinds.
 //
 // WHY it exists: the single-shot test-strategist systematically under-covers when it must reason about
 // behavior + fitness + client all in one turn (the design-equivalence live runs showed it consistently
 // drops the fitness-contract tests T6/T9/T15 and the client-render tests T16/T17). Splitting into
-// single-concern analysts , each fed only its slice's inputs and its focus prompt , removes that
+// single-concern analysts – each fed only its slice's inputs and its focus prompt – removes that
 // contention. The supervisor Task-spawns one general-purpose subagent per ENABLED analyst (a
 // preconditions preparer renders this catalogue's enabled roster + focus prompts into the turn), then
 // reconciles + assembles + orders the master. Analysts are ephemeral subagents, NOT first-class roles,
@@ -16,12 +16,12 @@
 // Each analyst emits an UNORDERED slice with kind-local ids; the SUPERVISOR owns ordering
 // (ordered_for) and assigns the final feature-flat T-ids on merge. Load-bearing invariant: the FITNESS
 // analyst is the SOLE emitter of invariant_id (so checkInvariantCoverageDistinct can't be tripped by
-// two owners) , that ownership is stated in every focus prompt.
+// two owners) – that ownership is stated in every focus prompt.
 
 /** The inputs an analyst consumes (the supervisor hands it exactly these slices). */
 export type AnalystInput = "story-acs" | "architecture-invariants" | "db-design" | "design-guide";
 
-/** The context the enablement predicate evaluates against , the resolved project config. */
+/** The context the enablement predicate evaluates against – the resolved project config. */
 export interface AnalystEnablementContext {
   projectDir: string;
   /** project.uiTrack (resolveProjectSettings). A no-frontend project is uiTrack:false. */
@@ -29,7 +29,7 @@ export interface AnalystEnablementContext {
 }
 
 /** One catalogue entry: a test-analyst kind, its focus prompt (injected VERBATIM into the analyst's
- *  Task spawn , the source of truth for what it authors), the inputs it needs, its recommended model,
+ *  Task spawn – the source of truth for what it authors), the inputs it needs, its recommended model,
  *  and an OPTIONAL enablement predicate (absent = always enabled). */
 export interface TestAnalystCatalogueEntry {
   /** The kind; matches the test-list item `kind` this analyst emits (behavior|fitness|client|...). */
@@ -45,12 +45,12 @@ export interface TestAnalystCatalogueEntry {
   model: string;
   /** ADVISORY effort for this analyst's Task turn. The Task tool has no effort parameter, so the
    *  supervisor RESTATES this in the spawn prompt ("think at <effort> effort") and the subagent
-   *  self-paces , it is guidance, not an enforced sandbox lever. A per-analyst optimize lever:
+   *  self-paces – it is guidance, not an enforced sandbox lever. A per-analyst optimize lever:
    *  the densest-reasoning analyst (fitness) can run high while cheaper slices run default/low. */
   effort?: "low" | "default" | "high";
   /** ADVISORY tool scope: the tools this analyst SHOULD confine itself to. Like effort, the Task
    *  tool has no allowedTools parameter, so the supervisor RESTATES this in the spawn prompt
-   *  ("confine your work to: <tools>") and the subagent self-limits , guidance, not a hard sandbox
+   *  ("confine your work to: <tools>") and the subagent self-limits – guidance, not a hard sandbox
    *  (an enforced boundary needs analysts promoted to real manifest steps). A tuning lever. */
   toolScope?: string[];
   /** The input slices the supervisor hands this analyst. */
@@ -69,7 +69,7 @@ const SLICE_CONTRACT =
   "```json ... ```. Each item is { \"id\": \"<kind-local id, e.g. bhv-1>\", \"description\": " +
   "\"<one observable behavior, no 'and'>\", \"ac_id\": \"<EXACT id of an existing story AC file>\", " +
   "\"status\": \"pending\", \"kind\": \"<your kind>\" }. Do NOT order the items and do NOT set " +
-  "ordered_for , the supervisor orders the merged master and assigns the final T-ids. Map every item " +
+  "ordered_for – the supervisor orders the merged master and assigns the final T-ids. Map every item " +
   "to a real story AC id (copy it verbatim, never re-slug).";
 
 export const TEST_ANALYST_CATALOGUE: Record<string, TestAnalystCatalogueEntry> = {
@@ -83,36 +83,36 @@ export const TEST_ANALYST_CATALOGUE: Record<string, TestAnalystCatalogueEntry> =
     inputs: ["story-acs", "architecture-invariants"],
     focusPrompt:
       "You are the BEHAVIOR test analyst. Cover every BACKEND-layer AC (API / service / data / INFRA) " +
-      "whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item , " +
+      "whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item – " +
       "one observable behavior verified through the API boundary (for Python, a pytest-bdd scenario; set " +
       "`scenario_file` to `tests/features/<story>.feature`). An `Infra`-layer AC (e.g. 'distinct " +
-      "(sku,location) coexist', 'refile updates in place') still has an observable API behavior , it is " +
-      "YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME , the actual result the " +
+      "(sku,location) coexist', 'refile updates in place') still has an observable API behavior – it is " +
+      "YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME – the actual result the " +
       "AC guarantees (a refile leaves the stored quantity == the NEW value AND exactly ONE row for the " +
       "pair; filing the same SKU at two DIFFERENT locations yields TWO independently-retrievable coexisting " +
       "rows), NOT merely a peripheral aspect (a preserved timestamp, atomicity). For a uniqueness / " +
       "multi-key invariant, cover BOTH sides: the COLLISION (same key -> rejected / stays one row) AND the " +
       "DISTINCT-keys-COEXIST positive (different keys -> independent rows). A test that checks only the " +
-      "peripheral aspect or only the collision lets a Driver go green without the real behavior , the " +
+      "peripheral aspect or only the collision lets a Driver go green without the real behavior – the " +
       "recurring reflect-testlist-defect. " +
       "**DO NOT author a behavior item for an E2E / UI-presentation AC** (e.g. a \"filing form\" / \"home " +
       "screen\" AC whose `layer` is `E2E`): those are the CLIENT analyst's Playwright job, NOT a backend " +
       "pytest-bdd test. Set each item's `ac_id` ONLY to an AC whose layer permits a backend test; anchoring " +
       "a 2xx / response-shape check to a UI AC (instead of the API-layer AC) is the recurring mis-route the " +
-      "reflect gate rejects , if an AC's observable outcome is an HTTP response shape, it belongs on the " +
+      "reflect gate rejects – if an AC's observable outcome is an HTTP response shape, it belongs on the " +
       "API-layer AC, never the form/screen AC. Test at the OUTERMOST public boundary matching the AC's " +
       "layer. One test per scenario, never an " +
-      "\"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state , use a per-run-unique " +
+      "\"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state – use a per-run-unique " +
       "key suffixed with the platform's BUILT-IN UUID (Python `uuid.uuid4()` from the stdlib; JS/TS " +
       "`crypto.randomUUID()`; Java `java.util.UUID`) OR delete/upsert the fixed key before writing, never " +
-      "assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` , the " +
+      "assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` – the " +
       "`uuid` npm package is not a scaffolded dependency and fails CI with \"Cannot find package 'uuid'\". " +
       "Do NOT emit fitness or client items, and do NOT set `invariant_id` (the fitness " +
       "analyst owns persistence invariants). COVER THE NEGATIVE/BOUNDARY-VALIDATION PATH a constraint " +
       "implies on your ACs: you are given architecture.json (NFRs + persistence_invariants), so when an " +
       "AC's field is required / NOT NULL (a `not_null` invariant or a field-named-validation NFR names it), " +
       "emit a behavior item that OMITS (or sends invalid) that field through the API boundary and asserts " +
-      "a field-named rejection , this is the boundary guard, DISTINCT from the DB constraint the fitness " +
+      "a field-named rejection – this is the boundary guard, DISTINCT from the DB constraint the fitness " +
       "analyst tests. A required-field/CHECK/overcommit rejection with only a happy-path test is the " +
       "recurring reflect-testlist-defect. " + SLICE_CONTRACT,
   },
@@ -125,37 +125,37 @@ export const TEST_ANALYST_CATALOGUE: Record<string, TestAnalystCatalogueEntry> =
     toolScope: ["Read"],
     inputs: ["architecture-invariants", "db-design"],
     focusPrompt:
-      "You are the FITNESS test analyst , the SOLE owner of `invariant_id`. Two duties: (1) Walk the " +
+      "You are the FITNESS test analyst – the SOLE owner of `invariant_id`. Two duties: (1) Walk the " +
       "architecture (layers, service_backed, ORM-only, config-in-env, each accepted NFR budget) and " +
       "emit >=1 `kind:\"fitness\"` item per architectural constraint the story touches: the layering " +
       "contract (boundary must not import the DB session; persistence only in the repository), the " +
-      "ORM-only contract (ONLY the repository touches the ORM/session , the service AND boundary " +
+      "ORM-only contract (ONLY the repository touches the ORM/session – the service AND boundary " +
       "contain no ORM imports; this is DISTINCT from the routes-vs-session check), config-from-env, and " +
       "any service-layer guard an NFR demands (e.g. a write-time rejection of an overcommitting / " +
-      "negative-quantity write at the SERVICE layer , distinct from a DB CHECK constraint). A " +
+      "negative-quantity write at the SERVICE layer – distinct from a DB CHECK constraint). A " +
       "CLIENT-render NFR fitness function (SPA rendering of null/optional/empty/loading/error states) is " +
-      "NOT yours , the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND " +
+      "NOT yours – the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND " +
       "defense (an `and`/`+`/comma joining two checkable claims) needs ONE item PER conjunct, never one " +
       "for the pair. (2) Walk architecture.json `persistence_invariants[]` and emit AT LEAST ONE " +
       "`kind:\"fitness\"` item per invariant with `invariant_id` set to that invariant's id, verified " +
       "DIRECTLY against the real branch database (never a mock, never a generic ORM round-trip). COVER " +
       "EVERY LEG the invariant NAMES: when one invariant names MULTIPLE columns/constraints (e.g. two " +
       "NOT NULL audit columns `filed_by`+`filed_at`, a multi-column CHECK, or an FK set), cover EACH named " +
-      "leg , a parametrised sub-case per column/constraint (or a sibling item), all sharing that " +
+      "leg – a parametrised sub-case per column/constraint (or a sibling item), all sharing that " +
       "`invariant_id`. A single item exercising only ONE of the named columns leaves the others uncovered " +
       "(the reflect gate rejects the un-covered leg). E.g. a NOT-NULL invariant over {filed_by, filed_at} " +
       "needs a direct INSERT with EACH column NULL asserting its own constraint violation, not just one. " +
       "ANCHOR BY REALIZING STORY, NOT KEYWORD PROXIMITY: emit an invariant's item ONLY when THIS story " +
-      "realizes that invariant's table , i.e. db-design.json `schema_changes[]` has an entry for THIS " +
+      "realizes that invariant's table – i.e. db-design.json `schema_changes[]` has an entry for THIS " +
       "story_id (create_table, else the earliest add_column/alter/constraint) on the invariant's " +
       "`table` (architecture.json `persistence_invariants[].table`). If the invariant's table is created " +
-      "by a LATER story, DO NOT emit its fitness item on this story , it belongs to that write story, and " +
+      "by a LATER story, DO NOT emit its fitness item on this story – it belongs to that write story, and " +
       "its test is un-buildable here (the table does not exist yet). A display/read-only story whose " +
       "migrations create NO table an invariant names emits NO invariant fitness items, even if its ACs " +
       "mention a related record (e.g. an AC 'shows the record' does NOT own the record's not-null/FK/" +
-      "reversibility invariants , the story that MIGRATES the table does). A " +
+      "reversibility invariants – the story that MIGRATES the table does). A " +
       "migration reversibility is ALWAYS one item: reversibility (single-step downgrade/upgrade, " +
-      "@pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated , the table + its " +
+      "@pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated – the table + its " +
       "columns/constraints are present again after downgrade-then-upgrade (NOT that data survives). " +
       "Data-preservation (seed rows, migrate, assert they survive with expected values) is a SEPARATE " +
       "item that applies ONLY to an ADDITIVE migration on a PRE-EXISTING table (a later story adding a " +
@@ -182,19 +182,19 @@ export const TEST_ANALYST_CATALOGUE: Record<string, TestAnalystCatalogueEntry> =
       "You are the CLIENT test analyst (this project HAS a frontend). For every UI-presentation AC the " +
       "architecture routes to the SPA's own client harness, emit a `kind:\"client\"` item with " +
       "`scenario_file` under `client/tests/` (e.g. `client/tests/pages/<Screen>.test.tsx`). Do NOT fold " +
-      "a presentation AC into the backend pytest-bdd suite , that mechanism mismatch is a defect. For an " +
+      "a presentation AC into the backend pytest-bdd suite – that mechanism mismatch is a defect. For an " +
       "AC that OWNS a page/route, at least one client item MUST exercise the page THROUGH THE REAL " +
       "`<App>` at the AC's route (a Playwright e2e that navigates the route, OR a component test " +
-      "rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) , a bare " +
+      "rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) – a bare " +
       "`render(<ThePage/>)` does NOT prove the page is routed; name the route in the description. Test " +
       "the design-guide SEAM (assert the element carries its design-guide class / `data-testid`), NEVER " +
       "an inline `style=` or raw CSS in the source. Do NOT set `invariant_id`. " +
       "MATCH THE TEST TO THE AC's `layer`: an AC whose `layer` is **`E2E`** is verified END-TO-END " +
-      "against the REAL paired-branch DB , it REQUIRES a real Playwright e2e (scenario_file under " +
+      "against the REAL paired-branch DB – it REQUIRES a real Playwright e2e (scenario_file under " +
       "`client/tests/e2e/…`) that drives the DEPLOYED app in a browser against the live DB, with NO " +
       "mocked/stubbed fetch and NO in-memory data. A mocked/stubbed COMPONENT test (rendering " +
       "`<App>`/`<Page>` with fake data) is ONLY for a pure presentation/rendering AC, NEVER for an " +
-      "`E2E`-layer AC , drafting an E2E-layer AC as a mocked component test is the recurring " +
+      "`E2E`-layer AC – drafting an E2E-layer AC as a mocked component test is the recurring " +
       "reflect-testlist-defect (it cannot hit the DB the layer demands). One real e2e per E2E-layer AC. " +
       "ALSO cover NFR CLIENT-RENDER fitness functions: for every `architecture.json` NFR whose " +
       "`fitness_function` describes a CLIENT render (e.g. rendering a row with null/optional fields and " +
@@ -216,7 +216,7 @@ export function resolveTestAnalystKind(kind: string): TestAnalystCatalogueEntry 
   return entry;
 }
 
-/** The analysts ENABLED for a given project , the catalogue filtered by each entry's `enabledWhen`
+/** The analysts ENABLED for a given project – the catalogue filtered by each entry's `enabledWhen`
  *  against the resolved project config (an entry with no predicate is always enabled). The supervisor's
  *  roster preparer calls this so a no-frontend project (uiTrack:false) never sees or spawns `client`. */
 export function enabledAnalysts(ctx: AnalystEnablementContext): TestAnalystCatalogueEntry[] {

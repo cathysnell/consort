@@ -42,7 +42,7 @@ export interface DriveEffects {
    * OPTIONAL executor-dispatch seam (Stage 2, #578): dispatch an AGENT turn THROUGH the
    * StepExecutor's 7-phase Template Method instead of `perform` + the separate routing seam.
    * Returns the BoundedRoute the executor's phase-7 validateAndBound produced (the loop consumes
-   * it EXACTLY like a contract `pendingProposal`, so routing authority stays single) , or
+   * it EXACTLY like a contract `pendingProposal`, so routing authority stays single) – or
    * `undefined` when this action is NOT executor-dispatched (no manifest / flag off), in which
    * case the loop falls through to `perform` unchanged. The impl receives the SAME `state` +
    * routerDeps the loop already holds, so nothing is threaded into `perform`. Default absent =>
@@ -58,7 +58,7 @@ export interface DriveEffects {
   /**
    * OPTIONAL routing-decision observability hook: fires once per iteration with BOTH the derived
    * action AND the DriveState it was derived from, so a diagnostic recorder can capture the
-   * state bag (reviewStoryPending / assessGreenAc / ...) that CHOSE the action , the "why" the
+   * state bag (reviewStoryPending / assessGreenAc / ...) that CHOSE the action – the "why" the
    * turn recorder does not persist (it logs only the action + file delta). Purely observational:
    * it never influences routing. `source` says how the action was resolved this iteration.
    * Default absent => byte-identical to before (no routing log emitted).
@@ -89,7 +89,7 @@ export interface DriveEffects {
   /**
    * Optional hand-back hook: fires when a role's prior handoff contract was
    * UNMET and a retry remains. The runner delivers `detail` (what the responder
-   * failed to return) so the imminent re-dispatch of that role is informed , the
+   * failed to return) so the imminent re-dispatch of that role is informed – the
    * role reads the hand-back and fixes its output instead of blindly re-running.
    */
   onHandback?(handoff: import("../../gates/orchestrator-expect.js").Handoff, detail: string): void;
@@ -143,7 +143,7 @@ export interface RunDriverOptions {
   /**
    * A PAUSE gate (NOT a bail-out): the FIRST time the next action satisfies this,
    * the loop awaits `confirmContinue` (a human Y/n prompt) BEFORE performing it,
-   * then carries on , the run never leaves the state machine. Distinct from
+   * then carries on – the run never leaves the state machine. Distinct from
    * stopWhen, which exits. Backs `--pause-before` (run-to-navigator / -release).
    */
   pauseBefore?: (action: WorkflowAction) => boolean;
@@ -169,7 +169,7 @@ export interface RunDriverOptions {
    * the orchestrator should go); `validateAndBound` VALIDATES it against the pure
    * transition and BOUNDS re-routes/retries with the existing limits before the next
    * iteration acts on it. When ABSENT (the default + current behavior), routing is purely
-   * state-derived via `transition(state)` , byte-identical to before this seam. Real
+   * state-derived via `transition(state)` – byte-identical to before this seam. Real
    * roles do not implement StepContract yet; this is consumed mock-first.
    */
   contract?: StepContract;
@@ -186,7 +186,7 @@ export type DriverBound = "plan" | "design" | "build" | "deploy";
  * The transition + stopWhen for a Tier-2 bound. `plan` runs the planning
  * sub-machine; `design` runs the design lane to design-complete (all stories
  * designed, none built); `build` builds gate-approved stories then stops before
- * deploy; `deploy` ships the feature , the local deploy phase THEN the promote
+ * deploy; `deploy` ships the feature – the local deploy phase THEN the promote
  * phase (PR review + merge up to the parent tier), to done. A bound also GUARDS:
  * a `build` run whose design is not done, or a `deploy` run whose feature is not
  * built, stops immediately (its first action is out of lane) rather than doing
@@ -265,7 +265,7 @@ export async function runDriver(
     const state = await effects.readState();
     // Reconcile the outstanding handoff FIRST: the state just read is the
     // responder's "callback". If its contract is unmet, the responder gets ONE
-    // informed retry , we hand back exactly what it failed to return and
+    // informed retry – we hand back exactly what it failed to return and
     // re-dispatch it; a second failure throws ProtocolViolationError and the run
     // aborts (a precise, attributed failure, not a silent re-dispatch / stall).
     let retrying = false;
@@ -284,7 +284,7 @@ export async function runDriver(
     // stall check treats a bounded re-issue as intentional.
     let action: WorkflowAction;
     if (pendingBounded) {
-      // Stage 2: the executor ALREADY ran validateAndBound last iteration , consume its
+      // Stage 2: the executor ALREADY ran validateAndBound last iteration – consume its
       // BoundedRoute directly (no re-bound). Same shape as the pendingProposal branch below.
       action = pendingBounded.bounded.action;
       if (pendingBounded.bounded.sanctionedRetry) retrying = true;
@@ -300,7 +300,7 @@ export async function runDriver(
 
     // Routing-decision observability: emit the action + the state bag that chose it, BEFORE any
     // terminal/stall/perform handling, so every iteration's decision (including a terminal one) is
-    // captured with its inputs. Purely observational , the value is already fixed above.
+    // captured with its inputs. Purely observational – the value is already fixed above.
     effects.onRoutingDecision?.(
       action,
       state,
@@ -349,8 +349,8 @@ export async function runDriver(
 
     // Record the handoff we are about to make: who must respond + the non-null
     // artifact they owe. The NEXT iteration's reconcile() discharges it (or
-    // retries / aborts). On a retry the head is still outstanding , do NOT
-    // re-push it. Non-role actions (gates, cut, deploy , the driver's own
+    // retries / aborts). On a retry the head is still outstanding – do NOT
+    // re-push it. Non-role actions (gates, cut, deploy – the driver's own
     // substrate) return null here and add nothing to the queue.
     if (enforceExpectations && !retrying) {
       const handoff = expectationFor(action);
@@ -366,17 +366,17 @@ export async function runDriver(
     effects.onAction?.(action, i);
     // Executor-dispatch seam (Stage 2, #578): when the effects wire performViaExecutor AND it
     // recognizes this agent action (manifest match + flag on), the turn runs THROUGH the
-    // StepExecutor , which already ran phase-7 validateAndBound and hands back a BoundedRoute.
+    // StepExecutor – which already ran phase-7 validateAndBound and hands back a BoundedRoute.
     // The loop consumes that directly next iteration (pendingBounded), so routing authority stays
     // single (no double-bound, no separate contract.route). When it returns undefined (not
-    // executor-dispatched), fall through to perform + the contract routing seam , byte-identical.
+    // executor-dispatched), fall through to perform + the contract routing seam – byte-identical.
     const bounded = await effects.performViaExecutor?.(action, state, routerDeps);
     if (bounded) {
       pendingBounded = { bounded, completed: action };
     } else {
       await effects.perform(action);
       // Correspondence: a HIL touchpoint (author-requests, a gate) just ran on the legacy perform
-      // path , the proxy has now LOGGED its response (intake.supplied / gate.approved). Fire the
+      // path – the proxy has now LOGGED its response (intake.supplied / gate.approved). Fire the
       // hook AFTER perform so it can pair the orchestrator's request with the proxy's fresh answer +
       // submission. No-op for non-HIL actions + when the hook is unwired.
       effects.onCorrespondence?.(action, state, i);

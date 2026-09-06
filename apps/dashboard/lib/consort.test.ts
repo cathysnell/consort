@@ -215,7 +215,7 @@ describe("reduceAgents — issue state clears when the run moves on", () => {
   it("clears a role's smell once the LANE advances to ANOTHER role (the deploy-verified case)", () => {
     // The exact live bug: the driver flags a NON-blocking ux-adherence smell on its LAST story,
     // finishes its turn (cycle REFACTOR), and the lane advances to the release-engineer (deploy).
-    // The driver has no later phase.start of its OWN , the only other clear , so before this fix
+    // The driver has no later phase.start of its OWN – the only other clear – so before this fix
     // its smell pinned the driver red forever even though the run deployed + verified. A BLOCKING
     // smell would have HALTED the lane (no release-engineer phase.start), so this clears only the
     // non-blocking, moved-on case.

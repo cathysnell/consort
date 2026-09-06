@@ -145,7 +145,7 @@ describe("recordReflectionGate: idempotent + self-clearing (Finding 9)", () => {
     const second = recordReflectionGate(tdd, F, S);
     const third = recordReflectionGate(tdd, F, S);
     // The defect is still reported each pass (for logging), but only ONE open
-    // smell exists , the accumulation the field hit (2+ identical entries) is gone.
+    // smell exists – the accumulation the field hit (2+ identical entries) is gone.
     expect(first.map((h) => h.smell)).toEqual(["reflect-testlist-defect"]);
     expect(second.map((h) => h.smell)).toEqual(["reflect-testlist-defect"]);
     expect(third.map((h) => h.smell)).toEqual(["reflect-testlist-defect"]);

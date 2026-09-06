@@ -41,9 +41,9 @@ export interface ExperimentCandidateSpec {
 }
 
 /** A full experiment: the corpus turn (fixed preconditions) + the candidates (the only perturbations).
- *  ONE config shape for EVERY turn , driver or navigator or a design role. The turn label determines the
+ *  ONE config shape for EVERY turn – driver or navigator or a design role. The turn label determines the
  *  role, and the role determines the SUBSTRATE (driver => cloud/Lakebase honest-GREEN; everything else =>
- *  lean/no-cloud) , so a single externally-configured harness runs them all off the recorded replay-set. */
+ *  lean/no-cloud) – so a single externally-configured harness runs them all off the recorded replay-set. */
 export interface ExperimentConfig {
   name: string;
   /** Corpus turn label whose replay-set + recorded-artifacts are the preconditions (e.g. "0156-driver",
@@ -55,7 +55,7 @@ export interface ExperimentConfig {
   ac?: string;
   /** The driver turn kind. Derived from the turn label when omitted (…-repair / …-refactor / else green). */
   driverTurn?: "green" | "repair" | "refactor";
-  /** The DISCRIMINATOR (judge evaluator) for this turn , named + externalized, not code-selected. "assess"
+  /** The DISCRIMINATOR (judge evaluator) for this turn – named + externalized, not code-selected. "assess"
    *  = compare the produced assess marker (superseded/regression) to the recorded one; "review" = compare
    *  the produced review-verdict to the recorded one; "red" = functional coverage of the produced tests vs
    *  the tests the recorded turn authored. Derived from the turn when omitted (…-refactor / …-review =>
@@ -91,7 +91,7 @@ export function roleFromLabel(turn: string): string {
 
 /** The SUBSTRATE a role's turn runs on: the DRIVER needs a live Lakebase branch + the honest-GREEN
  *  verify (cloud); every other role (navigator + the design roles) runs lean (no cloud). One switch that
- *  the unified harness reads to pick the substrate , not two separate harnesses. */
+ *  the unified harness reads to pick the substrate – not two separate harnesses. */
 export function substrateForRole(role: string): "cloud" | "lean" {
   return role === "driver" ? "cloud" : "lean";
 }
@@ -105,7 +105,7 @@ export function driverTurnFromLabel(turn: string): "green" | "repair" | "refacto
 
 /** The discriminator (judge evaluator) a turn label implies: a REFACTOR/REVIEW turn is judged on its
  *  review-verdict ("review"); a plain navigator BUILD turn (label ends "-navigator", no build-mode
- *  suffix , the story-level RED turn that authors the failing tests) on functional test coverage
+ *  suffix – the story-level RED turn that authors the failing tests) on functional test coverage
  *  ("red"); everything else (green/repair/assess) on its assess marker ("assess"). */
 export function discriminatorFromLabel(turn: string): "assess" | "review" | "red" {
   if (/-refactor\b|-refactor$|-review\b|-review$/.test(turn)) return "review";
@@ -152,7 +152,7 @@ export function loadExperimentConfig(
   const discriminator = raw.discriminator ?? discriminatorFromLabel(raw.turn);
   const driverTurn = raw.driverTurn ?? driverTurnFromLabel(raw.turn);
   // ac is REQUIRED for AC-scoped turns (assess/green/repair identify one AC's artifact). STORY-scoped turns
-  // are exempt , ac is optional + unused (the harness derives the story cycle dir): the RED turn (authors the
+  // are exempt – ac is optional + unused (the harness derives the story cycle dir): the RED turn (authors the
   // whole story's tests) and the REFACTOR turn (story-level review + refactor of the whole story).
   const storyScoped = discriminator === "red" || driverTurn === "refactor";
   if (!storyScoped && (!raw.ac || typeof raw.ac !== "string")) throw new Error(`experiment config ${path}: missing "ac" (required for a "${discriminator}" turn)`);

@@ -2,15 +2,15 @@
 // Template Method). It resolves the action to its manifest, builds the generic Step
 // (manifest + injected agent + validator registry), assembles the orchestrator-owned seams the
 // executor drives (resolve inputs from the shared workspace, provision it, source
-// instructions, reconcile routing), and runs the fixed 7 phases , so a caller drives a
+// instructions, reconcile routing), and runs the fixed 7 phases – so a caller drives a
 // manifest end to end without hand-wiring StepCtx/StepExecutorDeps every turn.
 //
-//   runManifestStep  , run ONE manifest through the executor, return its StepResult.
-//   runManifestChain , follow each turn's routing to the next matching manifest until the
+//   runManifestStep  – run ONE manifest through the executor, return its StepResult.
+//   runManifestChain – follow each turn's routing to the next matching manifest until the
 //                      chain leaves the manifest set (a terminal / off-graph action). This is
 //                      the 2-turn stockflow demo: PO seed -> spec-author breakdown -> done.
 //
-// Routing authority: a standalone manifest set has no separate pure transition graph , the
+// Routing authority: a standalone manifest set has no separate pure transition graph – the
 // manifest routing IS the transition function. So the runner's validateAndBound `allowed`
 // dep returns the step's own proposed next, i.e. the manifest's routing map is authoritative.
 // (In the full orchestrator the pure nextTransition is the authority; here the manifests are.)
@@ -37,7 +37,7 @@ export interface ManifestRunnerDeps {
   workspaceDir: string;
   /** The drive config (projectDir/consortDir/featureId + model/effort resolution). */
   cfg: DriveEffectsConfig;
-  /** The ENV the agent catalogue needs to build a step's agent from manifest.agent , corpus
+  /** The ENV the agent catalogue needs to build a step's agent from manifest.agent – corpus
    *  root, kit dir (workspaceDir is filled from above). Supplied by the runner, NOT the
    *  manifest, so manifests stay portable. */
   agentContext?: Omit<AgentBuildContext, "workspaceDir">;
@@ -54,7 +54,7 @@ export interface ManifestRunnerDeps {
    *  up the kit env. Returns the workspace + where each output id lands within it. */
   provisionWorkspace?(manifest: StepManifest, action: WorkflowAction): { workspaceDir: string; outputPaths?: Record<string, string> };
   /** Optional: format the agent-authored .agent-report.json into a conformant
-   *  agent-log.jsonl before validate-outputs , so a SANDBOXED spawned agent (which cannot run
+   *  agent-log.jsonl before validate-outputs – so a SANDBOXED spawned agent (which cannot run
    *  the shared log subprocess) still satisfies the agent-log requirement. Default OFF; a
    *  step whose agent authors a report (a live claude turn) turns it on. When true, every turn
    *  materializes with the manifest's role. */
@@ -72,7 +72,7 @@ export interface ManifestRunnerDeps {
   onRecord?: StepExecutorDeps["onRecord"];
   /** Optional: extra options merged into a precondition preparer's `options`, keyed by precondition
    *  KIND. Per-turn + parallel-safe (rides the in-memory deps, not env / a shared file), so a caller
-   *  (the optimize sweep) can vary a preparer's projection per run , e.g. the test-analyst-roster
+   *  (the optimize sweep) can vary a preparer's projection per run – e.g. the test-analyst-roster
    *  preparer reads `analystOverrides` here to sweep per-analyst subagent levers. The manifest's own
    *  `pre.options` still apply; these are shallow-merged ON TOP. Absent => byte-identical to before. */
   preconditionOptions?: Record<string, Record<string, unknown>>;
@@ -90,7 +90,7 @@ export interface ManifestTurn {
 }
 
 /** Resolve a manifest input's `source` (e.g. "feature:features/{feature}/architecture.json") to a
- *  workspace file and read its CONTENTS. The source is `feature:<rel>` , consort-relative (the shared
+ *  workspace file and read its CONTENTS. The source is `feature:<rel>` – consort-relative (the shared
  *  workspace IS the consort root here). `<rel>` may carry a `{feature}` / `{story}` placeholder ,
  *  expanded to the run's ids so a feature-scoped input names its REAL relative path instead of
  *  resolving flat to the root; a source with no placeholder (the literal-id integration fixtures) is
@@ -118,7 +118,7 @@ function resolveInputsFromWorkspace(
   return out;
 }
 
-/** A default instruction bundle when the caller supplies none , names the role + the files
+/** A default instruction bundle when the caller supplies none – names the role + the files
  *  the manifest declares the step must produce. */
 function defaultInstructions(manifest: StepManifest): StepInstructions {
   const outs = manifest.outputs.map((o) => o.filename).join(", ") || "(no static artifact)";
@@ -135,7 +135,7 @@ function resolveAgent(manifest: StepManifest, deps: ManifestRunnerDeps): StepAge
   if (deps.agentFor) return deps.agentFor(manifest);
   if (!manifest.agent) {
     throw new Error(
-      `manifest-runner: manifest "${manifest.id}" declares no \`agent\` and no agentFor override was provided , cannot build a StepAgent.`,
+      `manifest-runner: manifest "${manifest.id}" declares no \`agent\` and no agentFor override was provided – cannot build a StepAgent.`,
     );
   }
   return buildAgent(manifest.agent, { workspaceDir: deps.workspaceDir, ...(deps.agentContext ?? {}) });
@@ -178,13 +178,13 @@ function executorWiring(
     },
     reviseBudgetAvailable: () => true,
     // Bound the blocked retry across the whole chain (retries persists per action signature):
-    // one sanctioned re-issue, then THROW , no infinite re-spawn on a persistently-failing step.
+    // one sanctioned re-issue, then THROW – no infinite re-spawn on a persistently-failing step.
     recordRetry: (completed: WorkflowAction) => {
       const key = JSON.stringify(completed);
       const n = (retries.get(key) ?? 0) + 1;
       if (n > MAX_STEP_RETRIES) {
         throw new Error(
-          `manifest-runner: step ${key} emitted "blocked" past its retry budget (${MAX_STEP_RETRIES}) , aborting instead of re-spawning forever.`,
+          `manifest-runner: step ${key} emitted "blocked" past its retry budget (${MAX_STEP_RETRIES}) – aborting instead of re-spawning forever.`,
         );
       }
       retries.set(key, n);
@@ -214,8 +214,8 @@ function executorWiring(
     provisionWorkspace: () => (deps.provisionWorkspace ? deps.provisionWorkspace(manifest, action) : { workspaceDir: deps.workspaceDir }),
     instructionsFor: () => (deps.instructionsFor ? deps.instructionsFor(manifest, action, deps.workspaceDir) : defaultInstructions(manifest)),
     // Phase 2.5: PREPARE-PRECONDITIONS. A step that DECLARES preconditions (manifest.preconditions)
-    // has each projected here by the registry preparer , from the SHARED workspace's `.consort` +
-    // the action's story/ac , and appended to the prompt by the executor. This is the SAME
+    // has each projected here by the registry preparer – from the SHARED workspace's `.consort` +
+    // the action's story/ac – and appended to the prompt by the executor. This is the SAME
     // projection the real drive's roleTaskBody uses (one source of truth), so a manifest-driven
     // build turn is pre-conditioned identically to a dispatched one. A step declaring none never
     // calls this.
@@ -237,11 +237,11 @@ function executorWiring(
       });
     },
     // When enabled, format the agent's report into a conformant agent-log.jsonl
-    // (orchestrator-side) before validate-outputs , so a sandboxed agent that cannot run the
+    // (orchestrator-side) before validate-outputs – so a sandboxed agent that cannot run the
     // shared log subprocess still satisfies the agent-log requirement. The report travels as
-    // the agent's FINAL MESSAGE (a ```agent-report block) , containment-proof, no file path
-    // to misplace , with the .agent-report.json file as a fallback for agents that write one.
-    // CRUCIAL: write the log at the SAME relative path validate-outputs will check , the
+    // the agent's FINAL MESSAGE (a ```agent-report block) – containment-proof, no file path
+    // to misplace – with the .agent-report.json file as a fallback for agents that write one.
+    // CRUCIAL: write the log at the SAME relative path validate-outputs will check – the
     // manifest's agent-log output filename, remapped by any provisionWorkspace outputPaths (a
     // real turn nests it under .consort/). Otherwise the formatter writes agent-log.jsonl at the
     // workspace root while validation looks under .consort/ and the turn wrongly blocks.
@@ -254,7 +254,7 @@ function executorWiring(
             // Pass the final text ONLY when it carries a ```agent-report block; otherwise omit it so
             // formatAgentReport falls back to the .agent-report.json FILE the agent wrote (Write, no Bash).
             // A model that logged via the file (or emitted the block anywhere but the final message) still
-            // satisfies the agent-log output , the report block was the only channel before this.
+            // satisfies the agent-log output – the report block was the only channel before this.
             const ft = agentFinalText(agent);
             const reportText = ft && ft.includes("```agent-report") ? ft : undefined;
             formatAgentReport({ workspaceDir, role: manifest.role, ...(reportText !== undefined ? { reportText } : {}), ...(logFile ? { logFile } : {}) });
@@ -286,7 +286,7 @@ function turnTelemetry(manifest: StepManifest, captured: TelemetryCapture): Mani
 
 /**
  * Run ONE manifest through the orchestrator (StepExecutor). Resolves the action to its
- * manifest (THROWS loud if none matches , the runner never silently no-ops), builds the
+ * manifest (THROWS loud if none matches – the runner never silently no-ops), builds the
  * Step + the executor wiring, and runs the fixed 7 phases. Returns the StepResult
  * (bounded route + produced paths + violations).
  */
@@ -297,7 +297,7 @@ export async function runManifestStep(
 ): Promise<StepResult> {
   const manifest = manifestForAction(action, manifests);
   if (!manifest) {
-    throw new Error(`manifest-runner: no step manifest matches action ${JSON.stringify(action)} , cannot run it.`);
+    throw new Error(`manifest-runner: no step manifest matches action ${JSON.stringify(action)} – cannot run it.`);
   }
   const { step, ctx, execDeps } = executorWiring(manifest, action, deps, new Map());
   return execute(step, ctx, execDeps);
@@ -312,7 +312,7 @@ export async function runManifestTurn(
 ): Promise<ManifestTurn> {
   const manifest = manifestForAction(action, manifests);
   if (!manifest) {
-    throw new Error(`manifest-runner: no step manifest matches action ${JSON.stringify(action)} , cannot run it.`);
+    throw new Error(`manifest-runner: no step manifest matches action ${JSON.stringify(action)} – cannot run it.`);
   }
   const { step, ctx, execDeps, captured } = executorWiring(manifest, action, deps, new Map());
   const result = await execute(step, ctx, execDeps);
@@ -327,10 +327,10 @@ export interface RunChainOptions {
 
 /**
  * Follow a chain of manifests: run the action, take its bounded next action, and if a
- * manifest matches THAT action run it too , until the next action has no matching manifest
+ * manifest matches THAT action run it too – until the next action has no matching manifest
  * (a terminal / off-graph move like design-complete/done) or the maxTurns guard trips.
  * Returns every turn in order. All turns share the one workspace, so turn N+1 consumes
- * turn N's outputs , the whole point of the chain.
+ * turn N's outputs – the whole point of the chain.
  */
 export async function runManifestChain(
   start: WorkflowAction,
@@ -341,14 +341,14 @@ export async function runManifestChain(
   const maxTurns = options.maxTurns ?? 20;
   const turns: ManifestTurn[] = [];
   // Retry budget shared ACROSS the chain (per action signature), so a blocked step's
-  // sanctioned re-issue is bounded , not reset each iteration. This is what stops a
+  // sanctioned re-issue is bounded – not reset each iteration. This is what stops a
   // persistently-failing step from re-spawning forever.
   const retries = new Map<string, number>();
   let action: WorkflowAction | undefined = start;
 
   while (action && turns.length < maxTurns) {
     const manifest = manifestForAction(action, manifests);
-    if (!manifest) break; // the next action left the manifest set , terminal, stop cleanly.
+    if (!manifest) break; // the next action left the manifest set – terminal, stop cleanly.
     const { step, ctx, execDeps, captured } = executorWiring(manifest, action, deps, retries);
     const result = await execute(step, ctx, execDeps);
     turns.push({ manifestId: manifest.id, action, result, telemetry: turnTelemetry(manifest, captured) });

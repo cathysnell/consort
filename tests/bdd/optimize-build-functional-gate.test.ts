@@ -185,7 +185,7 @@ describe("evaluateBuildFunctionalGate: DISCRIMINATOR path (classification-driven
   });
 
   it("a low SCORE does NOT fail a clean equivalent verdict (classification drives, not score)", async () => {
-    // Even a modest score is a PASS when the classification is equivalent , the point of
+    // Even a modest score is a PASS when the classification is equivalent – the point of
     // the discriminator: clean convergence is the best outcome regardless of the score.
     const out = await evaluateBuildFunctionalGate({ kitRoot, projectDir, featureId, storyIndex: 0, role: "driver", judge: disc({ score: 0.5, classification: "equivalent", nextStep: "accept" }) });
     expect(out.passed).toBe(true);

@@ -89,7 +89,7 @@ export function readAcLayer(consortDir: string, featureId: string, acId: string)
  * The test-list items a cycle covers. A batch cycle (P8b) lists them in
  * `test_ids`; a per-test cycle has the single `test_id`. EMPTY-ARRAY GUARD (a
  * known test-strategist defect class): a present-but-empty `test_ids: []` falls
- * back to `test_id`, NEVER to "covers nothing" , else a batch cycle with an
+ * back to `test_id`, NEVER to "covers nothing" – else a batch cycle with an
  * empty list would silently green/stall zero tests and the story never
  * completes. Returns [] only when there is genuinely no test id at all.
  */

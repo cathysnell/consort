@@ -6,10 +6,10 @@
 //
 // Two tracks consume THESE preparers, so a turn is pre-conditioned identically no matter
 // which dispatched it:
-//   - the real drive's `roleTaskBody` (consort/orchestrator/drive/orchestrator-effects.ts) , positioned
+//   - the real drive's `roleTaskBody` (consort/orchestrator/drive/orchestrator-effects.ts) – positioned
 //     (the context-pack rides AFTER the directive; the green-failure advisory rides BEFORE
 //     "ASSESS ..."), and
-//   - the executor's PREPARE-PRECONDITIONS phase (turn/step-executor.ts) , declared on
+//   - the executor's PREPARE-PRECONDITIONS phase (turn/step-executor.ts) – declared on
 //     the step's `preconditions()` face + appended to its instructions.
 //
 // See PRE-CONDITIONING-AS-CONTRACT.md (this dir). The context-pack projection already lives
@@ -37,14 +37,14 @@ export interface PreparerContext {
 }
 
 /** A preparer: a pure projection of on-disk artifacts to a prompt text block ("" when the
- *  source is absent , the best-effort degrade the phase surfaces as an empty-warning). */
+ *  source is absent – the best-effort degrade the phase surfaces as an empty-warning). */
 export type PreconditionPreparer = (ctx: PreparerContext) => string;
 
 /**
  * The green-failure advisory: the deterministic PRE-LOCALIZATION the orchestrator recorded
  * into `green-failure.json` at verify-failure time, projected as the assess turn's leading
  * "start HERE" block so the Navigator does NOT re-scan the tree to rediscover a failure the
- * verify already reported. THREE sub-blocks, in fixed order , the verify's own captured
+ * verify already reported. THREE sub-blocks, in fixed order – the verify's own captured
  * failure output (the general pre-localizer), then the contract-clean code refs, then the
  * superseded-test candidates. Byte-identical to the block `roleTaskBody`'s assess branch
  * assembled inline (this is the migration to the orchestrator family: one projection, two
@@ -55,10 +55,10 @@ export function buildGreenFailureAdvisory(consortDir: string, featureId: string,
   // The verify's OWN captured failure output (failing node-ids + top error, e.g. "Cannot
   // find module ../../src/pages/StockViewPage"). The general pre-localization for failures
   // the deterministic column-drop gates CANNOT localize (a missing client component, a
-  // broken import) , so the Navigator starts from the REAL failure instead of re-scanning
+  // broken import) – so the Navigator starts from the REAL failure instead of re-scanning
   // the tree to rediscover what the verify already reported.
   const failureAdvisory = gfAssess?.failureOutput
-    ? `THE VERIFY'S OWN FAILURE OUTPUT (start HERE , it names the failing test(s) + the root error; do NOT re-run` +
+    ? `THE VERIFY'S OWN FAILURE OUTPUT (start HERE – it names the failing test(s) + the root error; do NOT re-run` +
       ` or re-scan the tree to rediscover this). Read the referenced file(s) directly to confirm the cause:\n` +
       `\`\`\`\n${gfAssess.failureOutput}\n\`\`\`\n\n`
     : "";
@@ -69,9 +69,9 @@ export function buildGreenFailureAdvisory(consortDir: string, featureId: string,
   // superseded prior tests below. Empty when no contract refs were found.
   const contractAdvisory = gfAssess?.contractRefs
     ? `DETERMINISTIC contract-clean has ALREADY localized the production-code references to the migration-` +
-      `dropped column(s) below , you do NOT need to re-find them. Record EXACTLY these as a driver-fixable` +
+      `dropped column(s) below – you do NOT need to re-find them. Record EXACTLY these as a driver-fixable` +
       ` regression via assess-regression --fix (path (b)), AND SEPARATELY flag any prior tests that assert the` +
-      ` dropped column as superseded (path (a)) , a column drop needs BOTH the code fix and the test refactor` +
+      ` dropped column as superseded (path (a)) – a column drop needs BOTH the code fix and the test refactor` +
       ` in the same repair turn:\n${gfAssess.contractRefs}\n\n`
     : "";
   // The test-side counterpart: DETERMINISTIC pre-localization of the PRIOR TESTS that
@@ -100,19 +100,19 @@ export const PRECONDITION_PREPARERS: Record<string, PreconditionPreparer> = {
     const projectDir = ctx.projectDir ?? "";
     const uiTrack = projectDir ? resolveProjectSettings(projectDir).project.uiTrack : true;
     // Per-analyst lever overrides (the optimize sweep's target) ride the precondition `options`,
-    // so they are per-turn (parallel-safe , no env, no shared file). The normal drive sets none.
+    // so they are per-turn (parallel-safe – no env, no shared file). The normal drive sets none.
     const overrides = (ctx.options as { analystOverrides?: Record<string, { model?: string; effort?: "low" | "default" | "high"; toolScope?: string[] }> } | undefined)?.analystOverrides;
     return renderTestAnalystRoster({ projectDir, uiTrack }, overrides ? { overrides } : {});
   },
 };
 
-/** Resolve a precondition KIND to its preparer. THROWS loud on an unknown kind , a manifest/
+/** Resolve a precondition KIND to its preparer. THROWS loud on an unknown kind – a manifest/
  *  contract-authoring bug the orchestrator must never silently no-op (mirrors resolveValidator). */
 export function resolvePreparer(kind: string): PreconditionPreparer {
   const p = PRECONDITION_PREPARERS[kind];
   if (!p) {
     const known = Object.keys(PRECONDITION_PREPARERS).join(", ");
-    throw new Error(`preconditions: unknown preparer kind "${kind}" , register it in PRECONDITION_PREPARERS (known: ${known}).`);
+    throw new Error(`preconditions: unknown preparer kind "${kind}" – register it in PRECONDITION_PREPARERS (known: ${known}).`);
   }
   return p;
 }

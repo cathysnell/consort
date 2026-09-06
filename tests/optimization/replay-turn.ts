@@ -1,8 +1,8 @@
 // replay-turn: the SHARED core every optimization experiment runs through. A recorded corpus turn
-// carries a `replay-set/` (written by the recorder for EVERY turn , spec-author, architect, dba,
+// carries a `replay-set/` (written by the recorder for EVERY turn – spec-author, architect, dba,
 // test-strategist, ux-designer, navigator, driver): the exact preconditions the agent ran under
 // (pre-project tree, resolved inputs, the fully-assembled prompt, the resolved levers). An experiment
-// REPLAYS those preconditions byte-for-byte and perturbs ONLY a lever , so a result is attributable to
+// REPLAYS those preconditions byte-for-byte and perturbs ONLY a lever – so a result is attributable to
 // the lever, not to a regenerated context. This module reads a replay-set and rehydrates the portable
 // <PROJECT_ROOT> token to a live project dir; the caller drives the turn (cfg.instructionsOverride =
 // the recorded prompt as the base body, context levers appended via contextPackSuffix) and judges the
@@ -41,7 +41,7 @@ export interface ReplaySet {
   preProjectDir: string;
 }
 
-/** Rehydrate the portable <PROJECT_ROOT> token in recorded text back to a live project dir , the exact
+/** Rehydrate the portable <PROJECT_ROOT> token in recorded text back to a live project dir – the exact
  *  inverse of the recorder's relativizeProjectPaths. So the prompt the agent gets points at the real
  *  rehydrated tree, byte-identical to the recording modulo the (necessarily different) root path. */
 export function rehydrate(text: string, projectDir: string): string {

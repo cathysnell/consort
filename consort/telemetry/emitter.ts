@@ -9,7 +9,7 @@
 //     flips the real endpoint." A real HTTP POST is used only when an endpoint
 //     is configured AND the privacy sign-off flag is set.
 //
-// The sender is hand-rolled (a small NDJSON POST over global fetch) , NOT the
+// The sender is hand-rolled (a small NDJSON POST over global fetch) – NOT the
 // OpenTelemetry SDK. One try, ~500ms timeout, all errors swallowed.
 
 import { spawn } from "node:child_process";
@@ -31,7 +31,7 @@ export const DEFAULT_TIMEOUT_MS = 500;
 
 /** A destination for delivered trace batches. MUST NOT throw; SHOULD NOT block.
  *  MAY return a Promise that resolves when delivery completes (an HTTP sink), so a
- *  bounded shutdown flush can AWAIT it before the process exits , without this the
+ *  bounded shutdown flush can AWAIT it before the process exits – without this the
  *  fire-and-forget POST is abandoned when the CLI calls process.exit() and every
  *  run's telemetry is silently lost (the drive-exit race). A void return = nothing
  *  to await (noop / in-memory). */
@@ -170,7 +170,7 @@ export interface DetachedHttpSinkOptions {
 /**
  * A sink that hands the batch to a DETACHED background process (the sender bin) and
  * returns IMMEDIATELY. The parent (`consort-drive`) never awaits the POST and is never
- * blocked or delayed, yet delivery SURVIVES the parent's `process.exit()` , the fix for
+ * blocked or delayed, yet delivery SURVIVES the parent's `process.exit()` – the fix for
  * the exit race where the in-process fire-and-forget POST was torn down at exit and
  * every run's telemetry was silently dropped. The batch is spooled to a temp file and
  * the sender (setsid + stdio ignored + unref'd) owns the network with a cold-start-
@@ -283,7 +283,7 @@ export class TelemetryEmitter {
 
   /** Drain the queue AND bound-await the in-flight deliveries, up to `timeoutMs`.
    *  Call this ONCE at process shutdown (after finish()) so the final POST is not
-   *  abandoned when the CLI calls process.exit() , the drive-exit race that silently
+   *  abandoned when the CLI calls process.exit() – the drive-exit race that silently
    *  dropped every run's telemetry. Never throws, never waits longer than the bound;
    *  a slow/cold endpoint is capped, not blocking. A no-op sink resolves at once. */
   async flushAndWait(timeoutMs: number): Promise<void> {

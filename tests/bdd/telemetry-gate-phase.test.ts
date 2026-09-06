@@ -1,7 +1,7 @@
 // L1 gate-span fidelity (option A): the DEFAULT telemetry now attributes duration to the
 // role + phase of each invoke-role turn, instead of lumping every role turn under the coarse
 // gate:"invoke-role". phaseForAction maps the action's buildMode/mode (or the role's base
-// phase) to a CLOSED enum , this is the "where does the time go" key most installs will ship.
+// phase) to a CLOSED enum – this is the "where does the time go" key most installs will ship.
 
 import { describe, it, expect } from "vitest";
 import { phaseForAction } from "../../consort/telemetry/with-telemetry";

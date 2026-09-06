@@ -104,7 +104,7 @@ function rubricSourcesNote(rubric: string, featureId: string, root: string): str
  * The build turn's CONTEXT PACK: rubric (layers + NFRs + UI tokens) PLUS the
  * established module layout and where the story's tests live. A heavy role
  * (Driver / Navigator) starts EVERY turn on a FRESH session (no warm context),
- * so anything it is not TOLD it must rediscover , and the recorded worst GREEN
+ * so anything it is not TOLD it must rediscover – and the recorded worst GREEN
  * turn spent 93 tool round-trips, ~37 of them just `find`/`grep`/`ls`/`Read`
  * relocating context already on disk. Injecting the layout + test locations
  * turns that discovery into zero round-trips. All of it is a deterministic
@@ -142,7 +142,7 @@ export type FailingTestReader = (projectDir: string, story: string) => string | 
 const defaultFailingTestReader: FailingTestReader = (projectDir, story) => {
   // The pytest-bdd step-def path is python-only; a nodejs project's RED test lives elsewhere and the
   // driver discovers it itself, so skip this pre-injection lever for node (returning undefined is
-  // graceful , it just means no pre-read of the failing test body).
+  // graceful – it just means no pre-read of the failing test body).
   if (projectLanguage(projectDir) === "nodejs") return undefined;
   // Story slug "S2-drop-combined-code" -> tests/step_defs/test_S2_drop_combined_code.py.
   const file = join(projectDir, "tests", "step_defs", `test_${story.replace(/-/g, "_")}.py`);
@@ -164,13 +164,13 @@ interface ContextPackOpts {
   /** Enable the scope-note section: an explicit layer-scoping directive that tells the driver to make
    *  ONLY the failing test green at its own layer and NOT investigate/build other layers' surfaces
    *  (e.g. the client/SPA a later refactor owns). Data-justified: the fast (-46%) runs touched the
-   *  client surface ~4x while the slow ones rabbit-holed it ~13x , this makes that scoping deterministic.
+   *  client surface ~4x while the slow ones rabbit-holed it ~13x – this makes that scoping deterministic.
    *  Same precedence as dbState (scopeNote marker / env LAKEBASE_CONSORT_CTX_SCOPENOTE). */
   scopeNote?: boolean;
   /** Enable the migration-convention section: where alembic migrations live + the command to create one
    *  + where models are. Eliminates the opening DISCOVERY a drop/schema turn otherwise does (the driver
    *  guesses the migrations path and greps scripts/lk to find `lakebase-new-migration` before it can even
-   *  start , measured on opus-ctx-test-emedium). Same precedence (migration marker / env CTX_MIGRATION). */
+   *  start – measured on opus-ctx-test-emedium). Same precedence (migration marker / env CTX_MIGRATION). */
   migration?: boolean;
   /** Injected for tests; defaults shell/read from disk. */
   dbStateReader?: DbStateReader;
@@ -203,13 +203,13 @@ function scopeNoteBlock(): string {
     ` SCOPE :: Make ONLY the single failing test green with the SIMPLEST honest code at ITS OWN layer.` +
     ` Iterate on that one test (\`uv run --env-file .env pytest <its path> -x -q\`). Do NOT investigate,` +
     ` build, or run OTHER layers' surfaces this turn (e.g. if the failing test is backend, do not touch,` +
-    ` grep, or run the client/SPA , StockView*, vite, npx vitest; a later refactor turn owns that). The` +
+    ` grep, or run the client/SPA – StockView*, vite, npx vitest; a later refactor turn owns that). The` +
     ` post-turn honest-GREEN verify is authoritative; stop once the single test passes.`
   );
 }
 
 /** APPEND-lever context: build ONLY the named context blocks (to APPEND after an already-assembled
- *  prompt, e.g. a corpus turn's recorded prompt.txt in a replay experiment) , not the full pack. The
+ *  prompt, e.g. a corpus turn's recorded prompt.txt in a replay experiment) – not the full pack. The
  *  faithful "leverage what was there + append" path: the recorded prompt already carries RUBRIC/LAYOUT/
  *  TESTS; a candidate's context lever adds these blocks on top. Blocks accrue in the requested order. */
 export function contextAppendBlocks(
@@ -256,22 +256,22 @@ function buildContextPack(
   // Language-aware RUN/REACHABILITY hint: how THIS app boots + how to confirm it is reachable, so a
   // turn that must check the app came up (especially a Navigator ASSESS of an "app not reachable"
   // verify failure) uses the project's OWN run command instead of improvising a Python check
-  // (`python -c "import app.main"`), which FALSE-fails on a node/java project , there is no app/,
+  // (`python -c "import app.main"`), which FALSE-fails on a node/java project – there is no app/,
   // source is src/, and the app boots a different way. Reachability is always an HTTP response on the
   // health path (the deploy gate's base_url+health_path probe), never a language-specific import.
   {
     const language = projectLanguage(dirname(consortDir));
     const runHint =
       language === "nodejs"
-        ? ` RUN/REACHABILITY :: node project , source under src/ (there is NO app/). To confirm the app` +
+        ? ` RUN/REACHABILITY :: node project – source under src/ (there is NO app/). To confirm the app` +
           ` boots or is reachable, run the project's OWN start (the package.json start/dev script, e.g.` +
-          ` \`node src/index.js\`) and GET the health path over HTTP , do NOT assume Python or run` +
+          ` \`node src/index.js\`) and GET the health path over HTTP – do NOT assume Python or run` +
           ` \`python -c "import app.main"\` (it will false-fail here).`
         : language === "java" || language === "kotlin"
           ? ` RUN/REACHABILITY :: ${language} project. To confirm the app boots or is reachable, run` +
-            ` \`./mvnw spring-boot:run\` and GET the health path over HTTP , do NOT assume Python` +
+            ` \`./mvnw spring-boot:run\` and GET the health path over HTTP – do NOT assume Python` +
             ` (\`python -c "import app.main"\` false-fails here).`
-          : ` RUN/REACHABILITY :: python project , source under app/. To confirm the app boots or is` +
+          : ` RUN/REACHABILITY :: python project – source under app/. To confirm the app boots or is` +
             ` reachable, run \`uv run uvicorn app.main:app\` and GET the health path over HTTP.` +
             ` Reachability is an HTTP response, never just an import succeeding.`;
     parts.push(runHint);
@@ -320,7 +320,7 @@ function buildContextPack(
 
   // ctx-migration: the migration mechanism, so a schema/drop turn does not DISCOVER it. Measured on
   // opus-ctx-test-emedium: the driver guessed the migrations path (app/migrations vs alembic/versions)
-  // and grepped scripts/lk to find `lakebase-new-migration` before it could start , pure opening waste.
+  // and grepped scripts/lk to find `lakebase-new-migration` before it could start – pure opening waste.
   const migrationOn = opts.migration ?? marker.migration ?? consortEnv("CTX_MIGRATION") === "1";
   if (migrationOn) {
     // Language-aware: the create command (lakebase-new-migration) is uniform, but the tool, the

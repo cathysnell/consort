@@ -1,7 +1,7 @@
-// orchestration-runner: drives a full RUN from a run-config , an optional `setup` lifecycle
+// orchestration-runner: drives a full RUN from a run-config – an optional `setup` lifecycle
 // op, the step chain, and an optional `teardown` op. The runner runs setup ONCE before the
 // chain and teardown ONCE after (finally semantics: teardown runs even if the chain throws),
-// so a headless demo is self-contained , scaffold a project, drive the steps, tear it down.
+// so a headless demo is self-contained – scaffold a project, drive the steps, tear it down.
 //
 // Setup/teardown are RUN-SCOPED (not per-step manifests): a multi-step run scaffolds once and
 // tears down once. Lifecycle ops are catalogued by kind (like agents), and INJECTED as
@@ -12,7 +12,7 @@
 import { runManifestChain, type ManifestRunnerDeps, type ManifestTurn } from "./manifest-runner.js";
 import type { StepManifest } from "../steps/manifest.js";
 import type { WorkflowAction } from "../workflow/workflow-vocabulary.js";
-// The lifecycle-op contract (op / result / deps / run-context) lives in the provisioning family , the
+// The lifecycle-op contract (op / result / deps / run-context) lives in the provisioning family – the
 // shared home between the ops' producer (the lifecycle catalogue) and this consumer (the run bracket).
 import type {
   LifecycleOp,
@@ -59,7 +59,7 @@ export async function runOrchestration(
   const result: OrchestrationResult = { turns: [] };
   const ctx: LifecycleRunContext = { workspaceDir: runnerDeps.workspaceDir };
 
-  // Setup , once, before anything.
+  // Setup – once, before anything.
   if (config.setup) {
     result.setup = await lifecycle.run(config.setup, ctx);
     if (result.setup.handle) ctx.setupHandle = result.setup.handle;

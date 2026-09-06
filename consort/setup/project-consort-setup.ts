@@ -218,7 +218,7 @@ export function resyncAgentsOnKitDrift(projectDir: string): {
     fs.mkdirSync(path.dirname(markerPath), { recursive: true });
     fs.writeFileSync(markerPath, current + "\n");
     // Commit the refreshed agent surface so a drift-resync leaves a CLEAN working tree. Otherwise
-    // the run's next experiment/feature fork REFUSES to fork , the paired-branch guard rejects the
+    // the run's next experiment/feature fork REFUSES to fork – the paired-branch guard rejects the
     // uncommitted tracked .claude/agents this resync just re-wrote. That is the same fork-refuse
     // class v0.3.46 fixed for consort-upgrade, but triggered by the drive's own on-resume resync
     // (e.g. after a branch checkout drifts the committed surface from the run pin). No-op outside a

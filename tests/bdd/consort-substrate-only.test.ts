@@ -5,15 +5,15 @@
 //
 // They must NOT reach for:
 //   - the low-level Lakebase-only creators/deleters (branch-create.createBranch,
-//     branch-delete.deleteBranch) , those make a Lakebase branch with no git
+//     branch-delete.deleteBranch) – those make a Lakebase branch with no git
 //     pair (the bug: a Lakebase branch was cut with no git branch);
 //   - the DELETED unpaired convention creators (createFeatureBranch /
 //     createTestBranch / createUatBranch / createPerfBranch);
-//   - raw git helpers (scripts/git/*) , git is a substrate concern, the paired
+//   - raw git helpers (scripts/git/*) – git is a substrate concern, the paired
 //     primitives own checkout/merge so .env follows the branch.
 //
 // EXEMPT: scripts/git/commits.ts (commit / add). Committing the working tree is
-// not a branch operation , it switches no branch, so it cannot desync the
+// not a branch operation – it switches no branch, so it cannot desync the
 // Lakebase pair or .env. The TDD build commits each GREEN + REFACTOR on the
 // already-checked-out experiment branch (cycle-record.ts) via this primitive;
 // the paired substrate still owns every create/delete/checkout/merge.
@@ -54,7 +54,7 @@ function sourceFiles(dir: string): string[] {
 // Forbidden import specifiers (the unpaired branch-lifecycle + raw git modules).
 // Matches with or without a `.js` extension and at any relative depth.
 // `git/(?!commits)` exempts the commit/add primitives (not a branch op; see the
-// header note) while still forbidding every other raw git module , including
+// header note) while still forbidding every other raw git module – including
 // `git/commit-push` (which pushes), since the negative lookahead only matches
 // the exact module name "commits".
 const FORBIDDEN_IMPORT = /from\s+["'][^"']*\/(?:lakebase\/branch-create|lakebase\/branch-delete|git\/(?!commits["'.])[a-z-]+)(?:\.js)?["']/;
@@ -63,12 +63,12 @@ const FORBIDDEN_IMPORT = /from\s+["'][^"']*\/(?:lakebase\/branch-create|lakebase
 const FORBIDDEN_SYMBOL = /\b(createFeatureBranch|createTestBranch|createUatBranch|createPerfBranch)\b/;
 
 // The TDD orchestration layer. The user's rule: "the TDD kit relies on the SCM
-// kit, period" , so nothing in it may reach a raw Lakebase/git module; it goes
+// kit, period" – so nothing in it may reach a raw Lakebase/git module; it goes
 // through the paired substrate. (The low-level lakebase_branch_create / _delete
 // MCP tools are a separate, deliberate substrate surface and are out of scope.)
 // The layer now spans BOTH scripts/sftdd/ (the bins + remaining libs) AND
 // consort/ (the foliated function families the orchestration code moved into),
-// so the guard scans both roots , coverage follows a module when foliation
+// so the guard scans both roots – coverage follows a module when foliation
 // relocates it out of scripts/sftdd/ into a consort/<domain>/ family.
 const GUARDED_DIRS = [join(ROOT, "consort"), join(ROOT, "bin")];
 

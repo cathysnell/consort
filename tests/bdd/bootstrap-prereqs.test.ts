@@ -55,7 +55,7 @@ function shimDir(shims: Shims): string {
   }
   write("gh", `[ "$1" = "auth" ] && exit 0 || echo "gh version 2.89.0"`);
   write("databricks", `[ "$1" = "auth" ] && exit 0 || echo "Databricks CLI v1.12.1"`);
-  // A uv shim: "" means "not on PATH" , a failing shim that shadows any real uv so the
+  // A uv shim: "" means "not on PATH" – a failing shim that shadows any real uv so the
   // absent-uv advisory is reachable. Default present + green so cases that don't vary uv
   // see no uv advisory (the same way java/node default green).
   if (shims.uv === "") {
@@ -156,7 +156,7 @@ describe("bootstrap.sh uv handling (language-scoped, like the JDK)", () => {
 
   it("reports a missing uv as an advisory, never blocking (a Node/Java author needs no uv)", () => {
     // uv is required for the Python project path (uv sync / uv run), but only for python
-    // , exactly like the JDK for java. bootstrap has no --language, so a missing uv must
+    // – exactly like the JDK for java. bootstrap has no --language, so a missing uv must
     // advise, not fail the run.
     const { stdout, status } = run({ uv: "" });
     expect(stdout).toContain("uv not found on PATH");

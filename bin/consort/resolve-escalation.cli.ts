@@ -41,7 +41,7 @@ function parseArgs(argv: string[]): Args {
       case "--list": out.list = true; break;
       case "-h": case "--help":
         process.stdout.write(
-          "consort-resolve-escalation , clear a HIL escalation after fixing its root cause.\n\n" +
+          "consort-resolve-escalation – clear a HIL escalation after fixing its root cause.\n\n" +
             "  consort-resolve-escalation --list\n" +
             "  consort-resolve-escalation [--id <id>] [--all] [--feature <id>] [--story <id>] [--resolution \"<why>\"]\n\n" +
             "Stamps resolved_at (keeps the record); the driver then retries the failed action. Do NOT rm the file.\n",
@@ -68,7 +68,7 @@ function main(): number {
   const args = parseArgs(process.argv.slice(2));
   const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
   // A HIL halt has TWO sources (the dual-source rule): explicit escalation FILES and
-  // BLOCKING SMELLS in smells.json. "Clear the halt" must cover both , T27's blocker
+  // BLOCKING SMELLS in smells.json. "Clear the halt" must cover both – T27's blocker
   // is smell-derived, not a file. List + resolve both.
   const fileEscalations = readEscalations(consortDir).filter((e) => !e.resolved_at);
   const smellEscalations = escalationsFromSmells(consortDir, args.feature);
@@ -89,14 +89,14 @@ function main(): number {
   const scoped = Boolean(args.id || args.feature || args.story || args.all);
   if (!scoped && pending.length > 1) {
     process.stderr.write(
-      `consort-resolve-escalation: ${pending.length} blockers are pending , specify which to clear with --id <id>, ` +
+      `consort-resolve-escalation: ${pending.length} blockers are pending – specify which to clear with --id <id>, ` +
         `or --all to clear them all:\n${pending.map(describe).join("\n")}\n`,
     );
     return 2;
   }
 
   const resolved: string[] = [];
-  // (1) File escalations , stamp resolved_at (keeps the record).
+  // (1) File escalations – stamp resolved_at (keeps the record).
   resolved.push(
     ...resolveEscalations(consortDir, {
       ...(args.id ? { id: args.id } : {}),
@@ -105,7 +105,7 @@ function main(): number {
       ...(args.resolution ? { resolution: args.resolution } : {}),
     }),
   );
-  // (2) Blocking smells , mark the smell "cleared" (does NOT count toward the revise
+  // (2) Blocking smells – mark the smell "cleared" (does NOT count toward the revise
   // budget), the smell-source half of the dual-source rule.
   for (const s of smellEscalations) {
     if (!args.all && !inScope(s, args)) continue;
@@ -124,7 +124,7 @@ function main(): number {
   }
   process.stdout.write(
     `consort-resolve-escalation: resolved ${resolved.length} blocker(s): ${resolved.join(", ")}\n` +
-      `  Re-run the driver , it will retry the failed action fresh (escalation records are kept, stamped resolved_at; ` +
+      `  Re-run the driver – it will retry the failed action fresh (escalation records are kept, stamped resolved_at; ` +
       `smells are marked cleared).\n`,
   );
   return 0;

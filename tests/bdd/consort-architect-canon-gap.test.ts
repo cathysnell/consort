@@ -196,7 +196,7 @@ describe("the establishing feature is exempt (no self-thrash against its own can
     establishCanon();
     mkdirSync(join(tdd, "features", EST), { recursive: true });
     writeFileSync(join(tdd, "features", EST, "architecture.json"), JSON.stringify({ feature_id: EST, service_backed: true, nfrs: [] }));
-    writeEstAc("S2", "AC1"); // clean layer , a LATER feature would be projectable, but the establisher is not
+    writeEstAc("S2", "AC1"); // clean layer – a LATER feature would be projectable, but the establisher is not
     expect(diskArtifactProbe(tdd, EST).architectProjectable("S2")).toBe(false);
   });
 });

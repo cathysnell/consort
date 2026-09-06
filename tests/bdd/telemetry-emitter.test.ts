@@ -212,7 +212,7 @@ describe("shared bearer token (soft secret for a public ingest endpoint)", () =>
   });
 });
 
-describe("detachedHttpSink , delivery survives process.exit WITHOUT blocking the drive", () => {
+describe("detachedHttpSink – delivery survives process.exit WITHOUT blocking the drive", () => {
   it("deliver() spawns a DETACHED, unref'd sender and returns synchronously (never awaited, never blocks)", () => {
     // The drive-exit-race fix: instead of an in-process fire-and-forget POST that the
     // CLI's process.exit() tears down (dropping EVERY run's telemetry), the batch is
@@ -233,7 +233,7 @@ describe("detachedHttpSink , delivery survives process.exit WITHOUT blocking the
         tmpDir: dir,
       });
       const ret = sink.deliver({ schema: "consort/v1", resource: RESOURCE, spans: [rootSpan()] });
-      expect(ret).toBeUndefined(); // returns void immediately , no promise, no await, no block
+      expect(ret).toBeUndefined(); // returns void immediately – no promise, no await, no block
       expect(calls).toHaveLength(1);
       expect(calls[0].bin).toBe(process.execPath); // node
       expect(calls[0].args[0]).toBe("/kit/dist/bin/consort/telemetry-send.cli.js");

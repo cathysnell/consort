@@ -3,16 +3,16 @@
 // kind against this catalogue and builds the agent from `config` + a build CONTEXT.
 //
 // The split that keeps manifests portable:
-//   - config  (in the manifest, DATA): the agent's own knobs , claude levers, replay seeds,
+//   - config  (in the manifest, DATA): the agent's own knobs – claude levers, replay seeds,
 //              mock fixtures. Part of the step's definition; travels with it.
-//   - context (from the runner, ENV): corpusRoot / kitDir / workspaceDir , per-run,
+//   - context (from the runner, ENV): corpusRoot / kitDir / workspaceDir – per-run,
 //              per-machine paths. NOT in the manifest.
 //
 // Catalogued kinds (each documented so a user can pick when authoring a manifest):
-//   - claude : the REAL agent , spawns `claude -p --agent <role>` from the config levers.
-//   - replay : emits RECORDED artifacts (copies configured seeds from the corpus) , the
+//   - claude : the REAL agent – spawns `claude -p --agent <role>` from the config levers.
+//   - replay : emits RECORDED artifacts (copies configured seeds from the corpus) – the
 //              offline/headless agent. No model, no cloud.
-//   - mock   : a test double that writes configured fixture outputs , for unit tests.
+//   - mock   : a test double that writes configured fixture outputs – for unit tests.
 //
 // resolveAgentKind / buildAgent throw loud on an unknown kind (a manifest typo is a hard
 // failure surfaced at build time, never a silent default).
@@ -35,16 +35,16 @@ export interface AgentBuildContext {
   corpusRoot?: string;
   /** The recorded-BUILD corpus root (REPLAY_BUILD_DIR). When present, the step-aware `replay` kind
    *  SYNCS a navigator/driver build turn's cumulative snapshot from here (replayBuildTurn) instead of
-   *  materializing a delta , the faithful per-turn build replay. Needs buildFeatureId + buildConsortDir. */
+   *  materializing a delta – the faithful per-turn build replay. Needs buildFeatureId + buildConsortDir. */
   buildCorpusRoot?: string;
   /** The feature id the build corpus is scoped to (recorded-build is feature-scoped). */
   buildFeatureId?: string;
-  /** The project's `.consort` dir , where replayBuildTurn delivers review verdicts. */
+  /** The project's `.consort` dir – where replayBuildTurn delivers review verdicts. */
   buildConsortDir?: string;
   /** The kit checkout the `claude` kind resolves bins/agent-defs from (LAKEBASE_KIT_DIR). */
   kitDir?: string;
   /** The UNCONTAINED production dispatch seam for the `claude` kind. When the runner supplies it
-   *  (the LIVE drive), buildClaude constructs the ClaudeStepAgent on its live path , the turn
+   *  (the LIVE drive), buildClaude constructs the ClaudeStepAgent on its live path – the turn
    *  dispatches through the production runner (execRunner: session/retry/replay/set-phase/
    *  sync-backlog) instead of the contained raw spawn. Absent (integration chains, per-role sweep,
    *  unit tests) => the contained raw-spawn path, byte-identical to before. This is what lets the
@@ -132,7 +132,7 @@ export const AGENT_CATALOGUE: Record<string, AgentCatalogueEntry> = {
     build: buildClaude,
   },
   replay: {
-    description: "Emits RECORDED artifacts by copying configured seed files from the corpus (context.corpusRoot). Offline/headless , no model, no cloud.",
+    description: "Emits RECORDED artifacts by copying configured seed files from the corpus (context.corpusRoot). Offline/headless – no model, no cloud.",
     configSummary: "{ role?, seeds: [{ outputId, from (corpus-relative), to (workspace-relative) }] }",
     build: buildReplay,
   },

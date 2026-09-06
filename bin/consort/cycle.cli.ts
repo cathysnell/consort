@@ -242,7 +242,7 @@ async function main(): Promise<number> {
     case "assess-green": {
       // Finalize the Navigator's assessment of a failed GREEN verify. Mark the
       // green-failure assessed (so a still-failing verify next escalates rather
-      // than re-assessing). The verdict is READ from disk , the role's output:
+      // than re-assessing). The verdict is READ from disk – the role's output:
       //   - superseded-tests.json present  -> supersession (Driver permissive green);
       //   - regression-assessment.json + fixDirective -> driver-fixable regression:
       //       record the diagnosis + directive on the marker; a Driver REPAIR turn
@@ -258,7 +258,7 @@ async function main(): Promise<number> {
       const regression = readRegressionAssessment(consortDir, a.feature, a.story, ac);
       // composeAssessedGreenFailure PRESERVES the cross-round fixAttempts counter
       // (without it the assess turn reset the self-heal cap every round, so the
-      // refactor-until-clean loop was unbounded , observed 4 rounds, counter stuck at 1).
+      // refactor-until-clean loop was unbounded – observed 4 rounds, counter stuck at 1).
       writeGreenFailure(consortDir, a.feature, a.story, ac, composeAssessedGreenFailure(gf, regression));
       if (flagged) {
         process.stdout.write(`cycle: assessed ${a.story}/${ac} -> superseded (${flagged.tests.length} test(s) flagged; Driver may permissively green)\n`);
@@ -270,7 +270,7 @@ async function main(): Promise<number> {
         const why = regression?.diagnosis ?? gf?.summary ?? "";
         writeEscalation(consortDir, {
           source: "driver-green",
-          reason: `GREEN verify failed for ${ac} in ${a.feature}/${a.story}: Navigator assessed it as a genuine regression${regression ? " (not driver-fixable)" : " (no superseded tests flagged)"}${why ? ` , ${why}` : ""}`,
+          reason: `GREEN verify failed for ${ac} in ${a.feature}/${a.story}: Navigator assessed it as a genuine regression${regression ? " (not driver-fixable)" : " (no superseded tests flagged)"}${why ? ` – ${why}` : ""}`,
           feature_id: a.feature,
           story_id: a.story,
           ac_id: ac,
@@ -294,7 +294,7 @@ async function main(): Promise<number> {
       const scopeLabel = a.story ? `${a.feature}/${a.story}` : a.feature;
       const marker = readDeployVerifyAssessMarker(consortDir, a.feature, a.story);
       if (!marker) {
-        process.stdout.write(`cycle: assess-deploy-verify , no marker for ${scopeLabel} (nothing to assess)\n`);
+        process.stdout.write(`cycle: assess-deploy-verify – no marker for ${scopeLabel} (nothing to assess)\n`);
         return 0;
       }
       const scope = readDeployVerifyScope(consortDir, a.feature, a.story);
@@ -320,7 +320,7 @@ async function main(): Promise<number> {
       // Finalize the Driver's SCOPE-DEPLOY turn: mark the flagged tests refactored
       // so the marker is no longer refactor-pending and the transition falls
       // through to the one re-deploy + re-verify (which clears the marker on pass,
-      // or , if it still fails , writes the terminal escalation, the one-shot bound).
+      // or – if it still fails – writes the terminal escalation, the one-shot bound).
       // --story optional: absent = the feature-ship marker.
       markDeployVerifyRefactored(consortDir, a.feature, a.story);
       process.stdout.write(
@@ -341,7 +341,7 @@ async function main(): Promise<number> {
       if (!a.story) return usage("assess-refactor-verify: --story is required.");
       const marker = readRefactorVerifyAssessMarker(consortDir, a.feature, a.story);
       if (!marker) {
-        process.stdout.write(`cycle: assess-refactor-verify , no marker for ${a.feature}/${a.story} (nothing to assess)\n`);
+        process.stdout.write(`cycle: assess-refactor-verify – no marker for ${a.feature}/${a.story} (nothing to assess)\n`);
         return 0;
       }
       // Aggregate the superseded tests the Navigator flagged across the story's ACs.
@@ -371,8 +371,8 @@ async function main(): Promise<number> {
     case "refactor-superseded-verify": {
       // Finalize the Driver's permissive-refactor turn: mark the marker refactored
       // so it is no longer refactor-pending and the transition falls through to the
-      // plain story refactor re-verify (which clears the marker on pass, or , if it
-      // still fails , escalates via the now-assessed marker, the one-shot bound).
+      // plain story refactor re-verify (which clears the marker on pass, or – if it
+      // still fails – escalates via the now-assessed marker, the one-shot bound).
       if (!a.story) return usage("refactor-superseded-verify: --story is required.");
       markRefactorVerifyRefactored(consortDir, a.feature, a.story);
       process.stdout.write(`cycle: refactor-verify superseded refactor recorded for ${a.story}; re-verifying\n`);

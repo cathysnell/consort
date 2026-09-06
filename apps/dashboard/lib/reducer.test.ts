@@ -1193,7 +1193,7 @@ describe("fold — an open gate lights its surfacer even when deploy/verify foll
 
   it("highlights the orchestrator bubble as waiting, not nothing", () => {
     // Assert on the AGENT BUBBLE (deriveWaiting mutates agent.status regardless of the
-    // ENABLE_WAITING_BANNER flag that gates the separate banner field) , that bubble highlight is
+    // ENABLE_WAITING_BANNER flag that gates the separate banner field) – that bubble highlight is
     // exactly what was missing at an open gate.
     const s = fold(gateEvents, snap({ next: gateNext }));
     expect(s.agents.find((a) => a.role === "orchestrator")!.status).toBe("waiting");
@@ -1304,10 +1304,10 @@ describe("latestOrchestratorActivity — the orchestrator's current narration, o
     const events = [
       ev("phase.start", { phase: "build", story: "S4-app-shell-branding" }, { role: "orchestrator", message: "orchestrator START build" }),
       ev("phase.start", { phase: "green" }, { role: "driver", message: "driver START green" }),
-      ev("gate.surfaced", { gate: "acceptance", subject: "S4-app-shell-branding" }, { role: "orchestrator", message: "GATE acceptance awaiting decision , story S4-app-shell-branding" }),
+      ev("gate.surfaced", { gate: "acceptance", subject: "S4-app-shell-branding" }, { role: "orchestrator", message: "GATE acceptance awaiting decision – story S4-app-shell-branding" }),
     ];
     expect(latestOrchestratorActivity(events)).toEqual({
-      action: "GATE acceptance awaiting decision , story S4-app-shell-branding",
+      action: "GATE acceptance awaiting decision – story S4-app-shell-branding",
       story: "S4-app-shell-branding",
     });
   });

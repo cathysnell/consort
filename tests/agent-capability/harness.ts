@@ -3,7 +3,7 @@
 // One replayable test per role: given a fixture (the role's inputs laid out
 // under .tdd/), invoke that role headless via `claude -p --agent <role>`, then
 // assert the artifact it produced CONFORMS to its schema. This is the unit of
-// "does this agent still do its job" , re-run it to catch a doc/schema drift or
+// "does this agent still do its job" – re-run it to catch a doc/schema drift or
 // a model-tier regression (e.g. the spec-author shipping feature_id instead of
 // id) without a full end-to-end smoke.
 //

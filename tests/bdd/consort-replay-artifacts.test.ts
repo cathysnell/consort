@@ -1,13 +1,13 @@
 // replayDesignTurn copies a design role's recorded output per-turn so the
 // fast-forward driver VISITS every stage (not pre-seed-and-skip). The key
 // faithfulness property: the Spec Author turn copies each AC VERBATIM (the spec
-// author authors `layer`), and the Architect turn , when dispatched , re-copies
+// author authors `layer`), and the Architect turn – when dispatched – re-copies
 // them idempotently + adds architecture.json. The design probe dispatches/skips
 // the Architect on architectural_notes + architecture.json + the canon, NOT on
 // `layer`, so the Spec Author must not strip it (a cleanly-mapping story gets its
 // notes PROJECTED with no Architect turn to restore a stripped layer). A story the
 // corpus lacks returns false: the caller (drive.cli.ts) treats a replay corpus miss
-// as a HARD FAILURE (ReplayCorpusMissError) , a replay is a recording and must never
+// as a HARD FAILURE (ReplayCorpusMissError) – a replay is a recording and must never
 // fall through to a live agent.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

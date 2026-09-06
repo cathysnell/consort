@@ -25,7 +25,7 @@ import { resolveModelForRole } from "../../consort/config/agent-models";
 import { storyAcIds, readAcLayer } from "../../consort/config/consort-paths";
 
 // Input fixtures = the LAST live run's real artifacts (snapshotted), not the
-// hand-curated corpus , this is what the agents actually produce today, junk
+// hand-curated corpus – this is what the agents actually produce today, junk
 // (e.g. acs/<ac>-tests.json) and all, so the isolation tests run against
 // representative real input.
 const CORPUS = join(__dirname, "..", "..", "examples", "replay", "corpora", "bug-tracker", "recorded-agent-inputs");

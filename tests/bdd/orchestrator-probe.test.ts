@@ -44,7 +44,7 @@ function writeArchitecture(): void {
 }
 function writeTestList(story: string, items: unknown[]): void {
   // The canonical per-story list (storyTestListJson): a StoryTestList with an
-  // `items[]` field, written as test-list-per-story.json , the exact file +
+  // `items[]` field, written as test-list-per-story.json – the exact file +
   // field the probe's testListReady reads.
   mkdirSync(storyDir(story), { recursive: true });
   writeFileSync(join(storyDir(story), "test-list-per-story.json"), JSON.stringify({ items }));
@@ -91,7 +91,7 @@ describe("diskArtifactProbe: design facts", () => {
   it("architectAnnotated requires the architect's OWN output (architectural_notes + architecture.json), NOT a bare `layer`", () => {
     // The bug this guards: keying architectAnnotated on `layer` alone made it true
     // the instant `layer` appeared, so if anything wrote `layer` early the
-    // architect-reviewer was skipped , no architecture.json + no layering/
+    // architect-reviewer was skipped – no architecture.json + no layering/
     // service_backed enforcement ever ran. `layer` is the architect's field
     // (optional in ac.schema, stamped in phase 7.1), so this keys on the
     // architect's DISTINCTIVE output instead.

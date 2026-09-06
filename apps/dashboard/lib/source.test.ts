@@ -98,7 +98,7 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
   };
   let proj: string;
   let rec: string;
-  // The COMPANION-gated capabilities , the ones that genuinely need a per-turn corpus. stepOutputs
+  // The COMPANION-gated capabilities – the ones that genuinely need a per-turn corpus. stepOutputs
   // is NOT here: a live board serves a step's deliverables from `.consort/` at HEAD, so it is a base
   // capability (asserted always-on separately below), present with or without a recording.
   const RICH = ["transcripts", "correspondence"] as const;
@@ -136,7 +136,7 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     const src = new LiveSource();
     expect(src.fidelity()).toEqual({ recording: false });
     for (const c of RICH) expect(src.capabilities.has(c)).toBe(false);
-    // stepOutputs is a BASE live capability , served from `.consort/` at HEAD, present even with no
+    // stepOutputs is a BASE live capability – served from `.consort/` at HEAD, present even with no
     // companion recording (so clicking a role/node surfaces what it produced on any live board).
     expect(src.capabilities.has("stepOutputs")).toBe(true);
   });
@@ -595,11 +595,11 @@ describe("LiveSource — reads its OWN .consort/turns corpus (one path: live bui
 
   beforeEach(() => {
     proj = mkdtempSync(join(tmpdir(), "consort-live-turns-"));
-    delete process.env.CONSORT_RECORD_DIR; // a PLAIN live board , no external capture dir
+    delete process.env.CONSORT_RECORD_DIR; // a PLAIN live board – no external capture dir
     process.env.CONSORT_PROJECT_DIR = proj;
     const c = join(proj, ".consort");
     mkdirSync(join(c, "turns", "0000-product-owner-intake"), { recursive: true });
-    // The agent-log's phase.start for the PO turn , correlate pairs it to turn 0, which is what
+    // The agent-log's phase.start for the PO turn – correlate pairs it to turn 0, which is what
     // populates latestTurnByRole (a role card resolves its turn). A real run always logs this.
     writeFileSync(
       join(c, "agent-log.jsonl"),
@@ -638,7 +638,7 @@ describe("LiveSource — reads its OWN .consort/turns corpus (one path: live bui
     const turn = src.turn!(0);
     expect(turn?.role).toBe("product-owner");
     expect(turn?.produced).toContain(".consort/product-overview.md");
-    // Transcript parses into prompt/tools/reasoning , what the PO card shows.
+    // Transcript parses into prompt/tools/reasoning – what the PO card shows.
     const tr = src.transcript!(0);
     expect(tr?.prompt).toContain("draft the intake");
     expect(tr?.tools.length).toBe(2);

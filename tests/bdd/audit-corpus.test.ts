@@ -1,6 +1,6 @@
 // The corpus expression audit is the engine of the audit -> fix -> re-record loop. These guards
 // build synthetic corpora (a clean one + one carrying each discrepancy) and assert auditCorpus
-// reports exactly the right findings , so the loop can trust a CLEAN verdict and act on each code.
+// reports exactly the right findings – so the loop can trust a CLEAN verdict and act on each code.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";

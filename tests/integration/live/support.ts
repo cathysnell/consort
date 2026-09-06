@@ -10,7 +10,7 @@
 // role-chains.ts), shared by these live tests AND the per-role sweep. This file adds only the
 // TEST-side concerns: the conformance assertions + surviving/printing the turn's telemetry.
 //
-// LEAN , NO cloud project. Every live role is tool-scoped out of Bash (never runs ./scripts/lk)
+// LEAN – NO cloud project. Every live role is tool-scoped out of Bash (never runs ./scripts/lk)
 // and reports via the agent-report channel; the chain runs in a throwaway `.sftdd` temp dir.
 
 import { expect } from "vitest";
@@ -60,7 +60,7 @@ export async function runRoleChain(chain: RoleChain): Promise<void> {
 
   // SURVIVE + PRINT the live turn's telemetry (the point of the isolation substrate): the
   // agent-reported num_turns/cost/tokens (why a role was slow) + the outer wall-clock + which
-  // levers were in effect, from the live manifest. Best-effort , telemetry is observability,
+  // levers were in effect, from the live manifest. Best-effort – telemetry is observability,
   // never gates the assertion above.
   emitRoleTelemetry(chain, liveTurn.telemetry);
 }

@@ -36,10 +36,10 @@ describe("reconstituteAgentLog", () => {
 
     // Live project log (this run, 2026-06-24): a synthetic reconciled placeholder,
     // a live duplicate of the PO intake (wrong run date), a live F6 breakdown turn
-    // (not in the corpus), and a live build turn , all on the run's clock.
+    // (not in the corpus), and a live build turn – all on the run's clock.
     fs.writeFileSync(path.join(consortDir, "agent-log.jsonl"), jl([
       { timestamp: "2026-06-24T11:00:00.000Z", level: "info", role: "product-owner", event: "gate.approved", message: "product-owner approved intake", metadata: { feature_id: "F1" } },
-      { timestamp: "2026-06-24T11:01:00.000Z", level: "info", role: "spec-author", event: "artifact.written", message: "spec-author wrote architecture.json , present on disk (reconciled)", metadata: { feature_id: "F1", reconciled: true, path: "x" } },
+      { timestamp: "2026-06-24T11:01:00.000Z", level: "info", role: "spec-author", event: "artifact.written", message: "spec-author wrote architecture.json – present on disk (reconciled)", metadata: { feature_id: "F1", reconciled: true, path: "x" } },
       { timestamp: "2026-06-24T11:05:00.000Z", level: "info", role: "spec-author", event: "turn.usage", message: "spec-author turn used 9 input + 99 output tokens", metadata: { feature_id: "F6", input_tokens: 9, output_tokens: 99, cost_usd: 0.05, story: "S1" } },
       { timestamp: "2026-06-24T11:30:00.000Z", level: "info", role: "driver", event: "turn.usage", message: "driver turn used 1 input + 2 output tokens", metadata: { feature_id: "F1", input_tokens: 1, output_tokens: 2, cost_usd: 0.5 } },
     ]));

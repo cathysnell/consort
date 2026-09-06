@@ -1,12 +1,12 @@
 // The route→contract COVERAGE guard: the manifests are the single source of the per-turn event
 // contract (raises / requiresEvents), so this guard holds them honest as a set:
 //   1. every declared raises/requiresEvents value is a real TurnEventKind (no typo silently ignored);
-//   2. producer/consumer CLOSURE , every event some turn REQUIRES is RAISED by some turn (a required
+//   2. producer/consumer CLOSURE – every event some turn REQUIRES is RAISED by some turn (a required
 //      event with no producer is a dead route that can never be satisfied);
 //   3. every raised/required kind has a spec in TURN_EVENTS (the scope-truth), so the pre-dispatch
 //      check can always resolve a path.
 // This is the runtime stand-in for a compile-time exhaustiveness pin (JSON manifests cannot be
-// `satisfies`-pinned). It iterates SHIPPED_MANIFESTS , the same set the loader dispatches , so a new
+// `satisfies`-pinned). It iterates SHIPPED_MANIFESTS – the same set the loader dispatches – so a new
 // build manifest that declares an event is covered automatically.
 
 import { describe, it, expect } from "vitest";

@@ -26,7 +26,7 @@ export default defineConfig({
     // Component + hook tests run against the real DOM (jsdom), never a mock
     // renderer. Collect component tests from BOTH src/** (co-located) and
     // tests/** (the tests/pages/ layout this scaffold ships and the design lane
-    // routes client component tests to) , EXCEPT tests/e2e/, which is Playwright's,
+    // routes client component tests to) – EXCEPT tests/e2e/, which is Playwright's,
     // not Vitest's. (A prior include of only src/** silently dropped every
     // tests/pages/*.test.tsx, so a client RED test there could never be collected
     // and the build escalated with "no runner for the layer".)

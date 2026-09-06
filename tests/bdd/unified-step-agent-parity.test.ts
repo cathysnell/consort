@@ -2,7 +2,7 @@
 // after LiveDriveStepAgent was dissolved into it.
 //
 //   - UNCONTAINED (live) seam: liveDispatchSeam dispatches the EXACT `buildClaudeCommand(action, cfg)`
-//     through cfg.runner , the same spawn the legacy perform() used (cwd=projectDir, prompt naming
+//     through cfg.runner – the same spawn the legacy perform() used (cwd=projectDir, prompt naming
 //     .consort paths, session/replay/retry all execRunner's). This is what the old LiveDriveStepAgent
 //     did; the assertion is unchanged in intent (the command the live path dispatches == the legacy
 //     claude command), only the mechanism moved onto the seam + the unified agent's invoke().
@@ -11,7 +11,7 @@
 //     command is byte-identical to before. Asserted here so the unification is proven on both faces.
 //
 // If either drifts, routing the live/contained turn through the unified agent would silently change
-// the spawn , the exact failure this golden exists to prevent.
+// the spawn – the exact failure this golden exists to prevent.
 
 import { describe, it, expect } from "vitest";
 import {
@@ -60,7 +60,7 @@ function legacyClaude(action: WorkflowAction, c: DriveEffectsConfig): DriveComma
   return commandsForAction(action, c).find((cmd) => cmd.kind === "claude");
 }
 
-describe("unified ClaudeStepAgent , UNCONTAINED (live) seam ≡ the legacy claude spawn (Stage F2 parity)", () => {
+describe("unified ClaudeStepAgent – UNCONTAINED (live) seam ≡ the legacy claude spawn (Stage F2 parity)", () => {
   const cases: Array<[string, WorkflowAction]> = [
     ["spec-author breakdown", { kind: "invoke-role", role: "spec-author", mode: "breakdown" }],
     ["architect per-story", { kind: "invoke-role", role: "architect-reviewer", story: "S1-record-stock" }],
@@ -88,7 +88,7 @@ describe("unified ClaudeStepAgent , UNCONTAINED (live) seam ≡ the legacy claud
   });
 
   it("honors per-turn model tiering exactly as the legacy path (byte-identical under a modelForTurn cfg)", async () => {
-    // A driver GREEN turn under model tiering , the dispatched command must carry the SAME model the
+    // A driver GREEN turn under model tiering – the dispatched command must carry the SAME model the
     // legacy spawn would (proving the live seam reuses buildClaudeCommand's resolution, not its own).
     const dispatched: DriveCommand[] = [];
     const c = cfg({
@@ -108,7 +108,7 @@ describe("unified ClaudeStepAgent , UNCONTAINED (live) seam ≡ the legacy claud
   });
 });
 
-describe("unified ClaudeStepAgent , CONTAINED seam byte-identity (untouched by F2)", () => {
+describe("unified ClaudeStepAgent – CONTAINED seam byte-identity (untouched by F2)", () => {
   // A contained design turn: no liveDispatch seam => invoke() takes the raw-spawn path, and
   // buildCommand/spawnArgs are the SAME pure derivations as before F2. We assert the command shape
   // directly (no spawn), the contained face's golden.
@@ -127,7 +127,7 @@ describe("unified ClaudeStepAgent , CONTAINED seam byte-identity (untouched by F
     expect(cmd.role).toBe("spec-author");
     expect(cmd.model).toBe("sonnet");
     expect(cmd.effort).toBe("low");
-    // The task carries the prompt, the embedded input block, and the guidelines , the contained
+    // The task carries the prompt, the embedded input block, and the guidelines – the contained
     // agent's whole world is in the prompt (it reads no filesystem for inputs).
     expect(cmd.task).toContain("Break it down");
     expect(cmd.task).toContain("product-overview");

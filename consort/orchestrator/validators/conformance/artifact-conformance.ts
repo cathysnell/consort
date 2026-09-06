@@ -330,7 +330,7 @@ export function checkNfrCoverage(
   /** PER-FEATURE RELEVANCE: brief ids a SIBLING feature in the same project
    *  already covers. A project-wide Required NFR need only be realized by the
    *  feature(s) that TOUCH it, so a feature that does not implement a concern is
-   *  not forced to manufacture nominal coverage , it passes when a sibling covers
+   *  not forced to manufacture nominal coverage – it passes when a sibling covers
    *  it. Empty/omitted preserves the original single-feature strictness. */
   otherFeatureBriefRefs: ReadonlySet<string> = new Set(),
 ): ConformanceResult {
@@ -399,7 +399,7 @@ export function projectBriefRefs(consortDir: string): Set<string> {
  * Evidence-bound `service_backed` determination: the layering + fitness guards
  * all key off the architect's self-declared `service_backed` flag, so an architect
  * that omits it (or sets false) on a feature that demonstrably persists data
- * silently exempts the whole feature from layering enforcement , the defect that
+ * silently exempts the whole feature from layering enforcement – the defect that
  * let a data-persisting bug tracker ship with HTML in a fat controller. This
  * cross-checks the declaration against the architect's OWN structured evidence:
  * a feature that is not `service_backed: true` while it shows persistence
@@ -438,7 +438,7 @@ export function checkServiceBackedDeclaration(
     // declares none. The safety net against a feature that REALLY persists
     // slipping through with no invariants lives HERE: persistence evidence
     // (an Infra AC / a storage NFR) while persistence_invariants is empty is the
-    // contradiction , force the invariants so the schema gets tested.
+    // contradiction – force the invariants so the schema gets tested.
     if (!infraAc && !persistNfr) return { ok: true }; // a non-persisting service: fine
     const hasInvariants = (parsed.persistence_invariants ?? []).some((i) => i && typeof i.id === "string" && i.id.length > 0);
     if (hasInvariants) return { ok: true }; // a real DB feature, properly declared
@@ -466,15 +466,15 @@ export function checkServiceBackedDeclaration(
  * E2E-layer PRESENCE (closes the "a UI feature designed as all-backend" escape).
  * `checkE2ECoverage` only bites once an AC is tagged `layer:"E2E"`, so a design lane
  * that mis-classifies EVERY client-facing AC as `API`/`Infra` yields a feature with ZERO
- * E2E ACs and satisfies the coverage guard vacuously , exactly how the actor-less pick
+ * E2E ACs and satisfies the coverage guard vacuously – exactly how the actor-less pick
  * form shipped (a whole feature of client behavior, not one E2E AC, so the client<->
  * server contract was never verified end to end, TWICE: the design lane flattened even a
  * rewritten "operator submits the form in the browser" premise into a backend
  * "the pick is saved" API AC). This cross-checks TWO signals that the feature is
  * client-facing against the AC-layer evidence:
- *   1. the architect's own structural declaration , a `boundary` layer with `renders_via`
+ *   1. the architect's own structural declaration – a `boundary` layer with `renders_via`
  *      (`react`/`jinja2`) means the feature renders a UI; and
- *   2. the architect-INDEPENDENT project signal , the project is a React UI track
+ *   2. the architect-INDEPENDENT project signal – the project is a React UI track
  *      (`uiReact`) AND the feature exposes an `API`-layer AC (an endpoint the SPA
  *      consumes). Signal 2 matters because the SAME mis-classification that drops the
  *      E2E tags can also drop `renders_via` (an architect that thinks the feature is
@@ -516,11 +516,11 @@ export function checkE2eLayerPresent(
     violations: [
       `the feature ${why} but NO acceptance criterion is tagged layer:"E2E"; a feature that renders a UI has at least one ` +
         `client<->server contract (a form submit, an inline validation rejection, a success/empty state) whose ONLY real ` +
-        `verification is a Playwright e2e against the live API , tag that AC layer:"E2E" (a mocked component test stubs the ` +
+        `verification is a Playwright e2e against the live API – tag that AC layer:"E2E" (a mocked component test stubs the ` +
         `response envelope, so a fabricated shape passes green while the real wire contract drifts). NOTE: an outcome phrased as ` +
         `"record WHO performed the action" or "the pick is saved", when the operator enters their name on a form with no auth, IS ` +
-        `a client form submission (layer:"E2E") , do not flatten it into a backend "API" AC. If the endpoint is genuinely not ` +
-        `consumed by any client, reconsider , that is unusual for a UI-track feature.`,
+        `a client form submission (layer:"E2E") – do not flatten it into a backend "API" AC. If the endpoint is genuinely not ` +
+        `consumed by any client, reconsider – that is unusual for a UI-track feature.`,
     ],
   };
 }
@@ -595,11 +595,11 @@ export function checkFitnessCoverage(testListJson: string, architectureJson: str
 
 /**
  * E2E coverage (the client<->server CONTRACT): an AC whose acceptance is the CLIENT rendering an
- * outcome DERIVED FROM A REAL SERVER RESPONSE , a validation rejection shown inline, a success
- * confirmation, an error state from a failed request , is a client<->server contract, tagged
+ * outcome DERIVED FROM A REAL SERVER RESPONSE – a validation rejection shown inline, a success
+ * confirmation, an error state from a failed request – is a client<->server contract, tagged
  * `layer:"E2E"`, and MUST be covered by a REAL end-to-end test: a Playwright spec (scenario_file
  * under an `e2e/` path, e.g. `client/tests/e2e/…`) that drives the deployed app against the live
- * API. A mocked component test is NOT sufficient , it stubs the response envelope, so a fabricated
+ * API. A mocked component test is NOT sufficient – it stubs the response envelope, so a fabricated
  * shape passes green while the real wire contract drifts. That is exactly the recurring S2/S3
  * inline-error defect: the client mocked a flat `{quantity: …}` body, went green, and shipped a
  * form that rendered nothing against the real backend's `{detail: {quantity: …}}`. Makes
@@ -625,7 +625,7 @@ export function checkE2ECoverage(testListJson: string, e2eAcIds: string[]): Conf
       ? `covered only by ${forAc.map((i) => i.scenario_file ?? `kind:${i.kind ?? "?"}`).join(", ")}`
       : "has no covering test";
     violations.push(
-      `E2E-layer AC ${acId} ${how} , a mocked component test cannot verify the real client<->server contract ` +
+      `E2E-layer AC ${acId} ${how} – a mocked component test cannot verify the real client<->server contract ` +
         `(a fabricated response envelope passes green while the real wire shape drifts). Add a real Playwright ` +
         `e2e (scenario_file under client/tests/e2e/) that drives the deployed app against the live API`,
     );
@@ -636,7 +636,7 @@ export function checkE2ECoverage(testListJson: string, e2eAcIds: string[]): Conf
 /**
  * Persistence coverage (robust DB testing, not an ORM re-test): a service-backed
  * feature's architecture MUST declare its `persistence_invariants[]` (the DB-level
- * guarantees the SCHEMA enforces , a unique key, an FK/cascade, a NOT NULL/CHECK, a
+ * guarantees the SCHEMA enforces – a unique key, an FK/cascade, a NOT NULL/CHECK, a
  * transactional-atomicity boundary, migration up-then-down reversibility), and the
  * test-list MUST cover EVERY declared invariant with >=1 item referencing its
  * `invariant_id`. This ties DB test coverage to the schema's own contract rather
@@ -674,7 +674,7 @@ export function checkPersistenceCoverage(testListJson: string, architectureJson:
       ok: false,
       violations: [
         `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} ` +
-          `(each declared invariant needs >=1 test that verifies the migration realized it against the real branch , ` +
+          `(each declared invariant needs >=1 test that verifies the migration realized it against the real branch – ` +
           `NOT a test of the ORM's generic round-trip; see test-strategy.md)`,
       ],
     };
@@ -739,7 +739,7 @@ export function checkDbDesign(dbDesignJson: string | undefined, architectureJson
   if (uncovered.length > 0) {
     violations.push(
       `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} ` +
-        `(the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , ` +
+        `(the DBA must physically realize every invariant the architect declared – a table/column/constraint/index – ` +
         `and list its id here; see agents/dba.md)`,
     );
   }
@@ -877,7 +877,7 @@ export function checkInvariantCoverageDistinct(
   /** OPTIONAL invariant_id -> the story that REALIZES it (its table's create/alter migration),
    *  derived from db-design (invariantRealizingStory). When present, ownership is REALIZATION, not
    *  story order: a fitness item on a story that does NOT realize the invariant is the violation
-   *  (even when that story sorts FIRST , the display-only-S1-front-loads-S2's-invariant defect), and
+   *  (even when that story sorts FIRST – the display-only-S1-front-loads-S2's-invariant defect), and
    *  the fix is to move it to the realizing story, not to keep it on the earliest. When absent, falls
    *  back to the earliest-S-number heuristic (a story-order proxy for "who realizes it"). */
   ownerByInvariant?: Map<string, string>,
@@ -905,7 +905,7 @@ export function checkInvariantCoverageDistinct(
       for (const c of stories) {
         if (c.story === realizer) continue;
         violations.push(
-          `${c.story} carries persistence invariant ${inv} but does NOT realize it , its table/migration ` +
+          `${c.story} carries persistence invariant ${inv} but does NOT realize it – its table/migration ` +
             `is introduced by ${realizer} (db-design schema_changes). Move the ${inv} fitness item to ${realizer}` +
             `${owns ? "" : " (which must add it)"}; a display/read-only story cannot test an invariant whose ` +
             `table it never creates. Anchor by the realizing story, not AC keyword proximity.`,
@@ -914,7 +914,7 @@ export function checkInvariantCoverageDistinct(
       continue;
     }
     if (stories.length < 2) continue;
-    // Fallback (no db-design owner map): earliest-S-number heuristic , the lowest story owns it.
+    // Fallback (no db-design owner map): earliest-S-number heuristic – the lowest story owns it.
     const sorted = [...stories].sort((a, b) => a.num - b.num || a.story.localeCompare(b.story));
     const owner = sorted[0].story;
     for (const later of sorted.slice(1)) {
@@ -934,7 +934,7 @@ export function checkInvariantCoverageDistinct(
  * db-design schema_changes (story -> the table it creates/alters). An invariant belongs to the FIRST
  * story whose migration touches its table (create_table, else the earliest add_column/alter/constraint
  * on it). This is the single source of ownership truth the coverage check, the analyst, and the spec
- * gate all key off , replacing "earliest story that happens to name it". Returns an empty map when the
+ * gate all key off – replacing "earliest story that happens to name it". Returns an empty map when the
  * inputs are absent/unparseable or no invariant has a resolvable table (the checker then falls back).
  */
 export function invariantRealizingStory(
@@ -980,10 +980,10 @@ export function invariantRealizingStory(
 /**
  * Guard the ROOT cause of the persistence-invariant reflect loop: a db-design that attributes a
  * `create_table` to a story whose ACs are ALL non-persisting (a pure UI/E2E shell, no API/Infra
- * layer). Such a story cannot realize a table , it has no data-layer AC that needs one , so
+ * layer). Such a story cannot realize a table – it has no data-layer AC that needs one – so
  * `invariantRealizingStory` (which trusts db-design) resolves the invariant's owner to the shell
  * story, the fitness analyst dutifully anchors its PI tests there, and only the navigator reflect
- * gate (which reads the shell story's ACs) catches it , then bounces the whole design lane back to
+ * gate (which reads the shell story's ACs) catches it – then bounces the whole design lane back to
  * the architect + test-strategist. Catching the mis-attribution HERE turns that round-trip into a
  * deterministic, correctly-routed db-design error (owner: DBA/architect) BEFORE the build lane.
  *
@@ -1003,14 +1003,14 @@ export function checkSchemaChangeStoryRealizes(
   const seen = new Set<string>();
   for (const c of schemaChanges) {
     if (!c || c.kind !== "create_table" || typeof c.story_id !== "string" || typeof c.table !== "string") continue;
-    if (!storyLayers.has(c.story_id)) continue; // unknown story , reported by the AC-conformance check
+    if (!storyLayers.has(c.story_id)) continue; // unknown story – reported by the AC-conformance check
     const key = `${c.story_id}::${c.table}`;
     if (seen.has(key)) continue;
     seen.add(key);
     if (!canRealize(c.story_id)) {
       violations.push(
         `db-design attributes create_table ${c.table} to ${c.story_id}, whose ACs are all non-persisting ` +
-          `(UI/E2E shell , no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC ` +
+          `(UI/E2E shell – no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC ` +
           `for. Attribute the create_table (and the invariants it realizes) to the story that first reads/writes ` +
           `${c.table}; a shell story gets no schema_changes. (This is the mis-anchoring the navigator reflect gate ` +
           `otherwise bounces back through the whole design lane.)`,

@@ -2,11 +2,11 @@
 // CLI: finalize a recorded capture so its prompts/transcripts are PORTABLE + BROWSABLE.
 //
 // Runs POST-recording, once the final `.consort` state exists:
-//   1. buildConsortMirror  , create <recordDir>/.consort/ = recorded-artifacts (produced, wins) UNION
+//   1. buildConsortMirror  – create <recordDir>/.consort/ = recorded-artifacts (produced, wins) UNION
 //      intake (seed, fills gaps), so every `.consort/<x>` a recorded prompt references is a REAL file.
-//   2. sweepRecordedPaths   , rewrite <PROJECT_ROOT>/.consort/<x> (and any residual absolute project
+//   2. sweepRecordedPaths   – rewrite <PROJECT_ROOT>/.consort/<x> (and any residual absolute project
 //      path via --live-root) in every prompt.txt + transcript.md + correspondence.jsonl to the
-//      record-relative `./.consort/<x>` , which now opens in a file browser.
+//      record-relative `./.consort/<x>` – which now opens in a file browser.
 //
 // Idempotent; operates only on recorded text/dirs. Safe to re-run on an existing corpus.
 //

@@ -1,4 +1,4 @@
-// Record a story's BUILD turn by turn , the capture counterpart to the per-turn
+// Record a story's BUILD turn by turn – the capture counterpart to the per-turn
 // build replay. During a REAL (non-skipped) Navigator/Driver build, the driver
 // calls recordBuildTurn AFTER each build turn's effect lands, snapshotting the
 // experiment-branch working tree (the code that turn delivered) plus the cycle +
@@ -28,7 +28,7 @@ export interface RecordBuildTurnArgs {
   role: string;
   /** The AC this turn targeted (per-AC review/refactor turns); omit for the kickoff. */
   ac?: string;
-  /** review | refactor | kickoff , the build mode, for the turn slug. */
+  /** review | refactor | kickoff – the build mode, for the turn slug. */
   mode?: string;
 }
 

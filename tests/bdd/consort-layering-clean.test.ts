@@ -282,7 +282,7 @@ describe("checkDuplicateClasses (A4): no class is defined in two modules", () =>
 
   it("catches the duplicate even when NO architecture/layers are declared (declaration-independent)", () => {
     // This is the resiliency the placement check lacks: it needs no `models` layer
-    // declaration , it scans source directly, so an architect omitting the layer
+    // declaration – it scans source directly, so an architect omitting the layer
     // cannot let a duplicate class slip through.
     const dir = mkProject();
     write(dir, "app/models.py", "class Recipe:\n    pass\n");

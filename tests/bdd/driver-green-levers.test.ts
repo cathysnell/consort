@@ -2,12 +2,12 @@
 // and flow through a dispatched turn. See consort/optimize/DRIVER-GREEN-LEVERS.md.
 //
 // Coverage:
-//  1. driverGreenCandidates()          , the candidate set is well-formed (ids/levers).
-//  2. buildContextPack ctx sections    , C1 (db-state) + C2 (failing-test) appear ONLY when enabled,
+//  1. driverGreenCandidates()          – the candidate set is well-formed (ids/levers).
+//  2. buildContextPack ctx sections    – C1 (db-state) + C2 (failing-test) appear ONLY when enabled,
 //                                          via BOTH the opt and the per-workspace marker; readers injected.
-//  3. applyDriverLevers                , writes .claude/settings.json (deny E2 + guard hook E1) + the
+//  3. applyDriverLevers                – writes .claude/settings.json (deny E2 + guard hook E1) + the
 //                                          ctx-levers marker, and returns the ctxPack env.
-//  4. the single-test-guard hook       , executed as a real python3 subprocess: no-arg full suite -> DENY,
+//  4. the single-test-guard hook       – executed as a real python3 subprocess: no-arg full suite -> DENY,
 //                                          targeted `pytest <path>` / `run-tests.sh <path>` -> ALLOW.
 //  5. LIVE dispatch (mock step executor), the real Step + driver-green manifest + a mock StepAgent: the
 //                                          agent receives a prompt carrying the enabled ctx sections, and
@@ -68,7 +68,7 @@ describe("driverGreenCandidates: the candidate set is well-formed", () => {
     expect(by["opus-scope-note"]).toEqual({ model: "opus", ctxPack: ["scope-note"] });
     expect(by["opus-ctx-test-scope"]).toEqual({ model: "opus", ctxPack: ["failing-test", "scope-note"] });
     expect(by["opus-single-test-guard"]).toEqual({ model: "opus", guardSuite: true });
-    // bare opus x the FULL effort ladder , locate where "default" (bare opus) sits, then n=3 the lowest
+    // bare opus x the FULL effort ladder – locate where "default" (bare opus) sits, then n=3 the lowest
     // passing rungs below it. low < medium < high < xhigh < max.
     expect(by["opus-e-low"]).toEqual({ model: "opus", effort: "low" });
     expect(by["opus-e-medium"]).toEqual({ model: "opus", effort: "medium" });
@@ -127,7 +127,7 @@ describe("buildContextPack: ctx-db (C1) + ctx-test (C2) sections are OPT- and MA
     expect(pack).toMatch(/SCOPE ::/);
   });
 
-  it("scope-note: emits the layer-scoping directive ONLY when enabled (no reader needed , it is static)", () => {
+  it("scope-note: emits the layer-scoping directive ONLY when enabled (no reader needed – it is static)", () => {
     const cd = consortDir();
     expect(buildContextPack(cd, F, S, "")).not.toMatch(/SCOPE ::/); // off by default
     const on = buildContextPack(cd, F, S, "", { scopeNote: true });
@@ -200,7 +200,7 @@ describe("per-candidate deploy port (concurrency safety): distinct ports + a con
   it("deployPortForIndex assigns a distinct, deterministic port per candidate index", () => {
     expect(deployPortForIndex(0)).toBe(BASE_DEPLOY_PORT);
     const ports = [0, 1, 2, 3, 4, 5, 6].map(deployPortForIndex);
-    expect(new Set(ports).size).toBe(ports.length); // all distinct , no two candidates share a port
+    expect(new Set(ports).size).toBe(ports.length); // all distinct – no two candidates share a port
     expect(deployPortForIndex(3)).toBe(BASE_DEPLOY_PORT + 3);
   });
 
@@ -256,9 +256,9 @@ describe("guard hook: executed as a real subprocess, segment-aware suite + scan 
 
   it("scan: DENIES ls/find/grep even inside `cd && …` and pipes (the deny-glob blind spot)", () => {
     expect(runGuard(SCAN, "ls app/")).toBe(true);
-    expect(runGuard(SCAN, "cd /w && ls tests/step_defs/")).toBe(true); // compound , the case globs miss
+    expect(runGuard(SCAN, "cd /w && ls tests/step_defs/")).toBe(true); // compound – the case globs miss
     expect(runGuard(SCAN, "find . -name '*.py'")).toBe(true);
-    expect(runGuard(SCAN, "uv run pytest x.py 2>&1 | grep PASSED")).toBe(true); // piped grep , caught
+    expect(runGuard(SCAN, "uv run pytest x.py 2>&1 | grep PASSED")).toBe(true); // piped grep – caught
     // allowed: a normal command is not scanning
     expect(runGuard(SCAN, "uv run --env-file .env pytest tests/step_defs/test_S2.py")).toBe(false);
     expect(runGuard(SCAN, "cat app/models.py")).toBe(false);
@@ -293,7 +293,7 @@ describe("S2 migration re-pin bundle: well-formed (the thrashing-turn pin)", () 
     expect(has(`${B}/design/stories/S2-drop-combined-code/acs/AC1-column-dropped.json`)).toBe(true);
   });
 
-  it("the judge reference is the SAME-STEP evaluation , 003-navigator-assess's REGRESSION determination", () => {
+  it("the judge reference is the SAME-STEP evaluation – 003-navigator-assess's REGRESSION determination", () => {
     // The reference is how the corpus evaluated THIS step: the navigator turn after the S2 driver-green
     // (003-navigator-assess) determined a regression (drop left code referencing the dropped column). It
     // must parse as classification "regression" (fixDirective present, schema-modernized on curation), so
@@ -335,7 +335,7 @@ describe("LIVE dispatch (mock step executor): levers reach the driver turn", () 
     expect(hook).toMatch(/SUITE = True/);
     expect(hook).toMatch(/SCAN = True/);
 
-    // The prompt the orchestrator sources for the driver turn , the context pack, with the marker
+    // The prompt the orchestrator sources for the driver turn – the context pack, with the marker
     // (written by applyDriverLevers) turning the ctx sections on, readers injected for hermeticity.
     const prompt = buildContextPack(consortDir, featureId, story, "", {
       dbStateReader: () => ({ current: "20260811000000", heads: "20260811000002" }),

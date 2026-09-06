@@ -12,7 +12,7 @@
 // attributed to event[i]'s role + event + phase. This is an APPROXIMATION (it
 // cannot see a cold `claude -p` boot before a turn's first emit, and a turn that
 // emits several events splits across spans), but it is faithful enough to find
-// the outliers the optimization plan targets , and it costs nothing extra to
+// the outliers the optimization plan targets – and it costs nothing extra to
 // collect (the timestamps already exist).
 
 import { readAgentLog, type AgentLogEvent, type ReadAgentLogOpts } from "../../consort/logging/agent-log.js";
@@ -28,7 +28,7 @@ export interface TurnTiming {
   phase?: string;
   /** The coarse lifecycle phase this turn belongs to (design | planning | build
    *  | deploy | gate | other), DERIVED from role + event + fine phase. Unlike the
-   *  raw `phase`, this is always set , so the rollup attributes every event
+   *  raw `phase`, this is always set – so the rollup attributes every event
    *  (incl. the agent-emitted reasoning / artifact.written / cycle.* that carry
    *  no phase slot of their own). */
   coarsePhase: string;
@@ -60,7 +60,7 @@ export interface GroupRollup {
 
 /** One role turn, from the driver's `turn.usage` event. Unlike the inter-event
  *  spans above, this is the driver's OWN measurement of a role subprocess's
- *  wall-time (duration_ms), so it is the clean per-turn compute cost , no idle
+ *  wall-time (duration_ms), so it is the clean per-turn compute cost – no idle
  *  gap, no cold-boot blind spot. This is the signal to compare against a
  *  baseline. */
 export interface TurnUsage {
@@ -92,16 +92,16 @@ export interface TimingReport {
   byPhase: GroupRollup[];
   /** Spans summed by `role` (desc). */
   byRole: GroupRollup[];
-  /** Spans summed by `role/event` kind (desc) , the per-turn-type breakdown. */
+  /** Spans summed by `role/event` kind (desc) – the per-turn-type breakdown. */
   byKind: GroupRollup[];
-  /** The N slowest individual spans (desc) , the outliers to attack. */
+  /** The N slowest individual spans (desc) – the outliers to attack. */
   slowest: TurnTiming[];
   /** MEASURED role turns from `turn.usage` events (the driver's own per-turn
    *  wall-time). Empty on older logs that predate turn.usage. When
    *  `skipPlanning` is set, planning-phase turns are excluded from these. */
   turnUsage: TurnUsage[];
   /** turn.usage rolled up by role (desc by seconds), with cost. The clean
-   *  per-role turn-time signal , compare this to a baseline, not the gap rollup. */
+   *  per-role turn-time signal – compare this to a baseline, not the gap rollup. */
   byRoleTurns: GroupRollup[];
   /** turn.usage rolled up by role/model (desc), so a per-turn second is compared
    *  within its own model tier (opus vs sonnet vs haiku are not comparable). */
@@ -115,7 +115,7 @@ export interface ComputeTimingOpts {
   /** How many slowest spans to surface (default 10). */
   topN?: number;
   /** Drop planning-phase turns (propose/estimate/author-requests/plan) from the
-   *  turn.usage rollups , the sprint-planning lane has no design/build baseline. */
+   *  turn.usage rollups – the sprint-planning lane has no design/build baseline. */
   skipPlanning?: boolean;
 }
 
@@ -178,7 +178,7 @@ const FINE_TO_COARSE: Record<string, string> = {
 /**
  * Derive the coarse lifecycle phase for an event. Prefers the fine `phase` token
  * when present (the orchestrator sets it on handoff/phase.start); otherwise falls
- * back to role + event name, so the events that carry NO phase , the code-emitted
+ * back to role + event name, so the events that carry NO phase – the code-emitted
  * cycle.* and the agent-emitted reasoning / artifact.written / smell.flagged ,
  * are still attributed (the "(none)" bucket the raw phase rollup left as 80% of
  * the wall-clock). Build vs deploy vs design/planning is what the rollup answers.
@@ -276,7 +276,7 @@ export function computeTiming(events: AgentLogEvent[], opts: ComputeTimingOpts =
   const slowest = [...turns].sort((a, b) => b.seconds - a.seconds).slice(0, topN);
 
   // MEASURED turns: the driver's own per-turn wall-time from turn.usage events
-  // (duration_ms), the clean per-turn compute cost , no idle gap. This is the
+  // (duration_ms), the clean per-turn compute cost – no idle gap. This is the
   // signal to compare against a baseline; the gap rollups above stay for finding
   // inter-event overhead. Optionally drop the planning lane (no design/build
   // baseline). Older logs without turn.usage yield an empty list (graceful).
@@ -347,7 +347,7 @@ function rollupBlock(title: string, rows: GroupRollup[]): string {
   return `${title}\n${lines.join("\n")}\n`;
 }
 
-/** Like rollupBlock, for measured turn.usage rollups , shows avg/max + cost. */
+/** Like rollupBlock, for measured turn.usage rollups – shows avg/max + cost. */
 function turnRollupBlock(title: string, rows: GroupRollup[]): string {
   if (rows.length === 0) return `${title}\n  (none)\n`;
   const keyW = Math.max(title.length, ...rows.map((r) => r.key.length));
@@ -365,14 +365,14 @@ export function formatTimingReport(report: TimingReport): string {
   if (report.events === 0) return "agent-log timing: no timestamped events found.\n";
   const out: string[] = [];
   out.push(
-    `agent-log timing , ${report.events} events over ${fmtSecs(report.totalSeconds)} ` +
+    `agent-log timing – ${report.events} events over ${fmtSecs(report.totalSeconds)} ` +
       `(${report.startedAt} -> ${report.endedAt})`,
   );
   out.push("");
-  // Measured per-turn compute (turn.usage) , the durable, baseline-comparable
+  // Measured per-turn compute (turn.usage) – the durable, baseline-comparable
   // signal. Lead with it; the gap rollups below are for inter-event overhead.
   if (report.turnUsage.length > 0) {
-    const planNote = report.turnUsage.some((t) => t.coarsePhase === "planning") ? "" : " , planning excluded";
+    const planNote = report.turnUsage.some((t) => t.coarsePhase === "planning") ? "" : " – planning excluded";
     out.push(
       `MEASURED turns (turn.usage): ${report.turnUsage.length} turns, ` +
         `${fmtSecs(report.turnSeconds)} compute, $${report.turnCostUsd.toFixed(2)}${planNote}`,

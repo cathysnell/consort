@@ -209,7 +209,7 @@ describe("projectStoryNotes: write per-AC notes from the canon (idempotent)", ()
   it("annotates ACs missing notes, and never clobbers an existing annotation", () => {
     establishedCanon();
     writeAc("S1", "AC1");
-    writeAc("S1", "AC2", { architectural_notes: "hand-authored by the architect , keep me" });
+    writeAc("S1", "AC2", { architectural_notes: "hand-authored by the architect – keep me" });
 
     const n = projectStoryNotes(tdd, F, "S1");
     expect(n).toBe(1); // only AC1 was missing notes
@@ -217,7 +217,7 @@ describe("projectStoryNotes: write per-AC notes from the canon (idempotent)", ()
     const ac1 = JSON.parse(readFileSync(join(tdd, "features", F, "stories", "S1", "acs", "AC1.json"), "utf8"));
     expect(ac1.architectural_notes).toMatch(/Layer API.*canon established by F1-stock-visibility/);
     const ac2 = JSON.parse(readFileSync(join(tdd, "features", F, "stories", "S1", "acs", "AC2.json"), "utf8"));
-    expect(ac2.architectural_notes).toBe("hand-authored by the architect , keep me");
+    expect(ac2.architectural_notes).toBe("hand-authored by the architect – keep me");
 
     // Idempotent: a second pass annotates nothing new.
     expect(projectStoryNotes(tdd, F, "S1")).toBe(0);

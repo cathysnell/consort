@@ -32,8 +32,8 @@ describe("emitAgentLogEvent", () => {
       { consortDir: tdd, now: clock },
     );
     expect(ev.timestamp).toBe("2026-06-05T10:00:00.000Z");
-    // message is rendered from "{{role}} wrote {{artifact}} , {{summary}}".
-    expect(ev.message).toBe("spec-author wrote feature-spec.json , drafted");
+    // message is rendered from "{{role}} wrote {{artifact}} – {{summary}}".
+    expect(ev.message).toBe("spec-author wrote feature-spec.json – drafted");
 
     const file = join(tdd, "agent-log.jsonl");
     expect(existsSync(file)).toBe(true);
@@ -131,7 +131,7 @@ describe("emitAgentLogEvents (batch: one process, one append)", () => {
   });
 });
 
-describe("emit mirrors into the corpus (LAKEBASE_CONSORT_RECORD_DIR) , live-write, like correspondence.jsonl", () => {
+describe("emit mirrors into the corpus (LAKEBASE_CONSORT_RECORD_DIR) – live-write, like correspondence.jsonl", () => {
   let recordDir: string;
   let priorEnv: string | undefined;
   beforeEach(() => {

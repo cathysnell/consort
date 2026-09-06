@@ -733,7 +733,7 @@ describe("scanFeatureConformance: checks every artifact that exists on disk", ()
 
   // HEAL-THEN-CHECK (the gate-conformance CLI runs normalizeStoryJson before scanning): a
   // {id}-only story.json stub whose narrative lives in story.md must PASS after the heal,
-  // WITHOUT hand-editing , but a stub whose story.md ALSO lacks the narrative must still FAIL.
+  // WITHOUT hand-editing – but a stub whose story.md ALSO lacks the narrative must still FAIL.
   const storyStub = (fid: string, sid: string, md: string): void => {
     const sdir = join(fdir, "stories", sid);
     mkdirSync(sdir, { recursive: true });
@@ -749,7 +749,7 @@ describe("scanFeatureConformance: checks every artifact that exists on disk", ()
     storyStub("F1-initial-domain", "S1-file-a-bug", "# S1: File a bug\nAs a user\nI want to file a bug\nSo that it gets tracked\n");
     // Raw scan (no heal): the {id}-only story.json is missing asA/iWantTo/soThat.
     expect(badStoryJson()).toBe(true);
-    // Heal from story.md, then scan again: now conformant , no hand-editing.
+    // Heal from story.md, then scan again: now conformant – no hand-editing.
     const changed = normalizeStoryJson(tdd, "F1-initial-domain");
     expect(changed).toContain("S1-file-a-bug");
     expect(scanFeatureConformance(tdd, "F1-initial-domain").ok).toBe(true);
@@ -759,7 +759,7 @@ describe("scanFeatureConformance: checks every artifact that exists on disk", ()
     writeFileSync(join(fdir, "feature-spec.json"), FEATURE_JSON);
     writeFileSync(join(fdir, "feature-spec.md"), FEATURE_MD);
     storyStub("F1-initial-domain", "S1-file-a-bug", "# S1: File a bug\n\nJust a title, no As-a/I-want/So-that lines.\n");
-    normalizeStoryJson(tdd, "F1-initial-domain"); // nothing to backfill , story.md has no narrative
+    normalizeStoryJson(tdd, "F1-initial-domain"); // nothing to backfill – story.md has no narrative
     expect(badStoryJson()).toBe(true);
   });
 });
@@ -923,7 +923,7 @@ describe("checkInvariantCoverageDistinct (Gate 3: each invariant belongs to exac
   });
 });
 
-describe("checkInvariantCoverageDistinct: REALIZATION ownership (db-design), not story order , the front-loaded-invariant defect", () => {
+describe("checkInvariantCoverageDistinct: REALIZATION ownership (db-design), not story order – the front-loaded-invariant defect", () => {
   // The stockflow-full F2 defect: a display-only read story (S1) ordered BEFORE the write story (S2)
   // that creates the table gets front-loaded with the write story's invariant (PI6). Earliest-S-number
   // ownership wrongly makes S1 the owner and dead-locks the reflect gate; realization ownership names
@@ -933,7 +933,7 @@ describe("checkInvariantCoverageDistinct: REALIZATION ownership (db-design), not
   it("flags a SINGLE display-only carrier (S1) holding a later write story's (S2) invariant, naming S2 as the realizer", () => {
     const r = checkInvariantCoverageDistinct(
       [
-        { story: "S1-display", invariantIds: ["PI6"] }, // mis-anchored , S1 does not migrate PI6's table
+        { story: "S1-display", invariantIds: ["PI6"] }, // mis-anchored – S1 does not migrate PI6's table
         { story: "S2-adjust", invariantIds: [] },
       ],
       owner,
@@ -999,7 +999,7 @@ describe("invariantRealizingStory: invariant -> the story whose migration realiz
 describe("checkSchemaChangeStoryRealizes: a create_table must not land on a UI/E2E shell story", () => {
   const layers = (m: Record<string, string[]>): Map<string, string[]> => new Map(Object.entries(m));
 
-  it("flags a create_table attributed to a pure-shell story (all E2E ACs) , the reflect-loop root cause", () => {
+  it("flags a create_table attributed to a pure-shell story (all E2E ACs) – the reflect-loop root cause", () => {
     const changes = [
       { story_id: "S1-scaffold-app-shell", kind: "create_table", table: "stock_levels" },
       { story_id: "S1-scaffold-app-shell", kind: "create_table", table: "stock_adjustments" },

@@ -201,7 +201,7 @@ async function main(): Promise<number> {
       // separate post-turn --reconcile having run first). The spec-author reliably
       // writes the As-a/I-want/So-that narrative to story.md but not always into the
       // JSON stub; the backfill fixes that. A stub the backfill CANNOT heal (story.md
-      // also lacks a parseable narrative , e.g. a truncated breakdown turn) is a
+      // also lacks a parseable narrative – e.g. a truncated breakdown turn) is a
       // genuinely incomplete breakdown: FAIL FAST here at design (exit non-zero halts
       // the drive) instead of passing build+accept and only detonating the
       // feature-complete conformance gate ~160 turns later (the observed F1/F6 halt
@@ -214,7 +214,7 @@ async function main(): Promise<number> {
       );
       if (missing.length > 0) {
         process.stderr.write(
-          `sync-breakdown: FAIL , ${missing.length} story stub(s) still missing required narrative after story.md backfill: ` +
+          `sync-breakdown: FAIL – ${missing.length} story stub(s) still missing required narrative after story.md backfill: ` +
             missing.map((m) => `${m.story} [${m.fields.join("/")}]`).join(", ") +
             `. The spec-author must write the "As a / I want / So that" narrative into each story.md ` +
             `(story.schema requires asA/iWantTo/soThat on story.json). Halting at design, not the feature-complete gate.\n`,
@@ -396,7 +396,7 @@ async function main(): Promise<number> {
       // The sanctioned "re-drive this story from a clean slate" op (Finding 27):
       // clears the build cycles + test-list, the story's HIL escalations AND
       // blocking smells, resets the experiment for a clean re-fork, and puts the
-      // story back on the build lane , so recovering a story after a caught
+      // story back on the build lane – so recovering a story after a caught
       // false-GREEN never needs `rm -rf .consort/cycles/...` + hand-edits.
       if (!args.story) return usage("rebuild-story needs --story");
       let r;

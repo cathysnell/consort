@@ -1,7 +1,7 @@
 // role-levers: the candidate generator for the per-role chain sweep. A candidate is one point in
-// the sweep space , a patch on the live role's AgentLevers (model / effort / tool scope). Baseline
+// the sweep space – a patch on the live role's AgentLevers (model / effort / tool scope). Baseline
 // (the role's default levers, no patch) is always first so the sweep measures it under the same
-// machinery as every candidate. Pure , no I/O.
+// machinery as every candidate. Pure – no I/O.
 
 import { describe, it, expect } from "vitest";
 import { roleCandidates, testStrategistCandidates, BASELINE_ID } from "../optimization/role-levers";
@@ -49,7 +49,7 @@ describe("roleCandidates: model tiers x effort rungs x scan-tight, baseline firs
 
   // Session warmth is a CROSS-TURN effect (a story's later cycles resuming the earlier session's
   // context + prompt cache). It cannot be measured on the default SINGLE-TURN chain substrate ,
-  // there is no prior turn to resume , so the warm candidate is gated behind a multiTurn capability.
+  // there is no prior turn to resume – so the warm candidate is gated behind a multiTurn capability.
   describe("session-warmth lever (gated on a multi-turn substrate)", () => {
     it("is EXCLUDED by default (single-turn substrate cannot measure warm-vs-cold)", () => {
       const ids = roleCandidates("sonnet").map((c) => c.id);
@@ -63,7 +63,7 @@ describe("roleCandidates: model tiers x effort rungs x scan-tight, baseline firs
       expect(warm!.levers.session).toBe("resume");
     });
 
-    it("multiTurn:true is otherwise a SUPERSET , every default candidate still present, baseline first", () => {
+    it("multiTurn:true is otherwise a SUPERSET – every default candidate still present, baseline first", () => {
       const base = roleCandidates("sonnet");
       const multi = roleCandidates("sonnet", { multiTurn: true });
       expect(multi[0].id).toBe(BASELINE_ID);
@@ -95,7 +95,7 @@ describe("testStrategistCandidates: per-analyst SUBAGENT lever permutations (sup
     }
   });
 
-  it("sweeps the SUPERVISOR itself , alone AND combined with the winning analyst lever (effort=low)", () => {
+  it("sweeps the SUPERVISOR itself – alone AND combined with the winning analyst lever (effort=low)", () => {
     const cs = testStrategistCandidates(["behavior", "fitness", "client"]);
     const sLow = cs.find((c) => c.id === "s-low")!;
     expect(sLow.levers.effort).toBe("low");

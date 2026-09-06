@@ -78,14 +78,14 @@ describe("resolveConsortSettings: defaults when no file + no env", () => {
     expect(s.models["spec-author"]).toBe("opus");
     expect(s.effortFor("navigator", "review")).toBe("low");
     // navigator RED is the sonnet-e-low tuning winner (panel + confirm: ~29% faster than the opus
-    // default, ~half the cost, holds test coverage). Manifest-declared, no file/overlay , the single
+    // default, ~half the cost, holds test coverage). Manifest-declared, no file/overlay – the single
     // per-turn config home. RED is mechanical test-authoring, so the cheaper model holds.
     expect(s.modelFor("navigator", "red")).toBe("sonnet");
     expect(s.effortFor("navigator", "red")).toBe("low");
     expect(s.effortFor("driver", "green")).toBe("medium"); // driver-green tuning winner (opus + medium + ctx-test) is the promoted default
     expect(s.modelFor("driver", "green")).toBe("opus"); //  ,, its model half (manifest-declared, no file needed)
     expect(s.modelFor("navigator", "assess")).toBe("opus"); // assess winner: opus holds the assessment, ~18% faster (manifest-declared)
-    expect(s.modelFor("driver", "repair")).toBe("sonnet"); // repair UNTUNED (base): the haiku flip was reverted , it was judged by code-equivalence, which the two-turn QUALITY method (next-turn determination, actual navigator model) did not support; 0053 is a recorded-CLEAN sample that live repairs rarely hold, so tuning needs a recorded-smelly sample
+    expect(s.modelFor("driver", "repair")).toBe("sonnet"); // repair UNTUNED (base): the haiku flip was reverted – it was judged by code-equivalence, which the two-turn QUALITY method (next-turn determination, actual navigator model) did not support; 0053 is a recorded-CLEAN sample that live repairs rarely hold, so tuning needs a recorded-smelly sample
     // spec-author's effort is keyed on the STEP, not the role: the optimize sweep
     // measured the BREAKDOWN step faster at low effort, so ONLY breakdown defaults
     // low; the per-story AC-authoring step (a different task) keeps the model default
@@ -181,18 +181,18 @@ describe("resolveConsortSettings: per-turn model tiering (driver GREEN/REFACTOR 
     writeConsortConfig(proj, defaultConsortConfig());
     const s = resolveConsortSettings({ projectDir: proj });
     expect(s.modelFor("driver", "red")).toBe("sonnet");
-    // GREEN runs on OPUS at MEDIUM effort , the driver-green tuning winner (faster-while-holding:
+    // GREEN runs on OPUS at MEDIUM effort – the driver-green tuning winner (faster-while-holding:
     // reliably reaches the clean-code + superseded-shift milestone at ~237s). See DRIVER-GREEN-LEVERS.md.
     expect(s.modelFor("driver", "green")).toBe("opus");
     expect(s.effortFor("driver", "green")).toBe("medium");
-    // REFACTOR runs on OPUS , the driver-refactor tuning winner (5-lever x3-replica panel, turn 0039):
+    // REFACTOR runs on OPUS – the driver-refactor tuning winner (5-lever x3-replica panel, turn 0039):
     // opus ties for the best clean-in-one-step rate (2/3) AND is the FASTEST holder (~334s), and its
     // efficiency makes it cheaper than sonnet (~$0.36 vs $0.41). The prior haiku default was the WORST
     // (1/3, thrashing to ~1142s). Judgment-heavy turn => the strongest tier wins, like ASSESS. See
     // DRIVER-REPAIR-TURN-REPLAY.md.
     expect(s.modelFor("driver", "refactor")).toBe("opus");
     // navigator is model-tiered per turn (all manifest-declared, the single per-turn config home):
-    // RED is the sonnet-e-low tuning winner (mechanical test authoring , cheaper model holds
+    // RED is the sonnet-e-low tuning winner (mechanical test authoring – cheaper model holds
     // coverage); ASSESS runs on opus (deep root-cause reasoning); REVIEW falls through to the sonnet
     // base. Design roles keep their scalar recommended model.
     expect(s.modelFor("navigator", "red")).toBe("sonnet");
@@ -203,7 +203,7 @@ describe("resolveConsortSettings: per-turn model tiering (driver GREEN/REFACTOR 
 
   it("defaultConsortConfig applies the spec-author winner PER STEP: breakdown haiku+low, AC-authoring untouched", () => {
     // The optimize sweep measured the BREAKDOWN step (haiku+low, -44%). The winner is
-    // applied keyed to `breakdown` ONLY , the per-story AC-authoring step is a
+    // applied keyed to `breakdown` ONLY – the per-story AC-authoring step is a
     // different task and keeps the recommended model + default effort until its own
     // sweep. This is the "apply to the step, not the role" invariant.
     writeConsortConfig(proj, defaultConsortConfig());
@@ -211,10 +211,10 @@ describe("resolveConsortSettings: per-turn model tiering (driver GREEN/REFACTOR 
     // breakdown step: the applied winner.
     expect(s.modelFor("spec-author", "breakdown")).toBe("haiku");
     expect(s.effortFor("spec-author", "breakdown")).toBe("low");
-    // AC-authoring step: NOT the breakdown winner , recommended model, default effort.
+    // AC-authoring step: NOT the breakdown winner – recommended model, default effort.
     expect(s.modelFor("spec-author", "acs")).toBe("opus");
     expect(s.effortFor("spec-author", "acs")).toBe("default");
-    // base (no key) also stays recommended , the breakdown lever does not leak.
+    // base (no key) also stays recommended – the breakdown lever does not leak.
     expect(s.modelFor("spec-author")).toBe("opus");
   });
 });
@@ -325,12 +325,12 @@ describe("legacy agent-config.json is honored below the new file", () => {
 });
 
 describe("defaultConsortConfig + write/load round-trip", () => {
-  it("seeds PROJECT settings only , no per-turn model/effort in the file (that is the manifest's job)", () => {
+  it("seeds PROJECT settings only – no per-turn model/effort in the file (that is the manifest's job)", () => {
     const wrote = writeConsortConfig(proj, defaultConsortConfig());
     expect(wrote).toBe(true);
     const loaded = loadConsortConfig(proj);
     expect(loaded?.version).toBe(1);
-    // The single per-turn config home is the step-manifest agentOptions , the scaffolded config file no
+    // The single per-turn config home is the step-manifest agentOptions – the scaffolded config file no
     // longer carries a SECOND copy of per-turn model/effort (which used to shadow the manifest). So the
     // seeded roles are empty; per-turn model/effort resolves from the manifests, and a project overrides
     // a turn by ADDING roles.<role>.model/effort to its own file.

@@ -1,5 +1,5 @@
 // Replay a design-lane role's OUTPUT from a recorded-artifacts corpus instead
-// of spawning the LLM agent , the engine behind the fast-forward smoke.
+// of spawning the LLM agent – the engine behind the fast-forward smoke.
 //
 // The point (vs. pre-seeding everything and skipping): the deterministic driver
 // still VISITS every stage as a real orchestrated turn (propose -> breakdown ->
@@ -9,7 +9,7 @@
 // turn, instead of paying for the model, the runner copies that turn's recorded
 // output here ("pushes it out"). The Navigator + Driver are NEVER replayed (the
 // runner only calls this for design-lane roles), so the real TDD begins exactly
-// at the Navigator handoff , "stub the handoffs UNTIL we get to navigator."
+// at the Navigator handoff – "stub the handoffs UNTIL we get to navigator."
 //
 // Faithfulness detail: the corpus holds FINAL artifacts, but each stage is gated
 // by a different on-disk fact, so copying per-turn keeps the next stage's gate
@@ -17,7 +17,7 @@
 // (the spec author really does author `layer`); the Architect turn re-copies them
 // verbatim (idempotent) and adds architecture.json. The design probe dispatches or
 // skips the Architect on ITS OWN products (architectural_notes + architecture.json
-// existence + the project canon), NOT on whether the ACs carry `layer` , so the
+// existence + the project canon), NOT on whether the ACs carry `layer` – so the
 // Spec Author must NOT strip `layer`. Stripping it (an earlier hack to give the
 // Architect "work") permanently drops the field for a cleanly-mapping story whose
 // notes are PROJECTED from the canon with no Architect turn to restore it, failing
@@ -107,7 +107,7 @@ export function replayDesignTurn(args: ReplayArgs): boolean {
         return ok;
       }
       // Per-story Spec Author turn: the ACs, verbatim (the spec author authors
-      // `layer`; the Architect , when dispatched , re-copies them idempotently).
+      // `layer`; the Architect – when dispatched – re-copies them idempotently).
       if (turn.story) {
         return cpDir(join(cf, "stories", turn.story, "acs"), join(tf, "stories", turn.story, "acs"));
       }

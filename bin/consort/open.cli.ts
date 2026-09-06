@@ -29,7 +29,7 @@ function parseArgs(argv: string[]): Args {
       case "--force": out.force = true; break;
       case "-h": case "--help":
         process.stdout.write(
-          "consort-open , open the reviewable Consort artifacts in Cursor/Code.\n\n" +
+          "consort-open – open the reviewable Consort artifacts in Cursor/Code.\n\n" +
             "  consort-open [--feature <id>] [--story <id>] [--force] [--project-dir <p>]\n\n" +
             "Opens only when inside the editor's terminal (else prints paths). --force opens regardless.\n",
         );

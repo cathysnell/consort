@@ -5,13 +5,13 @@
 //
 // Kinds:
 //   scaffold-project : create a REAL project via the kit createProject (Databricks + GitHub +
-//                      Lakebase). Cloud-bound , needs creds; returns a handle (projectDir,
+//                      Lakebase). Cloud-bound – needs creds; returns a handle (projectDir,
 //                      lakebaseProjectId, repo url) teardown consumes.
 //   remove-project   : delete what scaffold-project created (Lakebase project + local dir; the
 //                      GitHub repo is left unless config.deleteRepo). Reads the setup handle.
 //   inject-escalation: plant a REAL escalation into the workspace `.consort/escalations/` (via the
 //                      shared writeEscalation), so a scenario can deterministically drive the
-//                      revise/escalate route space , no flaky live navigator turn needed. The
+//                      revise/escalate route space – no flaky live navigator turn needed. The
 //                      manifest runner's probeEscalation seam then derives it back off disk.
 //
 // resolveLifecycleKind throws loud on an unknown kind. The builders are pure (no cloud at
@@ -98,7 +98,7 @@ export interface ScaffoldHandle {
   lakebaseDefaultBranch?: string;
   databricksHost?: string;
   githubRepoUrl?: string | null;
-  /** "<owner>/<name>" , what gh repo delete + removeRunner both key off. */
+  /** "<owner>/<name>" – what gh repo delete + removeRunner both key off. */
   githubRepoFullName?: string | null;
   /** True when scaffold registered a self-hosted runner that must be de-registered. */
   runnerRegistered?: boolean;
@@ -115,7 +115,7 @@ export interface RemoveProjectEffects {
   deleteLakebaseProject(args: { projectId: string; host: string }): Promise<void>;
 }
 
-/** The real effects , scm-utils runner/Lakebase ops + `gh repo delete`. Imported lazily so the
+/** The real effects – scm-utils runner/Lakebase ops + `gh repo delete`. Imported lazily so the
  *  hermetic tests + no-cloud paths never pull the cloud client at module load. */
 async function realRemoveProjectEffects(): Promise<RemoveProjectEffects> {
   const scm = await import("@databricks-solutions/lakebase-scm-utils/lakebase");
@@ -130,14 +130,14 @@ async function realRemoveProjectEffects(): Promise<RemoveProjectEffects> {
 }
 
 /**
- * remove-project: tear down EVERYTHING scaffold-project created , the self-hosted runner, the
+ * remove-project: tear down EVERYTHING scaffold-project created – the self-hosted runner, the
  * GitHub repo, the Lakebase project, and the local dir. This is the proven teardown ported from
  * create-project.test.ts + scm-utils; the earlier version only deleted Lakebase + dir, which
  * leaked the repo + runner on every run.
  *
  * ORDER matters: de-register the runner BEFORE deleting the repo (the GitHub API call needs the
  * repo to still exist), then delete the repo, then the Lakebase project, then the dir. Every
- * step is best-effort , a failure is collected, not thrown, and the remaining steps still run,
+ * step is best-effort – a failure is collected, not thrown, and the remaining steps still run,
  * so one broken step never strands the rest (teardown must not mask a chain error). Reports
  * ok:false with the joined errors if anything failed.
  */
@@ -150,7 +150,7 @@ export async function removeProject(
   if (!handle) return { ok: false, error: "remove-project: no setup handle (nothing to tear down)" };
   void config;
 
-  // Only build the (cloud) effects when there is real cloud work to do , a pure local-dir
+  // Only build the (cloud) effects when there is real cloud work to do – a pure local-dir
   // teardown (tests, no-cloud runs) stays hermetic and never imports the cloud client.
   const needsCloud = !!(handle.runnerRegistered || handle.githubRepoFullName || (handle.lakebaseProjectId && handle.databricksHost));
   const fx = effectsOverride ?? (needsCloud ? await realRemoveProjectEffects() : undefined);
@@ -175,10 +175,10 @@ export async function removeProject(
     try { await fx.deleteLakebaseProject({ projectId: handle.lakebaseProjectId, host: handle.databricksHost }); lakebaseDeleted = true; }
     catch (e) { errors.push(`Lakebase delete: ${e instanceof Error ? e.message : String(e)}`); }
   }
-  // 4. Remove the local project dir , but ONLY once the Lakebase project is actually gone. The local
+  // 4. Remove the local project dir – but ONLY once the Lakebase project is actually gone. The local
   //    dir carries the scaffold markers (.env LAKEBASE_PROJECT_ID + .lakebase/) that the ORPHAN SWEEP
   //    keys off to reclaim a stranded project. Removing the dir after a FAILED Lakebase delete would
-  //    strand the project with no local marker to recover it from , exactly the leak seen on the
+  //    strand the project with no local marker to recover it from – exactly the leak seen on the
   //    Stage-5 driver-green run (a transient delete failure + the dir gone => the sweep found nothing).
   //    So on a failed delete we KEEP the dir; the next orphan sweep (pre/post any live scaffold suite)
   //    re-reads its .env and retries the delete. This mirrors sweepOrphanProjects' own ordering.
@@ -187,7 +187,7 @@ export async function removeProject(
       try { rmSync(handle.projectDir, { recursive: true, force: true }); }
       catch (e) { errors.push(`dir remove: ${e instanceof Error ? e.message : String(e)}`); }
     } else {
-      errors.push(`dir KEPT (${handle.projectDir}) , Lakebase delete failed; left for the orphan sweep to retry`);
+      errors.push(`dir KEPT (${handle.projectDir}) – Lakebase delete failed; left for the orphan sweep to retry`);
     }
   }
 
@@ -246,7 +246,7 @@ export function resolveLifecycleKind(kind: string): LifecycleCatalogueEntry {
   return entry;
 }
 
-/** The real LifecycleDeps that dispatch through the catalogue , pass this to runOrchestration
+/** The real LifecycleDeps that dispatch through the catalogue – pass this to runOrchestration
  *  for a live run (tests inject a mock instead). */
 export const catalogueLifecycleDeps: LifecycleDeps = {
   run: (op: LifecycleOp, context: LifecycleRunContext) => resolveLifecycleKind(op.kind).run(op.config ?? {}, context),

@@ -1,5 +1,5 @@
 // The hard-stop guard (#732): a real AGENT turn must never run on the legacy commandsForAction path
-// (it would skip the executor's recording + validation + routing contract , silent corruption).
+// (it would skip the executor's recording + validation + routing contract – silent corruption).
 // assertNotStrandedAgentTurn throws for an invoke-role action that is neither executor-dispatched
 // nor a sanctioned deterministic-agentless action. These guards pin exactly that boundary.
 
@@ -47,7 +47,7 @@ describe("assertNotStrandedAgentTurn: hard-stop on an agent turn stranded on leg
     expect(() => assertNotStrandedAgentTurn(stranded)).toThrow(/LEGACY AGENT-PATH GUARD/);
   });
 
-  it("THROWS for an un-storied build turn (navigator with no story , escaped the executor allowlist)", () => {
+  it("THROWS for an un-storied build turn (navigator with no story – escaped the executor allowlist)", () => {
     const stranded = A({ role: "navigator" }); // no story => executorDispatched false
     expect(executorDispatched(stranded)).toBe(false);
     expect(() => assertNotStrandedAgentTurn(stranded)).toThrow(/must NEVER run on the legacy/);

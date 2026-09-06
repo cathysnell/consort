@@ -280,7 +280,7 @@ export function checkFeedbackPresent(html: string): ElementAdherenceResult {
 // The element-level checks above prove a rendered screen is styled + seamed IF it
 // is rendered at all. They cannot see two upstream defects a UI-track build can
 // ship GREEN with (observed live): a feature page with passing component tests
-// that is never wired into App.tsx's <Routes> (unreachable , dead to the user),
+// that is never wired into App.tsx's <Routes> (unreachable – dead to the user),
 // and a page rendered as bare browser-default HTML that consumes NONE of the
 // design guide (the tokens exist on :root but the screen ignores them). Both are
 // static + hermetic (parse App.tsx + the page sources), so they run at the REVIEW
@@ -338,7 +338,7 @@ export interface TokenConsumptionInput {
   pageSources: Record<string, string>;
   /** The design guide's component-class vocabulary (page/card/btn/...). When given,
    *  a page that renders structure but references NONE of these (and no var()) is
-   *  flagged even if it uses ad-hoc one-off classes , it bypasses the design system. */
+   *  flagged even if it uses ad-hoc one-off classes – it bypasses the design system. */
   designClasses?: string[];
 }
 export interface TokenConsumptionResult { ok: boolean; bare: string[]; remediation?: string; }
@@ -346,8 +346,8 @@ export interface TokenConsumptionResult { ok: boolean; bare: string[]; remediati
 const CONSUMPTION_REMEDIATION =
   "A feature page renders visible structure but consumes NONE of the design guide: no " +
   "var(--token) and no class from the design vocabulary. It renders as bare browser-default " +
-  "HTML. Apply the guide , wrap in the layout/card/button/table classes (or var(--token) " +
-  "styles) the design guide defines , so the screen matches the design system. See the " +
+  "HTML. Apply the guide – wrap in the layout/card/button/table classes (or var(--token) " +
+  "styles) the design guide defines – so the screen matches the design system. See the " +
   "`ux-adherence` smell.";
 
 /**
@@ -426,7 +426,7 @@ const APP_ICON_REMEDIATION =
 /**
  * When the guide declares an `app_icon`, verify it is APPLIED: (1) the asset exists
  * at install_to, and (2) its basename is referenced by BOTH the favicon link
- * (index.html) and the app shell (App.tsx) , i.e. the brand icon replaced the
+ * (index.html) and the app shell (App.tsx) – i.e. the brand icon replaced the
  * generic placeholder. No `appIcon` declared -> trivially ok (a project with no
  * brand asset legitimately keeps the scaffold icon).
  */

@@ -6,10 +6,10 @@
 // recorded intake; turn 2 the REAL spec-author (claude) authors feature-spec.json from those
 // inputs and emits an agent-report the orchestrator formats into a conformant agent-log.
 //
-// LEAN , NO cloud project. The live spec-author is tool-scoped (no Bash -> it never runs
+// LEAN – NO cloud project. The live spec-author is tool-scoped (no Bash -> it never runs
 // ./scripts/lk) and reports via the agent-report channel, so there is nothing a scaffolded
 // Databricks/GitHub/Lakebase project would provide: the whole chain runs in a throwaway `.sftdd`
-// workspace. (The earlier version scaffolded a real project; that was dead weight , removed.)
+// workspace. (The earlier version scaffolded a real project; that was dead weight – removed.)
 // Only ONE live agent here (spec-author); the PO is a deterministic replay.
 
 import { describe, it, expect } from "vitest";
@@ -40,11 +40,11 @@ function instructionsFor(manifest: StepManifest): { prompt: string; guidelines: 
   return {
     prompt:
       `Break feature ${FEATURE} into its stories from the provided inputs (they are in this ` +
-      `prompt , do NOT search the filesystem or read other projects). WRITE exactly these ` +
+      `prompt – do NOT search the filesystem or read other projects). WRITE exactly these ` +
       `files, relative to your current working directory:\n` +
       `  - ${SPEC_REL}  (JSON: id, name, status "draft", tdd_mode, NON-EMPTY stories[])\n` +
       `  - a stub dir per story under .sftdd/features/${FEATURE}/stories/<S>/ (story.md + story.json)\n` +
-      `Then STOP , do NOT run any shell command, do NOT run npx or ./scripts/lk, do NOT ` +
+      `Then STOP – do NOT run any shell command, do NOT run npx or ./scripts/lk, do NOT ` +
       `self-verify (the orchestrator validates your work). As the LAST thing in your reply, ` +
       `emit a fenced report block describing what you did:\n` +
       "```agent-report\n" +
@@ -53,7 +53,7 @@ function instructionsFor(manifest: StepManifest): { prompt: string; guidelines: 
       `Add extra entries with level "warn" + event "open.question" for any ambiguity you surfaced.`,
     guidelines: [
       "feature-spec.json is REQUIRED and must have a non-empty stories[].",
-      "End your reply with the ```agent-report block , the orchestrator formats it into the conformant agent log.",
+      "End your reply with the ```agent-report block – the orchestrator formats it into the conformant agent log.",
       "Do NOT verify your own work or run any command; write the files, emit the report, stop.",
     ],
   };
@@ -66,12 +66,12 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE (lean): mock PO -> live spec-a
     expect(manifests.find((m) => m.role === "product-owner")?.agent?.kind).toBe("replay");
     expect(manifests.find((m) => m.role === "spec-author" && m.match.mode === "breakdown")?.agent?.kind).toBe("claude");
 
-    // A throwaway workspace , NO scaffolded cloud project. The spec-author is tool-scoped out of
+    // A throwaway workspace – NO scaffolded cloud project. The spec-author is tool-scoped out of
     // Bash + reports via the agent-report channel, so ./scripts/lk is never called.
     const workspaceDir = mkdtempSync(join(tmpdir(), "po-spec-author-"));
     mkdirSync(join(workspaceDir, ".sftdd"), { recursive: true });
     // Lay the kit's role agent defs into <workspaceDir>/.claude/agents/ so the live spec-author
-    // resolves `--agent spec-author` , a plain file copy, no cloud project.
+    // resolves `--agent spec-author` – a plain file copy, no cloud project.
     layDownKitAgents(workspaceDir);
 
     const runnerDeps: ManifestRunnerDeps = {
@@ -93,7 +93,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE (lean): mock PO -> live spec-a
       // Cap at the 2 turns this test is about (PO seed -> live spec-author breakdown). The
       // route-scenarios/ dir also carries the downstream ux-designer manifest (a bare mock that
       // writes no design-guide, for the ROUTE suite), so an uncapped chain would flow into it and
-      // block on its missing artifact. maxTurns:2 stops after the breakdown , the same cap the
+      // block on its missing artifact. maxTurns:2 stops after the breakdown – the same cap the
       // hermetic manifest-runner 2-turn-chain test uses; the breakdown's honest next hop
       // (ux-designer) is still asserted below via specTurn.result.bounded.action.
       const turns = await runManifestChain(PO_SEED, manifests, runnerDeps, { maxTurns: 2 });

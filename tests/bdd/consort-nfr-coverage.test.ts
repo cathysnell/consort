@@ -177,7 +177,7 @@ describe("scanFeatureConformance: enforces NFR coverage once architecture.json e
     writeFileSync(join(tdd, "nfrs.md"), CONFORMANT_NFRS); // project R1 + R2
     const FEATURE_NFRS = [
       "# NFRs", "", "## Required",
-      "- R3: per-feature , tenant isolation enforced at the row level",
+      "- R3: per-feature – tenant isolation enforced at the row level",
       "", "## Preferences", "- none", "", "## Out of bounds", "- none", "",
     ].join("\n");
     writeFileSync(join(fdir, "nfrs.md"), FEATURE_NFRS); // feature adds R3

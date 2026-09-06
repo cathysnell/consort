@@ -1,6 +1,6 @@
 // Build-level self-heal: a refactor-fixable build smell (layering-violation,
 // ux-adherence, import-time-build-coupling) must NOT hard-halt to the HIL while
-// the owning AC already has a refactor pending , the Driver's refactor turn is
+// the owning AC already has a refactor pending – the Driver's refactor turn is
 // the remediation the Navigator's REVIEW prescribed. The escalation is suppressed
 // while a refactor is pending; refactorAc resolves the smell on success; and with
 // no refactor pending the smell still halts (the bound).
@@ -73,7 +73,7 @@ describe("pendingEscalation: layering-violation self-heals while a refactor is p
     requestRefactor();
     expect(firstRefactorPendingAc(tdd, F, S)).toBe("AC1"); // the driver's refactor turn is queued
     const probe = diskArtifactProbe(tdd, F, S);
-    expect(probe.pendingEscalation()).toBeNull(); // NOT a HIL halt , the driver handles it
+    expect(probe.pendingEscalation()).toBeNull(); // NOT a HIL halt – the driver handles it
   });
 
   it("self-heals on a gate-blocking smell even when the Navigator verdict was refactor:false (the F5 bug)", () => {

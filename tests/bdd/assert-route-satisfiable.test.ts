@@ -3,7 +3,7 @@
 // These pin: (a) a required event missing at its scope throws + names route AND event AND path;
 // (b) the event present passes; (c) a turn requiring no event is a no-op; (d) scope resolves per the
 // event (green-failure at CYCLE scope needs the action's ac in the path). `exists` is injected so the
-// check is pure , no disk.
+// check is pure – no disk.
 
 import { describe, it, expect } from "vitest";
 import {
@@ -59,7 +59,7 @@ describe("assertRouteSatisfiable: route→event→consumer, loud + route-named",
   it("resolves a STORY-scoped review-verdict at the cycles story-root, NOT features/<f>/stories/<s>", () => {
     // The whole-story review loop (no `ac` on the action) writes its verdict to
     // cycles/<f>/<s>/review-verdict.json (storyReviewVerdictJson), sibling of the per-AC cycle dirs
-    // , NOT the features/<f>/stories/<s> design dir. A regression here halts a valid review→refactor
+    // – NOT the features/<f>/stories/<s> design dir. A regression here halts a valid review→refactor
     // even though the verdict exists (surfaced live on stockflow-full).
     const refactor = {
       kind: "invoke-role",
@@ -79,7 +79,7 @@ describe("assertRouteSatisfiable: route→event→consumer, loud + route-named",
     expect(rce.expectedPath).toContain("/cycles/");
     expect(rce.expectedPath).toContain("S1-file-stock");
     expect(rce.expectedPath).toContain("review-verdict.json");
-    // The bug rooted it under features/<f>/stories/<s>/ , assert we are NOT there.
+    // The bug rooted it under features/<f>/stories/<s>/ – assert we are NOT there.
     expect(rce.expectedPath).not.toContain("/stories/");
   });
 

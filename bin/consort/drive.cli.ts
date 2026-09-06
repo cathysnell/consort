@@ -143,7 +143,7 @@ Flags:
   --pause-before <m>   PAUSE (not stop) just before a handoff: navigator (the
                        build kickoff) | release-engineer (the deploy/verify). The
                        driver blocks for a human [Y/n], then RESUMES the same run
-                       on Y , it never leaves the state machine. n re-asks. Set
+                       on Y – it never leaves the state machine. n re-asks. Set
                        LAKEBASE_CONSORT_AUTO_CONTINUE=1 to auto-confirm (non-interactive).
   --gates <mode>       interactive (default: stop AT each HITL gate so the human
                        answers, then re-run) | proxy (headless: Human Proxy
@@ -162,13 +162,13 @@ Flags:
  * The PAUSE gate's human wait: block the state machine at the handoff and ask
  * [Y/n], then RESUME on Y (n re-asks; the run never bails). Three input sources,
  * in order:
- *   1. LAKEBASE_CONSORT_AUTO_CONTINUE=1   , auto-confirm (CI / fully non-interactive).
- *   2. LAKEBASE_CONSORT_GATE_ANSWER_FILE  , poll that file for y/n (a parent process
+ *   1. LAKEBASE_CONSORT_AUTO_CONTINUE=1   – auto-confirm (CI / fully non-interactive).
+ *   2. LAKEBASE_CONSORT_GATE_ANSWER_FILE  – poll that file for y/n (a parent process
  *      drives the gate, e.g. a controller answering on the human's behalf).
- *   3. an interactive stdin TTY       , prompt + read the human's line.
+ *   3. an interactive stdin TTY       – prompt + read the human's line.
  * With none of those (piped, no control file), it auto-continues with a warning
  * rather than crashing or hanging. It never opens /dev/tty (absent in many
- * sandboxes, and its open error is async , the prior cause of a hard crash).
+ * sandboxes, and its open error is async – the prior cause of a hard crash).
  */
 function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
   const auto = consortEnv("AUTO_CONTINUE") === "1";
@@ -177,7 +177,7 @@ function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
   return (action) =>
     new Promise<void>((resolve, reject) => {
       const label = describeAction(action);
-      const prompt = `\n[drive] PAUSED , continue past the ${label} handoff? [Y/n] `;
+      const prompt = `\n[drive] PAUSED – continue past the ${label} handoff? [Y/n] `;
       if (auto) {
         process.stderr.write(`[drive] PAUSE gate (auto-continue): proceeding past ${label}\n`);
         return resolve();
@@ -189,10 +189,10 @@ function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
           let raw: string;
           try { raw = fs.readFileSync(answerFile, "utf8"); } catch { return; } // not written yet
           const a = raw.trim().toLowerCase();
-          if (a === "") return; // present but blank , keep waiting
+          if (a === "") return; // present but blank – keep waiting
           try { fs.rmSync(answerFile, { force: true }); } catch { /* ignore */ }
           if (a === "y" || a === "yes") { clearInterval(poll); process.stderr.write(`[drive] resuming.\n`); resolve(); }
-          else process.stderr.write(`[drive] holding , write Y to ${answerFile} when ready.\n`);
+          else process.stderr.write(`[drive] holding – write Y to ${answerFile} when ready.\n`);
         }, 1000);
         return;
       }
@@ -203,7 +203,7 @@ function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
           rl.question(prompt, (answer) => {
             rl.close();
             if (isYes(answer.trim().toLowerCase())) { process.stderr.write(`[drive] resuming.\n`); resolve(); }
-            else { process.stderr.write(`[drive] holding , answer Y when ready.\n`); ask(); }
+            else { process.stderr.write(`[drive] holding – answer Y when ready.\n`); ask(); }
           });
         };
         return ask();
@@ -215,7 +215,7 @@ function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
       // file; a human uses a terminal. None present = refuse.
       reject(
         new Error(
-          `[drive] PAUSED at the ${label} handoff with no human channel , refusing to continue. ` +
+          `[drive] PAUSED at the ${label} handoff with no human channel – refusing to continue. ` +
             `Set LAKEBASE_CONSORT_AUTO_CONTINUE=1 (deliberate headless), provide ` +
             `LAKEBASE_CONSORT_GATE_ANSWER_FILE, or run in an interactive terminal.`,
         ),
@@ -225,7 +225,7 @@ function makeConfirmContinue(): (action: WorkflowAction) => Promise<void> {
 
 /**
  * Wrap effects so that, when LAKEBASE_CONSORT_RECORD_BUILD_DIR is set, the driver
- * snapshots each Navigator/Driver turn AFTER its effect lands , the per-turn
+ * snapshots each Navigator/Driver turn AFTER its effect lands – the per-turn
  * build corpus the event-by-event replay plays back. A no-op when unset, so a
  * normal run is unaffected. Only build turns (invoke-role navigator|driver) are
  * recorded; design/deploy turns are not build output.
@@ -274,7 +274,7 @@ function withBuildRecording(inner: DriveEffects, cfg: DriveEffectsConfig): Drive
 
 /**
  * Wrap effects so that, when LAKEBASE_CONSORT_RECORD_DIR is set, the driver records
- * EVERY state-machine turn AFTER its effect lands , the universal per-turn
+ * EVERY state-machine turn AFTER its effect lands – the universal per-turn
  * timeline (design, gates, build, deploy, accept, promote), not just the build
  * lane. Each turn writes turns/<NNNN>-<label>/ (manifest + the .tdd/code delta it
  * produced) + refreshes the cumulative recorded-artifacts mirror that
@@ -285,7 +285,7 @@ function withBuildRecording(inner: DriveEffects, cfg: DriveEffectsConfig): Drive
 /** Project a HIL touchpoint (author-requests / a gate) + the proxy's fresh agent-log entries into a
  *  CorrespondenceEntry: the orchestrator's REQUEST paired with the proxy's ANSWER/SUBMISSION + outcome.
  *  Reads the response side from what the proxy LOGGED this turn (intake.supplied / gate.approved /
- *  their refused variants) , the faithful record of what the proxy submitted + whether it validated.
+ *  their refused variants) – the faithful record of what the proxy submitted + whether it validated.
  *  Stage 4 adds interview answers[]; here the response is the artifact submission + gate decision. */
 function projectCorrespondence(
   seq: number,
@@ -319,8 +319,8 @@ function projectCorrespondence(
     ? `orchestrator presents ${describeAction(action)} for HIL approval`
     : `orchestrator asks the PO to author the sprint's feature-requests (${describeAction(action)})`;
   const askRendered = isGate
-    ? `**HIL approval requested** , ${describeAction(action)}`
-    : `**PO input requested** , author the sprint's feature-requests (${describeAction(action)})`;
+    ? `**HIL approval requested** – ${describeAction(action)}`
+    : `**PO input requested** – author the sprint's feature-requests (${describeAction(action)})`;
   // EVERY HIL exchange is a two-beat round-trip, recorded faithfully (mirrors the kickoff/intake beats):
   //   ask    (orch-to-hil): the orchestrator poses the request (a gate approval, or the PO author ask).
   //   answer (hil-to-orch): the HIL's decision/submission + outcome.
@@ -348,7 +348,7 @@ function projectCorrespondence(
       by: "human-proxy",
       ...(submitted.length ? { submitted } : {}),
       ...(isGate ? { decision: approved ? ("approved" as const) : ("rejected" as const) } : {}),
-      // Presentation: the proxy's decision/submission as shown , the agent-log message lines it wrote,
+      // Presentation: the proxy's decision/submission as shown – the agent-log message lines it wrote,
       // preserved so the recorded transcript reads like the interactive exchange.
       presentation: {
         format: "markdown",
@@ -366,11 +366,11 @@ function projectCorrespondence(
 
 function withTurnRecording(inner: DriveEffects, cfg: DriveEffectsConfig): DriveEffects {
   // One recorder, two fidelities (the single path: a corpus can be replayed, a live build can be
-  // seen). An explicit RECORD_DIR is a CAPTURE , snapshot each turn's content into that corpus, so
+  // seen). An explicit RECORD_DIR is a CAPTURE – snapshot each turn's content into that corpus, so
   // it is historically accurate + replayable. Otherwise a plain LIVE build records into `.consort`
   // ITSELF (index + transcript, NO content snapshot): every turn is a viewable timeline entry with
   // its prompt/tools/reasoning + the files it added/modified/removed, and a clicked file is read at
-  // HEAD (may have changed since , not historically accurate, by design). During REPLAY we write
+  // HEAD (may have changed since – not historically accurate, by design). During REPLAY we write
   // nothing (the corpus is the input, not an output).
   const external = consortEnv("RECORD_DIR")?.trim();
   const isReplay = !!consortEnv("REPLAY_DIR")?.trim() || !!consortEnv("REPLAY_BUILD_DIR")?.trim();
@@ -420,12 +420,12 @@ function withTurnRecording(inner: DriveEffects, cfg: DriveEffectsConfig): DriveE
     // executor (whose ReplayRecorderWrapper records it, from cfg.takeTranscript) and NEVER reaches
     // perform, so this effects-level recorder only fires for the NON-dispatched (perform) turns ,
     // gates/deploy/human-proxy. Disjoint writers by construction (orchestrator-run.ts:326-330).
-    // Dropping this property silently disabled the executor path under recording , the bug this fixes.
+    // Dropping this property silently disabled the executor path under recording – the bug this fixes.
     performViaExecutor: inner.performViaExecutor ? (a, s, r) => inner.performViaExecutor!(a, s, r) : undefined,
     async perform(action) {
       logLenBeforePerform = readAgentLog({ consortDir: cfg.consortDir }).length; // pre-perform cursor for correspondence
       await inner.perform(action);
-      // `done` IS a recorded turn: it is no longer a bare no-op , it performs the
+      // `done` IS a recorded turn: it is no longer a bare no-op – it performs the
       // parent-tier landing (git checkout -f <parentBranch>) that ends the feature
       // on its parent, not the just-merged (soon-deleted) feature branch. That is
       // the terminal step a faithful capture must carry, so the recorded timeline
@@ -455,7 +455,7 @@ function gatedStopWhen(
   if (!interactive) return base;
   // Interactive: also stop where the HUMAN provides an input artifact (the PO's
   // feature-requests at author-requests), so the human supplies them and re-runs
-  // , the same transition the Human Proxy performs headless.
+  // – the same transition the Human Proxy performs headless.
   return (a) => (base?.(a) ?? false) || isHitlGateAction(a) || isHumanInputAction(a);
 }
 
@@ -464,7 +464,7 @@ function pendingGateOf(r: RunDriverResult): WorkflowAction | undefined {
   return r.stoppedAtBound && r.stoppedAt && isHitlGateAction(r.stoppedAt) ? r.stoppedAt : undefined;
 }
 
-/** The HUMAN-INPUT stop a bounded run halted at (interactive mode) , the PO's
+/** The HUMAN-INPUT stop a bounded run halted at (interactive mode) – the PO's
  *  `author-requests`, or undefined. gatedStopWhen halts here so the human supplies
  *  the feature-request(s); it is NOT an approval gate, so pendingGateOf misses it.
  *  Surfacing it separately is why interactive `--plan-only` no longer misreports a
@@ -486,7 +486,7 @@ function reportGate(gate: WorkflowAction, ctx: { featureId?: string; sprint?: st
   // Surface the parked gate to the log so the dashboard shows "waiting on you" and
   // the gate flashes. The driver STOPS before a HITL gate in interactive mode
   // (orchestrator-run halts at stopWhen, before onAction/perform), so a gate that
-  // parks directly , intake / plan / deploy / promote , would otherwise never emit
+  // parks directly – intake / plan / deploy / promote – would otherwise never emit
   // gate.surfaced. This is the ONE place the interactive park surfaces it; idempotent
   // via gateAlreadySurfaced, so a re-run at the same park + the spec/acceptance gates
   // that pre-surface (surface-gate / await-acceptance) never double-log.
@@ -526,7 +526,7 @@ function featuresWithAuthoredRequest(consortDir: string): string[] {
   }
 }
 
-/** Candidate feature ids the Spec Author proposed for THIS sprint , the `## F...`
+/** Candidate feature ids the Spec Author proposed for THIS sprint – the `## F...`
  *  headings in `planning/feature-proposals.md`. NOTE: these are only the RAW
  *  heading tokens; the Spec Author may label items with its own positional ids
  *  (`## F1`, `## F2`, ...) that are a DIFFERENT id space from the authored folder
@@ -562,9 +562,9 @@ export function composeInputPause(action: WorkflowAction, sprint?: string, conso
     // feature-request folder. The Spec Author may label its proposal items with a
     // positional id space (`## F1`, `## F2`, ...) that is NOT the folder id space
     // (`F1-stock-visibility`, ...), and `consort-sync-backlog` matches folder ids
-    // EXACTLY , so pre-filling raw proposal labels would emit a --features list
+    // EXACTLY – so pre-filling raw proposal labels would emit a --features list
     // that resolves to NOTHING (an empty backlog + "no feature-request.md"
-    // warnings, exit 2), or , worse if a future matcher went prefix , silently
+    // warnings, exit 2), or – worse if a future matcher went prefix – silently
     // select the wrong folders (e.g. `F5` -> a deferred `F5-cycle-count`). When the
     // proposal's labels do not match real folders, DO NOT guess: fall back to the
     // placeholder and make the human commit by the real folder ids listed above.
@@ -576,25 +576,25 @@ export function composeInputPause(action: WorkflowAction, sprint?: string, conso
       ? `        Planning proposed for this sprint: ${proposedValid.join(", ")} (see ${ARTIFACT_ROOT}/planning/feature-proposals.md).\n`
       : "";
     const mismatchLine = mismatched.length
-      ? `        NOTE: the proposal labels its items ${mismatched.join(", ")} , the Spec Author's own numbering, NOT the authored\n` +
+      ? `        NOTE: the proposal labels its items ${mismatched.join(", ")} – the Spec Author's own numbering, NOT the authored\n` +
         `        folder ids above. Commit by the FOLDER ids (map from the proposal's titles); do not pass the proposal's labels.\n`
       : "";
     return (
-      `[drive] PAUSED , awaiting the Product Owner's sprint backlog. This is a DECISION, not an authoring task:\n` +
-      `        ${existing.length} feature-request(s) are already authored (${existing.join(", ")}) , none need writing.\n` +
+      `[drive] PAUSED – awaiting the Product Owner's sprint backlog. This is a DECISION, not an authoring task:\n` +
+      `        ${existing.length} feature-request(s) are already authored (${existing.join(", ")}) – none need writing.\n` +
       proposedLine +
       mismatchLine +
       `        COMMIT which features are in sprint "${s}" (by folder id):\n` +
       `          consort-sync-backlog --sprint ${s} --features ${pick}\n` +
-      `        then re-run the drive , it advances to the (interactive) plan gate.\n`
+      `        then re-run the drive – it advances to the (interactive) plan gate.\n`
     );
   }
   return (
-    `[drive] PAUSED , awaiting human input (${describeAction(action)}). Nothing was approved or produced yet.\n` +
+    `[drive] PAUSED – awaiting human input (${describeAction(action)}). Nothing was approved or produced yet.\n` +
     `        No feature-request.md exists yet, so the Product Owner must:\n` +
     `          1. author the sprint's feature-request(s) at ${ARTIFACT_ROOT}/features/<id>/feature-request.md, then\n` +
     `          2. commit the backlog: consort-sync-backlog --sprint ${s} --features <id[,id...]>\n` +
-    `        then re-run the drive , it will advance to the (interactive) plan gate.\n`
+    `        then re-run the drive – it will advance to the (interactive) plan gate.\n`
   );
 }
 
@@ -629,11 +629,11 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
   const skipSizing = !settings.plan.sizing;
 
   // Correspondence step 0 (the kickoff): record the /sprint command that STARTED this session, so a
-  // recorded capture's transcript begins where the user begins , the real /sprint, not the first agent
+  // recorded capture's transcript begins where the user begins – the real /sprint, not the first agent
   // turn. Only when recording (RECORD_DIR set); the command + its formatting are preserved.
   //
   // Intake IS the HIL's response to /sprint: when the human (proxy) runs /sprint, the artifacts they
-  // hand over , product-overview.md, nfrs.md, design-brief.md, and the brand asset(s) , are the
+  // hand over – product-overview.md, nfrs.md, design-brief.md, and the brand asset(s) – are the
   // SUBMISSION on this kickoff exchange. They were placed on disk by the pre-drive intake supply
   // (human-proxy supply), so surface each that EXISTS as a kickoff `submitted[]` entry, keyed by
   // reference (contentRef = its project path). The icon is a BINARY asset (recorded by reference only,
@@ -645,23 +645,23 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
     const nowIso = (): string => new Date().toISOString();
     // The intake exchange is a THREE-BEAT round-trip, recorded faithfully so the corpus begins where
     // the human begins (the /sprint), shows the ORCHESTRATOR asking its project questions, and then
-    // the HIL's submission , not a single conflated entry.
-    //   seq 0  kickoff       (hil-to-orch): the HIL types `/sprint` , the command that starts the run.
+    // the HIL's submission – not a single conflated entry.
+    //   seq 0  kickoff       (hil-to-orch): the HIL types `/sprint` – the command that starts the run.
     //   seq 1  intake        (orch-to-hil): the orchestrator ASKS for the project intake it needs to
     //                          plan (the "project questions"): product overview, NFRs, design brief,
     //                          brand asset(s). This is the beat that was missing.
-    //   seq 2  intake        (hil-to-orch): the HIL SUBMITS the intake artifacts in response , each
+    //   seq 2  intake        (hil-to-orch): the HIL SUBMITS the intake artifacts in response – each
     //                          that exists on disk becomes a `submitted[]` entry (contentRef = its
     //                          project path; a binary asset by reference only, never inlined).
     const intakeCandidates: Array<{ artifact: string; rel: string; binary?: boolean; ask: string }> = [
-      { artifact: "product-overview.md", rel: "product-overview.md", ask: "a product overview , the framing + goals the features are proposed from" },
+      { artifact: "product-overview.md", rel: "product-overview.md", ask: "a product overview – the framing + goals the features are proposed from" },
       { artifact: "nfrs.md", rel: "nfrs.md", ask: "the non-functional requirements (NFRs) the work must satisfy" },
-      { artifact: "design-brief.md", rel: path.join("design", "design-brief.md"), ask: "a design brief , the UX/visual direction for the SPA" },
+      { artifact: "design-brief.md", rel: path.join("design", "design-brief.md"), ask: "a design brief – the UX/visual direction for the SPA" },
       { artifact: "warehouse.png", rel: path.join("design", "assets", "warehouse.png"), binary: true, ask: "any brand asset(s) (logo/icon) to carry into the design" },
     ];
     const resolved = intakeCandidates.map((c) => ({ ...c, abs: path.join(consortDir, c.rel) }));
 
-    // Beat 0 , the kickoff command (the HIL's `/sprint`).
+    // Beat 0 – the kickoff command (the HIL's `/sprint`).
     recordCorrespondence(recordDirForKickoff, {
       seq: 0,
       direction: "hil-to-orch",
@@ -674,7 +674,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       outcome: { validated: true },
     });
 
-    // Beat 1 , the ORCHESTRATOR asks the HIL for the project intake it needs to plan.
+    // Beat 1 – the ORCHESTRATOR asks the HIL for the project intake it needs to plan.
     const questions = resolved.map((c, i) => `${i + 1}. ${c.ask} (\`${c.rel}\`)`).join("\n");
     const askPrompt =
       `To plan this sprint I need the project intake. Please provide:\n${questions}\n\n` +
@@ -691,8 +691,8 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       outcome: { validated: true },
     });
 
-    // Beat 2 , the HIL SUBMITS the intake. COPY each submitted artifact INTO the record dir
-    // (`<REC>/intake/<rel>`) and reference THAT copy , the recording OWNS the bytes and never points
+    // Beat 2 – the HIL SUBMITS the intake. COPY each submitted artifact INTO the record dir
+    // (`<REC>/intake/<rel>`) and reference THAT copy – the recording OWNS the bytes and never points
     // at an external/ephemeral source (the project `.consort/` is deleted on reclaim; the seed folder
     // can change). contentRef is stored record-relative (`intake/<rel>`) so the corpus is portable.
     const intakeCopyDir = path.join(recordDirForKickoff, "intake");
@@ -731,7 +731,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
   }
 
   // Telemetry for the SPRINT path (the `/consort:start` default). Sprint mode used to
-  // emit NOTHING , beginTelemetryRun lived only in the single-feature path, so every
+  // emit NOTHING – beginTelemetryRun lived only in the single-feature path, so every
   // `--sprint` run (planning + each per-feature drive) was invisible: an empty
   // telemetry.runs despite heavy use. One run per sprint-mode invocation, opened here
   // so drivePlanning + driveFeature (below) can wrap their runDriver with it; finished
@@ -761,15 +761,15 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       snapshotRunConfig(cfg, "plan", gates);
       // Build effects via buildDriveEffects so the PLANNING lane gets the SAME executor path the
       // feature drive has: its performViaExecutor dispatches the planning AGENT turns (spec-author
-      // propose, architect estimate , both executor-allowlisted + manifested) through the StepExecutor,
+      // propose, architect estimate – both executor-allowlisted + manifested) through the StepExecutor,
       // while its perform runs the deterministic planning primitives (author-requests, sync-backlog,
-      // estimate-committed, the plan gate). Only readState differs from a feature drive , override it
+      // estimate-committed, the plan gate). Only readState differs from a feature drive – override it
       // with the sprint-planning deriver.
       //
       // The executor's post-turn `state-derived` re-derive must ALSO use the planning deriver, not the
       // feature probe: a propose turn routes state-derived, and the feature probe reports phase:"feature"
       // (no planning block), so nextTransition would derive `breakdown` instead of `estimate` (the J2
-      // defect). cfg.readFreshDriveState is the executor's fresh-reader seam , point it at the SAME
+      // defect). cfg.readFreshDriveState is the executor's fresh-reader seam – point it at the SAME
       // deriveSprintPlanningState so the executor's routing authority matches this drive's readState.
       // It is SYNC (the executor's `allowed` is sync); deriveSprintPlanningState is sync.
       cfg.readFreshDriveState = () => deriveSprintPlanningState(consortDir, sprint, { skipSizing });
@@ -809,7 +809,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       // reliably skips a feature the sprint itself drove to done (resume) or one
       // shipped in-band via the drive. A feature shipped fully out-of-band (its
       // promotion merged outside the drive, so its recorded state never reached
-      // done) is NOT detected here , that divergence is the reconcile capability's
+      // done) is NOT detected here – that divergence is the reconcile capability's
       // job (FEIP-8018). Best-effort: any read/derive error => not shipped (drive it).
       try {
         const { action } = await planNextAction(buildCfg(args, featureId));
@@ -817,7 +817,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
         // Fallback for the shared-SCM-state trap: the single workflow-state holds ONE
         // claim, so once a LATER backlog feature is claimed, this earlier (shipped)
         // feature's promote-phase derive reads the LATER feature's SCM ladder and never
-        // returns `done` , so isFeatureShipped was false and the loop re-claimed it,
+        // returns `done` – so isFeatureShipped was false and the loop re-claimed it,
         // tripping `already at feature-claimed for <later>`. A later feature holding the
         // claim PROVES this one was released at merge (the claim frees only on ship).
         const scm = readWorkflowState(projectDir);
@@ -825,8 +825,8 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
         if (shippedBecauseLaterFeatureClaimed(featureId, scm?.feature_id, backlog)) return true;
         // The LAST shipped feature / a fully-complete sprint: the claim is CLEARED (it frees
         // only at merge) and this feature's stories are all done+accepted, so it deployed +
-        // promoted (shipped). Its own-derive above can't return `done` here , the merge record
-        // lived in the now-cleared claim state , so without this a sprint RE-RUN re-drives the
+        // promoted (shipped). Its own-derive above can't return `done` here – the merge record
+        // lived in the now-cleared claim state – so without this a sprint RE-RUN re-drives the
         // shipped feature and errors (exit 2) instead of skipping it and reporting the sprint
         // already complete (exit 0).
         return shippedByClearedClaim(scm?.feature_id, deriveFeaturePhase(summarizeStories(consortDir, featureId)));
@@ -856,7 +856,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       return stepResultOf(r);
     },
     onFeature: (f, i) => process.stderr.write(`[sprint] feature ${i + 1}: ${f}\n`),
-    onSkip: (f, i) => process.stderr.write(`[sprint] feature ${i + 1}: ${f} , already shipped, skipping\n`),
+    onSkip: (f, i) => process.stderr.write(`[sprint] feature ${i + 1}: ${f} – already shipped, skipping\n`),
   };
 
   const runBody = async (): Promise<number> => {
@@ -871,7 +871,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       }
       // A human-input pause = the PO must author requests FIRST; nothing was
       // produced and the plan gate was NOT reached. Report it honestly and exit
-      // non-zero (the postcondition , an approved plan , is not met), so a caller
+      // non-zero (the postcondition – an approved plan – is not met), so a caller
       // never advances on an empty backlog thinking the plan was approved.
       if (planning.pendingInput) {
         reportInput(planning.pendingInput, sprint, consortDir);
@@ -896,10 +896,10 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       const e = result.escalation;
       const on = result.pendingFeature ? ` on ${result.pendingFeature}` : "";
       process.stderr.write(
-        `[sprint] RAISED TO HIL${on} , halting sprint ${sprint}.\n` +
+        `[sprint] RAISED TO HIL${on} – halting sprint ${sprint}.\n` +
           (e?.source ? `        source: ${e.source}\n` : "") +
           (e?.reason ? `        reason: ${e.reason}\n` : "") +
-          `        recorded under ${path.basename(consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.\n` +
+          `        recorded under ${path.basename(consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record – do NOT rm it), then re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );
       return 3;
@@ -943,7 +943,7 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
     // Auto-emit the AUTHORITATIVE sprint "what next" snapshot to <root>/next.json on
     // EVERY sprint stop (parity with the feature path's emitNextJson). Sprint mode used
     // to write NOTHING here, so after a plan gate / backlog pause the driving session
-    // and the extension had no deterministic on-disk signal , they were left tailing the
+    // and the extension had no deterministic on-disk signal – they were left tailing the
     // TRANSIENT drive-live.log (empty/gone between turns), which is why an interactive
     // sprint sat silent at the plan gate. This is exactly what `consort-next --sprint`
     // returns; the session's contract is "on any drive exit, read next.json + surface it".
@@ -953,12 +953,12 @@ async function runSprintMode(args: ParsedArgs): Promise<number> {
       try {
         // Scope the snapshot to WHERE the drive actually is. Once a feature is claimed
         // (SCM feature_id set), the sprint is executing THAT feature's lane, so a
-        // planning-scoped snapshot would mis-describe it , it can't see the feature's
+        // planning-scoped snapshot would mis-describe it – it can't see the feature's
         // spec/accept gates, so its `awaiting_human` reads false at a real feature gate
         // and a consumer keying on next.json would miss it. Emit the FEATURE-scoped
         // snapshot then (reusing the exact feature-path writer), and the planning snapshot
         // only while no feature is claimed (true planning scope). Purely changes next.json
-        // CONTENT , an advisory artifact the drive never reads back , so no run/telemetry
+        // CONTENT – an advisory artifact the drive never reads back – so no run/telemetry
         // side effect.
         const claimed = readWorkflowState(projectDir)?.feature_id?.trim();
         if (claimed) {
@@ -1006,7 +1006,7 @@ function snapshotRunConfig(cfg: DriveEffectsConfig, bound: string, gates: "inter
     consortDir: cfg.consortDir,
     bound,
     // Run-scoped effective gate mode (--gates override else project policy),
-    // recorded here so the snapshot is where the run-scoped choice lives , the
+    // recorded here so the snapshot is where the run-scoped choice lives – the
     // flag never persists into consort-config.json.
     gates,
     uiTrack: cfg.uiTrack,
@@ -1024,7 +1024,7 @@ function snapshotRunConfig(cfg: DriveEffectsConfig, bound: string, gates: "inter
 /** Re-launch THIS drive in its own session (detached) and return immediately, so a
  *  long run survives the launching shell/turn ending. This is the durable fix for the
  *  "detached drive gets reaped between turns" failure: `nohup … &` is NOT enough on
- *  macOS , the harness SIGTERMs the launching tool call's whole PROCESS GROUP when it
+ *  macOS – the harness SIGTERMs the launching tool call's whole PROCESS GROUP when it
  *  returns, and macOS has no `setsid` binary to escape it. Node's `spawn(detached:true)`
  *  DOES call setsid(2), putting the child in a NEW session + process group that the
  *  SIGTERM never reaches; `.unref()` frees the parent's event loop so we can exit now.
@@ -1041,7 +1041,7 @@ function relaunchDetached(rawArgv: string[], consortDir: string): number | null 
     rawArgv.filter((a) => a !== "--detach"),
     { stdio: "ignore" },
   );
-  if (pid === null) return null; // spawn failed , caller runs in-process instead of losing the run
+  if (pid === null) return null; // spawn failed – caller runs in-process instead of losing the run
   const logPath = path.join(consortDir, "drive-live.log");
   process.stdout.write(
     `consort-drive: detached into its own session as pid ${pid} (survives this turn/shell).\n` +
@@ -1056,7 +1056,7 @@ function relaunchDetached(rawArgv: string[], consortDir: string): number | null 
  *  used to depend on the caller redirecting stderr (`> .consort/drive-live.log`); when a
  *  session instead detached the drive as a harness background task, that redirect was
  *  lost and the log stayed empty (the watcher saw nothing). The drive OWNS the log now
- *  , do NOT also shell-redirect stderr to it (that double-writes). Best-effort: a log
+ *  – do NOT also shell-redirect stderr to it (that double-writes). Best-effort: a log
  *  failure never breaks the run. Fresh file per run (truncate). */
 function teeStderrToDriveLog(consortDir: string): void {
   try {
@@ -1085,13 +1085,13 @@ async function main(): Promise<number> {
   // --detach: re-launch in a NEW session and return immediately, so the run survives
   // the launching turn/shell ending (the recurring "reaped between turns" failure).
   // Must happen BEFORE any side effect (log tee, config write, provisioning) so the
-  // child , not this short-lived parent , owns them. Falls through to an in-process
+  // child – not this short-lived parent – owns them. Falls through to an in-process
   // run only if the re-spawn itself failed (never silently drops the run).
   if (rawArgv.includes("--detach")) {
     const cdir = args.consortDir ?? resolveConsortDir(args.projectDir ?? process.cwd());
     const pid = relaunchDetached(rawArgv, cdir);
     if (pid !== null) return 0;
-    process.stderr.write("consort-drive: detach re-spawn failed , running in-process instead.\n");
+    process.stderr.write("consort-drive: detach re-spawn failed – running in-process instead.\n");
   }
   // Auto-migrate a legacy artifact dir (".sftdd"/".tdd") to ".consort" before any
   // mode runs, so existing projects move to the current name on their next
@@ -1112,7 +1112,7 @@ async function main(): Promise<number> {
   // Write-through the drive's ad-hoc override flags into consort-config.json BEFORE
   // any settings resolution, so the file stays the single source of truth (the
   // flag is a WRITER, not a parallel reader; absent flags never mutate the file).
-  // NB: --gates is NOT here , it is run-scoped policy, resolved per run and never
+  // NB: --gates is NOT here – it is run-scoped policy, resolved per run and never
   // persisted (see effectiveGates / applyProjectOverrides).
   applyProjectOverrides(args.projectDir ?? process.cwd(), {
     deployTarget: args.deployTarget,
@@ -1175,7 +1175,7 @@ async function main(): Promise<number> {
     const auth = await driveAuthPreflight();
     if (!auth.ok) {
       process.stderr.write(
-        `consort-drive: Databricks auth preflight FAILED , halting before any agent spawn.\n${auth.message}\n`,
+        `consort-drive: Databricks auth preflight FAILED – halting before any agent spawn.\n${auth.message}\n`,
       );
       return 2;
     }
@@ -1225,13 +1225,13 @@ async function main(): Promise<number> {
   // DIFFERENT feature. With a prior feature shipped out-of-band and
   // .lakebase/workflow-state.json never reconciled, buildCfg would adopt the
   // stale predecessor's branch as this feature's featureBranch, so the experiment
-  // would fork from (and the build commit onto) the wrong branch. Block loud , the
+  // would fork from (and the build commit onto) the wrong branch. Block loud – the
   // human claims this feature (or reconciles the prior one) first.
   {
     const scm = readWorkflowState(cfg.projectDir);
     if (isForeignFeatureClaim(scm, cfg.featureId)) {
       process.stderr.write(
-        `consort-drive: refusing to drive "${cfg.featureId}" , the SCM workflow state records a\n` +
+        `consort-drive: refusing to drive "${cfg.featureId}" – the SCM workflow state records a\n` +
           `DIFFERENT feature "${scm?.feature_id}" (branch ${scm?.branch ?? "?"}). Driving now would fork the\n` +
           `experiment from the wrong branch and commit build output onto it. Claim this feature first\n` +
           `(lakebase-scm-claim-feature-branch ${cfg.featureId}), or reconcile the prior out-of-band feature,\n` +
@@ -1265,7 +1265,7 @@ async function main(): Promise<number> {
   // explicit Tier-2 bound (--plan-only / --only) maps to its slash command; a plain
   // --feature drive (what /design, /build, /deploy all invoke, no phase flag) DERIVES
   // its command from the feature's phase on disk, so a design or deploy drive no longer
-  // mislabels as "build". Best-effort , any read failure falls back to "build".
+  // mislabels as "build". Best-effort – any read failure falls back to "build".
   const featureDriveCommand = (): TelemetryCommand => {
     try {
       return commandForFeaturePhase(deriveFeaturePhase(summarizeStories(cfg.consortDir, cfg.featureId)));
@@ -1279,7 +1279,7 @@ async function main(): Promise<number> {
   });
   let result: RunDriverResult | undefined;
   // Capture the REAL exit code the drive returns, so telemetry's outcome + exit_code BOTH
-  // derive from it (via outcomeForExit) below , a non-zero exit (a guard / pending-input /
+  // derive from it (via outcomeForExit) below – a non-zero exit (a guard / pending-input /
   // CLI-effect failure: 2 or 3) can never be mis-recorded as a completed run. The IIFE lets
   // the finish() see the actual returned code instead of re-deriving it and drifting.
   const exitCode: number = await (async (): Promise<number> => {
@@ -1302,9 +1302,9 @@ async function main(): Promise<number> {
       // (the increment is genuinely not done) and a human resolves it.
       const e = result.escalation;
       process.stderr.write(
-        `[drive] RAISED TO HIL after ${result.iterations} actions , awaiting HIL decision.\n` +
+        `[drive] RAISED TO HIL after ${result.iterations} actions – awaiting HIL decision.\n` +
           `        source: ${e?.source}\n        reason: ${e?.reason}\n` +
-          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.\n` +
+          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record – do NOT rm it), then re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );
       return 3;
@@ -1335,7 +1335,7 @@ async function main(): Promise<number> {
     // A handoff EXPECTATION violation: a role returned nothing/null for the
     // artifact it owed (or the workflow tried to advance past an unmet handoff).
     // Record an escalation + emit escalation.raised (honor "escalate on any
-    // error"), then abort non-zero so the run fails loud , a human resolves it.
+    // error"), then abort non-zero so the run fails loud – a human resolves it.
     if (err instanceof ProtocolViolationError) {
       const h = err.handoff;
       try {
@@ -1387,7 +1387,7 @@ async function main(): Promise<number> {
       process.stderr.write(`[drive] ${err.message}\n        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; resolve it, then re-run.\n`);
       return 3;
     }
-    // A deterministic CLI effect (an SCM bin , wait-ci / merge / prepare-pr , or
+    // A deterministic CLI effect (an SCM bin – wait-ci / merge / prepare-pr – or
     // deploy) exited non-zero mid-drive: the CI-failure class. Record a RESUMABLE
     // escalation and emit the CLASSIFIED `RAISED TO HIL` halt line so a session
     // tailing drive-live.log (or a Monitor watching it) actually SURFACES the
@@ -1418,10 +1418,10 @@ async function main(): Promise<number> {
         /* best-effort; the classified halt line below is the load-bearing signal */
       }
       process.stderr.write(
-        `[drive] RAISED TO HIL , ${err.bin} failed.\n` +
+        `[drive] RAISED TO HIL – ${err.bin} failed.\n` +
           `        reason: ${reason}\n` +
           (captured_output ? `        failing output (tail):\n${captured_output.split("\n").map((l) => "        | " + l).join("\n")}\n` : "") +
-          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it), then re-run to resume.\n` +
+          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; once the root cause is fixed, clear it with \`consort-resolve-escalation\` (keeps the record – do NOT rm it), then re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );
       return 3;
@@ -1430,10 +1430,10 @@ async function main(): Promise<number> {
     // process event was never produced (assertRouteSatisfiable), so the turn is refused
     // BEFORE any agent spawns. Without a typed branch this fell to the bare ABORTED
     // catch-all below (return 1, NO escalation), so a `--detach`ed run died leaving only
-    // a truncated drive log , no escalation, so consort-next never showed awaiting_human
+    // a truncated drive log – no escalation, so consort-next never showed awaiting_human
     // and a resuming session had nothing to act on. Record a RESUMABLE escalation (so
     // consort-next surfaces awaiting_human) and emit the classified halt line, mirroring
-    // the ProtocolViolationError path. It is a routing/producer defect , the same
+    // the ProtocolViolationError path. It is a routing/producer defect – the same
     // fix-then-resume shape as the other pre-spawn contract failures.
     if (err instanceof RouteContractError) {
       const story =
@@ -1462,15 +1462,15 @@ async function main(): Promise<number> {
         /* best-effort; the classified halt line below is the load-bearing signal */
       }
       process.stderr.write(
-        `[drive] RAISED TO HIL , route-contract check refused a mis-fired turn before dispatch.\n` +
+        `[drive] RAISED TO HIL – route-contract check refused a mis-fired turn before dispatch.\n` +
           `        reason: ${err.message}\n` +
-          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; fix the route or the producer, then clear it with \`consort-resolve-escalation\` (keeps the record , do NOT rm it) and re-run to resume.\n` +
+          `        recorded under ${path.basename(cfg.consortDir)}/escalations/ ; fix the route or the producer, then clear it with \`consort-resolve-escalation\` (keeps the record – do NOT rm it) and re-run to resume.\n` +
           `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
       );
       return 3;
     }
     // A replay corpus miss: the recording is incomplete for a turn the pipeline
-    // dispatched. Not an escalation (no live workflow to resume) , it is a corpus/
+    // dispatched. Not an escalation (no live workflow to resume) – it is a corpus/
     // config defect. Fail loud with the missing-artifact guidance; no agent ran.
     if (err instanceof ReplayCorpusMissError) {
       process.stderr.write(`${err.message}\n`);
@@ -1485,11 +1485,11 @@ async function main(): Promise<number> {
       return 3;
     }
     // Last resort: an UNEXPECTED error escaped every typed branch. Do NOT let it die
-    // as a bare, unprefixed line , classifyDriveLine returns null for that, so a
+    // as a bare, unprefixed line – classifyDriveLine returns null for that, so a
     // session / Monitor tailing drive-live.log never learns the drive crashed (the run
     // looks still-in-flight). Prefix + a terminal `ABORTED` marker the watcher STOPS on.
     process.stderr.write(
-      `[drive] ABORTED , unexpected error: ${err instanceof Error ? err.message : String(err)}\n` +
+      `[drive] ABORTED – unexpected error: ${err instanceof Error ? err.message : String(err)}\n` +
         `        To troubleshoot or share the failure, bundle the local forensics: consort-diagnose\n`,
     );
     return 1;

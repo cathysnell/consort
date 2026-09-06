@@ -59,7 +59,7 @@ const TRANSIENT_BACKOFF_MS = Number(consortEnv("TRANSIENT_BACKOFF_MS") ?? "5000"
 // and re-run it as a transient failure. This is the fix for the stalled-API-stream
 // wedge: the child stays alive with an open TLS socket but no bytes ever arrive, so
 // `close` never fires and the await hangs forever. Silence, not duration, is the
-// signal , a turn that keeps streaming (a 45-min driver-green doing `uv sync` + live
+// signal – a turn that keeps streaming (a 45-min driver-green doing `uv sync` + live
 // pytest) re-arms the timer on every tool marker and never trips. The threshold must
 // exceed the longest SINGLE quiet tool step (a cold dependency sync, a long test run);
 // 10 min is comfortably past that while still catching a true stall in one heartbeat
@@ -88,12 +88,12 @@ export interface ParsedArgs {
   help?: boolean;
 }
 
-/** A deterministic CLI effect (a kit SCM bin , wait-ci / merge / prepare-pr / deploy ,
+/** A deterministic CLI effect (a kit SCM bin – wait-ci / merge / prepare-pr / deploy ,
  *  or any command the drive spawns) exited non-zero. Carries the bin + exit code so the
  *  drive's top-level catch can record a RESUMABLE escalation and emit a classified
  *  `RAISED TO HIL` halt line. Without a typed error the reject was a bare
  *  `new Error("<bin> exited N")` that fell through drive.cli's catch to an UNPREFIXED
- *  stderr line , `classifyDriveLine` returns null for it, so a session tailing
+ *  stderr line – `classifyDriveLine` returns null for it, so a session tailing
  *  `drive-live.log` (or a Monitor watching it) never surfaces the failure and the run
  *  looks like it is "still waiting on CI" when it has actually died. */
 export class CliEffectError extends Error {
@@ -116,7 +116,7 @@ export function spawnCmd(bin: string, args: string[], cwd: string): Promise<void
   return new Promise((resolve, reject) => {
     // PIPE stdout/stderr so a non-zero exit can attach the failing output to the escalation, but TEE
     // it straight back to the parent's streams so live tailing (drive-live.log) + console output are
-    // unchanged , the failure is both surfaced live AND captured for the escalation record.
+    // unchanged – the failure is both surfaced live AND captured for the escalation record.
     const child = spawn(bin, args, { cwd, stdio: ["inherit", "pipe", "pipe"] });
     const chunks: string[] = [];
     child.stdout?.on("data", (d: Buffer) => { process.stdout.write(d); chunks.push(d.toString()); });
@@ -136,7 +136,7 @@ export function spawnCmd(bin: string, args: string[], cwd: string): Promise<void
  * Spawn a `claude -p --output-format stream-json --verbose` turn, TEE the
  * human-readable assistant text to stderr (so the live console still shows the
  * agent working, not raw JSON), and return the turn's usage from the terminal
- * `result` event , the per-turn CONTEXT SIZE (input_tokens) + output + cache +
+ * `result` event – the per-turn CONTEXT SIZE (input_tokens) + output + cache +
  * cost. stderr is inherited so claude's own errors surface. Usage parsing is
  * best-effort: a missing result event yields undefined (never breaks the turn).
  */
@@ -153,7 +153,7 @@ export class ClaudeTurnError extends Error {
      *  dropped, overloaded, rate-limited, 5xx), so re-running it may succeed. */
     readonly transient = false,
     /** The turn was tree-killed by the inactivity monitor (stream went silent past
-     *  the deadline , a stalled API stream that would otherwise hang forever). A
+     *  the deadline – a stalled API stream that would otherwise hang forever). A
      *  stall IS a transient (retry on a fresh session), flagged distinctly so the
      *  retry log names it as a stall, not a wire blip. */
     readonly stalled = false,
@@ -169,7 +169,7 @@ export class ClaudeTurnError extends Error {
  *  a run meant to be deterministic, and silently mask a broken/incomplete
  *  corpus). So a miss is a hard, loud failure that names the missing artifact.
  *  Almost always the corpus is missing a file (e.g. a `.gitignore` glob dropped
- *  it) , put the artifact in the right place, do not run the model. */
+ *  it) – put the artifact in the right place, do not run the model. */
 export class ReplayCorpusMissError extends Error {
   constructor(message: string) {
     super(message);
@@ -227,7 +227,7 @@ export interface TurnTranscript {
 let lastAgentTranscript: TurnTranscript | undefined;
 /** Per-cwd (per-worktree) transcript index, set alongside the global on each turn's close. CONCURRENCY
  *  SAFETY: the bare `lastAgentTranscript` global is a RACE when candidates run in parallel (each spawn
- *  overwrites it, so a peek returns whoever flushed last , cross-candidate transcript crosstalk). A
+ *  overwrites it, so a peek returns whoever flushed last – cross-candidate transcript crosstalk). A
  *  concurrent caller (the optimize sweep, one worktree per candidate) peeks BY ITS cwd to get its OWN
  *  turn, never a sibling's. The serial drive keeps using the no-arg global path unchanged. */
 const lastAgentTranscriptByCwd = new Map<string, TurnTranscript>();
@@ -241,14 +241,14 @@ export function takeLastAgentTranscript(cwd?: string): TurnTranscript | undefine
   lastAgentTranscript = undefined;
   return t;
 }
-/** PEEK the last turn's transcript WITHOUT clearing it , for an intermediate consumer (the
+/** PEEK the last turn's transcript WITHOUT clearing it – for an intermediate consumer (the
  *  ClaudeStepAgent reads finalText for its lastResult) that must NOT rob the recorder wrapper's
  *  take() of the transcript. The take()-clears contract is a single-consumer design; when TWO
  *  consumers run per turn (the agent's lastResult + the record wrapper), the earlier one MUST peek,
  *  or the wrapper gets undefined and transcript.md is silently never written (the bug this fixes:
  *  every executor-dispatched agent turn lost its transcript to the double-consume race). The record
  *  wrapper remains the sole take()-clearer, at end of turn.
- *  Pass `cwd` to read the transcript for THAT worktree , the concurrency-safe path (see
+ *  Pass `cwd` to read the transcript for THAT worktree – the concurrency-safe path (see
  *  lastAgentTranscriptByCwd); omit it for the serial global. */
 export function peekLastAgentTranscript(cwd?: string): TurnTranscript | undefined {
   return cwd !== undefined ? lastAgentTranscriptByCwd.get(cwd) : lastAgentTranscript;
@@ -349,12 +349,12 @@ export function spawnClaudeStreaming(
     // Tee a COMPACT trace: each tool action (liveness) as it streams, and the
     // turn's FINAL assistant text (the outcome) at close. The interstitial
     // "now I'll... / let me check..." prose is buffered and overwritten, so only
-    // the last text (the result line) survives , the deliberation never hits the
+    // the last text (the result line) survives – the deliberation never hits the
     // log. Set LAKEBASE_CONSORT_VERBOSE_AGENT=1 to tee every assistant text delta.
     const verboseAgent = !!consortEnv("VERBOSE_AGENT");
     // Liveness sidecar: when recording, ALWAYS stream the agent's intermediate reasoning + each tool
     // action to <RECORD_DIR>/agent-live.log as it arrives, timestamped. This is the "is it working or
-    // spinning?" channel , a monitor can `tail -f` it and see fresh prose the moment the agent thinks,
+    // spinning?" channel – a monitor can `tail -f` it and see fresh prose the moment the agent thinks,
     // WITHOUT polluting the compact capture log (which still shows only `· tool` markers + the final
     // outcome). Independent of VERBOSE_AGENT (that tees to the console); this always writes to disk when
     // RECORD_DIR is set. Append-only, one line per delta, best-effort (a sidecar write must never break
@@ -392,7 +392,7 @@ export function spawnClaudeStreaming(
     // re-arms an inactivity deadline on every line and, after a stretch of total silence
     // (a stalled API stream: child alive, socket open, no bytes, so `close` never fires),
     // tree-kills the child and lets the close handler reject with a STALLED transient
-    // ClaudeTurnError , which the existing transient-retry envelope re-runs on a fresh
+    // ClaudeTurnError – which the existing transient-retry envelope re-runs on a fresh
     // session. Heartbeats are written to the sidecar so a `tail -f` sees "still waiting"
     // beats before any kill. Default no-op when both windows are disabled.
     let stalled = false;
@@ -406,7 +406,7 @@ export function spawnClaudeStreaming(
       // whole child process group (a stalled `claude` may have live child procs holding
       // the socket) so `close` fires; the close handler then rejects as STALLED.
       stalled = true;
-      liveWrite(`  ✖ ${new Date().toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1000)}s silent) , tree-killing pid ${child.pid} for a fresh-session retry\n`);
+      liveWrite(`  ✖ ${new Date().toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1000)}s silent) – tree-killing pid ${child.pid} for a fresh-session retry\n`);
       process.stderr.write(`[drive] turn stalled: no agent output for ~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1000)}s; killing pid ${child.pid} and retrying on a fresh session\n`);
       try {
         // Negative pid => kill the process GROUP. spawn() puts the child in its own group
@@ -462,7 +462,7 @@ export function spawnClaudeStreaming(
     const erl = readline.createInterface({ input: child.stderr! });
     erl.on("line", (line) => {
       // stderr carries claude's own error/status prose (not stream-json keepalive), so a stderr
-      // line IS meaningful activity , re-arm on it.
+      // line IS meaningful activity – re-arm on it.
       monitorCtl.progress({ kind: "text" });
       if (isPromptTooLongSignal(line)) sawTooLong = true;
       if (isTransientApiErrorSignal(line)) sawTransient = true;
@@ -514,7 +514,7 @@ export function spawnClaudeStreaming(
         tools: allTools,
       };
       // Record as global last AND per-cwd (the worktree), so a concurrent peek gets ITS OWN turn, not a
-      // sibling's , the fix for cross-candidate transcript crosstalk in parallel sweeps (global is a race).
+      // sibling's – the fix for cross-candidate transcript crosstalk in parallel sweeps (global is a race).
       recordAgentTranscript(cwd, tx);
       // Record the turn's usage (cost + tokens + numTurns + duration) the SAME crosstalk-safe way, so a
       // concurrent optimize sweep can peek ITS worktree's cost and record it (cost parity across runs).
@@ -555,7 +555,7 @@ export function claudeToolArgs(cmd: Extract<DriveCommand, { kind: "claude" }>): 
  *
  * --permission-mode acceptEdits is LOAD-BEARING: a scaffolded project ships no
  * .claude/settings.json, so without an explicit mode a headless role agent DEFAULTS
- * TO PROMPTING , and there is no one to answer. A role agent must both WRITE its
+ * TO PROMPTING – and there is no one to answer. A role agent must both WRITE its
  * artifact (feature-spec.json, story stubs, code) AND RUN kit CLIs (its self-check
  * `consort-response-formatter`, the cycle stamps); acceptEdits auto-accepts
  * both headlessly (verified: Write-tool AND Bash writes land with permission_denials
@@ -566,10 +566,10 @@ export function claudeToolArgs(cmd: Extract<DriveCommand, { kind: "claude" }>): 
  * `permissions.disableBypassPermissionsMode: "disable"`. When that policy is present,
  * a spawned `claude -p --permission-mode bypassPermissions` is SILENTLY DOWNGRADED to
  * `default` (the child session's init event reports permissionMode "default"), which
- * then auto-DENIES every headless prompt , the exact opposite of what we want. So
+ * then auto-DENIES every headless prompt – the exact opposite of what we want. So
  * bypassPermissions is not a stronger acceptEdits in this environment; it is broken.
  * acceptEdits is the strongest mode the policy honors, and it is sufficient. SCOPED to
- * the throwaway, isolated, scaffolded project the drive runs in , this spawns each
+ * the throwaway, isolated, scaffolded project the drive runs in – this spawns each
  * role agent autonomous within that project, not the operator's session.
  */
 export function claudeBaseArgs(cmd: Extract<DriveCommand, { kind: "claude" }>): string[] {
@@ -617,7 +617,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         // the ONE bridge from "author-requests supplied the request" to the backlog the planning
         // deriver reads; without it deriveSprintPlanningState sees an empty backlog, requestsAuthored
         // never flips, and the planning loop re-derives author-requests forever (the J2 stall). The
-        // arm was previously a no-op (the comment claimed another module handled it , nothing did).
+        // arm was previously a no-op (the comment claimed another module handled it – nothing did).
         syncBacklog(cfg.consortDir, cmd.sprint);
         return;
       }
@@ -627,7 +627,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         // experiment records) from the corpus instead of spawning the model. The
         // orchestrator still VISITS the turn (logs + transitions + runs the live
         // cycle-record CLIs that stamp RED/GREEN against the overlaid code), so
-        // every Navigator<->Driver event is reproduced , only the artifact
+        // every Navigator<->Driver event is reproduced – only the artifact
         // delivery is mocked. The Kth Navigator/Driver turn maps to the Kth
         // recorded turn dir. A replay is a RECORDING: a corpus miss is a HARD
         // FAILURE (ReplayCorpusMissError), never a fall-through to a live agent ,
@@ -638,10 +638,10 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         if (replayBuildDir && story && (cmd.role === "navigator" || cmd.role === "driver")) {
           // The reflect turn is a DESIGN GATE that runs in the build lane: its only
           // output is reflect-verdict.json (a .consort artifact), never code. Restore
-          // JUST the verdict , do NOT restore its recorded code snapshot (that would
+          // JUST the verdict – do NOT restore its recorded code snapshot (that would
           // overwrite the freshly-scaffolded tree with the recording's project-name-
           // baked files and leave it dirty, so the pre-build cut-experiment fork
-          // refuses) , and do NOT count it as a build turn (replayBuildTurn's index
+          // refuses) – and do NOT count it as a build turn (replayBuildTurn's index
           // skips reflect turns, so RED maps to the first real recorded build turn).
           if (cmd.replay?.buildMode === "reflect") {
             const rd = consortEnv("REPLAY_DIR");
@@ -655,11 +655,11 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
                 throw new ReplayCorpusMissError(
                   `[drive] REPLAY CORPUS MISS: reflect verdict for ${story} is not in the corpus ` +
                     `(expected features/${cfg.featureId}/stories/${story}/reflect-verdict.json under ${rd}). ` +
-                    `Replay will NOT run the Navigator live , put the recorded verdict in the corpus (check .gitignore is not dropping it).`,
+                    `Replay will NOT run the Navigator live – put the recorded verdict in the corpus (check .gitignore is not dropping it).`,
                 );
               }
             }
-            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus , verdict only (no code, not counted)\n`);
+            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus – verdict only (no code, not counted)\n`);
             return;
           }
           const turnIndex = (buildTurns.get(story) ?? 0) + 1;
@@ -681,7 +681,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
           throw new ReplayCorpusMissError(
             `[drive] REPLAY CORPUS MISS: build turn ${turnIndex} for ${story} (${cmd.role}) has no recorded turn dir under ` +
               `${replayBuildDir} (features/${cfg.featureId}/stories/${story}/turns). The live orchestrator dispatched more ` +
-              `build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live , ` +
+              `build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live – ` +
               `re-record or fix the corpus so it covers every dispatched turn.`,
           );
         }
@@ -692,7 +692,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         // is replaced. Navigator/Driver are never replayed (not design roles),
         // so the real TDD begins at the Navigator handoff. A replay is a RECORDING:
         // if the deterministic pipeline dispatched a replayable design turn, the
-        // corpus MUST have its artifact , a miss is a HARD FAILURE, never a
+        // corpus MUST have its artifact – a miss is a HARD FAILURE, never a
         // fall-through to a live agent (the .gitignore corpus drop this guards).
         const replayDir = consortEnv("REPLAY_DIR");
         if (replayDir && REPLAYABLE_DESIGN_ROLES.has(cmd.role)) {
@@ -712,7 +712,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
           throw new ReplayCorpusMissError(
             `[drive] REPLAY CORPUS MISS: no recorded artifact for design turn '${where}' under ${replayDir} ` +
               `(features/${cfg.featureId}/...). The deterministic pipeline dispatched this turn but the corpus lacks its ` +
-              `output. Replay will NOT run the agent live , put the recorded artifact in the corpus (check .gitignore is not dropping it).`,
+              `output. Replay will NOT run the agent live – put the recorded artifact in the corpus (check .gitignore is not dropping it).`,
           );
         }
         // stream-json (requires --verbose with --print) lets us capture the turn's
@@ -765,7 +765,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         };
         // Spawn with a bounded retry on a MID-TURN context overflow. The resume-time
         // guard above cannot pre-empt a turn that balloons WITHIN itself (one shot,
-        // many tool calls , the failure that killed F6/S3-split-drop-old). When that
+        // many tool calls – the failure that killed F6/S3-split-drop-old). When that
         // turn fails with "Prompt is too long", restart it on a FRESH session: the
         // artifacts the failed attempt already wrote (.consort + code + tests) persist,
         // so each retry has strictly less to do and converges, instead of aborting
@@ -887,7 +887,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
           // (parent + project hyphen-joined) and written the artifact to that
           // sibling. Relocate a stray .sftdd/.tdd tree from it into the real root
           // and re-check, so the run self-heals instead of deadlocking on the
-          // "re-run" remedy (which no-ops , the artifact never lands in-root).
+          // "re-run" remedy (which no-ops – the artifact never lands in-root).
           const strayFix = relocateStrayDesignArtifacts(cfg.projectDir);
           if (strayFix.relocated) {
             process.stderr.write(
@@ -911,7 +911,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
       // package.json bin map so it runs regardless of PATH; fall back to the
       // bare name for anything not a kit bin (external tools on PATH). Re-key any
       // CliEffectError to the LOGICAL bin (cmd.bin, e.g. "lakebase-scm-wait-ci"),
-      // not the "node" interpreter spawnCmd saw , so the drive's halt names the
+      // not the "node" interpreter spawnCmd saw – so the drive's halt names the
       // step that failed (wait-ci / merge / prepare-pr) instead of "node exited 1".
       const js = resolveKitBinJs(cmd.bin);
       try {
@@ -931,7 +931,7 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
 let agentResyncDone = false;
 /** Run the version-aware agent refresh at most once per drive process, and
  *  never during capture/replay (it mutates the tree; a recorded corpus must
- *  stay a pure product of its turns). Best-effort , resyncAgentsOnKitDrift
+ *  stay a pure product of its turns). Best-effort – resyncAgentsOnKitDrift
  *  swallows its own errors. */
 function maybeResyncAgents(projectDir: string): void {
   if (agentResyncDone) return;
@@ -980,13 +980,13 @@ export function buildCfg(args: ParsedArgs, featureId: string): DriveEffectsConfi
     // full plan lane): the Spec Author proposes from product-overview + nfrs,
     // the proxy still commits the recorded request at author-requests.
     livePropose: !!consortEnv("LIVE_PROPOSE")?.trim(),
-    // Agent turns dispatch THROUGH the StepExecutor (the unified path) , now the DEFAULT (J1). Every
+    // Agent turns dispatch THROUGH the StepExecutor (the unified path) – now the DEFAULT (J1). Every
     // executor-allowlisted action has a shipped manifest (guarded by executor-dispatch-coverage.test),
     // so the executor is the sole agent path. LAKEBASE_CONSORT_USE_MANIFEST_STEPS is a one-cycle escape
     // hatch: set it to 0/false/off/no to force the legacy commandsForAction dispatch (retired in J5).
     useManifestSteps: !/^(0|false|off|no)$/i.test(consortEnv("USE_MANIFEST_STEPS")?.trim() ?? ""),
     // Hand the executor's ReplayRecorderWrapper the just-completed live turn's transcript, so an
-    // executor-dispatched turn records prompt + reasoning + tools alongside its delta , the SAME
+    // executor-dispatched turn records prompt + reasoning + tools alongside its delta – the SAME
     // source the effects-level withTurnRecording uses. Colocated with takeLastAgentTranscript (this
     // module) so there's no runtime edge from the executor onto the runner. Read whenever the turn is
     // recorded: a CAPTURE (RECORD_DIR) OR the always-on LIVE index into `.consort` (every live build).
@@ -1028,10 +1028,10 @@ export function buildCfg(args: ParsedArgs, featureId: string): DriveEffectsConfi
       // Narrate each routing decision in plain language (DRY: the same message
       // the structured log uses). The machine-readable form is already written to
       // the structured agent-log by makeOnAction below, so the raw action JSON is
-      // console noise on every line , append it only under LAKEBASE_CONSORT_TRACE.
+      // console noise on every line – append it only under LAKEBASE_CONSORT_TRACE.
       (action, i) => {
         // Per-turn progress narration to stderr, ON BY DEFAULT so the drive is not
-        // silent during a run (the human , or the relaying session tailing this ,
+        // silent during a run (the human – or the relaying session tailing this ,
         // sees each phase/role/gate transition). LAKEBASE_CONSORT_QUIET=1 silences
         // it for captures / CI where the structured agent-log is the record.
         if (consortEnv("QUIET")) return;

@@ -198,7 +198,7 @@ const REQUIRED_STORY_NARRATIVE = ["asA", "iWantTo", "soThat"] as const;
 /**
  * Heal each of a feature's story.json stubs from the authoritative story.md
  * (normalizeStoryJson backfill), THEN report the stories whose story.json STILL
- * lacks a required narrative field , i.e. story.md ALSO carried no parseable
+ * lacks a required narrative field – i.e. story.md ALSO carried no parseable
  * As-a/I-want/So-that. This is the breakdown post-hook's fail-fast input: the
  * spec-author reliably writes the narrative to story.md but not always the JSON
  * stub, so the backfill fixes the common case; a story the backfill CANNOT fix is
@@ -218,7 +218,7 @@ export function healAndReportStoryNarrative(
   if (existsSync(stories)) {
     for (const s of readdirSync(stories)) {
       const file = join(stories, s, "story.json");
-      if (!existsSync(file)) continue; // no stub yet , the breakdown-complete guard owns that
+      if (!existsSync(file)) continue; // no stub yet – the breakdown-complete guard owns that
       let obj: Record<string, unknown>;
       try {
         obj = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;

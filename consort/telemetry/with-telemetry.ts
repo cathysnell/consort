@@ -9,7 +9,7 @@
 // outcome and flushes fire-and-forget.
 //
 // When consent fails, `beginTelemetryRun` returns a NO-OP session: `wrap` returns
-// the effects unchanged and `finish` does nothing , the drive is byte-identical
+// the effects unchanged and `finish` does nothing – the drive is byte-identical
 // to a build without telemetry (no spans, no config write, no latency, no output).
 //
 // The decorator NEVER throws into the driver and NEVER awaits network I/O: child
@@ -48,7 +48,7 @@ import { newSpanId, newTraceId, type GateSpan, type RunSpan, type TurnSpan } fro
 import { takeLastTurnMeta } from "../orchestrator/drive/claude-runner.js";
 import { turnSpanFieldsFromMeta } from "./turn-meta.js";
 
-/** The PHASE of an invoke-role action , WHAT KIND of turn it is , for the L1 gate span
+/** The PHASE of an invoke-role action – WHAT KIND of turn it is – for the L1 gate span
  *  (undefined for any non-invoke-role gate). Passes the action's buildMode/mode through
  *  when it is a known phase, maps an unmapped one to "other", and falls back to the role's
  *  base phase when the turn carries no sub-mode. Closed-enum output; never free text. */
@@ -71,7 +71,7 @@ export function phaseForAction(action: WorkflowAction): PhaseValue | undefined {
 }
 
 /** The reason+source an action carries (raise-to-hil / revise-route / deploy-verify-heal),
- *  lowercased for keyword classification. NEVER stored , only fed to the closed-enum
+ *  lowercased for keyword classification. NEVER stored – only fed to the closed-enum
  *  classifiers below, which emit a CATEGORY (no free text ever reaches a span). */
 function reasonText(action: WorkflowAction): string {
   const reason = "reason" in action && typeof action.reason === "string" ? action.reason : "";
@@ -80,7 +80,7 @@ function reasonText(action: WorkflowAction): string {
 }
 
 /** Categorize a FAILED/ABORTED gate into the closed FAIL_CLASSES taxonomy from the action's
- *  reason/source keywords. "other" when nothing matches. Category only , never the text. */
+ *  reason/source keywords. "other" when nothing matches. Category only – never the text. */
 export function classifyFailClass(action: WorkflowAction): FailClass {
   const t = reasonText(action);
   if (/etimedout/.test(t) || (/merge/.test(t) && /timeout/.test(t))) return "merge-etimedout";
@@ -93,8 +93,8 @@ export function classifyFailClass(action: WorkflowAction): FailClass {
 }
 
 /** Categorize a REVISE-ROUTE into the closed REVISE_CLASSES taxonomy from the verdict's
- *  reason/source keywords , turns the L1 revise_rounds count into WHY it re-routed. "other"
- *  when nothing matches. Category only , never the verdict text. */
+ *  reason/source keywords – turns the L1 revise_rounds count into WHY it re-routed. "other"
+ *  when nothing matches. Category only – never the verdict text. */
 export function classifyReviseClass(action: WorkflowAction): ReviseClass {
   const t = reasonText(action);
   if (/nfr/.test(t) && /coverage|gap|uncovered/.test(t)) return "nfr-coverage-gap";
@@ -111,7 +111,7 @@ export const FIRST_RUN_NOTICE =
   "[consort] Anonymous* usage telemetry is on (*pseudonymous: a random per-install id, no PII).\n" +
   "          Each run of Consort reports to the maintainers' endpoint; only allowlisted,\n" +
   "          non-sensitive fields are sent (no paths, code, error text, or names).\n" +
-  "          Help the maintainers more , opt in to Level 2: `consort-telemetry enable --level 2`\n" +
+  "          Help the maintainers more – opt in to Level 2: `consort-telemetry enable --level 2`\n" +
   "          adds per-role timings + coarse failure classes (still no code/paths/names), so they\n" +
   "          can find and fix what makes runs slow or fail. It's off by default; this is the ask.\n" +
   "          Turn telemetry off any time: `consort-telemetry disable` (or CONSORT_TELEMETRY=0).\n" +
@@ -120,12 +120,12 @@ export const FIRST_RUN_NOTICE =
 /** The one-time LEVEL-2 opt-in notice (stderr). Shown once, on the first run after
  *  a user explicitly opts in to Level 2. Level 2 is a SEPARATE opt-in on top of the
  *  Level-1 default; it captures MORE (per-role turn timings, coarse repair/loop
- *  counts, a categorized failure class) , still only allowlisted enums / counts /
+ *  counts, a categorized failure class) – still only allowlisted enums / counts /
  *  durations, never prompts, code, paths, or names. */
 export const L2_OPT_IN_NOTICE =
   "[consort] Level-2 usage telemetry is ON (you opted in).\n" +
   "          On top of Level 1, it reports per-role turn timings and coarse\n" +
-  "          repair/loop counts , still only allowlisted enums, counts, and\n" +
+  "          repair/loop counts – still only allowlisted enums, counts, and\n" +
   "          durations (no prompts, code, paths, error text, or names).\n" +
   "          Back to Level 1 any time: `consort-telemetry enable --level 1`.\n" +
   "          Details: TELEMETRY.md.\n";
@@ -149,7 +149,7 @@ export interface TelemetryRun {
 export interface BeginRunDeps extends ResourceDeps {
   /** The consort-drive command this run represents (plan|design|build|deploy). */
   command: TelemetryCommand;
-  /** Injectable sink (tests). Defaults to resolveSink(env) , no-op unless signed off. */
+  /** Injectable sink (tests). Defaults to resolveSink(env) – no-op unless signed off. */
   sink?: TelemetrySink;
   /** Clock (tests). Defaults to Date.now. */
   now?: () => number;
@@ -191,7 +191,7 @@ export function beginTelemetryRun(deps: BeginRunDeps): TelemetryRun {
   } catch (err) {
     // The emitter must NEVER throw into consort-drive. Any failure setting up the
     // run (e.g. an unwritable ~/.config while building the resource) disables
-    // telemetry for this run rather than propagating , a silent no-op.
+    // telemetry for this run rather than propagating – a silent no-op.
     telemetryDebug("beginTelemetryRun failed; telemetry disabled for this run", err);
     return NOOP_RUN;
   }
@@ -241,7 +241,7 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
   let lastState: DriveState | undefined;
 
   /** Tally the coarse L2 repair/loop dynamics from a performed action. Reads ONLY
-   *  the action's structured `kind` / `role` / `buildMode` / `mode` , never any
+   *  the action's structured `kind` / `role` / `buildMode` / `mode` – never any
    *  free-text field. */
   const tallyL2 = (action: WorkflowAction): void => {
     switch (action.kind) {
@@ -266,7 +266,7 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
   };
 
   const recordChild = (action: WorkflowAction, ordinal: number, start: number, threw: boolean): void => {
-    // `done` is the terminal no-op, not real work , never a child span.
+    // `done` is the terminal no-op, not real work – never a child span.
     if (action.kind === "done") return;
     // Only allowlisted kinds ship as a `gate`; a kind the frozen enum does not
     // know is dropped rather than shipped as a raw string (defense in depth ,
@@ -294,7 +294,7 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
       if (phase) span.phase = phase;
     }
     // L1 WHY (both closed CATEGORY enums, never free text): the categorized signature of a
-    // fail/abort (fail_class), and why a revise-route re-routed (revise_class , turns the L1
+    // fail/abort (fail_class), and why a revise-route re-routed (revise_class – turns the L1
     // revise_rounds count into a reason). Populated UNCONDITIONALLY (L1), like role/phase.
     if (span.outcome === "fail" || span.outcome === "abort") span.fail_class = classifyFailClass(action);
     if (action.kind === "revise-route") span.revise_class = classifyReviseClass(action);
@@ -306,14 +306,14 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
     // ran with). The runner records that meta after the turn's retry loop settles;
     // we TAKE it here (single per-turn consumer, take-clears so a gate action between
     // two role turns can't inherit a stale model/effort). All fields it yields are
-    // closed-enum buckets , the sanitizer keeps only allowlisted keys either way.
-    // L1: the repair/loop counts are aggregate health , tallied on EVERY run.
+    // closed-enum buckets – the sanitizer keeps only allowlisted keys either way.
+    // L1: the repair/loop counts are aggregate health – tallied on EVERY run.
     tallyL2(action);
     // L2 (opt-in) only: the per-turn cost/flakiness span (model/effort/token/retry).
     if (l2) {
       if (action.kind === "invoke-role" && isKnownRole(action.role)) {
         // Carry the PHASE too (same closed enum the gate span uses), so the L2 turn view is a
-        // clean GROUP BY phase, role, model , the design-lane roles are 1:1 with a phase, but the
+        // clean GROUP BY phase, role, model – the design-lane roles are 1:1 with a phase, but the
         // build roles (navigator/driver) multiplex red/green/review/assess/refactor, which only
         // phase disambiguates (model/effort alone can't tell red from review).
         const turnPhase = phaseForAction(action);
@@ -361,7 +361,7 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
         ? (a, s) => inner.assertRouteSatisfiable!(a, s)
         : undefined,
       // Executor-dispatched agent turns run THROUGH performViaExecutor (the driver
-      // does NOT then call perform), so a child span is timed here , but ONLY when
+      // does NOT then call perform), so a child span is timed here – but ONLY when
       // the inner returns a DEFINED bounded route, i.e. the action was actually
       // handled by the executor. When it returns `undefined` the action was NOT
       // executor-dispatched: the driver falls through to `perform`, whose wrapper
@@ -410,7 +410,7 @@ function beginTelemetryRunUnsafe(deps: BeginRunDeps): TelemetryRun {
       exit_code: info.exit_code,
       gates_total: gates,
     };
-    // L1: repair/loop dynamics are always emitted (aggregate health , "is it thrashing").
+    // L1: repair/loop dynamics are always emitted (aggregate health – "is it thrashing").
     root.red_green_cycles = l2Counts.red_green_cycles;
     root.refactor_iterations = l2Counts.refactor_iterations;
     root.revise_rounds = l2Counts.revise_rounds;

@@ -1,4 +1,4 @@
-// analyzeFailure , the deterministic diagnosis half of consort-diagnose. It reads
+// analyzeFailure – the deterministic diagnosis half of consort-diagnose. It reads
 // the escalation(s) + cycle green-failures, classifies the failure, and suggests a
 // remediation the driving session attempts (troubleshoot) before offering to share.
 

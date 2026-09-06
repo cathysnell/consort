@@ -1,5 +1,5 @@
 // FEIP-8024: a /design breakdown deadlocked when the spec-author wrote the story
-// stubs but not feature-spec.json , the drive gates on feature-spec.json, and on
+// stubs but not feature-spec.json – the drive gates on feature-spec.json, and on
 // re-run the agent saw its stubs present and no-oped, so every retry failed the
 // same missing-feature-spec.json guard forever. Fix: (a) the breakdown directive
 // requires feature-spec.json + names the ABSOLUTE artifact root; (b) before every

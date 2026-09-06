@@ -1,7 +1,7 @@
 // lifecycle-catalogue: run-scoped setup/teardown ops selected by kind. This pins the
 // catalogue's resolution + the no-cloud remove-project path (deleting a local dir). The
 // cloud calls (scaffold-project -> createProject; remove-project -> deleteLakebaseProject)
-// are exercised only in a gated live run , here we assert the catalogue shape + the local
+// are exercised only in a gated live run – here we assert the catalogue shape + the local
 // filesystem half of teardown.
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -36,7 +36,7 @@ describe("lifecycle-catalogue", () => {
     expect(() => resolveLifecycleKind("noSuchOp")).toThrow(/noSuchOp|unknown/i);
   });
 
-  it("scaffold-project fails cleanly (ok:false) when required config is missing , no throw", async () => {
+  it("scaffold-project fails cleanly (ok:false) when required config is missing – no throw", async () => {
     const r = await catalogueLifecycleDeps.run({ kind: "scaffold-project", config: {} }, { workspaceDir: root });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/projectName|databricksHost/i);
@@ -147,7 +147,7 @@ describe("lifecycle-catalogue", () => {
   });
 
   // The Stage-5 driver-green leak: a transient Lakebase delete FAILURE, yet the local dir was still
-  // removed , which strands the project because the orphan sweep keys off that dir's .env marker to
+  // removed – which strands the project because the orphan sweep keys off that dir's .env marker to
   // reclaim it. Fix: on a FAILED Lakebase delete, KEEP the dir so the next orphan sweep retries.
   it("remove-project KEEPS the local dir when the Lakebase delete fails (so the orphan sweep can reclaim it)", async () => {
     const projectDir = join(root, "proj4");
@@ -186,7 +186,7 @@ describe("lifecycle-catalogue", () => {
     expect(escalations[0].story_id).toBe("S1-a");
   });
 
-  it("inject-escalation fails cleanly (ok:false) without a source/reason , no throw", async () => {
+  it("inject-escalation fails cleanly (ok:false) without a source/reason – no throw", async () => {
     const r = await catalogueLifecycleDeps.run({ kind: "inject-escalation", config: {} }, { workspaceDir: root });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/source|reason/i);

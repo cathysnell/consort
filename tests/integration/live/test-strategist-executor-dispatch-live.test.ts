@@ -5,7 +5,7 @@
 // Real test-strategist turn via performViaExecutor: reads the story acs/ + feature-scoped
 // architecture.json + db-design.json (the {feature} source fix), lands test-list.json under .consort
 // at features/<F>/ (artifact channel) + the reconciled agent-log (meta), and runs its `after` test-list
-// CLI. LEAN, no cloud. The spec is the catalogue's shared entry (DESIGN_LIVE_SPECS["test-list"]) , one
+// CLI. LEAN, no cloud. The spec is the catalogue's shared entry (DESIGN_LIVE_SPECS["test-list"]) – one
 // source of truth for the role turn.
 
 import { describe, it } from "vitest";

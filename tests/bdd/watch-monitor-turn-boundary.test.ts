@@ -2,7 +2,7 @@
 // deterministic drive performs its action(s) and EXITS per turn (the driver re-runs it),
 // so a dead pid is usually a benign turn boundary, not a crash. classifyPidGone tells them
 // apart by the next-ACTION identity (advanced => benign; unchanged + no stop => stuck/crash),
-// so the monitor alarms only at a real gate or a genuine stuck/crash , not on progress.
+// so the monitor alarms only at a real gate or a genuine stuck/crash – not on progress.
 
 import { describe, it, expect } from "vitest";
 import { classifyPidGone, type NextStop } from "../../bin/consort/watch.cli";

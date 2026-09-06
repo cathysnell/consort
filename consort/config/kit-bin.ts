@@ -10,12 +10,12 @@ import * as path from "node:path";
 
 // This module is BUNDLED into each importing bin (a non-entry lib), so at runtime
 // __dirname is the importer's dir: <kitRoot>/dist/bin/consort. The kit root
-// (which holds package.json + its bin map) is three directories up , the layout the
+// (which holds package.json + its bin map) is three directories up – the layout the
 // SHIPPED dist has. LAKEBASE_KIT_DIR overrides it as the authoritative kit locator
 // (the documented env other kit resolution honors): needed when the module runs from
 // a non-dist layout (e.g. TS source under vitest, where the __dirname math would point
 // at the wrong root). Resolved LAZILY (not at module load) so an env set after import ,
-// as a test does before driving , is still honored; memoized on first use. When the env
+// as a test does before driving – is still honored; memoized on first use. When the env
 // is set + valid it wins; otherwise the __dirname computation, so the shipped dist path
 // is unchanged.
 let kitRootCache: string | undefined;
@@ -64,7 +64,7 @@ function resolveSubstrateRoot(): string | null {
  *  kit bin nor a substrate bin (an external tool resolved on PATH). Kit-owned bins
  *  resolve under the kit's dist; SUBSTRATE bins (e.g. lakebase-scm-merge) resolve
  *  under the installed scm-utils package's OWN dist via its bin map, so they run
- *  from the substrate regardless of hoisting , the kit no longer redeclares them.
+ *  from the substrate regardless of hoisting – the kit no longer redeclares them.
  *  Resolving to the mapped file means the bin runs regardless of PATH. */
 export function resolveKitBinJs(bin: string): string | null {
   if (kitBinMap === null) {
@@ -116,8 +116,8 @@ export function kitVersion(): string {
  * Export this kit's version as `CONSORT_VERSION` so the substrate (lakebase-scm-utils)
  * labels the Postgres connections it opens under a Consort run as `consort/<version>`
  * rather than its own `scm-utils/<version>` (scm-utils reads this env in
- * `connectionApplicationName()`; anything that is NOT Consort , the VS Code extension, a
- * bare `lakebase-*` CLI , leaves it unset and keeps the scm-utils brand). Child processes
+ * `connectionApplicationName()`; anything that is NOT Consort – the VS Code extension, a
+ * bare `lakebase-*` CLI – leaves it unset and keeps the scm-utils brand). Child processes
  * a Consort run spawns inherit it. Call once at a Consort entry point BEFORE any substrate
  * connection. Idempotent + non-destructive: it never overwrites an already-set value (so an
  * outer Consort process's version wins over a re-derive), and skips an unresolved version.

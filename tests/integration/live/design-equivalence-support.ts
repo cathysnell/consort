@@ -1,4 +1,4 @@
-// Shared support for the GATED design-equivalence LIVE check , the UNCONSTRAINED-channel sibling of
+// Shared support for the GATED design-equivalence LIVE check – the UNCONSTRAINED-channel sibling of
 // the lean design-equivalence attempt. The lean version (tool-scoped Write/Read, throwaway .consort)
 // could NOT run faithfully: the production roleTaskBody ends each design turn with a `./scripts/lk`
 // self-check the agent must pass before returning, and `lk` runs ONLY from the unconstrained channel
@@ -12,10 +12,10 @@
 //   judge the output vs the pin -> remove the worktree -> next step -> remove-project.
 //
 // WHY WORKTREE-PER-STEP (not scaffold-once-and-reset): the scaffold commits a PRISTINE .consort/
-// bootstrap (+ .claude/agents, scripts/lk, .lakebase config) into the initial commit , the artifact
+// bootstrap (+ .claude/agents, scripts/lk, .lakebase config) into the initial commit – the artifact
 // root is NOT gitignored (only the two per-run files agent-log.jsonl/run-config.json are). So
 // `git worktree add <dir> -b <branch>` off HEAD gives each step a fresh, production-shaped, fully
-// ISOLATED tree with a clean .consort , no snapshot, no rm+restore reset, and steps can run in
+// ISOLATED tree with a clean .consort – no snapshot, no rm+restore reset, and steps can run in
 // PARALLEL (each worktree is independent). This mirrors production (a real branch per unit of work,
 // the #589 design) far better than mutating one shared tree.
 //
@@ -24,8 +24,8 @@
 // are the catalogued lifecycle ops (scaffold-project / remove-project), same as driver-green. A real
 // Lakebase project IS created (for consistency) even though design roles never touch the DB.
 //
-// RESET CONTRACT (tiered + DB-aware): design roles only Write/Read design docs into .consort , they
-// never run alembic or insert rows , so a fresh worktree off HEAD is a COMPLETE reset for the design
+// RESET CONTRACT (tiered + DB-aware): design roles only Write/Read design docs into .consort – they
+// never run alembic or insert rows – so a fresh worktree off HEAD is a COMPLETE reset for the design
 // tier (filesystem-only, by construction). When this pattern extends to CODE/build turns (driver GREEN
 // runs `alembic upgrade` + inserts test rows), the worktree gives filesystem isolation but the SHARED
 // Lakebase project does NOT reset itself: the build tier MUST additionally cut a Lakebase BRANCH per
@@ -63,7 +63,7 @@ import { resolveKitSingleSource, assertKitSingleSource, clearKitSingleSource } f
 export const KIT = process.cwd();
 const SETUP_DIR = join(KIT, "tests/integration/live/design-equivalence-setup");
 const RUN_CONFIG_PATH = join(SETUP_DIR, "design-equivalence.run.json");
-/** The pin's recorded-artifacts , the faithful recorded upstream each equivalence seed copies from. */
+/** The pin's recorded-artifacts – the faithful recorded upstream each equivalence seed copies from. */
 const PIN_ARTIFACTS = join(KIT, "consort/evaluation/reference-assets/stockflow/recorded-artifacts");
 
 export { DESIGN_LIVE_STEPS, FEATURE };
@@ -111,7 +111,7 @@ export async function sweepDesignEquivOrphans(): Promise<void> {
   }
 }
 
-/** The scaffolded project a design-equivalence run drives , held for the lifetime of the suite so all
+/** The scaffolded project a design-equivalence run drives – held for the lifetime of the suite so all
  *  design steps share ONE scaffold (amortized). Each step cuts its OWN worktree off the committed HEAD
  *  (no shared mutable .consort), so there is nothing to reset between steps. */
 export interface DesignEquivProject {
@@ -192,9 +192,9 @@ async function cutStepWorktree(project: DesignEquivProject, step: TurnKey): Prom
 }
 
 /** The DriveEffectsConfig for a design-equivalence turn: UNCONSTRAINED (Bash allowed) so the role's
- *  ./scripts/lk self-check runs exactly as production does. NO taskSuffix , the production buildTaskBody
+ *  ./scripts/lk self-check runs exactly as production does. NO taskSuffix – the production buildTaskBody
  *  is the whole prompt (the equivalence proof measures the REAL production turn). PINS the model to
- *  `corpusModel` , the model the corpus recorded this turn on , so the comparison is LIKE-FOR-LIKE:
+ *  `corpusModel` – the model the corpus recorded this turn on – so the comparison is LIKE-FOR-LIKE:
  *  the judge scores the current output against a SAME-MODEL reference, isolating agent/prompt quality
  *  from model-default drift (e.g. test-strategist's shipped default is now sonnet but the corpus is opus;
  *  judging sonnet-vs-opus conflates the two). effort still follows the shipped per-role config. */
@@ -270,7 +270,7 @@ export async function runDesignEquivStep(project: DesignEquivProject, step: Turn
       expect(existsSync(artifactAbs), `${spec.name} produced ${spec.artifactRel}`).toBe(true);
     }
 
-    // Judge semantic equivalence to the pin , the SHARED judge, per-story slice where the role is
+    // Judge semantic equivalence to the pin – the SHARED judge, per-story slice where the role is
     // story-scoped (its feature artifact is accreted across stories in the real drive).
     const referencePaths = spec.equivalenceReferencePaths?.(KIT);
     const outcome = await evaluateSemanticGate({
@@ -284,11 +284,11 @@ export async function runDesignEquivStep(project: DesignEquivProject, step: Turn
     });
     // eslint-disable-next-line no-console
     console.log(
-      `[design-equivalence] ${step} (model=${spec.corpusModel}, corpus-pinned): ${outcome.skipped ? "SKIPPED (no pinned reference)" : outcome.passed ? `PASSED (score ${outcome.score?.toFixed(2)} >= ${SEMANTIC_THRESHOLD})` : `FAILED , ${outcome.reason}`}`,
+      `[design-equivalence] ${step} (model=${spec.corpusModel}, corpus-pinned): ${outcome.skipped ? "SKIPPED (no pinned reference)" : outcome.passed ? `PASSED (score ${outcome.score?.toFixed(2)} >= ${SEMANTIC_THRESHOLD})` : `FAILED – ${outcome.reason}`}`,
     );
     expect(
       outcome.passed,
-      `${step}: produced artifact not semantically equivalent to the pin , ${outcome.reason ?? "below threshold"}`,
+      `${step}: produced artifact not semantically equivalent to the pin – ${outcome.reason ?? "below threshold"}`,
     ).toBe(true);
   } finally {
     // Remove the worktree (fresh one per step => nothing to reset; the whole scaffold is torn down in

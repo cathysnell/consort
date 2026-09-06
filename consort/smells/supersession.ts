@@ -163,11 +163,11 @@ export interface GreenFailure {
    *  The verify already produced this at fail time; recording it here lets the ASSESS turn
    *  START from the real failure instead of re-scanning the tree to rediscover it. This is the
    *  general pre-localization for failures the deterministic gates cannot localize (a missing
-   *  client component, a broken import) , the symmetric counterpart to supersededTestRefs/
+   *  client component, a broken import) – the symmetric counterpart to supersededTestRefs/
    *  contractRefs (which only fire for backend column-drops). Advisory; bounded in length. */
   failureOutput?: string;
   /** The Navigator's root-cause diagnosis recorded at assess time (the WHY the
-   *  verify failed), so a regression escalation , and any Driver repair , carries
+   *  verify failed), so a regression escalation – and any Driver repair – carries
    *  the finding instead of the generic "verify FAILED". */
   diagnosis?: string;
   /** When the Navigator judged the regression DRIVER-FIXABLE: the concrete repair
@@ -306,7 +306,7 @@ export function regressionFixExhausted(gf: GreenFailure): boolean {
 /** Compose the green-failure record the assess turn writes when the Navigator
  *  has assessed a failure (assessed:true + diagnosis/fixDirective from the
  *  assessment). CRITICAL: it PRESERVES the cross-round `fixAttempts` counter from
- *  the prior record , the assess turn must not reset the self-heal cap, or
+ *  the prior record – the assess turn must not reset the self-heal cap, or
  *  regressionFixExhausted never fires and the refactor-until-clean loop is
  *  unbounded. Pure + unit-tested so the preservation can't silently regress. */
 export function composeAssessedGreenFailure(
@@ -369,7 +369,7 @@ export function rearmRegressionFix(
 // ── Navigator's regression assessment (the diagnosis hand-off) ───────────────
 //
 // When the Navigator assesses a green-failure as a GENUINE regression (not a
-// supersession), it records its root-cause diagnosis here , and, when it judges
+// supersession), it records its root-cause diagnosis here – and, when it judges
 // the Driver can fix it, a concrete repair directive. This is the inter-agent API
 // for the regression path, exactly as superseded-tests.json is for supersession:
 // the Navigator WRITES it, and the deterministic `assess-green` effect READS it to
@@ -403,7 +403,7 @@ export function readRegressionAssessment(
   // file `regression-assessment.json`, field `fixDirective`). But a `claude -p`
   // navigator reliably uses the Write tool yet is FLAKY at shell-escaping a
   // multi-arg CLI call: across three live captures the navigator produced a
-  // CORRECT driver-fixable diagnosis but failed to persist it via the CLI , once
+  // CORRECT driver-fixable diagnosis but failed to persist it via the CLI – once
   // by hand-writing `assess-regression.json` with a `fix` key (the verb-order
   // filename + the natural key name), twice by abandoning the escaped call
   // entirely. A driver-fixable regression then wrongly escalated to HIL. So we

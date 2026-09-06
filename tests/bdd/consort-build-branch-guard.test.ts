@@ -1,6 +1,6 @@
 // FEIP-8023: a Tier-2 drive of a fresh feature (with a prior feature shipped
 // out-of-band and never reconciled) committed the GREEN build straight onto the
-// shared `staging` tier , the feature branch was never cut and the build-commit
+// shared `staging` tier – the feature branch was never cut and the build-commit
 // helper committed onto whatever branch happened to be checked out. The safety
 // net is a protected-branch guard: build/experiment commits MUST land on an
 // experiment or feature branch, never on a protected tier (main/master/staging/
@@ -113,7 +113,7 @@ describe("greenOpenCycle fails loud on a protected tier (re-throw wiring, FEIP-8
     initRepoOn(proj, "staging");
     beginNextPendingCycle({ consortDir: ptdd, featureId: F, story: S });
     writeFileSync(join(proj, "app.py"), "x = 1\n");
-    // The GREEN commit is attempted onto staging , the guard must surface loud
+    // The GREEN commit is attempted onto staging – the guard must surface loud
     // (commitCycleWork re-throws it) rather than silently proceeding un-committed.
     await expect(greenOpenCycle({ consortDir: ptdd, featureId: F, story: S, verify: pass })).rejects.toBeInstanceOf(
       ProtectedBranchCommitError,

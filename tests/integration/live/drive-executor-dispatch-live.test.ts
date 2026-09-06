@@ -6,12 +6,12 @@
 //   buildDriveEffects(cfg) -> runDriver -> effects.performViaExecutor -> execute()
 // with a REAL `claude -p` spec-author breakdown turn, on a REAL seeded .sftdd, no cloud. The only
 // difference from `consort-drive --only design` is the bound (stop after the one breakdown
-// turn) and that no Lakebase/GitHub project is claimed (breakdown is a design turn , it touches
+// turn) and that no Lakebase/GitHub project is claimed (breakdown is a design turn – it touches
 // neither). useManifestSteps is turned on via the same env the CLI reads (LAKEBASE_SFTDD_USE_
 // MANIFEST_STEPS), so the executor-dispatch path fires exactly as it would in production.
 //
-// Contrast with spec-author-breakdown-live.test.ts (which drives runManifestChain , the executor
-// in ISOLATION): this drives runDriver , the actual orchestrator loop , so it proves the loop
+// Contrast with spec-author-breakdown-live.test.ts (which drives runManifestChain – the executor
+// in ISOLATION): this drives runDriver – the actual orchestrator loop – so it proves the loop
 // consumes execute()'s BoundedRoute and the pre/post-turn CLIs (reset/sync-breakdown, reconcile)
 // fire through the real execRunner.
 
@@ -80,7 +80,7 @@ describe.skipIf(!process.env.RUN_LIVE_STEP)("LIVE: the production drive dispatch
     try {
       // Drive the REAL loop, bounded to stop right AFTER the single breakdown turn: stopWhen fires
       // on the FIRST action that is NOT the breakdown (the loop performs breakdown, then the next
-      // iteration's action , ux-designer/story , trips the bound before it runs).
+      // iteration's action – ux-designer/story – trips the bound before it runs).
       const result = await runDriver(buildDriveEffects(cfg), {
         stopWhen: (a: WorkflowAction) => !(a.kind === "invoke-role" && "mode" in a && a.role === "spec-author" && a.mode === "breakdown"),
         maxSteps: 3,

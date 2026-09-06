@@ -1,7 +1,7 @@
 // Route-scenario suite: each entry in ROUTE_SCENARIOS is ONE route pathway out of a spec-author
 // breakdown, run in ISOLATION against its own throwaway `.sftdd` workspace. It exercises the
-// REAL stack , the manifest runner, the StepExecutor, a real escalation planted on disk, and the
-// real disk probe deriving it back , so the ROUTE decision is genuine, not mocked. It is LEAN:
+// REAL stack – the manifest runner, the StepExecutor, a real escalation planted on disk, and the
+// real disk probe deriving it back – so the ROUTE decision is genuine, not mocked. It is LEAN:
 // no cloud project (the route pathways depend on `.sftdd` state, not Databricks/GitHub). The
 // live-claude authoring path is covered separately by stockflow-demo-config-live.test.ts.
 //
@@ -29,7 +29,7 @@ const CONFORMANT_DESIGN_GUIDE = JSON.stringify({
 }) + "\n";
 
 /** Deterministic agents: PO replays the recorded intake; the spec-author writes a conformant
- *  feature-spec + log, the ux-designer a conformant design-guide + log , UNLESS the scenario
+ *  feature-spec + log, the ux-designer a conformant design-guide + log – UNLESS the scenario
  *  asks for a nonconformant primary (to drive the blocked outcome), in which case it writes only
  *  the log and NO primary artifact. The route (not authoring) is under test, so these are
  *  fixtures. */

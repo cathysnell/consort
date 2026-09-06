@@ -2,7 +2,7 @@
 //
 // The create command resolves `npx github:consort#<ref>`. If <ref> is unpinned
 // (bare `github:consort`), npx serves whatever it cached or the mutable `main`
-// branch , so a fresh plugin install can scaffold a project from the WRONG
+// branch – so a fresh plugin install can scaffold a project from the WRONG
 // create-project (stale launcher name, mismatched scm-utils-ref, etc.). start.md
 // therefore stamps a release version as the reliable floor:
 //   KIT_REF="${KIT_REF:-vX.Y.Z}"

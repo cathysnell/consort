@@ -35,7 +35,7 @@ export interface AuditReport {
   turnCount: number;
   routingCount: number;
   findings: AuditFinding[];
-  /** True when findings is empty , the corpus is fully expressed. */
+  /** True when findings is empty – the corpus is fully expressed. */
   clean: boolean;
 }
 
@@ -128,7 +128,7 @@ export function auditCorpus(
   const routing = readRoutingDecisions(recordDir);
 
   if (!existsSync(join(recordDir, "turns", "index.json"))) {
-    findings.push({ code: "no-index", message: `no turns/index.json under ${recordDir} , nothing was recorded` });
+    findings.push({ code: "no-index", message: `no turns/index.json under ${recordDir} – nothing was recorded` });
   }
   if (index.length === 0) {
     findings.push({ code: "no-turns", message: "index.json lists zero turns" });
@@ -141,7 +141,7 @@ export function auditCorpus(
       findings.push({ code: "turn-missing-manifest", message: `turn ${t.ordinal} (${t.dir}) has no turn.json`, where: t.dir });
     }
     if (deltaFileCount(turnDir) === 0) {
-      findings.push({ code: "turn-missing-delta", message: `turn ${t.ordinal} (${t.dir}) recorded an EMPTY files/ delta , it expressed no artifact`, where: t.dir });
+      findings.push({ code: "turn-missing-delta", message: `turn ${t.ordinal} (${t.dir}) recorded an EMPTY files/ delta – it expressed no artifact`, where: t.dir });
     }
     if (t.kind === "invoke-role" && !existsSync(join(turnDir, "transcript.md"))) {
       findings.push({ code: "agent-turn-missing-transcript", message: `agent turn ${t.ordinal} (${t.dir}, role=${t.role ?? "?"}) has no transcript.md`, where: t.dir });
@@ -151,17 +151,17 @@ export function auditCorpus(
   // Routing "why": the diagnostic stream must exist, have one record per turn, and carry a
   // non-empty state bag on each (the review-vs-assess evidence).
   if (routing.length === 0) {
-    findings.push({ code: "no-routing-log", message: "no routing-decisions.jsonl , the routing 'why' was not captured (instrumentation off or not wired)" });
+    findings.push({ code: "no-routing-log", message: "no routing-decisions.jsonl – the routing 'why' was not captured (instrumentation off or not wired)" });
   } else {
     if (index.length > 0 && routing.length !== index.length) {
       findings.push({
         code: "routing-count-mismatch",
-        message: `routing-decisions count (${routing.length}) != recorded turn count (${index.length}) , not one decision per turn`,
+        message: `routing-decisions count (${routing.length}) != recorded turn count (${index.length}) – not one decision per turn`,
       });
     }
     const emptyBags = routing.filter((r) => !r.stateBag || Object.keys(r.stateBag).length === 0).length;
     if (emptyBags > 0) {
-      findings.push({ code: "routing-empty-bag", message: `${emptyBags} routing decision(s) carry an EMPTY state bag , the 'why' is blank` });
+      findings.push({ code: "routing-empty-bag", message: `${emptyBags} routing decision(s) carry an EMPTY state bag – the 'why' is blank` });
     }
   }
 
@@ -170,7 +170,7 @@ export function auditCorpus(
   if (opts.requireAssess) {
     const assessTurns = index.filter((t) => t.mode === "assess");
     if (assessTurns.length === 0) {
-      findings.push({ code: "no-assess-turn", message: "requireAssess: no navigator assess turn was recorded , the failing-green path was not exercised" });
+      findings.push({ code: "no-assess-turn", message: "requireAssess: no navigator assess turn was recorded – the failing-green path was not exercised" });
     } else {
       const withMarker = assessTurns.some((t) => deltaHasGreenFailure(join(recordDir, "turns", t.dir)));
       if (!withMarker) {
@@ -184,7 +184,7 @@ export function auditCorpus(
 
 /** Render an audit report as a concise, itemized string for the loop's log. */
 export function renderAuditReport(r: AuditReport): string {
-  const head = `[audit] ${r.recordDir}: ${r.turnCount} turns, ${r.routingCount} routing decisions , ${r.clean ? "CLEAN" : `${r.findings.length} finding(s)`}`;
+  const head = `[audit] ${r.recordDir}: ${r.turnCount} turns, ${r.routingCount} routing decisions – ${r.clean ? "CLEAN" : `${r.findings.length} finding(s)`}`;
   if (r.clean) return head;
   return [head, ...r.findings.map((f) => `  - [${f.code}] ${f.message}`)].join("\n");
 }

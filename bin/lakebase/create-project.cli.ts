@@ -221,8 +221,8 @@ async function main(): Promise<number> {
 
   // --detach: re-launch scaffolding in its OWN session and return at once, so the ~3-4
   // min provision NEVER hits the harness's ~2min bash timeout (a foreground call is
-  // killed; a plain `&` is reaped at turn-end). The child's stdout+stderr , doctor +
-  // every `[stage]` line + the final JSON , are captured to a log the caller relays
+  // killed; a plain `&` is reaped at turn-end). The child's stdout+stderr – doctor +
+  // every `[stage]` line + the final JSON – are captured to a log the caller relays
   // POLL-ONCE with `consort-watch --since` (so each step shows live). Must run BEFORE
   // any side effect (doctor gate, provisioning) so the CHILD owns them. Falls through
   // to an in-process run only if the re-spawn itself fails (never silently drops it).
@@ -245,7 +245,7 @@ async function main(): Promise<number> {
       );
       return 0;
     }
-    process.stderr.write("lakebase-create-project: detach re-spawn failed , running in-process instead.\n");
+    process.stderr.write("lakebase-create-project: detach re-spawn failed – running in-process instead.\n");
   }
 
   let input: CreateProjectArgs;
@@ -300,7 +300,7 @@ async function main(): Promise<number> {
 
   // Substrate integrity gate: refuse to scaffold from a STALE nested substrate.
   // npx can update the top-level kit while reusing a cached older
-  // @databricks-solutions/lakebase-scm-utils , that silently produces a broken
+  // @databricks-solutions/lakebase-scm-utils – that silently produces a broken
   // project (wrong launcher, mismatched .lakebase refs). Verify the installed
   // substrate matches what this kit declares, and fail loud BEFORE provisioning
   // anything (a repo + a Lakebase database).
@@ -313,7 +313,7 @@ async function main(): Promise<number> {
         readFileSync(req.resolve("@databricks-solutions/lakebase-scm-utils/package.json"), "utf8"),
       ).version;
     } catch {
-      // Can't resolve the installed substrate , leave undefined; the check no-ops
+      // Can't resolve the installed substrate – leave undefined; the check no-ops
       // and the downstream scaffold still guards.
     }
     const mismatch = substrateMismatchMessage({ declared, installed, env: process.env });
@@ -333,12 +333,12 @@ async function main(): Promise<number> {
   if (pin) {
     process.env.LAKEBASE_KIT_REF = pin;
     process.stderr.write(
-      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version , avoids mutable-main cache drift)\n`,
+      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version – avoids mutable-main cache drift)\n`,
     );
   }
 
   // Tee stage lines to --progress-log (fresh file) so a caller can poll it for live
-  // relay regardless of how create was launched (the caller owns the path , no
+  // relay regardless of how create was launched (the caller owns the path – no
   // dependency on a shell redirect the launch might drop). Best-effort; never fatal.
   if (args.progressLog) {
     try { writeFileSync(args.progressLog, ""); } catch { /* ignore */ }

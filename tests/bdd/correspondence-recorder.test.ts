@@ -1,5 +1,5 @@
 // Correspondence observability: the run-level transcript of the orchestrator<->HIL exchange the turn
-// recorder otherwise lacks , the orchestrator's REQUEST paired with the proxy's ANSWER/SUBMISSION +
+// recorder otherwise lacks – the orchestrator's REQUEST paired with the proxy's ANSWER/SUBMISSION +
 // outcome, WITH the rich presentation (formatting/highlighting) of what was shown. recordCorrespondence
 // must append one well-formed JSONL line per exchange, preserving presentation. These pin the writer +
 // the entry shape (the projection from a live HIL touchpoint is proven by the capture run).

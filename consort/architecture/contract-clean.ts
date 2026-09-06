@@ -9,7 +9,7 @@
 // migrations for the net set of dropped symbols (dropped and not later re-added, so
 // an expand/contract that re-adds is not flagged), then grep the production code tree
 // for residual references. A finding is a precise file:line list the Driver can
-// repair directly , the self-heal that removes model variance from the contract loop
+// repair directly – the self-heal that removes model variance from the contract loop
 // (the Navigator assess used to have to both notice AND localize it). Mirrors the
 // `layering-clean` / `imports-clean` deterministic gates.
 //
@@ -22,7 +22,7 @@ import { join, relative, extname } from "node:path";
 import { artifactRootsRegexAlternation } from "../../consort/config/consort-paths.js";
 
 // The workflow bookkeeping roots (.consort + legacy), as a regex fragment derived
-// from the single source of truth , never hardcoded here.
+// from the single source of truth – never hardcoded here.
 const ARTIFACT_ROOTS_RE = artifactRootsRegexAlternation();
 
 export interface ContractCleanArgs {
@@ -122,7 +122,7 @@ function collectAll(re: RegExp, text: string): string[] {
  * is actually present. Only the forward direction defines the live schema.
  *   - alembic (.py): the `def upgrade()` body, up to `def downgrade`.
  *   - knex / umzug (.js/.ts): the `up` function, up to the `down` half.
- *   - raw SQL (.sql): the whole file (forward-only by convention , a flyway undo
+ *   - raw SQL (.sql): the whole file (forward-only by convention – a flyway undo
  *     lives in a separate undo file the migration dirs do not pair here).
  */
 function forwardMigrationBody(src: string, ext: string): string {
@@ -174,7 +174,7 @@ export function netDroppedSymbols(projectDir: string, migrationDirs = DEFAULT_MI
     const body = forwardMigrationBody(src, ext);
     const drops = isPy ? collectAll(DROP_COLUMN_PY, body) : collectAll(DROP_COLUMN_SQL, body);
     const adds = isPy ? collectAll(ADD_COLUMN_PY, body) : collectAll(ADD_COLUMN_SQL, body);
-    // Within one migration, an add then drop (or vice versa) , take textual order by
+    // Within one migration, an add then drop (or vice versa) – take textual order by
     // scanning positions. Simpler + robust enough: process adds then drops so a
     // migration that drops a column marks it dropped (the common contract case).
     for (const a of adds) lastAction.set(a, "add");
@@ -231,8 +231,8 @@ export function checkContractClean(args: ContractCleanArgs): ContractCleanResult
     `CONTRACT-INCOMPLETENESS (software-design-principles hard rule 9): a migration DROPPED ${syms}, but the` +
     ` running code still references it, so the app emits SQL for a column the database no longer has and crashes` +
     ` ("${syms} does not exist") even though the migration succeeded. Remove or replace EVERY reference below in` +
-    ` the SAME change , the ORM model field, every query/repository, every serializer/DTO, and every template/view` +
-    ` , so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the` +
+    ` the SAME change – the ORM model field, every query/repository, every serializer/DTO, and every template/view` +
+    ` – so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the` +
     ` production code:\n${list}`;
   return { clean: false, droppedSymbols: dropped, violations, remediation };
 }

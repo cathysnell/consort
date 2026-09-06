@@ -1,4 +1,4 @@
-// resolveEscalations , the supported "clear a HIL halt after fixing its root cause"
+// resolveEscalations – the supported "clear a HIL halt after fixing its root cause"
 // path (consort-resolve-escalation), replacing a hand `rm` of the record. It stamps
 // resolved_at (+ optional note) and KEEPS the file; firstPendingEscalation ignores
 // resolved records, so the drive stops pre-empting and retries.
@@ -32,7 +32,7 @@ describe("resolveEscalations", () => {
 
     const ids = resolveEscalations(tdd, { resolution: "freed port 8000" });
     expect(ids).toEqual([e.id]);
-    // Record is KEPT (not deleted) , audit trail.
+    // Record is KEPT (not deleted) – audit trail.
     expect(existsSync(join(tdd, "escalations", `${e.id}.json`))).toBe(true);
     const after = readEscalations(tdd).find((x) => x.id === e.id)!;
     expect(after.resolved_at).toBeTruthy();
@@ -66,9 +66,9 @@ describe("resolveEscalations", () => {
   });
 });
 
-describe("blocking-smell blockers (the dual-source rule , T27's kind)", () => {
+describe("blocking-smell blockers (the dual-source rule – T27's kind)", () => {
   it("a blocking smell surfaces as a pending escalation and clears via resolveOpenSmells", () => {
-    // A blocking reflect-gate smell (no escalation FILE) , the T27 case.
+    // A blocking reflect-gate smell (no escalation FILE) – the T27 case.
     fsWrite(
       join(tdd, "smells.json"),
       JSON.stringify({

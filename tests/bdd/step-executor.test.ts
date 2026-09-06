@@ -132,7 +132,7 @@ describe("StepExecutor: the fixed 7-phase Template Method", () => {
     expect(result.bounded.action).toEqual({ kind: "design-complete" });
   });
 
-  it("FAILS LOUD in phase 1 when an input is missing , NO agent spawn, NO workspace provisioned", async () => {
+  it("FAILS LOUD in phase 1 when an input is missing – NO agent spawn, NO workspace provisioned", async () => {
     const { step, ctx, deps, order, seen } = harness();
     (deps.resolveInputs as ReturnType<typeof vi.fn>).mockImplementation(() => {
       order.push("resolve-inputs");
@@ -150,7 +150,7 @@ describe("StepExecutor: the fixed 7-phase Template Method", () => {
     const { step, ctx, deps } = harness({ badSpec: true });
     const result = await execute(step, ctx, deps);
     expect(result.violations.join(" ")).toMatch(/stories/i);
-    // A rejected output routes blocked (retry) , not a clean produce.
+    // A rejected output routes blocked (retry) – not a clean produce.
     expect(result.bounded.action).toEqual(BREAKDOWN); // blocked => re-issue the same step
     expect(result.bounded.sanctionedRetry).toBe(true);
   });
@@ -201,7 +201,7 @@ describe("phase 2.5 PREPARE-PRECONDITIONS: declared preconditions are prepared +
     expect(dispatched).toBe("REVIEW story S1. LAYOUT (place/judge code) :: service=app/services.");
   });
 
-  it("WARNS (never fails) when a declared preparer yields empty , the 'always something' anomaly", async () => {
+  it("WARNS (never fails) when a declared preparer yields empty – the 'always something' anomaly", async () => {
     const warnings: string[] = [];
     const step = preconditionStep([{ id: "context-pack", kind: "context-pack", description: "the pack" }]);
     const deps: StepExecutorDeps = {
@@ -254,7 +254,7 @@ describe("phase 2.5 PREPARE-PRECONDITIONS: declared preconditions are prepared +
   });
 
   // POSITION-AWARE injection (A-full Stage F): a precondition rides BEFORE ("prepend") or AFTER
-  // ("append", the default) the base prompt , so the executor-assembled prompt is byte-identical to
+  // ("append", the default) the base prompt – so the executor-assembled prompt is byte-identical to
   // the legacy inline positioning (context-pack appended; green-failure advisory prepended).
   it("a PREPEND precondition rides BEFORE the base prompt (the assess-advisory position)", async () => {
     let dispatched = "";
@@ -350,7 +350,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
     expect(result.bounded.action).not.toEqual(action);
   });
 
-  it("a PRESENT optional output still runs its validator , a malformed marker is a hard reject", async () => {
+  it("a PRESENT optional output still runs its validator – a malformed marker is a hard reject", async () => {
     const result = await execute(assessLikeStep(true, rejectValidate), ctxFor(), deps());
     expect(result.violations.join(" ")).toMatch(/marker malformed/);
   });
@@ -360,7 +360,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
     expect(result.violations).toEqual([]);
   });
 
-  it("a REQUIRED output (optional absent) that never appears STILL blocks , the design-lane default", async () => {
+  it("a REQUIRED output (optional absent) that never appears STILL blocks – the design-lane default", async () => {
     const step = {
       ...assessLikeStep(false),
       outputs: () => [{ id: "spec", description: "required", filename: "missing.json", channel: "meta" as const, validate: okValidate }],
@@ -372,7 +372,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
   });
 
   // Regression guard for the SYSTEMIC navigator-review PROTOCOL VIOLATION (live occurrences #1/#2/#3):
-  // navigator-review declares ZERO outputs , its result is the `review-verdict` EVENT (raised + handled
+  // navigator-review declares ZERO outputs – its result is the `review-verdict` EVENT (raised + handled
   // by the postTurn cycle CLI), NOT a workspace artifact. A clean "looks good" review writes no file, so
   // run() reports produced:false. The old guard only spared an OPTIONAL primary (needs outputs.length>0),
   // so a zero-output turn fell through to a FALSE "primary output not produced" violation -> blocked ->
@@ -383,7 +383,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
       ...assessLikeStep(false),
       outputs: () => [], // the review turn declares no workspace output; its result is the review-verdict EVENT
       async run() {
-        // A "looks good" review writes no file , exactly the case that dead-locked the sprint.
+        // A "looks good" review writes no file – exactly the case that dead-locked the sprint.
         return { produced: false as const, producedPaths: [] as string[] };
       },
     };
@@ -395,7 +395,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
   // The TRUE root cause of the systemic navigator-review PROTOCOL VIOLATION (occurrences #1-#4): the
   // review manifest declares a REQUIRED input (acs) + an OPTIONAL input (code, the project tree).
   // resolveInputs correctly SKIPS the optional-absent `code` on the live lane, so it is NOT in the
-  // inputs map. ManifestStep.run's own presence re-check must ALSO honor `optional` , otherwise it
+  // inputs map. ManifestStep.run's own presence re-check must ALSO honor `optional` – otherwise it
   // returns {produced:false, missingInput:"code"} BEFORE the agent spawns (confirmed live: no TURN
   // START), phase 5 flags `missing input "code"`, and the turn blocks->retries->aborts. This asserts
   // that a ManifestStep whose optional input is absent from the resolved map runs the agent + passes.
@@ -423,7 +423,7 @@ describe("optional outputs: absent-optional passes, present-nonconformant fails,
       inputs: { acs: "" }, // `code` deliberately ABSENT (the optional-skip case)
       instructions: { prompt: "REVIEW" },
     } as never);
-    expect(spawned, "the agent MUST spawn , the optional-absent `code` must not short-circuit run()").toBe(true);
+    expect(spawned, "the agent MUST spawn – the optional-absent `code` must not short-circuit run()").toBe(true);
     expect((res as { produced: boolean }).produced, "zero-output review PRODUCES by completing").toBe(true);
     expect((res as { missingInput?: string }).missingInput, "no missingInput on an optional-absent input").toBeUndefined();
   });
@@ -578,7 +578,7 @@ describe("three-channel outputs: product->workspace, artifact->artifactDir, meta
       };
       const result = await execute(channelStep(), ctxFor(), deps);
       expect(result.violations).toEqual([]);
-      // Each artifact landed in ITS root , and NOT leaked into the product workspace.
+      // Each artifact landed in ITS root – and NOT leaked into the product workspace.
       expect(existsSync(join(root, "code.txt"))).toBe(true);
       expect(existsSync(join(artifactDir, "feature-spec.json"))).toBe(true);
       expect(existsSync(join(metaDir, "marker.json"))).toBe(true);
@@ -597,7 +597,7 @@ describe("three-channel outputs: product->workspace, artifact->artifactDir, meta
       instructionsFor: () => ({ prompt: "build S1" }),
     };
     const result = await execute(channelStep(), ctxFor(), deps);
-    // All three outputs resolved under the workspace , byte-identical to the pre-channel behavior.
+    // All three outputs resolved under the workspace – byte-identical to the pre-channel behavior.
     expect(result.violations).toEqual([]);
     expect(existsSync(join(root, "code.txt"))).toBe(true);
     expect(existsSync(join(root, "feature-spec.json"))).toBe(true);
@@ -633,7 +633,7 @@ describe("three-channel outputs: product->workspace, artifact->artifactDir, meta
 });
 
 // The LIVE drive provisions artifactDir === metaDir === <workspace>/.consort (a NESTED subdir of
-// the product workspace, not a sibling temp dir) , see executor-dispatch.ts provisionWorkspace.
+// the product workspace, not a sibling temp dir) – see executor-dispatch.ts provisionWorkspace.
 // This shape is where a leading ".consort/" on a filename double-encodes the root
 // (=> <workspace>/.consort/.consort/...), the bug fixed when the channel model went live. These
 // two tests pin the live shape + make that regression BITE hermetically (no live run needed).
@@ -656,7 +656,7 @@ describe("channel placement under the LIVE .consort shape (artifactDir === metaD
     };
   }
 
-  it("a BARE (channel-relative) filename lands directly under .consort , NOT double-encoded", async () => {
+  it("a BARE (channel-relative) filename lands directly under .consort – NOT double-encoded", async () => {
     const consort = join(root, ".consort");
     mkdirSync(consort, { recursive: true });
     // A conformant agent that writes each channel's BARE filename into the root the invocation
@@ -672,17 +672,17 @@ describe("channel placement under the LIVE .consort shape (artifactDir === metaD
       resolveInputs: () => ({ "product-overview": "x", nfrs: "x", "feature-request": "x" }),
       // The LIVE shape: both contained roots ARE the workspace's .consort subdir. But the agent
       // writes at workspaceDir (its cwd), so provision the ROOT as .consort so the agent's writes
-      // and the channel resolution coincide , exactly the executor-dispatch live wiring, where the
+      // and the channel resolution coincide – exactly the executor-dispatch live wiring, where the
       // agent runs in the project and artifact/meta resolve to <project>/.consort.
       provisionWorkspace: () => ({ workspaceDir: consort, artifactDir: consort, metaDir: consort }),
       instructionsFor: () => ({ prompt: "break down F1" }),
     };
     const result = await execute(step, breakdownCtx(), deps);
     expect(result.violations).toEqual([]);
-    // Each file lands exactly one level deep under .consort , the correct placement.
+    // Each file lands exactly one level deep under .consort – the correct placement.
     expect(existsSync(join(consort, "feature-spec.json"))).toBe(true);
     expect(existsSync(join(consort, "agent-log.jsonl"))).toBe(true);
-    // And is NEVER double-nested , the regression this guard exists for.
+    // And is NEVER double-nested – the regression this guard exists for.
     expect(existsSync(join(consort, ".consort", "feature-spec.json"))).toBe(false);
     expect(existsSync(join(consort, ".consort", "agent-log.jsonl"))).toBe(false);
     // Step.run() reports the single-level .consort paths as produced.
@@ -695,7 +695,7 @@ describe("channel placement under the LIVE .consort shape (artifactDir === metaD
     // The exact authoring mistake the channel model forbids: an outputPaths override that re-encodes
     // the channel root (".consort/feature-spec.json"). The orchestrator prepends the channel root
     // (artifactDir === consort), so the executor looks for the primary output at
-    // <consort>/.consort/feature-spec.json , which the (correct, bare-writing) agent never creates,
+    // <consort>/.consort/feature-spec.json – which the (correct, bare-writing) agent never creates,
     // so the primary is absent => a produce failure. If someone re-introduces the prefix on a
     // shipped manifest/override, its live turn breaks exactly here.
     const agent: StepAgent = {

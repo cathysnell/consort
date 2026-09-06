@@ -139,7 +139,7 @@ describe("driver-green code reference resolves (regression: dir-vs-file EISDIR)"
   it("reads the driver-green code pin (a directory) into non-empty concatenated .py text", () => {
     const text = readCampAppDir(DRIVER_GREEN_CODE_PIN_REL, "driver-green code pin");
     expect(text.trim().length).toBeGreaterThan(0);
-    // it is the recorded app/ , models.py's split columns are the load-bearing content the judge scores.
+    // it is the recorded app/ – models.py's split columns are the load-bearing content the judge scores.
     expect(text).toMatch(/models\.py|class |def /);
   });
 
@@ -159,7 +159,7 @@ describe("driver-turn next-step references resolve (the CONTAINED navigator dete
       expect(existsSync(refDir), `${handle}: contained ref dir ${refDir} must exist`).toBe(true);
       if (spec.evaluatorKind === "assess") {
         // assess ref parses to a non-equivalent determination (superseded-shift or regression), i.e. the
-        // recorded navigator actually found issues , the thing the candidate is compared directionally to.
+        // recorded navigator actually found issues – the thing the candidate is compared directionally to.
         const v = parseNavigatorAssessMarker(refDir);
         expect(["superseded-shift", "regression"], `${handle}: recorded assess should carry issues`).toContain(v.classification);
       } else {
@@ -171,8 +171,8 @@ describe("driver-turn next-step references resolve (the CONTAINED navigator dete
   });
 
   // The repair/refactor SEED bundles (contained under driver-green-setup/) must exist + carry the recorded
-  // pre-turn CYCLE MARKERS that route the drive to that turn , guards the corpus-assumed-deleted invariant
-  // + that the seed reproduces the routing state (green needs no seed , its open-RED cycle is pipeline-set).
+  // pre-turn CYCLE MARKERS that route the drive to that turn – guards the corpus-assumed-deleted invariant
+  // + that the seed reproduces the routing state (green needs no seed – its open-RED cycle is pipeline-set).
   const SETUP = "tests/integration/live/driver-green-setup";
   it("driver-repair seed carries the recorded post-assess regression markers (routes to REPAIR)", () => {
     const cyc = join(process.cwd(), SETUP, "repair-seed/cycles/F6-split-tracking-code/S3-stock-shows-split-fields/AC1-split-fields-shown");
@@ -230,7 +230,7 @@ describe("loadPreservedArtifacts: read a preserved candidate's artifacts/ back t
       writeFileSyncFs(join(dir, "artifacts", "app", "models.py"), "class Stock: pass\n");
       writeFileSyncFs(join(dir, "artifacts", "app", "routes", "stock.py"), "router = 1\n");
       writeFileSyncFs(join(dir, "artifacts", "navigator-eval", "superseded-tests.json"), '{"tests":["t"]}');
-      writeFileSyncFs(join(dir, "telemetry.json"), "{}"); // sibling, NOT under artifacts/ , must be excluded
+      writeFileSyncFs(join(dir, "telemetry.json"), "{}"); // sibling, NOT under artifacts/ – must be excluded
       const map = loadPreservedArtifacts(dir);
       expect(Object.keys(map).sort()).toEqual(["app/models.py", "app/routes/stock.py", "navigator-eval/superseded-tests.json"]);
       expect(map["app/models.py"]).toContain("class Stock");
@@ -239,7 +239,7 @@ describe("loadPreservedArtifacts: read a preserved candidate's artifacts/ back t
       rmSync(dir, { recursive: true, force: true });
     }
   });
-  it("returns {} when the candidate preserved NO artifacts/ (un-rejudgeable , e.g. navigator-assess)", () => {
+  it("returns {} when the candidate preserved NO artifacts/ (un-rejudgeable – e.g. navigator-assess)", () => {
     const dir = mkdtempSync(join(tmpdir(), "rejudge-empty-"));
     try {
       expect(loadPreservedArtifacts(dir)).toEqual({});
@@ -251,7 +251,7 @@ describe("loadPreservedArtifacts: read a preserved candidate's artifacts/ back t
 
 describe("classifyReproduce: first-verdict vs REPRODUCED vs DIVERGED (regression: never-judged mislabeled REPRODUCED)", () => {
   // The bug: a telemetry.json can EXIST with NO verdict (navigator-red predated the working judge), so
-  // stored={} , comparing storedClass===freshClass gave undefined===undefined => a false "REPRODUCED".
+  // stored={} – comparing storedClass===freshClass gave undefined===undefined => a false "REPRODUCED".
   // classifyReproduce keys on whether a stored verdict VALUE exists, and compares the right kind.
   it("no stored verdict (never judged) => first-verdict, NEVER a false REPRODUCED", () => {
     expect(classifyReproduce({}, { score: 0.82 })).toMatch(/first-verdict/);
@@ -286,11 +286,11 @@ describe("isMissingJudgeTarget: a judge short-circuit for an absent target is NO
 });
 
 describe("buildDriverNextStepJudge IS the next-turn assessment (ENFORCED: no bespoke discriminator)", () => {
-  // ENFORCED INVARIANT: the judge maps evaluateNextStepDetermination straight through , the RECORDED
+  // ENFORCED INVARIANT: the judge maps evaluateNextStepDetermination straight through – the RECORDED
   // next-turn navigator determination vs the candidate's captured one, ranked same / better / worse. It
   // must NOT read the produced CODE, shortcut on honest-GREEN, or apply any milestone/resolution overlay:
   // the next-turn agent (navigator assess/review) AND the orchestrator's deterministic assess already
-  // evaluate the code results / smells / superseded tests. This locks TWO reverted regressions , an
+  // evaluate the code results / smells / superseded tests. This locks TWO reverted regressions – an
   // honest-GREEN shortcut, and a code-scanning "milestone" (productionCodeReferencesSymbol). Any richer
   // evaluation belongs in the next-turn assessment, not this closure. driver-green-s2's recorded same-step
   // determination is a REGRESSION.
@@ -312,7 +312,7 @@ describe("buildDriverNextStepJudge IS the next-turn assessment (ENFORCED: no bes
     // The resolution ladder scores same/better/worse over the DETERMINATION classes: superseded-shift (code
     // correct, prior tests superseded) is MORE resolved than a regression (code broken). driver-green-s2's
     // recorded next-turn determination is a regression, so a candidate whose navigator returns superseded-shift
-    // is BETTER , the contract-change case (the drop resolved; only test bookkeeping remains). No code scan.
+    // is BETTER – the contract-change case (the drop resolved; only test bookkeeping remains). No code scan.
     const v = await buildDriverNextStepJudge("driver-green-s2").judgeCandidate({
       candidateId: "resolved-drop",
       primary: undefined,
@@ -336,7 +336,7 @@ describe("parseNavigatorAssessMarker recognizes the kit's determination shapes (
   // The kit-produced determinations were being MISREAD as clean, creating false pass-with-honors:
   //  (1) the kit writes `superseded.json` (not `superseded-tests.json`) => a real superseded-shift fell
   //      through to "equivalent" (clean); (2) a FAILED green with no determination file defaulted to
-  //      "equivalent" too. Both must be recognized. Uses a temp marker dir , no cloud, no LLM.
+  //      "equivalent" too. Both must be recognized. Uses a temp marker dir – no cloud, no LLM.
   const mk = (files: Record<string, unknown>) => {
     const dir = mkdtempSync(join(tmpdir(), "navmarker-"));
     for (const [name, body] of Object.entries(files)) writeFileSyncFs(join(dir, name), JSON.stringify(body));

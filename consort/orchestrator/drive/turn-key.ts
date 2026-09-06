@@ -4,13 +4,13 @@
 // (consort/config/step-key.ts); this module imports them DOWN and RE-EXPORTS them so its long-
 // standing callers (which import the types from here) keep working unchanged. The MAP stays here
 // because it needs a WorkflowAction. Both the settings resolver and the drive effects derive the
-// key from this ONE place , without an import cycle.
+// key from this ONE place – without an import cycle.
 
 import type { WorkflowAction } from "./orchestrator-drive.js";
 import type { BuildTurn, DesignStep, TurnKey, EffortLevel } from "../../config/step-key.js";
 export type { BuildTurn, DesignStep, TurnKey, EffortLevel } from "../../config/step-key.js";
 
-/** Map an invoke-role action to its TurnKey , the per-invocation step the config's
+/** Map an invoke-role action to its TurnKey – the per-invocation step the config's
  *  effort/model can be keyed on ("apply to the step, not the role"). BUILD turns:
  *  navigator review|red, driver refactor|green (reflect is a design-lane critic on
  *  the base model, so no key). DESIGN steps: spec-author breakdown|propose|acs,
@@ -19,7 +19,7 @@ export type { BuildTurn, DesignStep, TurnKey, EffortLevel } from "../../config/s
 export function turnKeyForAction(action: WorkflowAction): TurnKey | undefined {
   if (action.kind !== "invoke-role") return undefined;
   // Build turns first (buildMode-carrying navigator/driver turns). Each specialized
-  // buildMode collapses onto its base BuildTurn family , the same KIND of work, so it
+  // buildMode collapses onto its base BuildTurn family – the same KIND of work, so it
   // picks that family's model/effort. (reflect is the design-lane critic, no build key.)
   if ("buildMode" in action) {
     switch (action.buildMode) {
@@ -46,7 +46,7 @@ export function turnKeyForAction(action: WorkflowAction): TurnKey | undefined {
     if (action.role === "spec-author" && action.mode === "breakdown") return "breakdown";
     if (action.role === "spec-author" && action.mode === "propose") return "propose";
     if (action.role === "architect-reviewer" && (action.mode === "estimate" || action.mode === "estimate-committed")) return "estimate";
-    // author-requests is human input, no agent turn , no key.
+    // author-requests is human input, no agent turn – no key.
     return undefined;
   }
   // Feature-scoped design role.

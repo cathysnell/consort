@@ -31,7 +31,7 @@ export function localKitCacheLink(ref: string = LOCAL_KIT_REF_DEFAULT): string {
  *  with no GitHub install. Throws if the kit has no built dist (the shell fails loud the same way). */
 export function pinLocalKitCache(kitRoot: string, ref: string = LOCAL_KIT_REF_DEFAULT): void {
   if (!existsSync(join(kitRoot, "dist"))) {
-    throw new Error(`kit-resolution: kit dist missing at ${kitRoot}/dist , run 'npm run build' in the kit first.`);
+    throw new Error(`kit-resolution: kit dist missing at ${kitRoot}/dist – run 'npm run build' in the kit first.`);
   }
   const link = localKitCacheLink(ref);
   mkdirSync(dirname(link), { recursive: true });
@@ -54,7 +54,7 @@ export function recordLocalKitHint(projectDir: string, kitRoot: string, ref: str
 export function resolveKitSingleSource(kitRoot: string, ref: string = LOCAL_KIT_REF_DEFAULT): string {
   if (process.env.LAKEBASE_KIT_DIR) {
     throw new Error(
-      `kit-resolution: LAKEBASE_KIT_DIR is set , it redirects ONLY the orchestrator and leaves the ` +
+      `kit-resolution: LAKEBASE_KIT_DIR is set – it redirects ONLY the orchestrator and leaves the ` +
         `claude -p agents on the ref cache (split-brain). Unset it; this pins ref '${ref}' for everyone.`,
     );
   }
@@ -73,7 +73,7 @@ export function assertKitSingleSource(projectDir: string, kitRoot: string, ref: 
   const got = realpathSync(link);
   if (got !== want) {
     throw new Error(
-      `kit-resolution: kit resolution drift , ref '${ref}' resolves to '${got}', expected '${want}'. ` +
+      `kit-resolution: kit resolution drift – ref '${ref}' resolves to '${got}', expected '${want}'. ` +
         `Aborting so the run cannot use a stale/other kit.`,
     );
   }

@@ -146,7 +146,7 @@ describe("evaluateSemanticGate: judge decides comparability above the structural
     expect(out.reason).toMatch(/0\.40 < 0\.85/);
   });
 
-  it("SKIPS (passes) when there is no recorded reference , structural floor stands alone", async () => {
+  it("SKIPS (passes) when there is no recorded reference – structural floor stands alone", async () => {
     seedCandidate("design/design-guide.json", { components: {} });
     let judged = false;
     const spyJudge: SemanticJudge = async () => { judged = true; return { score: 1 }; };
@@ -204,7 +204,7 @@ describe("judge prompt + reply parsing", () => {
 // Unlike the flat design/functional similarity score, the discriminator mirrors what
 // the navigator ASSESS turn does: it CLASSIFIES the produced code and names the NEXT
 // STEP the evaluation warrants (accept / permissive-refactor-superseded / driver-repair
-// / escalate). A CLEAN verdict ("equivalent"/"accept" , nothing to refactor, no
+// / escalate). A CLEAN verdict ("equivalent"/"accept" – nothing to refactor, no
 // regression) is the BEST outcome (the candidate converged cleaner than the recorded
 // baseline that needed the assess->repair spiral), NEVER a miss.
 
@@ -320,9 +320,9 @@ describe("evaluateNavigatorAssessAlignment: navigator verdict vs the RECORDED GR
   });
   // Delta judges: one says the sets are coverage-equivalent, one says the difference is material.
   const equivalentJudge = async () => ({ equivalent: true, materialDifferences: [] });
-  const materialJudge = async () => ({ equivalent: false, materialDifferences: ["navigator missed tests/core_drop.py , the actual dropped-symbol test"] });
+  const materialJudge = async () => ({ equivalent: false, materialDifferences: ["navigator missed tests/core_drop.py – the actual dropped-symbol test"] });
 
-  it("FAILS on misclassification (navigator 'superseded', ground truth 'regression') , the hard gate", async () => {
+  it("FAILS on misclassification (navigator 'superseded', ground truth 'regression') – the hard gate", async () => {
     const markerDir = mkdtempSync(join(tmpdir(), "assess-marker-"));
     writeFileSync(join(markerDir, "superseded-tests.json"), JSON.stringify({ tests: ["tests/a.py"], reason: "retired" }));
     const r = await evaluateNavigatorAssessAlignment({
@@ -342,7 +342,7 @@ describe("evaluateNavigatorAssessAlignment: navigator verdict vs the RECORDED GR
     const spy = async () => { judged = true; return { equivalent: false, materialDifferences: ["x"] }; };
     const r = await evaluateNavigatorAssessAlignment({ recordedVerdict: recorded({}), navigatorMarkerDir: markerDir, deltaJudge: spy });
     expect(r.passed).toBe(true);
-    expect(judged).toBe(false); // identical sets short-circuit , no judge spawn needed
+    expect(judged).toBe(false); // identical sets short-circuit – no judge spawn needed
     rmSync(markerDir, { recursive: true, force: true });
   });
 
@@ -388,7 +388,7 @@ describe("evaluateNextStepDetermination: driver-turn discriminator = next-step n
     return dir;
   };
   const equivalentDelta = async () => ({ equivalent: true, materialDifferences: [] });
-  const materialDelta = async () => ({ equivalent: false, materialDifferences: ["navigator over-flagged tests/keep.py , still-live coverage"] });
+  const materialDelta = async () => ({ equivalent: false, materialDifferences: ["navigator over-flagged tests/keep.py – still-live coverage"] });
   // A verdict-alignment stub: decisionMatch true => same issue; false => different issue.
   const sameIssueJudge = async (): Promise<VerdictAlignmentOutcome> => ({ passed: false, decisionMatch: true, reason: "same issue still open" });
   const diffIssueJudge = async (): Promise<VerdictAlignmentOutcome> => ({ passed: false, decisionMatch: false, reason: "a different issue" });
@@ -438,13 +438,13 @@ describe("evaluateNextStepDetermination: driver-turn discriminator = next-step n
   });
 
   // BOTH regression (same rung): class-match alone is not enough. A fidelity judge grades the diagnosis +
-  // fixDirective CONTENT vs the recorded ground truth , the panel finding (fast candidates held the class
+  // fixDirective CONTENT vs the recorded ground truth – the panel finding (fast candidates held the class
   // but misdiagnosed the root cause). Aligned => pass; material divergence => fail. Absent judge => legacy.
   const alignedFidelity = async () => ({ aligned: true, materialDifferences: [] });
   const materialFidelity = async () => ({ aligned: false, materialDifferences: ["blames the ORM serializer; the real bug is an empty repositories/__init__.py (import-ordering)"] });
 
   it("assess: both regression, fidelity judge ALIGNED => PASS", async () => {
-    const rec = writeMarker({ "regression-assessment.json": { diagnosis: "repos.stock unresolved , empty __init__.py", fixDirective: "add 'from . import stock'" } });
+    const rec = writeMarker({ "regression-assessment.json": { diagnosis: "repos.stock unresolved – empty __init__.py", fixDirective: "add 'from . import stock'" } });
     const cand = writeMarker({ "regression-assessment.json": { diagnosis: "same import-ordering bug, worded differently", fixDirective: "import the submodule in __init__" } });
     const r = await evaluateNextStepDetermination({ evaluatorKind: "assess", recordedMarkerDir: rec, candidateMarkerDir: cand, deltaJudge: equivalentDelta, verdictJudge: sameIssueJudge, regressionJudge: alignedFidelity });
     expect(r.verdict).toBe("pass");
@@ -452,7 +452,7 @@ describe("evaluateNextStepDetermination: driver-turn discriminator = next-step n
   });
 
   it("assess: both regression, fidelity judge MATERIAL (wrong root cause) => FAIL", async () => {
-    const rec = writeMarker({ "regression-assessment.json": { diagnosis: "repos.stock unresolved , empty __init__.py", fixDirective: "add 'from . import stock'" } });
+    const rec = writeMarker({ "regression-assessment.json": { diagnosis: "repos.stock unresolved – empty __init__.py", fixDirective: "add 'from . import stock'" } });
     const cand = writeMarker({ "regression-assessment.json": { diagnosis: "the ORM serializer mishandles null batch_number", fixDirective: "fix StockOut.model_validate" } });
     const r = await evaluateNextStepDetermination({ evaluatorKind: "assess", recordedMarkerDir: rec, candidateMarkerDir: cand, deltaJudge: equivalentDelta, verdictJudge: sameIssueJudge, regressionJudge: materialFidelity });
     expect(r.verdict).toBe("fail");

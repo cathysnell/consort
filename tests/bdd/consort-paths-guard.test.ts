@@ -76,7 +76,7 @@ describe("consort-paths is the single source of truth for .consort layout", () =
 
   // The artifact-root NAME (.consort + the legacy .sftdd/.tdd) is defined once in
   // consort-paths.ts (ARTIFACT_ROOT / LEGACY_ARTIFACT_ROOTS / ALL_ARTIFACT_ROOTS).
-  // No other module may hardcode one of those directory-name string literals , it
+  // No other module may hardcode one of those directory-name string literals – it
   // must import the constant, so a future root rename touches one file, not a
   // scattered pile (the whole point of Rename C's single source of truth).
   it("no module hardcodes an artifact-root literal (import ARTIFACT_ROOT / ALL_ARTIFACT_ROOTS instead)", () => {

@@ -1,6 +1,6 @@
 // Per-turn TOOL-CALL report parsed from the drive's STDOUT log (not the agent
 // log). timing-report.ts answers "where did wall-clock go" from the timestamped
-// agent log; this answers the complementary "WHY is a turn slow" , the driver's
+// agent log; this answers the complementary "WHY is a turn slow" – the driver's
 // worst GREEN turn spent 407s across 93 tool calls, and each tool call is a full
 // model round-trip. Turn cost is round-trip-bound, so the lever is cutting calls
 // (inject context so the agent stops rediscovering it, stop re-running tests).
@@ -165,7 +165,7 @@ export function formatDriveLogReport(report: DriveLogReport, topN = 10): string 
   if (report.turns.length === 0) return "drive-log: no turn-close lines found (need a stream-json drive log).\n";
   const out: string[] = [];
   out.push(
-    `drive-log tool-calls , ${report.turns.length} turns, ${report.totalToolCalls} tool calls over ${fmtSecs(report.totalSeconds)}`,
+    `drive-log tool-calls – ${report.turns.length} turns, ${report.totalToolCalls} tool calls over ${fmtSecs(report.totalSeconds)}`,
   );
   out.push("");
   out.push(rollupBlock("by role", report.byRole));

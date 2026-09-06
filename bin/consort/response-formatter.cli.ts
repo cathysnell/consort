@@ -37,7 +37,7 @@ function parse(argv: string[]): Args {
 function usage(msg: string): number {
   process.stderr.write(
     `${msg}\nUsage: consort-response-formatter --role <role> --feature <F> [--story <S>] [--tdd-dir <D>]\n` +
-      `Type-checked roles: ${[...FORMATTED_ROLES].join(", ")} (others pass , no deterministic contract yet).\n`,
+      `Type-checked roles: ${[...FORMATTED_ROLES].join(", ")} (others pass – no deterministic contract yet).\n`,
   );
   return 2;
 }
@@ -54,7 +54,7 @@ function main(): number {
     return 0;
   }
   process.stderr.write(
-    `response-formatter: ${a.role}${a.story ? ` (${a.story})` : ""} output does NOT conform , fix it before returning:\n` +
+    `response-formatter: ${a.role}${a.story ? ` (${a.story})` : ""} output does NOT conform – fix it before returning:\n` +
       result.violations.map((v) => `  - ${v.artifact}: ${v.problem}`).join("\n") +
       "\n",
   );

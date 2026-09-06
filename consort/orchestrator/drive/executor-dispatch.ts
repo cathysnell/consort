@@ -1,11 +1,11 @@
-// executor-dispatch: the DRIVE's executor-dispatch machinery (Stage 2, #578) , the seam that lets
+// executor-dispatch: the DRIVE's executor-dispatch machinery (Stage 2, #578) – the seam that lets
 // the LIVE runDriver loop route selected agent turns THROUGH the StepExecutor's Template Method
 // instead of `effects.perform` -> commandsForAction -> runner. Extracted out of the 2000-line
 // orchestrator-effects.ts into its own cohesive family module (the "every seam in a function-family
 // module" migration metric), re-imported by buildDriveEffects.performViaExecutor.
 //
 // Dependency-injected (no runtime import of orchestrator-effects, so no import cycle): the caller
-// supplies the command-derivation primitives it already owns in that module , buildCycleCommand
+// supplies the command-derivation primitives it already owns in that module – buildCycleCommand
 // (the ONE shared cycle-CLI derivation), readDriveStateFromDisk (fresh post-turn state), the bin
 // tokens, and LOG_BIN. Everything else is this family's own (Step, the unified ClaudeStepAgent on
 // its live-dispatch seam, execute) or the manifest registry.
@@ -14,7 +14,7 @@
 // with its byte-identical golden):
 //   - spec-author breakdown (DESIGN): single-shot, feature-scoped inputs, artifact-channel output,
 //     pre-turn reset-breakdown + post-turn sync-breakdown.
-//   - navigator RED (BUILD, LEAN , no cloud): story-scoped inputs, PRODUCT-channel output (the real
+//   - navigator RED (BUILD, LEAN – no cloud): story-scoped inputs, PRODUCT-channel output (the real
 //     tests/ tree at the project root), post-turn `@build-cycle` (the RED cycle stamp).
 
 import * as fs from "node:fs";
@@ -42,7 +42,7 @@ import { consortEnv } from "../../config/consort-env.js";
 import { productDirForLanguage, projectLanguage } from "../../config/consort-config-file.js";
 import type { WorkflowAction, DriveState } from "./orchestrator-drive.js";
 import type { BoundedRoute, ValidateBoundDeps } from "../steps/step-contract.js";
-// Types only (erased at compile) , so this module never imports orchestrator-effects at runtime.
+// Types only (erased at compile) – so this module never imports orchestrator-effects at runtime.
 import type { DriveCommand, DriveEffectsConfig } from "./orchestrator-effects.js";
 
 /** The command-derivation primitives orchestrator-effects owns, injected so this family module
@@ -53,7 +53,7 @@ export interface ExecutorDispatchDeps {
   buildCycleCommand(action: Extract<WorkflowAction, { kind: "invoke-role" }>, cfg: DriveEffectsConfig): DriveCommand | undefined;
   /** The `claude` command ENVELOPE built around a GIVEN task body (handback + body + suffixes +
    *  levers), injected so the UNCONTAINED live dispatch seam wraps the EXECUTOR-ASSEMBLED prompt
-   *  (base directive + declared preconditions re-injected in position) , the A-full switch that
+   *  (base directive + declared preconditions re-injected in position) – the A-full switch that
    *  makes the formal precondition face the ONE injector on the live path while staying byte-
    *  identical to the legacy inline spawn. Injected (not imported) so this family module stays free
    *  of a runtime orchestrator-effects edge (the acyclic-DI discipline the whole module is built on). */
@@ -78,14 +78,14 @@ export interface ExecutorDispatchDeps {
 /** The invoke-role actions the live drive dispatches THROUGH the StepExecutor. Every action whose
  *  shipped manifest declares outputs (so the executor's validate + channel-placement phases have
  *  something to do) is dispatched here; the pure build turns with NO declared outputs
- *  (review/reflect/assess/refactor/repair/superseded/deploy , verified by @build-cycle records, not
+ *  (review/reflect/assess/refactor/repair/superseded/deploy – verified by @build-cycle records, not
  *  a static artifact) fall through to commandsForAction. The set:
- *   DESIGN LANE (artifact + meta channels, LEAN , no cloud):
+ *   DESIGN LANE (artifact + meta channels, LEAN – no cloud):
  *     - spec-author breakdown | propose | per-story ACs
  *     - architect-reviewer (architecture) | architect estimate (planning/estimates)
  *     - dba (db-design) | test-strategist (test-list) | ux-designer (design-guide)
  *   BUILD LANE (product + meta channels):
- *     - navigator RED (LEAN , authors tests/) | driver GREEN (cloud-gated , honest-GREEN verify).
+ *     - navigator RED (LEAN – authors tests/) | driver GREEN (cloud-gated – honest-GREEN verify).
  *  All dispatch through the SAME role-agnostic performTurnViaExecutor; the only per-role knobs are
  *  this gate + outputPathsForAction's channel-relative path per output. */
 export function executorDispatched(action: WorkflowAction): boolean {
@@ -93,12 +93,12 @@ export function executorDispatched(action: WorkflowAction): boolean {
 
   // ── DESIGN LANE ────────────────────────────────────────────────────────────────────────────
   if ("mode" in action) {
-    // spec-author breakdown | propose; architect estimate (NOT estimate-committed , that re-syncs
+    // spec-author breakdown | propose; architect estimate (NOT estimate-committed – that re-syncs
     // the backlog via a separate legacy branch with no shipped manifest).
     if (action.role === "spec-author" && (action.mode === "breakdown" || action.mode === "propose")) return true;
     if (action.role === "architect-reviewer" && action.mode === "estimate") return true;
     // product-owner intake: the metered PO turn that DRAFTS the intake docs (product-overview / nfrs
-    // / design-brief) from the human's gathered answers , tracked via turn.usage, model-configurable
+    // / design-brief) from the human's gathered answers – tracked via turn.usage, model-configurable
     // via its manifest agentOptions + roles.product-owner. Planning mode (no reconcile).
     if (action.role === "product-owner" && action.mode === "intake") return true;
     return false; // author-requests + estimate-committed + any other mode: legacy path.
@@ -143,7 +143,7 @@ export function executorDispatched(action: WorkflowAction): boolean {
     // ── THE TAIL (Stage I): reflect + the deploy/superseded driver variants ────────────────────
     // navigator REFLECT (design-gate turn: contextRubric inline, no pack precondition) and the
     // driver DEPLOY/SUPERSEDED variants (they read their marker as a declared INPUT + interpolate
-    // it inline, so no clean precondition to extract , the pack/marker stays inline, byte-identical
+    // it inline, so no clean precondition to extract – the pack/marker stays inline, byte-identical
     // via omit=∅). All are no-output turns verified by their @build-cycle record + state-derived
     // route. reflect is lean; the driver variants edit tests/code so their verify is cloud-gated.
     if (action.role === "navigator" && action.buildMode === "reflect") return true;
@@ -153,13 +153,13 @@ export function executorDispatched(action: WorkflowAction): boolean {
 }
 
 /**
- * The SANCTIONED deterministic, agent-LESS invoke-role actions , the ones that legitimately do NOT
+ * The SANCTIONED deterministic, agent-LESS invoke-role actions – the ones that legitimately do NOT
  * go through the agent executor because no LLM runs for them:
  *   - product-owner `author-requests` : a HUMAN-INPUT step (the Human Proxy supplies the recorded
  *     feature-requests via SPRINT_REQUESTS; no agent turn, no artifact to record).
  *   - architect-reviewer `estimate-committed` : re-runs the estimate then does a deterministic
  *     sync-backlog to stamp the committed F-keyed sizes (the distinguishing work is the sync).
- * These are handled deterministically by `commandsForAction` , NOT a defect, NOT an agent turn on a
+ * These are handled deterministically by `commandsForAction` – NOT a defect, NOT an agent turn on a
  * legacy path. This allowlist is what lets `assertNotStrandedAgentTurn` tell an INTENTIONAL
  * deterministic action apart from a real agent turn that wrongly escaped the executor. The
  * transcript/replay-set recorder concerns do not apply (nothing spawns).
@@ -198,7 +198,7 @@ export function isPlanningMode(action: WorkflowAction): boolean {
  * HARD-STOP GUARD (#732): a live drive must never run an AGENT turn on the legacy (non-executor)
  * path. Every invoke-role action is EITHER executor-dispatched (an agent turn through the
  * StepExecutor) OR a sanctioned deterministic-agentless action (author-requests / estimate-committed,
- * no LLM). Anything else , an invoke-role action that is neither , is a real agent turn that escaped
+ * no LLM). Anything else – an invoke-role action that is neither – is a real agent turn that escaped
  * the executor (a coverage gap, a bad env override forcing legacy, an un-migrated role): it would
  * silently run through commandsForAction with NONE of the executor's recording/validation/contract.
  * That is exactly the class of silent corruption this project is eliminating, so we THROW LOUD
@@ -211,10 +211,10 @@ export function assertNotStrandedAgentTurn(action: WorkflowAction): void {
   throw new Error(
     `LEGACY AGENT-PATH GUARD: invoke-role action ${JSON.stringify(action)} is neither executor-` +
       `dispatched nor a sanctioned deterministic-agentless action (author-requests / estimate-` +
-      `committed). A real agent turn must NEVER run on the legacy commandsForAction path , it would ` +
+      `committed). A real agent turn must NEVER run on the legacy commandsForAction path – it would ` +
       `skip the executor's recording, output validation, and routing contract (silent corruption). ` +
-      `Fix: add it to the executor allowlist (executorDispatched) with a shipped manifest, or , if it ` +
-      `is genuinely agent-less , to deterministicAgentless. Do NOT run it on legacy. (Likely cause: a ` +
+      `Fix: add it to the executor allowlist (executorDispatched) with a shipped manifest, or – if it ` +
+      `is genuinely agent-less – to deterministicAgentless. Do NOT run it on legacy. (Likely cause: a ` +
       `coverage gap, or LAKEBASE_CONSORT_USE_MANIFEST_STEPS forcing the legacy path.)`,
   );
 }
@@ -246,7 +246,7 @@ export function manifestPostTurnCommands(
     if ((p.when ?? "after") !== when) continue;
     if (p.bin === "@build-cycle") {
       // The build turn's cycle CLI (RED stamp / assess / refactor-verify), args are DYNAMIC so they
-      // can't be a static manifest arg array , delegate to the shared derivation.
+      // can't be a static manifest arg array – delegate to the shared derivation.
       if (action.kind === "invoke-role") {
         const cycle = deps.buildCycleCommand(action, cfg);
         if (cycle) out.push(cycle);
@@ -258,17 +258,17 @@ export function manifestPostTurnCommands(
   return out;
 }
 
-/** The on-disk locations the executor validates a dispatched turn's outputs at , resolved in each
+/** The on-disk locations the executor validates a dispatched turn's outputs at – resolved in each
  *  output's channel root (product -> workspaceDir, meta/artifact -> a workspace-relative path). The
  *  same nested paths the legacy designArtifactExpectation + cycle/agent-log writers use.
  *
  *  Every ARTIFACT-channel path is derived from the SAME consort-paths.ts helper the legacy
  *  designArtifactExpectation uses, made CHANNEL-RELATIVE via `relative(consortDir, helper(...))`, so
  *  it is byte-identical to legacy AND slug-dir-safe (features/<F> and stories/<S> may be `<id>` or
- *  `<id>-<slug>` , the helper resolves the real dir; a hardcoded `features/<F>/...` would miss a slug
+ *  `<id>-<slug>` – the helper resolves the real dir; a hardcoded `features/<F>/...` would miss a slug
  *  dir a design role READS). The META agent-log is always bare `agent-log.jsonl` (reconcile writes
  *  it at <consortDir>/agent-log.jsonl). PRODUCT paths (tests/, app/) are project-root-relative. */
-/** The set of precondition KINDS a manifest declares , the kinds the base task body OMITS inline
+/** The set of precondition KINDS a manifest declares – the kinds the base task body OMITS inline
  *  (phase 2.5 re-injects them). Empty for a turn with no declared preconditions (byte-identical
  *  full-inline body). One source of truth: derived from the manifest, so adding a `preconditions[]`
  *  entry both omits its inline block AND re-injects it, keeping the assembled prompt byte-identical. */
@@ -290,16 +290,16 @@ export function outputPathsForAction(action: WorkflowAction, consortDir: string,
     if (action.role === "spec-author" && action.mode === "breakdown") {
       return { "feature-spec": rel(featureSpecJson(consortDir, f)), ...META };
     }
-    // spec-author propose: the sprint's planning proposals (no agent-log , planning mode skips reconcile).
+    // spec-author propose: the sprint's planning proposals (no agent-log – planning mode skips reconcile).
     if (action.role === "spec-author" && action.mode === "propose") {
       return { "feature-proposals": rel(featureProposalsMd(consortDir)) };
     }
-    // architect estimate: the planning estimates (planning mode , no reconcile/agent-log).
+    // architect estimate: the planning estimates (planning mode – no reconcile/agent-log).
     if (action.role === "architect-reviewer" && action.mode === "estimate") {
       return { estimates: rel(planningEstimatesJson(consortDir)) };
     }
     // product-owner intake: the PO's project-level intake deliverables at the .consort root
-    // (planning mode , no reconcile/agent-log, like propose/estimate). design-brief.md is UI-only,
+    // (planning mode – no reconcile/agent-log, like propose/estimate). design-brief.md is UI-only,
     // declared OPTIONAL on the manifest so a backend-only project doesn't fail on its absence.
     if (action.role === "product-owner" && action.mode === "intake") {
       return { "product-overview": "product-overview.md", nfrs: "nfrs.md", "design-brief": "design/design-brief.md" };
@@ -308,7 +308,7 @@ export function outputPathsForAction(action: WorkflowAction, consortDir: string,
   }
   if (!("buildMode" in action)) {
     // spec-author per-story ACs: the story's acs/ DIRECTORY (the legacy designArtifactExpectation's
-    // anyOf is the DIR , the deliverable is "≥1 conformant AC", not a fixed filename).
+    // anyOf is the DIR – the deliverable is "≥1 conformant AC", not a fixed filename).
     if (action.role === "spec-author" && story) {
       return { acs: rel(acsDir(consortDir, f, story)), ...META };
     }
@@ -356,7 +356,7 @@ export function outputPathsForAction(action: WorkflowAction, consortDir: string,
 /**
  * The UNCONTAINED live dispatch seam for the unified ClaudeStepAgent (Stage F2, #644): build the
  * EXACT legacy `buildClaudeCommand(action, cfg)` and dispatch it through the SAME `cfg.runner`
- * (execRunner) the legacy perform() used , byte-identical spawn (cwd=projectDir, prompt naming
+ * (execRunner) the legacy perform() used – byte-identical spawn (cwd=projectDir, prompt naming
  * .consort paths, session/replay/retry all execRunner's). This is what dissolves the old
  * LiveDriveStepAgent: one agent, its live path supplied by this seam. The agent reads the turn
  * transcript itself after this returns, so the seam is dispatch-only. Non-invoke-role actions
@@ -370,7 +370,7 @@ export function liveDispatchSeam(cfg: DriveEffectsConfig, deps: ExecutorDispatch
       throw new Error(`live dispatch only handles invoke-role actions; got ${JSON.stringify(a)}`);
     }
     // The task body is the EXECUTOR-ASSEMBLED prompt (the base directive with the DECLARED
-    // preconditions re-injected in position by phase 2.5) , NOT rebuilt here. buildClaudeCommandWithBody
+    // preconditions re-injected in position by phase 2.5) – NOT rebuilt here. buildClaudeCommandWithBody
     // wraps it in the envelope (handback + suffixes + levers). For an un-migrated turn (no
     // preconditions) the assembled prompt IS the full inline body, so this is byte-identical to legacy.
     const body = invocation.instructions?.prompt ?? deps.buildTaskBody(a, cfg);
@@ -402,7 +402,7 @@ export async function performTurnViaExecutor(
   // Observable dispatch marker: this turn is committing to the StepExecutor path (manifest matched +
   // flag on), NOT the legacy commandsForAction spawn. One line per executor-dispatched turn, naming
   // the manifest + role[/mode] + lane (live/replay/record), so a run's log unambiguously shows WHICH
-  // turns went through the executor , e.g. the sprint-planning turns (spec-author/propose,
+  // turns went through the executor – e.g. the sprint-planning turns (spec-author/propose,
   // architect-reviewer/estimate) prove the planning lane dispatches here, not through the old arm.
   {
     const mode = "mode" in action && typeof action.mode === "string" ? `/${action.mode}` : "";
@@ -414,20 +414,20 @@ export async function performTurnViaExecutor(
   // Resolve the step's agent from the MANIFEST (agent:{kind,config}) via the shared catalogue ,
   // the SAME seam the integration tests use (manifest-runner's buildAgent). The shipped manifests
   // declare kind "claude"; we supply the live dispatch seam in the build context so buildClaude
-  // constructs the UNCONTAINED (live) ClaudeStepAgent , byte-identical to the former inline
+  // constructs the UNCONTAINED (live) ClaudeStepAgent – byte-identical to the former inline
   // `new ClaudeStepAgent({role}, undefined, liveDispatchSeam(cfg,deps))`. levers carry only the role
   // (the live seam builds the real command from cfg, not from these levers, so model/effort/session
-  // are inert here , the runner resolves them).
+  // are inert here – the runner resolves them).
   //
-  // Stage G , REPLAY / RECORD lanes selected from ENV, via the SAME seam:
+  // Stage G – REPLAY / RECORD lanes selected from ENV, via the SAME seam:
   //  * LAKEBASE_CONSORT_REPLAY_DIR set => swap the manifest's kind to "replay" (the step-aware
-  //    corpus agent, corpusRoot from the env). No manifest edit , the modular point. The replay
+  //    corpus agent, corpusRoot from the env). No manifest edit – the modular point. The replay
   //    agent MATERIALIZES this turn's recorded slice, so the turn never reaches cfg.runner.run
   //    (the runner-level replay short-circuit is a no-op for executor-dispatched turns; it still
   //    governs any non-executor agent turn until commandsForAction is retired, #648).
   //  * LAKEBASE_CONSORT_RECORD_DIR set => WRAP whatever agent the manifest declared with the
   //    recorder decorator (writes this turn's delta into the corpus by step). Records a LIVE claude
-  //    run, or , with REPLAY also set , re-records a replay (corpus migration).
+  //    run, or – with REPLAY also set – re-records a replay (corpus migration).
   const replayDir = consortEnv("REPLAY_DIR")?.trim();
   const replayBuildDir = consortEnv("REPLAY_BUILD_DIR")?.trim();
   const recordDir = consortEnv("RECORD_DIR")?.trim();
@@ -444,13 +444,13 @@ export async function performTurnViaExecutor(
   });
   // Record the agent turn. Two fidelities on ONE path (a corpus can be replayed, a live build can be
   // seen): an explicit RECORD_DIR is a CAPTURE (snapshot content into that corpus, historically
-  // accurate + replayable); otherwise , a plain LIVE build , record into `.consort` ITSELF as an
+  // accurate + replayable); otherwise – a plain LIVE build – record into `.consort` ITSELF as an
   // INDEX (transcript + the produced/deleted file list, NO content snapshot; clicked files read at
   // HEAD). During REPLAY we record nothing (the corpus is the input), UNLESS RECORD_DIR is also set
   // (corpus migration). This mirrors withTurnRecording's perform-path rule for the non-agent turns.
   // Gate the live index on the transcript seam: a real live DRIVE supplies cfg.takeTranscript
   // (claude-runner wires takeLastAgentTranscript unconditionally), whereas a hermetic executor
-  // dispatch test supplies none , and must not start writing a `.consort/turns` corpus into its
+  // dispatch test supplies none – and must not start writing a `.consort/turns` corpus into its
   // temp project. Same discriminator assertTurnComplete already uses for a live capture.
   const liveIndex = !recordDir && !replayDir && cfg.takeTranscript !== undefined;
   const turnRecordDir = recordDir || (liveIndex ? cfg.consortDir : undefined);
@@ -479,7 +479,7 @@ export async function performTurnViaExecutor(
   // Resolve a manifest input `source` to its on-disk path on the LIVE tree. `feature:<rel>` is
   // rooted at <consortDir>; `story:<rel>` at the story's resolved dir (test-list-per-story.json,
   // acs/). A bare source (no prefix) is treated as feature-relative (back-compat). The `<rel>` may
-  // carry a `{feature}` / `{story}` placeholder , expanded to the run's ids BEFORE the join, so a
+  // carry a `{feature}` / `{story}` placeholder – expanded to the run's ids BEFORE the join, so a
   // feature-scoped input names its REAL relative path (features/{feature}/architecture.json) instead
   // of resolving flat to the consort root (where the artifact does not live). The story-dir resolver
   // (storyResolved) already handles the slug-named story dir; {feature} lets a feature-scoped file
@@ -487,19 +487,19 @@ export async function performTurnViaExecutor(
   const expandRel = (rel: string): string =>
     rel.replace(/\{feature\}/g, f).replace(/\{story\}/g, story ?? "");
   const inputPath = (source: string): string => {
-    // `cycle:`/`ac:` , the per-cycle dir (cycleDir(f, s, ac)), where the build lane's process-event
+    // `cycle:`/`ac:` – the per-cycle dir (cycleDir(f, s, ac)), where the build lane's process-event
     // markers live (green-failure.json / superseded-tests.json / regression-assessment.json). An AC and
     // its cycle share a dir; both prefixes read naturally at a call site and resolve identically. This
-    // is the scope `story:` LACKED , declaring an input at cycle scope is what lets resolveInputs find a
+    // is the scope `story:` LACKED – declaring an input at cycle scope is what lets resolveInputs find a
     // marker the router already saw at AC scope (the green-failure scope-mismatch bug this closes).
     if (source.startsWith("cycle:") || source.startsWith("ac:")) {
       const rel = expandRel(source.slice(source.indexOf(":") + 1));
-      if (!story || !ac) return join(cfg.consortDir, rel); // no story/ac on the action , resolve under consortDir (will miss + fail loud)
+      if (!story || !ac) return join(cfg.consortDir, rel); // no story/ac on the action – resolve under consortDir (will miss + fail loud)
       return join(cycleDir(cfg.consortDir, f, story, ac), rel);
     }
     if (source.startsWith("story:")) {
       const rel = expandRel(source.slice("story:".length));
-      if (!story) return join(cfg.consortDir, rel); // no story on the action , resolve under consortDir (will miss + fail loud)
+      if (!story) return join(cfg.consortDir, rel); // no story on the action – resolve under consortDir (will miss + fail loud)
       return join(storyResolved(cfg.consortDir, f, story), rel);
     }
     return join(cfg.consortDir, expandRel(source.replace(/^feature:/, "")));
@@ -516,12 +516,12 @@ export async function performTurnViaExecutor(
         const p = inputPath(input.source);
         if (!fs.existsSync(p)) {
           // An OPTIONAL input that is absent is skipped (e.g. design-guide.json on a no-frontend
-          // project) , not handed back, not a turn failure. A required input still fails loud , EXCEPT
+          // project) – not handed back, not a turn failure. A required input still fails loud – EXCEPT
           // under the REPLAY lane: the step-aware replay agent materializes this turn's recorded output
           // from the corpus and does NOT consume the declared inputs, so a missing input is not a turn
           // failure there (the recorded design-lane replay clean-syncs recorded-artifacts over .consort,
           // which legitimately lacks the PO intake docs a live turn would read). SATISFY it with an
-          // empty sentinel (rather than skip) so BOTH input gates pass , this executor's presence-check
+          // empty sentinel (rather than skip) so BOTH input gates pass – this executor's presence-check
           // AND ManifestStep.run's own `spec.id in inputs` re-check, which a skip would still trip. The
           // LIVE presence-gate is unchanged when replayDir is unset.
           if (input.optional) continue;
@@ -535,11 +535,11 @@ export async function performTurnViaExecutor(
     // The workspace IS the real project (the live seam's runner spawns in cfg.projectDir).
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
-    // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
+    // places the design docs + the reconciled agent-log there – the manifest filename stays bare.
     provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
-    // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.
+    // NO preconditions gets the full inline body (omit=∅) – byte-identical to the pre-A-full spawn.
     // A migrated turn (e.g. assess declaring green-failure-advisory) gets the body MINUS that inline
     // block; phase 2.5 prepends it back, so the assembled prompt matches the legacy inline order.
     instructionsFor: () =>
@@ -557,7 +557,7 @@ export async function performTurnViaExecutor(
     },
     // Phase 4.5: reconcile MATERIALIZES the agent-log (the legacy path's LOG_BIN --reconcile), so
     // validate-outputs sees the conformant agent-log.jsonl the agent never wrote itself. SKIPPED for
-    // the sprint-scoped PLANNING modes (propose / estimate / estimate-committed) , they write no
+    // the sprint-scoped PLANNING modes (propose / estimate / estimate-committed) – they write no
     // feature agent-log to reconcile + declare no agent-log output, and the legacy path guards
     // reconcile with the SAME `!isPlanningMode` condition (commandsForAction / commandsFromManifest),
     // so skipping here keeps the executor byte-parallel to the legacy stream ([claude] only).
@@ -565,7 +565,7 @@ export async function performTurnViaExecutor(
       if (isPlanningMode(action)) return;
       await cfg.runner.run({ kind: "cli", bin: deps.logBin, args: ["--reconcile", "--feature", f, "--tdd-dir", cfg.consortDir] });
     },
-    // Phase 6.5: the manifest's `after` CLIs , gated on clean validation by the executor. For
+    // Phase 6.5: the manifest's `after` CLIs – gated on clean validation by the executor. For
     // breakdown that is sync-breakdown; for navigator RED it is the `@build-cycle` RED stamp (the
     // cycle `begin`), which flips testsWritten so the loop advances to the Driver.
     postTurnEffects: async () => {
@@ -583,10 +583,10 @@ export async function performTurnViaExecutor(
   // Which fresh reader: the DRIVE'S OWN (cfg.readFreshDriveState) when set, else the feature probe.
   // A feature drive has no readFreshDriveState => the feature probe (byte-identical to before). A
   // PLANNING drive (drivePlanning) sets it to deriveSprintPlanningState, whose DriveState carries
-  // phase:"planning" , which nextTransition needs to route propose->estimate->author-requests. The
+  // phase:"planning" – which nextTransition needs to route propose->estimate->author-requests. The
   // feature probe reports phase:"feature" (no planning block), so re-deriving a planning turn through
   // it wrongly yields `breakdown` (the J2 defect). Re-deriving through the drive's own reader keeps
-  // the executor's routing authority IDENTICAL to the drive's readState , one source, both lanes.
+  // the executor's routing authority IDENTICAL to the drive's readState – one source, both lanes.
   const readFresh = (): DriveState =>
     cfg.readFreshDriveState?.() ?? deps.readDriveStateFromDisk(cfg.consortDir, cfg.featureId, cfg.projectDir, { uiTrack: cfg.uiTrack });
   const freshRouterDeps: ValidateBoundDeps = {
@@ -599,7 +599,7 @@ export async function performTurnViaExecutor(
 
   // Per-turn completion line for the log narrator. The executor does NOT go through the legacy
   // claude-runner timing emit, so without this a finished agent turn never appears as
-  // "[drive] <role> turn <N>s" in drive-live.log , and consort-watch's turn-done rule + its per-turn
+  // "[drive] <role> turn <N>s" in drive-live.log – and consort-watch's turn-done rule + its per-turn
   // IDE open (openRoleArtifacts) never fire for it. So the product-owner's intake docs (and every
   // other role's artifacts) are revealed in the editor when the turn completes, same as before the
   // executor became the sole agent path. Same format watch-classify.ts's turn-done regex expects.

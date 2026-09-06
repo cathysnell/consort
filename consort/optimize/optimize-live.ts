@@ -1,10 +1,10 @@
-// ⚠️ DEPRECATED (superseded 2026-08-07) , do NOT extend or build new work on this module.
+// ⚠️ DEPRECATED (superseded 2026-08-07) – do NOT extend or build new work on this module.
 // This is the CHAMPION-WALK optimize engine (per-handoff snapshot/runTrial/recordWinner over the
 // live drive, ranked by the FASTEST gate-passing turn). It is superseded by the ONE judged sweep
-// engine , `runRoleSweep`/`runOneCandidate` (tests/optimization/role-sweep.ts), driven by the ONE
+// engine – `runRoleSweep`/`runOneCandidate` (tests/optimization/role-sweep.ts), driven by the ONE
 // launcher `scripts/optimize-role.sh`. The champion walk ranks on conformance + wall-clock and its
 // judge is only OPTIONAL (design turns w/ a reference) with build handoffs bypassing a judge
-// entirely , which VIOLATES the standing invariant that EVERY evaluation runs an LLM judge vs the
+// entirely – which VIOLATES the standing invariant that EVERY evaluation runs an LLM judge vs the
 // recorded reference on every candidate and preserves the output for independent re-judging (see
 // memory feedback_every_evaluation_judge_and_preserve). Kept only because a published bin
 // (consort-optimize) + optimize-apply + ~20 tests still reference it; slated for removal once
@@ -12,8 +12,8 @@
 //
 // optimize-live: assemble the REAL champion-walk deps (snapshot + runTrial +
 // recordWinner) over the drive, with only the cloud/model LEAVES injected. Every
-// other step , candidate config write, agent overlay, gate evaluation, state
-// restore, experiment-record write , is real, so the full composition is validated
+// other step – candidate config write, agent overlay, gate evaluation, state
+// restore, experiment-record write – is real, so the full composition is validated
 // HERMETICALLY on a design handoff (no cloud): a fake spawnTurn that seeds the
 // artifact + a fake clock prove the walk applies each candidate, gates it, keeps
 // the fastest, and restores between candidates. The live CLI supplies the real
@@ -22,7 +22,7 @@
 //
 // SAFETY: a trial NEVER sets LAKEBASE_CONSORT_REPLAY_BUILD_DIR (that fakes GREEN);
 // every build trial runs the real honest-GREEN verifier via the drive's own cycle
-// commands. The harness only forks/drops throwaway branches , never pushes/merges.
+// commands. The harness only forks/drops throwaway branches – never pushes/merges.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -162,7 +162,7 @@ export function makeChampionWalkDeps(ctx: OptimizeLiveCtx): ChampionWalkDeps {
       let result: TrialResult;
       try {
         await ctx.spawnTurn({ handoff, candidate, record: false });
-        const durationMs = ctx.now() - started; // clock STOPS here , judging is untimed
+        const durationMs = ctx.now() - started; // clock STOPS here – judging is untimed
         let gate: GateOutcome = isBuildHandoff(handoff)
           ? (ctx.gateBuild ?? (() => ({ passed: true })))({ handoff })
           : evaluateDesignGate({ consortDir: ctx.consortDir, featureId: ctx.featureId, handoff });
@@ -179,7 +179,7 @@ export function makeChampionWalkDeps(ctx: OptimizeLiveCtx): ChampionWalkDeps {
         // input/cache-read tokens from the just-emitted turn.usage. Best-effort.
         const tokens = ctx.readTurnTokens?.({ handoff });
         // Capture THIS trial's produced .consort artifacts NOW, before the caller's
-        // between-trial restore wipes them , but only for a PASSING design trial
+        // between-trial restore wipes them – but only for a PASSING design trial
         // (the winner is chosen among passing; a failed trial's output is not
         // restorable-as-winner). The capture is DURABLE, under this trial's own
         // experiments dir (NOT /tmp), so: (a) recordWinner restores the winner's
@@ -215,8 +215,8 @@ export function makeChampionWalkDeps(ctx: OptimizeLiveCtx): ChampionWalkDeps {
     },
 
     async recordWinner({ handoff, candidate, artifactsRef }): Promise<void> {
-      // Advance to the winner's state using the WINNING TRIAL's ACTUAL artifacts , the
-      // exact output that was measured + gated , so the next role runs against what
+      // Advance to the winner's state using the WINNING TRIAL's ACTUAL artifacts – the
+      // exact output that was measured + gated – so the next role runs against what
       // truly won, NOT a fresh re-run that would produce different artifacts. The ref
       // is that trial's DesignSnapshot (captured in runTrial before the between-trial
       // restore wiped it); restoring it makes the live .consort the winner's output.
@@ -226,7 +226,7 @@ export function makeChampionWalkDeps(ctx: OptimizeLiveCtx): ChampionWalkDeps {
         // Record the (now-restored) winner state into the corpus without a re-spawn:
         // recordTurn diffs the current .consort against the recorder baseline. Only when
         // a corpus record dir is set (a winner capture); best-effort so a recorder
-        // hiccup never loses the advance. No transcript , this is a restored artifact,
+        // hiccup never loses the advance. No transcript – this is a restored artifact,
         // not a fresh agent turn.
         const recordDir = process.env[RECORD_DIR_ENV]?.trim() || ctx.recordDir;
         if (recordDir && handoff.action) {
@@ -237,7 +237,7 @@ export function makeChampionWalkDeps(ctx: OptimizeLiveCtx): ChampionWalkDeps {
             process.stderr.write(`[optimize] recordWinner: corpus record best-effort failed for ${handoff.id}: ${e instanceof Error ? e.message : String(e)}\n`);
           }
         }
-        // NOTE: the durable capture is intentionally NOT deleted , it stays under
+        // NOTE: the durable capture is intentionally NOT deleted – it stays under
         // experiments/ for audit + reusable corpus (disposeExperiments tears down
         // the whole scratch tree at end of run).
       } else {
@@ -286,12 +286,12 @@ export interface LiveDriveSeams {
   buildCfg(featureId: string): DriveEffectsConfig;
   /** Build a DriveEffects bound to the (candidate-aware) cfg, i.e. orchestrator-effects
    *  `buildDriveEffects`. The walk runs the PINNED handoff's action THROUGH the executor
-   *  (eff.performViaExecutor) , the SAME primitive the live drive + lean chains use , so
+   *  (eff.performViaExecutor) – the SAME primitive the live drive + lean chains use – so
    *  the sweep survives J5's deletion of commandsForAction. Injected (not imported) so
    *  optimize-live stays hermetically testable. */
   buildEffects(cfg: DriveEffectsConfig): DriveEffects;
   /** The corpus dir a WINNER capture records into (turns/ + recorded-artifacts/).
-   *  A TRIAL (record:false) must NOT record , only the winner. When absent, no turn
+   *  A TRIAL (record:false) must NOT record – only the winner. When absent, no turn
    *  records (a pure-timing sweep). This is the single door for "does this turn land
    *  in the corpus", so a losing candidate can never pollute the shippable corpus. */
   recordDir?: string;
@@ -303,7 +303,7 @@ export interface LiveDriveSeams {
  *  role), so this just satisfies the executor's phase-7 validateAndBound: `allowed`
  *  re-derives from state via nextTransition (the same default the live drive uses),
  *  the revise budget is closed (a sweep never revises), and a "blocked" outcome is
- *  unsanctioned (the executor returns a blocked route , which the sweep ignores; the
+ *  unsanctioned (the executor returns a blocked route – which the sweep ignores; the
  *  harness gate then fails naturally because a blocked/nonconformant turn produced no
  *  conformant artifact). Mirrors orchestrator-run.ts's routerDeps minus the retry
  *  ledger (irrelevant to a single un-routed turn). */
@@ -315,33 +315,33 @@ export const SWEEP_ROUTER_DEPS: ValidateBoundDeps = {
 
 /** Build the REAL spawnTurn: for a candidate, construct a fresh drive cfg, thread
  *  the candidate's content seams, and run the PINNED handoff's ROLE TURN through the
- *  StepExecutor (eff.performViaExecutor) , the SAME primitive the live drive + lean
+ *  StepExecutor (eff.performViaExecutor) – the SAME primitive the live drive + lean
  *  chains use. performViaExecutor runs the manifest's preconditions + the agent turn
  *  (emitting turn.usage) + the post-turn substrate CLIs (sync-breakdown etc.) + phase-5
  *  structural validate, then returns a BoundedRoute. The sweep IGNORES that route: it
  *  runs the ONE pinned turn, it does not advance to the next role. (Before J4 this ran
  *  the pinned action's command LIST via execRunner; converging onto the executor makes
- *  the sweep survive J5's deletion of commandsForAction , the whole point of J4.)
+ *  the sweep survive J5's deletion of commandsForAction – the whole point of J4.)
  *
  *  It runs the handoff's OWN action (handoff.action), NOT "whatever planNextAction
  *  says is next". planNextAction reads current disk state, so once the turn's artifact
- *  lands it returns the NEXT role , a spec-author sweep would then run ux-designer,
+ *  lands it returns the NEXT role – a spec-author sweep would then run ux-designer,
  *  which flakes and crashes the whole sweep. Each handoff is a well-defined interface
  *  (role + inputs -> artifact passing a gate); the walk runs THAT interface.
  *
  *  STRUCTURAL vs QUALITY: performViaExecutor's phase-5 validate-outputs is structural
  *  conformance (registry validators); on a violation it returns a BLOCKED route (no
  *  throw). The harness gate (evaluateDesignGate / semanticGate in runTrial) scores
- *  QUALITY by reading the PRODUCED artifact , so a blocked/nonconformant turn produces
+ *  QUALITY by reading the PRODUCED artifact – so a blocked/nonconformant turn produces
  *  no conformant artifact and the harness gate fails naturally. No violation plumbing
  *  is needed here; the sweep discards the route.
  *
  *  Non-dispatched action fallback: performViaExecutor returns undefined only for an
  *  action NOT on the executor allowlist (no shipped manifest). Today every swept design
- *  role IS dispatched, so this is defensive , we fall to eff.perform (the deterministic
+ *  role IS dispatched, so this is defensive – we fall to eff.perform (the deterministic
  *  substrate path) to keep the sweep running rather than silently no-op the turn.
  *
- *  Recording is gated on the `record` flag , the load-bearing anti-pollution fix.
+ *  Recording is gated on the `record` flag – the load-bearing anti-pollution fix.
  *  A champion walk runs N candidates x M TRIALS per handoff; only the WINNER (a
  *  single record:true re-run) may land in the recorded corpus. So this sets
  *  LAKEBASE_CONSORT_RECORD_DIR (which the executor's recorder decorator reads) ONLY
@@ -353,10 +353,10 @@ export const SWEEP_ROUTER_DEPS: ValidateBoundDeps = {
 export function makeLiveSpawnTurn(featureId: string, seams: LiveDriveSeams): SpawnTurn {
   return async ({ handoff, candidate, record }) => {
     // The walk pins the action at positioning; a HandoffPlan without one is a caller
-    // bug (never re-plan to recover it , that is the wrong-role trap this fixes).
+    // bug (never re-plan to recover it – that is the wrong-role trap this fixes).
     if (!handoff.action) {
       throw new Error(
-        `optimize spawnTurn: handoff '${handoff.id}' carries no pinned action , cannot run its turn ` +
+        `optimize spawnTurn: handoff '${handoff.id}' carries no pinned action – cannot run its turn ` +
           `(actionToHandoffPlan must attach the resolved WorkflowAction).`,
       );
     }
@@ -373,7 +373,7 @@ export function makeLiveSpawnTurn(featureId: string, seams: LiveDriveSeams): Spa
       // Dispatch the PINNED turn THROUGH the executor. It runs preconditions + the agent
       // turn + the load-bearing post-turn substrate + structural validate, and hands back
       // a BoundedRoute the sweep IGNORES (it runs one turn, it does not route). A blocked
-      // route (structural violation) is fine here , the harness gate scores the produced
+      // route (structural violation) is fine here – the harness gate scores the produced
       // artifact and fails a nonconformant one. undefined => action not executor-dispatched
       // (no manifest); fall to the deterministic substrate path so the sweep keeps running.
       const bounded = await eff.performViaExecutor?.(handoff.action, state, SWEEP_ROUTER_DEPS);
@@ -444,10 +444,10 @@ export function makeBuildSnapshotDeps(args: {
 
 /** Advance the drive from the design-complete boundary to sit exactly ON the first
  *  build ROLE turn (navigator RED / driver GREEN), performing the intervening
- *  build-lane SUBSTRATE actions (dispatch, then cut-experiment , which forks the
+ *  build-lane SUBSTRATE actions (dispatch, then cut-experiment – which forks the
  *  paired branch, the pre-turn state the snapshot then captures). Returns the
  *  HandoffPlan the walk should sweep, or null when the next action is not in the
- *  build lane (design not complete / a gate is pending , the caller should drive
+ *  build lane (design not complete / a gate is pending – the caller should drive
  *  those first). Plan + perform are injected so this is unit-tested with no cloud.
  *
  *  Only substrate (non-invoke-role) build-lane actions are auto-performed; the
@@ -465,7 +465,7 @@ export async function positionToBuildHandoff(args: {
  *  lane's non-role actions to get there (design: project-architect-notes /
  *  surface-gate / approve-gate; build: dispatch / cut-experiment). Returns the role
  *  handoff to sweep, or null at the lane boundary (design-complete, or the plan
- *  left the lane). The target role turn is LEFT unperformed , that is what the walk
+ *  left the lane). The target role turn is LEFT unperformed – that is what the walk
  *  sweeps. A cut-experiment (build) is performed here, so its fork is the pre-turn
  *  state the snapshot captures. Bounded loop; plan + perform injected -> hermetic. */
 export async function positionToNextHandoff(args: {
@@ -481,7 +481,7 @@ export async function positionToNextHandoff(args: {
     // does not own) -> boundary reached.
     if (actionLane(action) !== args.lane) return null;
     // A lane TERMINAL (design-complete) shares the lane tag but is not a turn to
-    // perform , it is the boundary. It emits no commands; treat it as done.
+    // perform – it is the boundary. It emits no commands; treat it as done.
     if (action.kind === "design-complete") return null;
     // An invoke-role turn in this lane is the target: land here, do NOT perform it.
     const plan = actionToHandoffPlan(action);
@@ -491,7 +491,7 @@ export async function positionToNextHandoff(args: {
     await args.perform(commands);
   }
   throw new Error(
-    `optimize: could not position on a ${args.lane} role turn within ${maxSteps} steps , the lane is not advancing (a stuck non-role action). Check the drive state.`,
+    `optimize: could not position on a ${args.lane} role turn within ${maxSteps} steps – the lane is not advancing (a stuck non-role action). Check the drive state.`,
   );
 }
 
@@ -518,7 +518,7 @@ export interface LaneSweepDeps {
  *  by throwing rather than spinning.
  *
  *  startFrom: the handoff id OR role to START sweeping at. Handoffs BEFORE it are
- *  already-settled (their winner applied to the kit) , they are ADVANCED once at
+ *  already-settled (their winner applied to the kit) – they are ADVANCED once at
  *  baseline (advanceOne) to reach the target, NOT re-swept. Lets a lane resume at the
  *  next unsettled role without re-paying decided ones. */
 export async function runLaneSweep(
@@ -539,7 +539,7 @@ export async function runLaneSweep(
     if (!handoff) break; // lane boundary reached
     if (handoff.id === prevId) {
       throw new Error(
-        `optimize lane sweep: handoff "${handoff.id}" did not advance after its winner was recorded , the drive is stuck (a gate the sweep cannot pass, or a winner that does not change readState). Check the drive state.`,
+        `optimize lane sweep: handoff "${handoff.id}" did not advance after its winner was recorded – the drive is stuck (a gate the sweep cannot pass, or a winner that does not change readState). Check the drive state.`,
       );
     }
     // startFrom matches the exact handoff id OR the role, so a caller can say
@@ -561,7 +561,7 @@ export async function runLaneSweep(
 
 /** Read the prompt-weight tokens (input + cache-read) of the LAST turn.usage the
  *  given role emitted, from the project's agent-log. Backs OptimizeLiveCtx.
- *  readTurnTokens , the pass-2 trim-target signal. Best-effort: returns undefined
+ *  readTurnTokens – the pass-2 trim-target signal. Best-effort: returns undefined
  *  when there is no turn.usage yet (older log / turn errored before usage). A role
  *  whose last turn had high input_tokens but was slow is prompt-bound; one whose
  *  input is dominated by cache_read_tokens is not. */

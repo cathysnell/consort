@@ -1,4 +1,4 @@
-// P3-prep (#502): runLaneSweep , the multi-handoff walk that sweeps EVERY role
+// P3-prep (#502): runLaneSweep – the multi-handoff walk that sweeps EVERY role
 // handoff in a lane (design or build), not just one. The design lane has inter-turn
 // dependencies (a winner's artifact feeds the next turn), so the sweep must be
 // SEQUENTIAL: position on the next handoff -> champion-walk it -> record the winner
