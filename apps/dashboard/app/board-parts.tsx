@@ -203,6 +203,10 @@ export function EventTicker({
             : e.level === "warn" || e.level === "error"
               ? levelColor[e.level] ?? "var(--text-body)"
               : eventAccent(e.event) ?? "var(--text-body)";
+          // The AGENT colour for this row's role , shared by BOTH the #<ordinal> turn marker and the
+          // left accent rail, so a row's turn number and its rail read as the same agent (the #N is
+          // NOT part of the lime selection accent). Fallback to the neutral accent when roleless.
+          const agentColor = e.role ? colorForRole(e.role) : "var(--status-accent)";
           return (
             // Reference `.row`: a [time | message] grid. The message column carries the whole line —
             // #ordinal (blue, on a turn-starting row) · event (bold, kind-coloured) · [role] (muted) ·
@@ -221,13 +225,15 @@ export function EventTicker({
                 // in by 2px so every row's text stays on the same left edge.
                 padding: clickable ? "3px 4px" : "3px 4px 3px 6px",
                 cursor: clickable ? "pointer" : undefined,
+                // Override the .consort-open class's static accent rail with THIS row's agent colour.
+                ...(clickable ? { borderLeft: `2px solid ${agentColor}` } : {}),
               }}
             >
               {/* Time column (reference `.t`): muted, tabular figures. */}
               <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{e.timestamp.slice(11, 19)}</span>
               {/* Message column (reference `.m`): #ord · event · [role] · message, wrapping. */}
               <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {openTurn ? <span style={{ color: "var(--status-selection)", fontWeight: 700 }}>#{turn} </span> : null}
+                {openTurn ? <span style={{ color: agentColor, fontWeight: 700 }}>#{turn} </span> : null}
                 <span style={{ fontWeight: 700, color: eventColor }}>{e.event}</span>{" "}
                 <span style={{ color: "var(--text-muted)" }}>[{e.role ?? "?"}]</span>{" "}
                 <span style={{ color: "var(--text-body)" }}>{e.message}</span>

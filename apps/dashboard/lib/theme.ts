@@ -105,9 +105,10 @@ export const status = {
   onDeck: "#3B82F6",
   onDeckTint: "rgba(59, 130, 246, 0.08)",
 
-  // SELECTION accent (lime-green): the ONE colour shared by every "this is the selected item" cue ,
-  // the selected node's dashed ring, the drill-down's square badge, and the log's #<ordinal> marker.
-  // Change this single token and all three move together (--status-selection).
+  // SELECTION accent (lime-green): the ONE colour shared by the "this is the selected item" cues ,
+  // the selected node's dashed ring + the drill-down's square badge. Change this single token and
+  // they move together (--status-selection). (The log's #<ordinal> marker is NOT here , it takes the
+  // row's agent colour, tied to the row's left rail.)
   selection: "#65A30D",
 } as const;
 
