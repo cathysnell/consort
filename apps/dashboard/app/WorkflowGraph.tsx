@@ -236,7 +236,7 @@ function Node({
   const fill = active ? `color-mix(in srgb, ${activeColor} 14%, transparent)` : "var(--surface-inset)";
 
   const label = active
-    ? "var(--status-accent-text)"
+    ? "var(--text-strong)" // standard black (light) / white (dark) per theme, legible on any active-colour tint
     : passed || gateStatus === "approved"
       ? "var(--text-muted)"
       : "var(--text-faint)";
