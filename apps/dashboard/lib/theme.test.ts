@@ -107,6 +107,11 @@ describe("theme — values are unchanged from the pre-refactor literals", () => 
     expect(status.onDeckTint).toBe("rgba(59, 130, 246, 0.08)");
   });
 
+  it("the play blue is shared by the transport control and the selected drill-down tab", () => {
+    expect(status.play).toBe("#3987e5");
+    expect(status.playBorder).toBe("#2f6fbf");
+  });
+
   it("the role palette: one distinct colour per role, aligned with the agent definitions", () => {
     expect(roleColor).toEqual({
       orchestrator: "#64748B",

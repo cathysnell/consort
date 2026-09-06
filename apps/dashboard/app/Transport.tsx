@@ -119,7 +119,7 @@ export function Transport({
           onChange(v >= total ? null : v);
         }}
         aria-label="scrub through the event log"
-        style={{ flex: 1, minWidth: 160, accentColor: "#3987e5", cursor: "pointer" }}
+        style={{ flex: 1, minWidth: 160, accentColor: "var(--status-play)", cursor: "pointer" }}
       />
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.7rem", color: "var(--text-muted)" }}>
@@ -196,10 +196,11 @@ function TransportButton({
       title={title}
       aria-label={title}
       style={{
-        border: `1px solid ${primary ? "#2f6fbf" : active ? "var(--status-good)" : "var(--border-default)"}`,
-        // The play/pause button is the same blue as the scrub slider (the only `primary` button),
-        // with a white glyph so the ▶/❚❚ reads on the blue in both themes.
-        background: primary ? "#3987e5" : active ? "var(--status-good-tint-soft)" : "var(--surface-card)",
+        border: `1px solid ${primary ? "var(--status-play-border)" : active ? "var(--status-good)" : "var(--border-default)"}`,
+        // The play/pause button is the same blue as the scrub slider (the only `primary` button) —
+        // --status-play, shared with the drill-down's selected tab — with a white glyph so the
+        // ▶/❚❚ reads on the blue in both themes.
+        background: primary ? "var(--status-play)" : active ? "var(--status-good-tint-soft)" : "var(--surface-card)",
         color: primary ? "#ffffff" : active ? "var(--status-good-text)" : "var(--text-muted)",
         borderRadius: radius.chip,
         padding: "3px 9px",

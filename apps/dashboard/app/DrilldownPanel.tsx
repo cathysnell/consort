@@ -653,8 +653,9 @@ function TabButton({ active, onClick, disabled, children }: { active: boolean; o
         background: "none",
         border: "none",
         // Sits ON the tabs-row bottom border, so pull it down 1px to overlap and read as the
-        // reference's active-tab underline rather than a second line above the divider.
-        borderBottom: `2px solid ${active && !disabled ? "var(--status-accent)" : "transparent"}`,
+        // reference's active-tab underline rather than a second line above the divider. The
+        // selected tab's accent is the transport play-button blue (--status-play).
+        borderBottom: `2px solid ${active && !disabled ? "var(--status-play)" : "transparent"}`,
         marginBottom: -1,
         padding: "7px 14px",
         cursor: disabled ? "default" : "pointer",

@@ -105,6 +105,12 @@ export const status = {
   onDeck: "#3B82F6",
   onDeckTint: "rgba(59, 130, 246, 0.08)",
 
+  // The transport's play/pause button + scrub slider blue (the only `primary` control), and its
+  // darker edge. The drill-down's SELECTED tab underline takes this same blue (--status-play), so
+  // "which tab am I on" reads in the play-button colour. Theme-fixed — the same value in both.
+  play: "#3987e5",
+  playBorder: "#2f6fbf",
+
   // SELECTION accent (lime-green): the ONE colour shared by the "this is the selected item" cues ,
   // the selected node's dashed ring + the drill-down's square badge. Change this single token and
   // they move together (--status-selection). (The log's #<ordinal> marker is NOT here , it takes the
@@ -217,6 +223,9 @@ export const statusDark: Tokens<typeof status> = {
 
   onDeck: "#60A5FA", // brightened blue for a dark ground
   onDeckTint: "rgba(96,165,250,0.14)",
+
+  play: "#3987e5", // transport control is theme-fixed — same blue on dark
+  playBorder: "#2f6fbf",
 
   selection: "#A3E635", // brighter lime for a dark ground (see --status-selection in the light block)
 };
