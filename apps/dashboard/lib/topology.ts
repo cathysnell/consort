@@ -282,10 +282,16 @@ const PLAN_LANE: Lane = {
       match: { role: "architect-reviewer", phaseAny: ["estimate", "estimate-committed"] },
     },
     {
+      // The backlog commit is a HUMAN decision, not a PO agent turn: after the architect sizes the
+      // proposals, the human picks which proposed features enter the sprint (the drive's
+      // "Commit the sprint backlog" step). Modeled as a human gate — role null so it reads as a
+      // purple HITL diamond, not a product-owner-coloured agent step that glows as if the PO chose.
+      // It still lights from the author-requests/feature events (a match), so it shows reached/done.
       id: "p-req",
-      role: "product-owner",
-      label: "Product owner",
-      sub: "choose features",
+      role: null,
+      label: "Backlog gate",
+      sub: "human selects features",
+      gate: true,
       match: { role: "product-owner", phaseAny: ["author-requests", "feature"] },
     },
     {

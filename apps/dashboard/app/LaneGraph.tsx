@@ -295,7 +295,9 @@ function LanePanel({
 
 function gateTintFor(step: LaneStep, state: DashboardState): string {
   const gateName = LANE_STEP_GATE[step.id];
-  if (!gateName) return "var(--border-strong)";
+  // A human gate with no formal gate-state mapping (the backlog-commit lights from events, not a
+  // gates.json record) is still purple — gateTintFor is only reached for roleless (human) gates.
+  if (!gateName) return "var(--status-gate)";
   // The gate the run is PARKED at reads purple even when it's not a snapshot gate (acceptance is
   // log-derived, never in state.gates). `focus.kind === "gate"` already means the run is parked (no
   // active step), so no separate laneCurrent guard is needed.
@@ -751,10 +753,12 @@ function StepBox({
   // The active turn is set apart by its PULSE ALONE — no static accent fill or thick border. It
   // otherwise looks like any other reached step; only the glowpulse (below) marks it. Each step
   // carries its agent's colour via the role stripe regardless. Gates and escalation terminals DO
-  // keep a distinct colour: a HUMAN gate (gate:true AND never lit from an event, match === null) is
-  // purple (green once approved); a raise-to-HIL terminal is critical red; the automated VERIFY
-  // checkpoint (gate:true but match: verify) is NOT a human gate and stays neutral.
-  const isHumanGate = isGate && step.match === null;
+  // keep a distinct colour: a HUMAN gate (gate:true with NO owning agent, role === null) is purple;
+  // a raise-to-HIL terminal is critical red; the automated VERIFY checkpoint (the one gate that DOES
+  // own a role, release-engineer) is NOT a human gate and stays neutral. Keyed on role rather than
+  // `match === null` so a human gate that lights from events (the backlog-commit, which carries the
+  // author-requests events) still reads purple.
+  const isHumanGate = isGate && step.role === null;
   const active = state === "current"; // the current turn
   // The ONE human gate the drive is parked at (state = "gate-current") is the active locus even
   // though it never lights from an event; it pulses too, in PURPLE (its human-gate hue), and keeps
@@ -766,7 +770,9 @@ function StepBox({
   const stroke = active
     ? step.role
       ? colorForRole(step.role)
-      : "var(--status-accent)"
+      : step.gate
+        ? "var(--status-gate)" // an active human gate (e.g. awaiting the backlog commit) pulses PURPLE, not accent
+        : "var(--status-accent)"
     : step.escalation
       ? "var(--status-critical)" // a raise-to-HIL terminal reads CRITICAL (red), distinct from amber branches + purple gates
       : isHumanGate

@@ -611,9 +611,9 @@ const PORTED_LANE_IDS = ["plan", "design", "build"] as const;
 const STEP_DEVIATIONS: {
   lane: (typeof PORTED_LANE_IDS)[number];
   step: string;
-  field: "role" | "sub";
-  py: string | null;
-  ts: string | null;
+  field: "role" | "sub" | "label" | "gate";
+  py: string | boolean | null;
+  ts: string | boolean | null;
   why: string;
 }[] = [
   {
@@ -624,13 +624,42 @@ const STEP_DEVIATIONS: {
     ts: "release-engineer",
     why: "the dashboard attributes VERIFY (build-cycle and deploy) to the release-engineer for lane colouring; Kevin's Python left it ownerless. It keeps its verify-prefix match, so it still lights from events and is not a human gate.",
   },
+  // p-req is Kevin's Python 'product-owner: author requests' step, but author-requests is a HUMAN
+  // decision (the Human Proxy supplies it), not a PO agent turn. The dashboard draws it as a human
+  // gate — the "Backlog gate" — so it reads as a HITL diamond (purple) rather than a product-owner-
+  // coloured agent step that glows as if the PO chose the features. Role/label/gate all deviate; it
+  // keeps its author-requests/feature match so it still lights from the run's events.
+  {
+    lane: "plan",
+    step: "p-req",
+    field: "role",
+    py: "product-owner",
+    ts: null,
+    why: "the backlog commit is a human decision, not a PO agent turn; ownerless so it renders as a purple human gate, not a product-owner-coloured (glowing) agent step.",
+  },
+  {
+    lane: "plan",
+    step: "p-req",
+    field: "label",
+    py: "Product owner",
+    ts: "Backlog gate",
+    why: "it is the HITL 'Backlog gate' where the human commits which sized features enter the sprint, not a product-owner turn labelled by its role.",
+  },
   {
     lane: "plan",
     step: "p-req",
     field: "sub",
     py: "author requests",
-    ts: "choose features",
-    why: "author-requests is where the PO picks the sized candidates that fit the sprint (a feature-request.md per committed feature) — a selection, not prose authoring; 'choose features' describes what actually happens.",
+    ts: "human selects features",
+    why: "author-requests is where the human picks the sized candidates that fit the sprint — a human selection, not the PO authoring prose; 'human selects features' describes what actually happens.",
+  },
+  {
+    lane: "plan",
+    step: "p-req",
+    field: "gate",
+    py: null,
+    ts: true,
+    why: "drawn as a HITL gate (diamond) so the human backlog-commit reads as a decision point, like the intake and plan gates around it.",
   },
 ];
 
@@ -807,8 +836,9 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       const matchDevs = MATCH_DEVIATIONS.filter((d) => d.lane === lane);
       const withDev = (s: PyStep): PyStep => {
         let out = s;
-        const d = devs.find((x) => x.step === s.id);
-        if (d) out = { ...out, [d.field]: d.ts };
+        // A step may declare several field deviations (p-req deviates role, label, sub AND gate);
+        // apply every one, not just the first.
+        for (const d of devs.filter((x) => x.step === s.id)) out = { ...out, [d.field]: d.ts };
         const md = matchDevs.find((x) => x.step === s.id);
         if (md) out = { ...out, match: md.ts } as PyStep; // widen the fixture's match to the declared ts
         return out;
@@ -844,8 +874,8 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       const ts = WORKFLOW.lanes[d.lane].steps.find((s) => s.id === d.step);
       expect(py, `${d.step} in fixture`).toBeDefined();
       expect(ts, `${d.step} in topology`).toBeDefined();
-      expect((py![d.field] ?? null) as string | null, `${d.step} fixture ${d.field}`).toBe(d.py);
-      expect((ts![d.field] ?? null) as string | null, `${d.step} topology ${d.field}`).toBe(d.ts);
+      expect((py![d.field] ?? null) as string | boolean | null, `${d.step} fixture ${d.field}`).toBe(d.py);
+      expect((ts![d.field] ?? null) as string | boolean | null, `${d.step} topology ${d.field}`).toBe(d.ts);
       expect(d.py, `${d.step} is a real difference`).not.toBe(d.ts);
       expect(d.why.length, `${d.step} needs a reason`).toBeGreaterThan(20);
     }
