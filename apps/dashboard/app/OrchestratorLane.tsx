@@ -172,8 +172,10 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
       {story ? (
         <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--status-accent-text)", marginTop: 2 }}>▸ {story}</div>
       ) : null}
+      {/* RUN totals, summed across every agent , NOT the orchestrator's own (it is deterministic and
+          spends nothing). Labeled "run" so the number isn't misread as the orchestrator's cost. */}
       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-        {turns} turn{turns === 1 ? "" : "s"} · ${cost.toFixed(2)}
+        run: {turns} turn{turns === 1 ? "" : "s"} · ${cost.toFixed(2)}
       </div>
 
       {gateRows.length > 0 ? (
