@@ -108,7 +108,16 @@ export default function Home() {
     // Open the turn whenever the source can serve transcripts (it is, per the capability); only a
     // role that genuinely never took a recorded turn falls to the ROLE panel (same "#— <role>" title
     // + tab layout, its Artifacts/Code filled from the role's lifecycle-step deliverables at HEAD).
-    setDrilldown(ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role });
+    const target: DrilldownTarget = ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role };
+    // TOGGLE, mirroring the workflow-graph nodes: clicking the SAME card whose panel is already open
+    // slides it back out. Same target = the same turn ordinal, or the same role's shell.
+    setDrilldown((cur) => {
+      const same =
+        cur != null &&
+        ((target.kind === "turn" && cur.kind === "turn" && cur.ord === target.ord) ||
+          (target.kind === "role" && cur.kind === "role" && cur.role === target.role));
+      return same ? null : target;
+    });
   };
 
   return (
