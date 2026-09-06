@@ -7410,6 +7410,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
+  const intakeReady = fs12.existsSync(path9.join(consortDir, "product-overview.md")) && fs12.existsSync(path9.join(consortDir, "nfrs.md"));
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs12.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs12.existsSync(featureDeployEvidenceJson(consortDir, featureId));
@@ -7440,7 +7441,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };

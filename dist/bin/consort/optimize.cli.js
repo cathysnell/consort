@@ -9789,6 +9789,7 @@ function nextTransition(state) {
   if (preempt) return preempt;
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
+    if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
@@ -11822,6 +11823,7 @@ function executorDispatched(action) {
 }
 function deterministicAgentless(action) {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
+  if (action.role === "product-owner" && action.mode === "intake") return true;
   if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;
@@ -13256,6 +13258,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
+  const intakeReady = fs15.existsSync(path11.join(consortDir, "product-overview.md")) && fs15.existsSync(path11.join(consortDir, "nfrs.md"));
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
@@ -13286,7 +13289,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -14627,6 +14630,8 @@ function roleTaskBody(action, featureId, uiTrack, consortDir, build, omit) {
         return `Estimate each proposed candidate feature with a t-shirt size (XS/S/M/L/XL) and write planning/estimates.json, so the Product Owner can commit a backlog that fits sprint capacity.`;
       case "estimate-committed":
         return `Estimate the sprint's COMMITTED feature(s) with a t-shirt size (XS/S/M/L/XL). Read each committed feature's request at ${root}/features/<F>/feature-request.md, then ADD one entry per committed feature to ${root}/planning/estimates.json keyed by its REAL feature id (e.g. "F1-stock-visibility", not a "FP" candidate id), each {"feature_id":"<F>","size":"<XS|S|M|L|XL>","rationale":"<why>"}. KEEP every existing estimate already in the file (merge, do not overwrite the candidate sizes). This is the size sync-backlog stamps into the per-sprint backlog, so the committed backlog shows real sizing.`;
+      case "intake":
+        return `Run the Product Owner intake interview: author ${root}/product-overview.md, ${root}/nfrs.md, and (UI only) ${root}/design/design-brief.md WITH the human, then resume so the Spec Author can propose.`;
       case "author-requests":
         return `Provide the sprint's feature-requests.`;
       case "breakdown":

@@ -7792,6 +7792,7 @@ function nextTransition(state) {
   if (preempt) return preempt;
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
+    if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
@@ -9486,6 +9487,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
+  const intakeReady = fs15.existsSync(path11.join(consortDir, "product-overview.md")) && fs15.existsSync(path11.join(consortDir, "nfrs.md"));
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
@@ -9516,7 +9518,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -9949,6 +9951,19 @@ function buildNextOptions(action, ctx) {
     approver: ctx.approver,
     featureBranch: ctx.featureBranch
   });
+  if (action.kind === "invoke-role" && "mode" in action && action.mode === "intake") {
+    return [
+      {
+        id: "intake.run",
+        title: "Author the project intake (Product Owner interview)",
+        hil_prompt: "This project has no intake yet. Run the Product Owner intake interview to author it WITH you: .consort/product-overview.md (who/why/how it grows), .consort/nfrs.md (Required R<n> across performance/scalability/security/observability/operability/resilience), and , for a UI product , .consort/design/design-brief.md (## References + brand/interaction/a11y). Then resume; the Spec Author proposes the sprint from it.",
+        kind: "manual",
+        enact: null,
+        note: 'No single CLI , the PO drafts FOR the human, who approves (never invent intent). Invoke the `product-owner` agent (.claude/agents/product-owner.md) and follow its intake Method (three short interviews). Commit the artifacts (`git add .consort && git commit -m "intake: product-overview + nfrs + design-brief"`), then resume the drive , it re-derives intakeReady=true and proceeds to propose.'
+      },
+      holdOption()
+    ];
+  }
   if (action.kind === "invoke-role" && "mode" in action && action.mode === "author-requests") {
     return [
       {
@@ -10159,7 +10174,9 @@ function buildNextSnapshot(scope, state, ctx, transition = nextTransition) {
   };
   const primary = { kind: action.kind, describe: describeAction(action, { featureId: ctx.featureId }) };
   const options = buildNextOptions(action, ctx);
-  const awaiting_human = options.some((o) => o.kind === "gate" || o.kind === "action" && o.id !== "resume");
+  const awaiting_human = options.some(
+    (o) => o.kind === "gate" || o.kind === "manual" || o.kind === "action" && o.id !== "resume"
+  );
   return {
     scope,
     ...ctx.featureId ? { feature: ctx.featureId } : {},

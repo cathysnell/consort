@@ -150,6 +150,13 @@ interface StoryView extends DriveStoryView {
  *  phases live in the pipeline state the lane sub-machines read.) */
 type DrivePhase = "planning" | "feature" | "deploy" | "promote" | "done";
 interface PlanningState {
+    /** The project intake exists on disk (product-overview.md + nfrs.md), so the Spec Author has
+     *  something to propose FROM. Headless the Human Proxy deposits the recorded seeds (this reads
+     *  true); interactively a fresh project starts WITHOUT them (false) and the drive first surfaces
+     *  the Product Owner intake step to help the human author them. Absent = treated as satisfied
+     *  (legacy/hermetic states that predate the field), so intake fires ONLY on an explicit `false`
+     *  and every existing run is byte-identical. */
+    intakeReady?: boolean;
     /** The Spec Author proposed the sprint's candidate feature breakdown. */
     proposed: boolean;
     /** The Architect t-shirt-sized the candidates (planning/estimates.json), so
@@ -260,6 +267,10 @@ type WorkflowAction = DriveAction | {
     kind: "invoke-role";
     role: "architect-reviewer";
     mode: "estimate-committed";
+} | {
+    kind: "invoke-role";
+    role: "product-owner";
+    mode: "intake";
 } | {
     kind: "invoke-role";
     role: "product-owner";
