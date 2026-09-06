@@ -225,7 +225,7 @@ function isFile(abs: string): boolean {
  * or flood the UI. Paths are returned relative to `root` so they round-trip through
  * `stepOutputContent`. `absDir` is assumed already containment-checked by the caller.
  */
-function listFilesUnder(root: string, absDir: string, cap = 60): string[] {
+export function listFilesUnder(root: string, absDir: string, cap = 60): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
     if (out.length >= cap) return;

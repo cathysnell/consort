@@ -98,7 +98,10 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
   };
   let proj: string;
   let rec: string;
-  const RICH = ["transcripts", "correspondence", "stepOutputs"] as const;
+  // The COMPANION-gated capabilities , the ones that genuinely need a per-turn corpus. stepOutputs
+  // is NOT here: a live board serves a step's deliverables from `.consort/` at HEAD, so it is a base
+  // capability (asserted always-on separately below), present with or without a recording.
+  const RICH = ["transcripts", "correspondence"] as const;
 
   // A minimally READABLE ReplaySource corpus: available() requires the agent-log + turns/index.json.
   const makeReadableCorpus = (dir: string) => {
@@ -133,6 +136,25 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     const src = new LiveSource();
     expect(src.fidelity()).toEqual({ recording: false });
     for (const c of RICH) expect(src.capabilities.has(c)).toBe(false);
+    // stepOutputs is a BASE live capability , served from `.consort/` at HEAD, present even with no
+    // companion recording (so clicking a role/node surfaces what it produced on any live board).
+    expect(src.capabilities.has("stepOutputs")).toBe(true);
+  });
+
+  it("serves a step's deliverables from `.consort/` at HEAD with NO companion recording", () => {
+    // The product-owner's intake node deliverables sit at the live project HEAD; clicking the PO
+    // must surface them even on a plain live build (the user's bug: the click showed nothing).
+    writeFileSync(join(proj, ".consort", "product-overview.md"), "# Overview\n");
+    writeFileSync(join(proj, ".consort", "nfrs.md"), "# NFRs\n");
+    const src = new LiveSource();
+    expect(src.fidelity()).toEqual({ recording: false }); // no companion
+    const out = src.stepOutputs!("intake", null);
+    const names = out.assets.map((a) => a.name).sort();
+    // Both present docs are listed; design-brief.md was not written, so it is absent (not a dead link).
+    expect(names).toEqual(["nfrs.md", "product-overview.md"]);
+    // And its content reads back from HEAD via the same containment-guarded reader.
+    const overview = out.assets.find((a) => a.name === "product-overview.md")!;
+    expect(src.stepOutputContent!(overview.path).content).toContain("# Overview");
   });
 
   it("does NOT key off the project's own .consort/turns (the shipped-A3 detection bug)", () => {

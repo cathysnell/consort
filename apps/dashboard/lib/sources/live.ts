@@ -25,7 +25,8 @@
 //   the "rewind == replay while live" unlock. The FidelityBanner, whose visibility is keyed on
 //   the MISSING capabilities, then auto-hides.
 
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
+import { basename } from "node:path";
 import {
   noSftddMessage,
   projectDir,
@@ -35,9 +36,12 @@ import {
   recordDir,
   sftddDir,
 } from "../consort";
+import { resolveContained } from "../safepath";
+import { STEP_OUTPUTS } from "../topology";
 import { loadPlanning } from "../planning";
 import { CAPABILITIES, foldSource, type Capability, type DashboardSource } from "../source";
-import { ReplaySource, classify, type ParsedTranscript, type TurnDetail } from "./replay";
+import { ReplaySource, classify, listFilesUnder, type ParsedTranscript, type TurnDetail } from "./replay";
+import type { StepOutputAsset } from "../types";
 import { correlate, driftMessage, driftSeverity } from "../correlate";
 import { RECENT_EVENT_TAIL } from "../reducer";
 import type { AgentLogEvent, ArtifactContent, DashboardState, Planning, SnapshotInputs, SourceMeta, StepOutputs } from "../types";
@@ -50,16 +54,23 @@ const LIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   "artifactPaths",
   "artifactContent", // HEAD-only; see the header note
   "planningBacklog",
+  // A lifecycle step's deliverables, served from the live project's `.consort/` tree at HEAD (see
+  // stepOutputs below). Unlike transcripts/correspondence , which genuinely need a per-turn corpus ,
+  // the deliverables a step produced live ON DISK, so "click a role/node → read what it produced"
+  // works on ANY live board, not only one with a companion recording. This is what makes clicking
+  // the product-owner surface its intake docs (product-overview / nfrs / design-brief).
+  "stepOutputs",
 ]);
 
-// With a companion record-lane corpus, the live board additionally gains the three replay-grade
-// drill-down capabilities, served from the record dir. Precomputed once; the getter picks between
-// the two sets by whether a companion is present-and-readable right now.
+// With a companion record-lane corpus, the live board additionally gains the two replay-grade
+// drill-down capabilities that DO need a per-turn corpus (a live project has no transcript / no
+// correspondence.jsonl). stepOutputs is already in the base set (served from HEAD); the companion
+// simply gives its reads the recorded per-turn snapshot instead. Precomputed once; the getter picks
+// between the two sets by whether a companion is present-and-readable right now.
 const LIVE_CAPABILITIES_RECORDING: ReadonlySet<Capability> = new Set<Capability>([
   ...LIVE_CAPABILITIES,
   "transcripts",
   "correspondence",
-  "stepOutputs",
 ]);
 
 // Sanity: every capability named above must be a declared one. A typo would otherwise
@@ -159,12 +170,55 @@ export class LiveSource implements DashboardSource {
     return rec.correspondenceSummary(undefined, recentCount, horizon);
   }
 
+  // A lifecycle step's deliverables. A companion recording gives the richer per-turn snapshot; a
+  // plain live board reads the SAME deliverables from the project's `.consort/` tree at HEAD, so the
+  // drill-down works either way (the point-in-time nuance is the companion's, the files are the
+  // project's). An empty HEAD list is honest , the step simply hasn't produced them yet.
   stepOutputs(node: string, feature?: string | null): StepOutputs {
-    return this.companion()?.stepOutputs(node, feature) ?? { node, feature: feature ?? null, assets: [] };
+    const rec = this.companion();
+    if (rec) return rec.stepOutputs(node, feature);
+    return this.stepOutputsAtHead(node, feature ?? null);
   }
 
   stepOutputContent(rel: string): ArtifactContent {
-    return this.companion()?.stepOutputContent(rel) ?? { path: rel, kind: classify(rel), content: null, reason: "(no companion recording)" };
+    const rec = this.companion();
+    if (rec) return rec.stepOutputContent(rel);
+    // No companion: read the deliverable from the live project at HEAD (containment-guarded, same
+    // reader as the artifact drill-down). classify AS RESOLVED under `.consort/`, matching HEAD.
+    return readArtifactAtHead(rel);
+  }
+
+  // The HEAD half of stepOutputs: resolve each STEP_OUTPUTS spec for `node` against the live
+  // `.consort/` root and keep the ones that exist NOW (a `dir` spec expands to its files). Mirrors
+  // ReplaySource.stepOutputs, but rooted at the live tree instead of `recorded-artifacts/`, and
+  // containment-guarded (the same guard the HEAD artifact reader uses) since paths carry `<F>`.
+  private stepOutputsAtHead(node: string, feature: string | null): StepOutputs {
+    const root = sftddDir();
+    const specs = STEP_OUTPUTS[node] ?? [];
+    const assets: StepOutputAsset[] = [];
+    const seen = new Set<string>();
+    const add = (rel: string) => {
+      if (seen.has(rel)) return;
+      seen.add(rel);
+      assets.push({ path: rel, name: basename(rel), kind: classify(basename(root) + "/" + rel) });
+    };
+    for (const spec of specs) {
+      if (spec.perFeature && !feature) continue;
+      const rel = feature ? spec.path.split("<F>").join(feature) : spec.path;
+      const abs = resolveContained(root, rel);
+      if (abs === null) continue; // escaped containment or absent
+      try {
+        const st = statSync(abs);
+        if (spec.dir && st.isDirectory()) {
+          for (const child of listFilesUnder(root, abs)) add(child);
+        } else if (st.isFile()) {
+          add(rel);
+        }
+      } catch {
+        /* not present at HEAD — dropped, as elsewhere */
+      }
+    }
+    return { node, feature, assets };
   }
 
   turn(ordinal: number): TurnDetail | null {
