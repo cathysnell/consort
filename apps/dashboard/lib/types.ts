@@ -391,7 +391,7 @@ export interface DashboardState {
   // laneCurrent + pendingGate + blockers, so a step running, a gate parked-at, an escalation, or idle
   // is decided in one place instead of each surface recombining the raw fields (and disagreeing).
   focus: Focus;
-  lane: "design" | "build" | "complete"; // which top bar to emphasize
+  lane: "plan" | "design" | "build" | "complete"; // which top bar to emphasize ("plan" = intake/planning, before design starts)
   totalCost: number;
   eventCount: number;
   recentEvents: AgentLogEvent[]; // tail, newest last

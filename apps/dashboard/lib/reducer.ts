@@ -123,7 +123,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
     pendingGate: null,
     focus: { kind: "idle" },
     laneStepMeta: {},
-    lane: "design" as const,
+    lane: "plan" as const, // empty/fresh run is at the start (plan), not design
     totalCost: 0,
     eventCount: 0,
     recentEvents: [],
@@ -237,22 +237,27 @@ function deriveTopology(
 //
 // Note this uses activeNode first precisely because `passedNodes` alone is too generous:
 // `reflect` maps to the build node, so a design-lane reflect would otherwise read as "build".
-function laneFromPlayhead(topology: DashboardState["topology"]): "design" | "build" | "complete" {
-  const laneOf = (node: string | null): "design" | "build" | "complete" | null => {
+function laneFromPlayhead(topology: DashboardState["topology"]): "plan" | "design" | "build" | "complete" {
+  const laneOf = (node: string | null): "plan" | "design" | "build" | "complete" | null => {
     if (node === "shipped" || node === "promote") return "complete";
     if (node === "build" || node === "deploy") return "build";
-    if (node === "design" || node === "plan" || node === "intake") return "design";
+    if (node === "design") return "design";
+    // intake / plan are PRE-design: their own bar, so the DESIGN bar does not read "in progress"
+    // while the run is still at intake or planning (the intake-gate false "design in progress").
+    if (node === "plan" || node === "intake") return "plan";
     return null;
   };
 
   const active = laneOf(topology.activeNode);
   if (active) return active;
 
-  // Nothing running: use the furthest point the run got to, most advanced first.
+  // Nothing running: use the furthest point the run got to, most advanced first. A run that only
+  // reached intake/plan is "plan", NOT "design" (design has not started).
   const passed = new Set(topology.passedNodes);
   if (passed.has("shipped") || passed.has("promote")) return "complete";
   if (passed.has("deploy")) return "build";
-  return "design";
+  if (passed.has("design")) return "design";
+  return "plan";
 }
 
 /**
@@ -487,10 +492,14 @@ export function fold(
   // workflow ended, which made the Build lane render "· in progress" on a run that had
   // already promoted and shipped. A pinned-and-shipped past feature is complete for the same
   // reason: its own workflow ended, even though the run at large has moved on.
+  // At the live edge trust the drive's derived_phase; but during intake/planning there is no feature
+  // phase yet (derived_phase is null), so fall back to the playhead's lane instead of blindly
+  // defaulting to "design" (the intake-gate false "design in progress"). Off the live edge, the
+  // playhead's own position is authoritative.
   const derived =
-    runEnded || pinnedDone ? "complete" : atLive ? derivedSnapshot : laneFromPlayhead(topology);
+    runEnded || pinnedDone ? "complete" : atLive ? (derivedSnapshot ?? laneFromPlayhead(topology)) : laneFromPlayhead(topology);
   const lane: DashboardState["lane"] =
-    derived === "complete" ? "complete" : derived === "build" ? "build" : "design";
+    derived === "complete" ? "complete" : derived === "build" ? "build" : derived === "plan" ? "plan" : "design";
 
   // The ONE gate the drive is parked at now: the MOST-RECENTLY-SURFACED gate that has not since been
   // cleared. Derived from the LOG, not the gate SNAPSHOT — acceptance is not a next.json "gate" at all

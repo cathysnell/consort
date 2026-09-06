@@ -259,9 +259,10 @@ describe("fold — scrubbed-back state is reconstructed from the log, not the sn
   });
 
   it("takes the lane from the playhead, not from derived_phase", () => {
-    // The snapshot says `build`, but event 1 is a `propose` phase.start — still planning.
+    // The snapshot says `build`, but event 1 is a `propose` phase.start — still planning, so the
+    // lane is "plan" (propose/estimate/intake are the plan bar, not design).
     expect(fold(RUN, withStatus).lane).toBe("build");
-    expect(fold(RUN, withStatus, 1).lane).toBe("design");
+    expect(fold(RUN, withStatus, 1).lane).toBe("plan");
   });
 
   it("does not mark the design lane complete while the run is still designing", () => {
@@ -781,7 +782,7 @@ describe("fold — multi-feature run (stockflow-rerecord corpus)", () => {
     const events = readCorpus();
     // Folding exactly TO sprint 1's end (213/214) legitimately reads complete: the slice ends
     // on phase.end/workflow with nothing reopened yet. The bug was that it STAYED complete.
-    expect(fold(events, snap(), 215).lane).toBe("design"); // sprint 2's plan lane opens
+    expect(fold(events, snap(), 215).lane).toBe("plan"); // sprint 2's plan lane opens (propose = planning)
     expect(fold(events, snap(), 230).lane).toBe("design"); // F6 is designing
     expect(fold(events, snap(), 260).lane).toBe("build"); // ...and building
     expect(fold(events, snap(), 300).lane).not.toBe("complete");
@@ -806,12 +807,12 @@ describe("fold — multi-feature run (stockflow-rerecord corpus)", () => {
     expect(s.lane).toBe("complete");
     expect(s.agents.filter((a) => a.status === "working" || a.status === "on-deck")).toEqual([]);
 
-    // ...but a real phase.start after the end DOES mean a new workflow began.
+    // ...but a real phase.start after the end DOES mean a new workflow began (propose = the plan lane).
     const trailingStart = [
       ...events,
       ev("phase.start", { phase: "propose", feature_id: "F7-next" }, { role: "spec-author" }),
     ];
-    expect(fold(trailingStart, snap()).lane).toBe("design");
+    expect(fold(trailingStart, snap()).lane).toBe("plan");
   });
 
   it("puts agents back to work after the first sprint ends", () => {
@@ -1327,5 +1328,24 @@ describe("latestOrchestratorActivity — the orchestrator's current narration, o
       ev("reasoning", { story: "S1" }, { role: "orchestrator", message: "…internal narration…" }), // skipped
     ];
     expect(latestOrchestratorActivity(withNoise)).toEqual({ action: "dispatch driver for green", story: "S1" });
+  });
+});
+
+describe("fold — lane at intake/plan is 'plan', not 'design'", () => {
+  it("a run parked at the intake gate reads lane 'plan' (design bar is NOT in progress)", () => {
+    // pm6's real shape: the PO drafts intake, the drive parks at the intake gate. Only
+    // intake-phase events + the intake gate.surfaced , NO design has happened.
+    const events = [
+      ev("handoff", { to_role: "product-owner", phase: "intake" }, { role: "orchestrator", message: "dispatch product-owner for intake" }),
+      ev("phase.start", { phase: "intake" }, { role: "product-owner" }),
+      ev("turn.usage", { phase: "intake", cost_usd: 0.27 }, { role: "product-owner" }),
+      ev("gate.surfaced", { gate: "intake", subject: "sprint pm-s1" }, { role: "orchestrator" }),
+    ];
+    const s = fold(events, snap());
+    // The bug: lane resolved to "design" (intake was lumped into the design bar), so the
+    // StatusBar's DesignLane showed "in progress" at the intake gate.
+    expect(s.lane).toBe("plan");
+    // And no design phase reads in-progress with only intake events.
+    expect(s.designPhases.every((p) => p.status === "not-started")).toBe(true);
   });
 });
