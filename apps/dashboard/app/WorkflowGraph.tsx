@@ -62,20 +62,18 @@ export function WorkflowGraph({
   // there and needs the whole prefix, so it is derived once rather than recomputed on the client.
   const passed = new Set(state.topology.passedNodes);
   const activeNode = state.topology.activeNode;
-  // The active node's colour reflects WHAT is active , the same colour the agent cards + the
-  // orchestrator card use: a HIL issue/escalation is red (status-critical), a parked human gate is
-  // the gate colour, a working agent is its role colour, else the neutral accent. Reads the ONE
-  // focus observation + blockers, so it never disagrees with the other surfaces.
+  // The active node's highlight is a NEUTRAL slate (the deterministic conductor's colour), NOT any
+  // agent role colour , so "this lane is active" never collides with e.g. the navigator's orange.
+  // The human states keep their own: a HIL issue/escalation is red, a parked gate is purple. Which
+  // agents own a node is shown by its role DOTS, not the highlight. Reads the ONE focus observation
+  // + blockers, so it never disagrees with the other surfaces.
   const focus = state.focus;
-  const activeRole = state.agents.find((a) => a.status === "working")?.role ?? null;
   const activeColor =
     state.blockers.length > 0
       ? "var(--status-critical)"
       : focus.kind === "gate"
         ? "var(--status-gate)"
-        : activeRole
-          ? colorForRole(activeRole)
-          : "var(--status-accent)";
+        : "var(--role-orchestrator)";
   // The gate DIAMOND the run is parked at also highlights (not just the phase node beside it): find
   // the gate node whose gate name is the one the focus is awaiting, and treat it as active too, so it
   // glows in the gate colour (activeColor is the gate colour while focus.kind === "gate").

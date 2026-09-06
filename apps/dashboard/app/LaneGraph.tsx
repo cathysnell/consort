@@ -159,7 +159,10 @@ function LanePanel({
       : entered
         ? "in progress"
         : "not started";
-  const statusColor = active ? "var(--status-accent-text)" : complete ? "var(--status-good-text)" : "var(--text-faint)";
+  // Active lane highlight is NEUTRAL slate (the conductor's colour), not the accent orange that
+  // collided with the navigator's role colour. The label uses the strong text (readable on the slate
+  // tint); complete/not-started keep their own.
+  const statusColor = active ? "var(--text-strong)" : complete ? "var(--status-good-text)" : "var(--text-faint)";
 
   return (
     <div
@@ -167,7 +170,7 @@ function LanePanel({
         // Body carries a subtle tint (surface-panel); only the header band below is the more
         // distinct card surface.
         background: "var(--surface-panel)",
-        border: `1px solid ${active ? "var(--status-accent)" : "var(--border-default)"}`,
+        border: `1px solid ${active ? "var(--role-orchestrator)" : "var(--border-default)"}`,
         borderRadius: radius.panel,
         overflow: "hidden",
       }}
@@ -183,7 +186,7 @@ function LanePanel({
           padding: "9px 12px",
           // Consistent pane pattern: a distinct header band (card surface) over a flat page body,
           // turning to the in-progress accent when the lane is active.
-          background: active ? "var(--status-accent-tint-soft)" : "var(--surface-card)",
+          background: active ? "color-mix(in srgb, var(--role-orchestrator) 12%, transparent)" : "var(--surface-card)",
           textAlign: "left",
           cursor: "pointer",
         }}
