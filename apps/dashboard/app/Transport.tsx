@@ -100,12 +100,6 @@ export function Transport({
           }}
         />
         <TransportButton label="▶|" title="step forward one event" onClick={() => step(1)} disabled={atEnd} />
-        <TransportButton
-          label="latest"
-          title="jump to the newest event"
-          active={live}
-          onClick={() => { onPlayingChange(false); onChange(null); }}
-        />
       </div>
 
       <input
