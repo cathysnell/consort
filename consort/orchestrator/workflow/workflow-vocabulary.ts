@@ -184,6 +184,12 @@ export interface PlanningState {
    *  (legacy/hermetic states that predate the field), so intake fires ONLY on an explicit `false`
    *  and every existing run is byte-identical. */
   intakeReady?: boolean;
+  /** The human (or, headless, the Human Proxy) APPROVED the drafted intake at the intake gate. The
+   *  drive parks at the intake gate after the PO drafts product-overview/nfrs/design-brief, so the
+   *  human can review / edit / request changes, and only advances to the Spec Author's propose once
+   *  approved. Absent = treated as satisfied (legacy/hermetic states), so the gate fires ONLY on an
+   *  explicit `false` (intake ready but not yet approved) and every existing run is byte-identical. */
+  intakeApproved?: boolean;
   /** The Spec Author proposed the sprint's candidate feature breakdown. */
   proposed: boolean;
   /** The Architect t-shirt-sized the candidates (planning/estimates.json), so
@@ -294,6 +300,7 @@ export type WorkflowAction =
   | { kind: "invoke-role"; role: "architect-reviewer"; mode: "estimate-committed" }
   | { kind: "invoke-role"; role: "product-owner"; mode: "intake" }
   | { kind: "invoke-role"; role: "product-owner"; mode: "author-requests" }
+  | { kind: "approve-intake-gate" }
   | { kind: "approve-plan-gate" }
   | { kind: "planning-complete" }
   | { kind: "dispatch"; story: string }
@@ -417,6 +424,7 @@ export function actionLane(action: WorkflowAction): ActionLane {
       }
       return action.role === "navigator" || action.role === "driver" ? "build" : "design";
     }
+    case "approve-intake-gate":
     case "approve-plan-gate":
     case "planning-complete":
       return "planning";
@@ -465,6 +473,7 @@ export function actionLane(action: WorkflowAction): ActionLane {
 export function isHitlGateAction(action: WorkflowAction): boolean {
   return (
     action.kind === "approve-gate" ||
+    action.kind === "approve-intake-gate" ||
     action.kind === "approve-plan-gate" ||
     action.kind === "approve-deploy-gate" ||
     action.kind === "approve-promote-gate" ||

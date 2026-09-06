@@ -34,6 +34,7 @@
 // approve; 3 = per-story draft invariant violated.
 
 import { approveSprintPlanGate } from "../../consort/gates/sprint-gates.js";
+import { approveIntakeGate } from "../../consort/gates/intake-gate.js";
 import { drainGatesAsHumanProxy } from "../../consort/gates/human-proxy.js";
 import { approveStoryGateFromDisk, batchedDraftMessage } from "../../consort/pipeline/story-pipeline.js";
 import { resolveConsortDir } from "../../consort/config/consort-paths.js";
@@ -135,6 +136,15 @@ export function runApproveGateCli(argv: string[]): number {
       `approve-gate: ${p.feature}/${p.story} , per-story spec gate approved by ${p.approver}` +
         ` (ready + queued: ${(r.queue ?? []).join(", ") || "none"})\n`,
     );
+    return 0;
+  }
+
+  // Sprint INTAKE gate: `--sprint <name> --gate intake`. Approves the drafted intake (the human
+  // reviewed product-overview/nfrs/design-brief) so the drive advances to the Spec Author's propose.
+  // Writes the approval marker + logs gate.approved("intake"). Checked before the plan-gate branch.
+  if (p.sprint && (p.gate as string) === "intake") {
+    approveIntakeGate(consortDir, p.approver);
+    process.stdout.write(`approve-gate: intake gate for '${p.sprint}' approved by ${p.approver}\n`);
     return 0;
   }
 

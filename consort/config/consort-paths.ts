@@ -104,6 +104,13 @@ export const nfrsMd = (tdd: string): string => join(tdd, "nfrs.md");
  *  never disagree about whether intake is done , the exact split that let the sprint path skip it. */
 export const intakeReadyOnDisk = (tdd: string): boolean =>
   fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
+/** The intake-gate approval marker (`.consort/intake/approved`): written when the human (or, headless,
+ *  the Human Proxy) approves the drafted intake at the intake gate. Its presence gates the transition
+ *  from the intake turn to the Spec Author's propose , the drive parks at the gate until it exists. */
+export const intakeApprovedMarker = (tdd: string): string => join(tdd, "intake", "approved");
+/** True once the intake gate has been approved (the marker exists). Distinct from intakeReadyOnDisk
+ *  (docs drafted): drafted-but-unapproved is exactly the state the intake gate pauses in. */
+export const intakeApprovedOnDisk = (tdd: string): boolean => fs.existsSync(intakeApprovedMarker(tdd));
 /** The design corpus dir (`.consort/design/`): the design brief, project-level
  *  design-guide, IA, and staged brand assets , the committed design half of a
  *  feature's spec. */

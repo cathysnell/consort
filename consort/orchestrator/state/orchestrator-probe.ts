@@ -54,6 +54,7 @@ import {
   architectureJson,
   dbDesignJson,
   intakeReadyOnDisk,
+  intakeApprovedOnDisk,
 } from "../../config/consort-paths.js";
 import { checkDbDesign } from "../validators/conformance/artifact-conformance.js";
 
@@ -187,7 +188,7 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote,
   };

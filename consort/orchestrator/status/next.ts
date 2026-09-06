@@ -223,6 +223,23 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
         holdOption(),
       ];
     }
+    case "approve-intake-gate":
+      return [
+        {
+          id: "intake.approve",
+          title: "Approve the project intake",
+          hil_prompt:
+            "The Product Owner drafted product-overview.md / nfrs.md" +
+            " / design-brief.md from your answers. REVIEW them (open + read), EDIT anything that's off, " +
+            "or ask for changes (edit .consort/intake/answers.md and re-run to redraft). Approve to hand " +
+            "the intake to the Spec Author, who proposes the sprint from it?",
+          kind: "gate",
+          enact: gateEnact,
+          note: "To request changes instead of approving: edit the drafted docs directly, or edit " +
+            ".consort/intake/answers.md and resume so the PO redrafts. Approve only once they reflect your intent.",
+        },
+        holdOption(),
+      ];
     case "approve-plan-gate":
       return [
         {

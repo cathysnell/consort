@@ -145,6 +145,7 @@ var GATE_KINDS = [
   "surface-gate",
   "approve-gate",
   "design-complete",
+  "approve-intake-gate",
   "approve-plan-gate",
   "planning-complete",
   "dispatch",

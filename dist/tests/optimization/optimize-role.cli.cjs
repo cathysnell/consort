@@ -7528,6 +7528,8 @@ var workflowStateJson = (tdd) => (0, import_node_path2.join)(tdd, "workflow-stat
 var productOverviewMd = (tdd) => (0, import_node_path2.join)(tdd, "product-overview.md");
 var nfrsMd = (tdd) => (0, import_node_path2.join)(tdd, "nfrs.md");
 var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
+var intakeApprovedMarker = (tdd) => (0, import_node_path2.join)(tdd, "intake", "approved");
+var intakeApprovedOnDisk = (tdd) => fs.existsSync(intakeApprovedMarker(tdd));
 var designDir = (tdd) => (0, import_node_path2.join)(tdd, "design");
 var designGuideJson = (tdd) => (0, import_node_path2.join)(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => (0, import_node_path2.join)(tdd, "architecture");
@@ -11885,7 +11887,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -16373,6 +16375,7 @@ function nextTransition(state) {
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
     if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
+    if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
@@ -16820,7 +16823,8 @@ function labelForAction(action) {
     const mode = a.buildMode ?? a.mode;
     return mode ? `${role}-${mode}` : role;
   }
-  if (kind === "approve-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
+  if (kind === "approve-gate" || kind === "approve-intake-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
+    if (kind === "approve-intake-gate") return "gate-intake";
     if (kind === "approve-plan-gate") return "gate-plan";
     if (kind === "approve-promote-gate") return "gate-promote";
     return "gate-spec";
@@ -18104,6 +18108,14 @@ Edit ONLY those test files. The orchestrator re-deploys + re-verifies the whole 
       ];
     case "complete":
       return [{ kind: "cli", bin: PIPELINE_BIN, args: ["complete", ...tdd] }];
+    case "approve-intake-gate":
+      return [
+        {
+          kind: "cli",
+          bin: HUMAN_PROXY_BIN,
+          args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "intake", "--approver", approver, "--tdd-dir", cfg.consortDir]
+        }
+      ];
     case "approve-plan-gate":
       return [
         {

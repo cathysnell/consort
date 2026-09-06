@@ -242,6 +242,8 @@ export function gateEnactCommand(
   const you = ctx.approver ?? "<you>";
   const f = ctx.featureId ?? "<feature-id>";
   switch (gate.kind) {
+    case "approve-intake-gate":
+      return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "intake", "--approver", you] };
     case "approve-plan-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--approver", you] };
     case "approve-gate": // the per-story spec gate (pipeline.json), NOT feature gates.json

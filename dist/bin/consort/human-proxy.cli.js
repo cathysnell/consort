@@ -6712,6 +6712,7 @@ var planningDir = (tdd) => join(tdd, "planning");
 var sprintsDir = (tdd) => join(tdd, "sprints");
 var cyclesRootDir = (tdd) => join(tdd, "cycles");
 var nfrsMd = (tdd) => join(tdd, "nfrs.md");
+var intakeApprovedMarker = (tdd) => join(tdd, "intake", "approved");
 var architectureDir = (tdd) => join(tdd, "architecture");
 var architectureConventionsJson = (tdd) => join(architectureDir(tdd), "conventions.json");
 var featureProposalsMd = (tdd) => join(planningDir(tdd), "feature-proposals.md");
@@ -9108,6 +9109,18 @@ function approveSprintPlanGate(args) {
   return { ok: true, state: updated, alreadyApproved: false };
 }
 
+// consort/gates/intake-gate.ts
+init_esm_shims();
+import { mkdirSync as mkdirSync18, writeFileSync as writeFileSync20 } from "fs";
+import { dirname as dirname14 } from "path";
+function approveIntakeGate(consortDir, approver) {
+  const marker = intakeApprovedMarker(consortDir);
+  mkdirSync18(dirname14(marker), { recursive: true });
+  writeFileSync20(marker, `${(/* @__PURE__ */ new Date()).toISOString()} approved-by:${approver}
+`);
+  logGateApproved({ consortDir, gate: "intake", approver });
+}
+
 // bin/consort/human-proxy.cli.ts
 function runSupplyCli(argv) {
   let from;
@@ -9346,6 +9359,12 @@ function runHumanProxyCli(argv) {
   const args = parseArgs(argv);
   if (args.help) {
     process.stdout.write(`${HELP}
+`);
+    return 0;
+  }
+  if (args.sprint && args.gate === "intake") {
+    approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
+    process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved
 `);
     return 0;
   }

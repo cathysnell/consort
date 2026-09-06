@@ -22,6 +22,7 @@ import {
 import { applyReviseSelfHeal } from "../../consort/orchestrator/status/revise.js";
 import { ARTIFACT_ROOT } from "../../consort/config/consort-paths.js";
 import { approveSprintPlanGate } from "../../consort/gates/sprint-gates.js";
+import { approveIntakeGate } from "../../consort/gates/intake-gate.js";
 import type { GateName } from "../../consort/gates/gates.js";
 
 /**
@@ -275,6 +276,14 @@ export function runHumanProxyCli(argv: string[]): number {
   const args = parseArgs(argv);
   if (args.help) {
     process.stdout.write(`${HELP}\n`);
+    return 0;
+  }
+  // Sprint-scoped INTAKE gate: `--sprint <name> --gate intake`. The Human Proxy approves the intake
+  // gate headless (writes the approval marker + logs gate.approved("intake")), so replay/CI never
+  // park at it. Checked BEFORE the plan-gate branch (that branch matches any --sprint).
+  if (args.sprint && args.gate === "intake") {
+    approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
+    process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved\n`);
     return 0;
   }
   // Sprint-scoped plan gate: `--sprint <name> [--gate plan]`. The

@@ -164,7 +164,7 @@ describe("readDriveContext", () => {
     expect(ctx.breakdownDone).toBe(false);
     // No product-overview.md/nfrs.md on disk → intake not ready (the drive would surface the PO
     // intake step first, interactively). An empty project has done nothing, intake included.
-    expect(ctx.planning).toEqual({ intakeReady: false, proposed: false, estimated: false, requestsAuthored: false });
+    expect(ctx.planning).toEqual({ intakeReady: false, intakeApproved: false, proposed: false, estimated: false, requestsAuthored: false });
     expect(ctx.deploy).toEqual({ deployed: false, gateApproved: false, verifyAssessEligible: false, verifyRefactorPending: false });
   });
 
@@ -236,6 +236,8 @@ describe("readDriveContext", () => {
     // project that has already proposed + authored requests.
     writeFileSync(join(consortDir, "product-overview.md"), "# Overview\n\nA product.\n");
     writeFileSync(join(consortDir, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
+    mkdirSync(join(consortDir, "intake"), { recursive: true });
+    writeFileSync(join(consortDir, "intake", "approved"), "approved\n"); // intake gate approved (mid-flow)
     writeFeatureFile("feature-request.md", "# request");
     writeFeatureFile("feature-spec.json", JSON.stringify({ id: FEATURE, stories: ["S1", "S2"] }));
     writeEvidence(); // deploy ran -> deployed:true
@@ -244,7 +246,7 @@ describe("readDriveContext", () => {
     const ctx = readDriveContext(consortDir, FEATURE);
     expect(ctx.phase).toBe("feature"); // implementation -> feature
     expect(ctx.breakdownDone).toBe(true);
-    expect(ctx.planning).toEqual({ intakeReady: true, proposed: true, estimated: false, requestsAuthored: true });
+    expect(ctx.planning).toEqual({ intakeReady: true, intakeApproved: true, proposed: true, estimated: false, requestsAuthored: true });
     // deploy ran (evidence present) but the deploy gate is not approved
     expect(ctx.deploy).toEqual({ deployed: true, gateApproved: false, verifyAssessEligible: false, verifyRefactorPending: false });
   });

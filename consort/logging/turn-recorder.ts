@@ -441,8 +441,9 @@ export function labelForAction(action: WorkflowAction): string {
     const mode = a.buildMode ?? a.mode;
     return mode ? `${role}-${mode}` : role;
   }
-  if (kind === "approve-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
+  if (kind === "approve-gate" || kind === "approve-intake-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
     // approve-gate carries the per-story spec gate; the others name their gate.
+    if (kind === "approve-intake-gate") return "gate-intake";
     if (kind === "approve-plan-gate") return "gate-plan";
     if (kind === "approve-promote-gate") return "gate-promote";
     return "gate-spec";

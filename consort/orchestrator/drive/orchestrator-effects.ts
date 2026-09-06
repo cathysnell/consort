@@ -1728,6 +1728,19 @@ export function commandsForAction(action: WorkflowAction, cfg: DriveEffectsConfi
     case "complete":
       return [{ kind: "cli", bin: PIPELINE_BIN, args: ["complete", ...tdd] }];
 
+    case "approve-intake-gate":
+      // HITL intake gate: AFTER the PO drafts the intake, BEFORE propose. Interactive, the drive
+      // PARKS here (the human reviews/edits/approves via consort-approve-gate --gate intake);
+      // headless, the Human Proxy performs this and approves (writes the marker + logs
+      // gate.approved("intake")). Sprint-scoped, mirroring the plan gate's approve verb.
+      return [
+        {
+          kind: "cli",
+          bin: HUMAN_PROXY_BIN,
+          args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "intake", "--approver", approver, "--tdd-dir", cfg.consortDir],
+        },
+      ];
+
     case "approve-plan-gate":
       // HITL sprint plan gate: the Human Proxy approves it headless (teeth:
       // feature-proposals.md must exist + conform). Sprint-scoped, mirroring the

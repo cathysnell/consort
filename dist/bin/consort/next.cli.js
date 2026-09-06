@@ -6677,6 +6677,8 @@ var workflowStateJson = (tdd) => join(tdd, "workflow-state.json");
 var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
 var nfrsMd = (tdd) => join(tdd, "nfrs.md");
 var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
+var intakeApprovedMarker = (tdd) => join(tdd, "intake", "approved");
+var intakeApprovedOnDisk = (tdd) => fs.existsSync(intakeApprovedMarker(tdd));
 var designDir = (tdd) => join(tdd, "design");
 var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => join(tdd, "architecture");
@@ -7822,6 +7824,7 @@ function nextTransition(state) {
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
     if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
+    if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
@@ -8444,6 +8447,8 @@ function gateEnactCommand(gate, ctx = {}) {
   const you = ctx.approver ?? "<you>";
   const f = ctx.featureId ?? "<feature-id>";
   switch (gate.kind) {
+    case "approve-intake-gate":
+      return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "intake", "--approver", you] };
     case "approve-plan-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--approver", you] };
     case "approve-gate":
@@ -9550,7 +9555,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -9915,7 +9920,7 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   }
   return {
     phase: "planning",
-    planning: { intakeReady: intakeReadyOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},
@@ -10026,6 +10031,18 @@ function buildNextOptions(action, ctx) {
         holdOption()
       ];
     }
+    case "approve-intake-gate":
+      return [
+        {
+          id: "intake.approve",
+          title: "Approve the project intake",
+          hil_prompt: "The Product Owner drafted product-overview.md / nfrs.md / design-brief.md from your answers. REVIEW them (open + read), EDIT anything that's off, or ask for changes (edit .consort/intake/answers.md and re-run to redraft). Approve to hand the intake to the Spec Author, who proposes the sprint from it?",
+          kind: "gate",
+          enact: gateEnact,
+          note: "To request changes instead of approving: edit the drafted docs directly, or edit .consort/intake/answers.md and resume so the PO redrafts. Approve only once they reflect your intent."
+        },
+        holdOption()
+      ];
     case "approve-plan-gate":
       return [
         {

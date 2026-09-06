@@ -6732,6 +6732,7 @@ var featuresDir = (tdd) => join2(tdd, "features");
 var planningDir = (tdd) => join2(tdd, "planning");
 var sprintsDir = (tdd) => join2(tdd, "sprints");
 var nfrsMd = (tdd) => join2(tdd, "nfrs.md");
+var intakeApprovedMarker = (tdd) => join2(tdd, "intake", "approved");
 var architectureDir = (tdd) => join2(tdd, "architecture");
 var architectureConventionsJson = (tdd) => join2(architectureDir(tdd), "conventions.json");
 var featureProposalsMd = (tdd) => join2(planningDir(tdd), "feature-proposals.md");
@@ -7673,19 +7674,31 @@ function approveSprintPlanGate(args) {
   return { ok: true, state: updated, alreadyApproved: false };
 }
 
+// consort/gates/intake-gate.ts
+init_esm_shims();
+import { mkdirSync as mkdirSync4, writeFileSync as writeFileSync3 } from "fs";
+import { dirname as dirname3 } from "path";
+function approveIntakeGate(consortDir, approver) {
+  const marker = intakeApprovedMarker(consortDir);
+  mkdirSync4(dirname3(marker), { recursive: true });
+  writeFileSync3(marker, `${(/* @__PURE__ */ new Date()).toISOString()} approved-by:${approver}
+`);
+  logGateApproved({ consortDir, gate: "intake", approver });
+}
+
 // consort/gates/human-proxy.ts
 init_esm_shims();
-import { existsSync as existsSync13, readFileSync as readFileSync13, writeFileSync as writeFileSync9, mkdirSync as mkdirSync8 } from "fs";
-import { dirname as dirname7, basename as basename2 } from "path";
+import { existsSync as existsSync13, readFileSync as readFileSync13, writeFileSync as writeFileSync10, mkdirSync as mkdirSync9 } from "fs";
+import { dirname as dirname8, basename as basename2 } from "path";
 
 // consort/gates/approve-gate.ts
 init_esm_shims();
-import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync5 } from "fs";
+import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync6 } from "fs";
 import { join as join7 } from "path";
 
 // consort/gates/gates-lock.ts
 init_esm_shims();
-import { closeSync, mkdirSync as mkdirSync4, openSync, readFileSync as readFileSync6, unlinkSync as unlinkSync2, writeFileSync as writeFileSync3 } from "fs";
+import { closeSync, mkdirSync as mkdirSync5, openSync, readFileSync as readFileSync6, unlinkSync as unlinkSync2, writeFileSync as writeFileSync4 } from "fs";
 import { join as join5 } from "path";
 var GatesLockBusyError = class extends Error {
   constructor(featureId, heldByPid, retries) {
@@ -7712,7 +7725,7 @@ function withGatesLock(featureId, fn, opts = {}) {
   while (!acquired && attempts <= maxRetries) {
     try {
       const fd = openSync(lockPath, "wx");
-      writeFileSync3(fd, String(process.pid));
+      writeFileSync4(fd, String(process.pid));
       closeSync(fd);
       acquired = true;
     } catch (err) {
@@ -7748,7 +7761,7 @@ function readHeldByPid(lockPath) {
 }
 function gatesLockFilePath(consortDir, featureId) {
   const dir = requireFeatureDir(consortDir, featureId);
-  mkdirSync4(dir, { recursive: true });
+  mkdirSync5(dir, { recursive: true });
   return join5(dir, ".gates.lock");
 }
 function defaultSleep(ms) {
@@ -7758,7 +7771,7 @@ function defaultSleep(ms) {
 
 // consort/gates/gates.ts
 init_esm_shims();
-import { existsSync as existsSync7, readFileSync as readFileSync7, renameSync as renameSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync4 } from "fs";
+import { existsSync as existsSync7, readFileSync as readFileSync7, renameSync as renameSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync5 } from "fs";
 import { join as join6 } from "path";
 var GATES_SCHEMA_VERSION = 1;
 var GATE_NAMES = ["spec", "plan", "test_list", "promote", "deploy"];
@@ -7800,7 +7813,7 @@ function writeGates(state, opts = {}) {
   const file = gatesFilePath(consortDir, state.feature_id);
   const tempFile = `${file}.tmp.${process.pid}.${Date.now()}`;
   const payload = JSON.stringify(state, null, 2) + "\n";
-  writeFileSync4(tempFile, payload, "utf8");
+  writeFileSync5(tempFile, payload, "utf8");
   try {
     renameSync2(tempFile, file);
   } catch (err) {
@@ -7961,25 +7974,25 @@ function appendSelectionLog(consortDir, entry) {
   ];
   const text = lines.join("\n");
   if (existsSync8(logPath)) {
-    writeFileSync5(logPath, readFileSync8(logPath, "utf8") + text);
+    writeFileSync6(logPath, readFileSync8(logPath, "utf8") + text);
   } else {
-    writeFileSync5(logPath, text);
+    writeFileSync6(logPath, text);
   }
 }
 
 // consort/gates/gate-conformance-guard.ts
 init_esm_shims();
 import { existsSync as existsSync12, readFileSync as readFileSync12, readdirSync as readdirSync6, statSync as statSync4 } from "fs";
-import { join as join11, dirname as dirname6 } from "path";
+import { join as join11, dirname as dirname7 } from "path";
 
 // consort/config/consort-config-file.ts
 init_esm_shims();
-import { existsSync as existsSync9, readFileSync as readFileSync9, mkdirSync as mkdirSync5, writeFileSync as writeFileSync6 } from "fs";
-import { dirname as dirname4, join as join9 } from "path";
+import { existsSync as existsSync9, readFileSync as readFileSync9, mkdirSync as mkdirSync6, writeFileSync as writeFileSync7 } from "fs";
+import { dirname as dirname5, join as join9 } from "path";
 
 // consort/config/agent-models.ts
 init_esm_shims();
-import { dirname as dirname3, join as join8 } from "path";
+import { dirname as dirname4, join as join8 } from "path";
 var RECOMMENDED_MODELS = {
   "spec-author": "opus",
   "architect-reviewer": "opus",
@@ -8039,8 +8052,8 @@ function resolveProjectSettings(projectDir) {
 
 // consort/test-list/test-list.ts
 init_esm_shims();
-import { readFileSync as readFileSync10, writeFileSync as writeFileSync7, existsSync as existsSync10, mkdirSync as mkdirSync6, readdirSync as readdirSync5, statSync as statSync3 } from "fs";
-import { join as join10, dirname as dirname5 } from "path";
+import { readFileSync as readFileSync10, writeFileSync as writeFileSync8, existsSync as existsSync10, mkdirSync as mkdirSync7, readdirSync as readdirSync5, statSync as statSync3 } from "fs";
+import { join as join10, dirname as dirname6 } from "path";
 function acIdsInStoryDir(storyDir2) {
   const dir = join10(storyDir2, "acs");
   if (!existsSync10(dir)) return [];
@@ -8063,7 +8076,7 @@ function acsForStory(tddDir, featureId, storyId) {
 
 // consort/architecture/architecture-conventions.ts
 init_esm_shims();
-import { existsSync as existsSync11, readFileSync as readFileSync11, writeFileSync as writeFileSync8, mkdirSync as mkdirSync7 } from "fs";
+import { existsSync as existsSync11, readFileSync as readFileSync11, writeFileSync as writeFileSync9, mkdirSync as mkdirSync8 } from "fs";
 function normModule(m) {
   return m.replace(/\/+$/, "");
 }
@@ -8388,7 +8401,7 @@ function e2eLayerPresentReason(consortDir, featureId) {
   }
   let uiReact = false;
   try {
-    const proj = resolveProjectSettings(dirname6(consortDir)).project;
+    const proj = resolveProjectSettings(dirname7(consortDir)).project;
     uiReact = proj.uiTrack === true && proj.clientFramework === "react";
   } catch {
   }
@@ -8588,8 +8601,8 @@ function drainGatesAsHumanProxy(args) {
 
 // consort/pipeline/story-pipeline.ts
 init_esm_shims();
-import { existsSync as existsSync14, readFileSync as readFileSync14, writeFileSync as writeFileSync10, mkdirSync as mkdirSync9, readdirSync as readdirSync8, statSync as statSync5, rmSync } from "fs";
-import { dirname as dirname8, join as join13 } from "path";
+import { existsSync as existsSync14, readFileSync as readFileSync14, writeFileSync as writeFileSync11, mkdirSync as mkdirSync10, readdirSync as readdirSync8, statSync as statSync5, rmSync } from "fs";
+import { dirname as dirname9, join as join13 } from "path";
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };
 }
@@ -8603,8 +8616,8 @@ function readPipeline(consortDir, featureId) {
 }
 function writePipeline(consortDir, pipeline) {
   const p = pipelinePath(consortDir, pipeline.feature_id);
-  mkdirSync9(dirname8(p), { recursive: true });
-  writeFileSync10(p, JSON.stringify(pipeline, null, 2) + "\n");
+  mkdirSync10(dirname9(p), { recursive: true });
+  writeFileSync11(p, JSON.stringify(pipeline, null, 2) + "\n");
 }
 function setStoryStatus(pipeline, storyId, status) {
   const existing = pipeline.stories[storyId];
@@ -8766,6 +8779,12 @@ decision to a named human. (For headless/smoke runs use consort-human-proxy.)
       `approve-gate: ${p.feature}/${p.story} , per-story spec gate approved by ${p.approver} (ready + queued: ${(r.queue ?? []).join(", ") || "none"})
 `
     );
+    return 0;
+  }
+  if (p.sprint && p.gate === "intake") {
+    approveIntakeGate(consortDir, p.approver);
+    process.stdout.write(`approve-gate: intake gate for '${p.sprint}' approved by ${p.approver}
+`);
     return 0;
   }
   if (p.sprint) {

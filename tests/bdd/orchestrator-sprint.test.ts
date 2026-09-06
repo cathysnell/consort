@@ -117,7 +117,7 @@ describe("deriveSprintPlanningState", () => {
     expect(s.phase).toBe("planning");
     // intakeReady false with nothing on disk: the sprint drive dispatches the PO intake turn FIRST.
     // This is the assertion that would have caught the bug where the sprint path skipped intake.
-    expect(s.planning).toEqual({ intakeReady: false, proposed: false, estimated: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
+    expect(s.planning).toEqual({ intakeReady: false, intakeApproved: false, proposed: false, estimated: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
   });
 
   // REGRESSION (the sprint-path intake bug): deriveSprintPlanningState fed into nextTransition MUST
@@ -131,11 +131,23 @@ describe("deriveSprintPlanningState", () => {
     expect(nextTransition(s)).toEqual({ kind: "invoke-role", role: "product-owner", mode: "intake" });
   });
 
-  it("intake COMPLETE (product-overview + nfrs) => intakeReady true, past the intake turn to propose", () => {
+  it("intake DRAFTED but NOT approved => the drive PARKS at the intake gate (review before propose)", () => {
     writeFileSync(join(tdd, "product-overview.md"), "# Overview\n\nA product.\n");
     writeFileSync(join(tdd, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
     const s = deriveSprintPlanningState(tdd, SPRINT);
     expect(s.planning?.intakeReady).toBe(true);
+    expect(s.planning?.intakeApproved).toBe(false); // no approval marker yet
+    expect(nextTransition(s)).toEqual({ kind: "approve-intake-gate" });
+  });
+
+  it("intake drafted AND approved (marker present) => past the intake gate to propose", () => {
+    writeFileSync(join(tdd, "product-overview.md"), "# Overview\n\nA product.\n");
+    writeFileSync(join(tdd, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
+    mkdirSync(join(tdd, "intake"), { recursive: true });
+    writeFileSync(join(tdd, "intake", "approved"), "approved\n"); // the intake gate's approval marker
+    const s = deriveSprintPlanningState(tdd, SPRINT);
+    expect(s.planning?.intakeReady).toBe(true);
+    expect(s.planning?.intakeApproved).toBe(true);
     expect(nextTransition(s)).toEqual({ kind: "invoke-role", role: "spec-author", mode: "propose" });
   });
 

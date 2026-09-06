@@ -230,6 +230,18 @@ describe("buildNextSnapshot: reconciled state, blockers, truthful summary", () =
     expect(intake.options.map((o) => o.id)).toContain("resume");
     expect(intake.awaiting_human).toBe(false);
 
+    // The INTAKE gate (after the PO drafts the intake, before propose) is a HITL gate: it surfaces
+    // an intake.approve option and awaits the human (review/edit/approve before the Spec Author).
+    const intakeGate = buildNextSnapshot(
+      "sprint",
+      baseState(),
+      { ...CTX, sprint: "s1" },
+      fixed({ kind: "approve-intake-gate" } as WorkflowAction),
+    );
+    expect(intakeGate.awaiting_human).toBe(true);
+    expect(intakeGate.options.map((o) => o.id)).toContain("intake.approve");
+    expect(intakeGate.options.find((o) => o.id === "intake.approve")?.kind).toBe("gate");
+
     // A gate + a per-story accept both require the human.
     expect(buildNextSnapshot("feature", baseState(), CTX, fixed({ kind: "accept", story: "S3" })).awaiting_human).toBe(true);
 

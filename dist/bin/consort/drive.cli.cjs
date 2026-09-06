@@ -6717,6 +6717,8 @@ var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state
 var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
 var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
 var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
+var intakeApprovedMarker = (tdd) => (0, import_node_path.join)(tdd, "intake", "approved");
+var intakeApprovedOnDisk = (tdd) => fs.existsSync(intakeApprovedMarker(tdd));
 var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
 var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
@@ -7232,7 +7234,8 @@ function labelForAction(action) {
     const mode = a.buildMode ?? a.mode;
     return mode ? `${role}-${mode}` : role;
   }
-  if (kind === "approve-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
+  if (kind === "approve-gate" || kind === "approve-intake-gate" || kind === "approve-plan-gate" || kind === "approve-promote-gate") {
+    if (kind === "approve-intake-gate") return "gate-intake";
     if (kind === "approve-plan-gate") return "gate-plan";
     if (kind === "approve-promote-gate") return "gate-promote";
     return "gate-spec";
@@ -7740,6 +7743,7 @@ function actionLane(action) {
       }
       return action.role === "navigator" || action.role === "driver" ? "build" : "design";
     }
+    case "approve-intake-gate":
     case "approve-plan-gate":
     case "planning-complete":
       return "planning";
@@ -7775,7 +7779,7 @@ function actionLane(action) {
   }
 }
 function isHitlGateAction(action) {
-  return action.kind === "approve-gate" || action.kind === "approve-plan-gate" || action.kind === "approve-deploy-gate" || action.kind === "approve-promote-gate" || action.kind === "accept";
+  return action.kind === "approve-gate" || action.kind === "approve-intake-gate" || action.kind === "approve-plan-gate" || action.kind === "approve-deploy-gate" || action.kind === "approve-promote-gate" || action.kind === "accept";
 }
 function isHumanInputAction(action) {
   return action.kind === "invoke-role" && "mode" in action && action.mode === "author-requests";
@@ -7848,6 +7852,7 @@ function nextTransition(state) {
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
     if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
+    if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
@@ -9192,6 +9197,8 @@ function gateEnactCommand(gate, ctx = {}) {
   const you = ctx.approver ?? "<you>";
   const f = ctx.featureId ?? "<feature-id>";
   switch (gate.kind) {
+    case "approve-intake-gate":
+      return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "intake", "--approver", you] };
     case "approve-plan-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--approver", you] };
     case "approve-gate":
@@ -9940,7 +9947,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -14299,6 +14306,14 @@ Edit ONLY those test files. The orchestrator re-deploys + re-verifies the whole 
       ];
     case "complete":
       return [{ kind: "cli", bin: PIPELINE_BIN, args: ["complete", ...tdd] }];
+    case "approve-intake-gate":
+      return [
+        {
+          kind: "cli",
+          bin: HUMAN_PROXY_BIN,
+          args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "intake", "--approver", approver, "--tdd-dir", cfg.consortDir]
+        }
+      ];
     case "approve-plan-gate":
       return [
         {
@@ -14583,6 +14598,18 @@ function buildNextOptions(action, ctx) {
         holdOption()
       ];
     }
+    case "approve-intake-gate":
+      return [
+        {
+          id: "intake.approve",
+          title: "Approve the project intake",
+          hil_prompt: "The Product Owner drafted product-overview.md / nfrs.md / design-brief.md from your answers. REVIEW them (open + read), EDIT anything that's off, or ask for changes (edit .consort/intake/answers.md and re-run to redraft). Approve to hand the intake to the Spec Author, who proposes the sprint from it?",
+          kind: "gate",
+          enact: gateEnact,
+          note: "To request changes instead of approving: edit the drafted docs directly, or edit .consort/intake/answers.md and resume so the PO redrafts. Approve only once they reflect your intent."
+        },
+        holdOption()
+      ];
     case "approve-plan-gate":
       return [
         {
@@ -14839,7 +14866,7 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   }
   return {
     phase: "planning",
-    planning: { intakeReady: intakeReadyOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},
@@ -15100,6 +15127,7 @@ var GATE_KINDS = [
   "surface-gate",
   "approve-gate",
   "design-complete",
+  "approve-intake-gate",
   "approve-plan-gate",
   "planning-complete",
   "dispatch",

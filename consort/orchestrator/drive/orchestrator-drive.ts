@@ -211,6 +211,11 @@ export function nextTransition(state: DriveState): WorkflowAction {
     // an EXPLICIT `false`: absent/undefined (legacy + hermetic states) is treated as satisfied, so
     // every existing run is byte-identical (same convention as `committedEstimated === false`).
     if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
+    // Intake drafted but NOT yet approved: PARK at the intake gate so the human reviews / edits /
+    // requests changes on product-overview/nfrs/design-brief BEFORE the Spec Author proposes from
+    // them. Headless the Human Proxy approves it (intakeApproved true), so replay/CI never park.
+    // Fires ONLY when intake is ready AND explicitly unapproved (absent/undefined = satisfied).
+    if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     // The Architect t-shirt-sizes the candidates before the PO commits, so the
     // PO can pick a backlog that fits sprint capacity (the team's estimation).

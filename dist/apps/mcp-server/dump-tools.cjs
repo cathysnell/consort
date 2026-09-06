@@ -6685,6 +6685,8 @@ var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state
 var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
 var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
 var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
+var intakeApprovedMarker = (tdd) => (0, import_node_path.join)(tdd, "intake", "approved");
+var intakeApprovedOnDisk = (tdd) => fs.existsSync(intakeApprovedMarker(tdd));
 var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureSpecJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "feature-spec.json");
@@ -7435,7 +7437,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };

@@ -6720,6 +6720,7 @@ var planningDir = (tdd) => (0, import_node_path.join)(tdd, "planning");
 var sprintsDir = (tdd) => (0, import_node_path.join)(tdd, "sprints");
 var cyclesRootDir = (tdd) => (0, import_node_path.join)(tdd, "cycles");
 var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
+var intakeApprovedMarker = (tdd) => (0, import_node_path.join)(tdd, "intake", "approved");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
 var architectureConventionsJson = (tdd) => (0, import_node_path.join)(architectureDir(tdd), "conventions.json");
 var featureProposalsMd = (tdd) => (0, import_node_path.join)(planningDir(tdd), "feature-proposals.md");
@@ -9116,6 +9117,18 @@ function approveSprintPlanGate(args) {
   return { ok: true, state: updated, alreadyApproved: false };
 }
 
+// consort/gates/intake-gate.ts
+init_cjs_shims();
+var import_node_fs10 = require("fs");
+var import_node_path11 = require("path");
+function approveIntakeGate(consortDir, approver) {
+  const marker = intakeApprovedMarker(consortDir);
+  (0, import_node_fs10.mkdirSync)((0, import_node_path11.dirname)(marker), { recursive: true });
+  (0, import_node_fs10.writeFileSync)(marker, `${(/* @__PURE__ */ new Date()).toISOString()} approved-by:${approver}
+`);
+  logGateApproved({ consortDir, gate: "intake", approver });
+}
+
 // bin/consort/human-proxy.cli.ts
 function runSupplyCli(argv) {
   let from;
@@ -9354,6 +9367,12 @@ function runHumanProxyCli(argv) {
   const args = parseArgs(argv);
   if (args.help) {
     process.stdout.write(`${HELP}
+`);
+    return 0;
+  }
+  if (args.sprint && args.gate === "intake") {
+    approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
+    process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved
 `);
     return 0;
   }
