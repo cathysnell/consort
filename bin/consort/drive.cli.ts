@@ -365,8 +365,18 @@ function projectCorrespondence(
 }
 
 function withTurnRecording(inner: DriveEffects, cfg: DriveEffectsConfig): DriveEffects {
-  const recordDir = consortEnv("RECORD_DIR")?.trim();
-  if (!recordDir) return inner;
+  // One recorder, two fidelities (the single path: a corpus can be replayed, a live build can be
+  // seen). An explicit RECORD_DIR is a CAPTURE , snapshot each turn's content into that corpus, so
+  // it is historically accurate + replayable. Otherwise a plain LIVE build records into `.consort`
+  // ITSELF (index + transcript, NO content snapshot): every turn is a viewable timeline entry with
+  // its prompt/tools/reasoning + the files it added/modified/removed, and a clicked file is read at
+  // HEAD (may have changed since , not historically accurate, by design). During REPLAY we write
+  // nothing (the corpus is the input, not an output).
+  const external = consortEnv("RECORD_DIR")?.trim();
+  const isReplay = !!consortEnv("REPLAY_DIR")?.trim() || !!consortEnv("REPLAY_BUILD_DIR")?.trim();
+  if (!external && isReplay) return inner;
+  const recordDir = external || cfg.consortDir;
+  const snapshotContent = !!external;
   // Seed the delta baseline with the current (post-scaffold/intake) state ONCE,
   // so the first recorded turn reports only what it produced, not the pre-existing
   // scaffold. A no-op once a baseline exists (later drive processes in the run).
@@ -427,7 +437,7 @@ function withTurnRecording(inner: DriveEffects, cfg: DriveEffectsConfig): DriveE
       // transcript (prompt + final reasoning + tool list) to record alongside
       // the artifact delta. Non-agent actions (gates, deploy) have none.
       const transcript = takeLastAgentTranscript();
-      const rec = recordTurn({ recordDir, projectDir: cfg.projectDir, consortDir: cfg.consortDir, action, step: 0, transcript });
+      const rec = recordTurn({ recordDir, projectDir: cfg.projectDir, consortDir: cfg.consortDir, action, step: 0, transcript, snapshotContent });
       process.stderr.write(
         `[record] turn ${rec.ordinal} (${rec.dir}): ${rec.produced.length} produced` +
           `${rec.deleted.length ? `, ${rec.deleted.length} deleted` : ""}\n`,

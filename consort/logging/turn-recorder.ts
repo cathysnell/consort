@@ -9,9 +9,9 @@
 //
 // Layout under recordDir (the answer to "record every step, replayably"):
 //   turns/<NNNN>-<label>/turn.json   , manifest {step, kind, role, mode, story, ac, action, produced[], deleted[]}
-//   turns/<NNNN>-<label>/files/<rel> , the .tdd + code DELTA this turn produced
+//   turns/<NNNN>-<label>/files/<rel> , the .consort + code DELTA this turn produced
 //   turns/index.json                 , the ordered list of every recorded turn
-//   recorded-artifacts/<rel under .tdd> , the CUMULATIVE .tdd mirror, so the
+//   recorded-artifacts/<rel under .consort> , the CUMULATIVE .consort mirror, so the
 //                                          existing replayDesignTurn(replayDir=
 //                                          recorded-artifacts) consumes it as-is
 //   .recorder-state.json             , internal file-hash map for delta computation
@@ -58,14 +58,14 @@ export function relativizeProjectPaths(text: string, projectDir: string): string
 }
 
 /** A relpath the recorder watches, keyed to its scan root (so the cumulative
- *  .tdd mirror can be re-rooted under recorded-artifacts). */
+ *  .consort mirror can be re-rooted under recorded-artifacts). */
 interface ScannedFile {
   /** Absolute path on disk. */
   abs: string;
   /** Path relative to projectDir (the stable key across turns). */
   rel: string;
-  /** Whether this file lives under .tdd (-> mirrored into recorded-artifacts). */
-  underTdd: boolean;
+  /** Whether this file lives under .consort (-> mirrored into recorded-artifacts). */
+  underConsort: boolean;
   /** Content hash. */
   sha: string;
 }
@@ -86,7 +86,7 @@ export interface RecordTurnArgs {
   recordDir: string;
   /** Project working tree root (dirname of consortDir). */
   projectDir: string;
-  /** The project .tdd dir. */
+  /** The project .consort dir. */
   consortDir: string;
   /** The action just performed. */
   action: WorkflowAction;
@@ -97,6 +97,16 @@ export interface RecordTurnArgs {
    *  transcript.md + summarized into turn.json so the demo can render what each
    *  role was asked, decided, and did. Absent for non-agent turns. */
   transcript?: RecordedTranscript;
+  /**
+   * Whether to SNAPSHOT the content of the files this turn produced (copy them into
+   * turns/<NNNN>/files/ + the recorded-artifacts mirror). Default true , a recorded corpus is
+   * historically accurate and replayable. Set FALSE for the always-on LIVE record into `.consort`:
+   * the turn's transcript + the INDEX of files it added/modified/removed are still written (so a
+   * live board shows every turn with its prompt/tools/reasoning and its file listing), but the
+   * files' content is NOT copied , clicking one reads the REAL file at HEAD, which may have changed
+   * since (not historically accurate, by design). One recorder, two fidelities.
+   */
+  snapshotContent?: boolean;
 }
 
 export interface RecordedTurn {
@@ -112,7 +122,23 @@ export interface RecordedTurn {
 
 /** Append-only log + recorder bookkeeping that must NOT count as a turn's
  *  produced artifact (they churn every turn / are the recorder's own state). */
-const NON_ARTIFACT_TDD = new Set(["agent-log.jsonl"]);
+const NON_ARTIFACT_CONSORT = new Set(["agent-log.jsonl"]);
+
+/** The recorder's OWN output, which lands under `.consort/` when the LIVE record targets the project
+ *  itself (recordDir === consortDir). It must never be scanned as a produced artifact , otherwise the
+ *  recorder would record its own turns/ + state each turn (compounding churn). A no-op when recordDir
+ *  is an external corpus (these paths don't exist under `.consort/` then). Matched on the
+ *  `.consort/`-relative path: the `turns/` tree, the delta state, and the two append-only streams. */
+function isRecorderOwned(relUnderConsort: string): boolean {
+  const p = relUnderConsort.split("\\").join("/");
+  return (
+    p === ".recorder-state.json" ||
+    p === "correspondence.jsonl" ||
+    p === "routing-decisions.jsonl" ||
+    p === "turns" ||
+    p.startsWith("turns/")
+  );
+}
 
 /** The build state-bag booleans/ids the router read to CHOOSE this iteration's action , the
  *  routing "why" the turn recorder does not persist. Extracted from the DriveState's active
@@ -512,24 +538,26 @@ function walk(dir: string, keep?: (abs: string) => boolean): string[] {
   return out;
 }
 
-/** Scan the watched roots (.tdd in full + the code tree via codeTreeFilter) into
- *  a stable relpath->ScannedFile map. The code filter also excludes .tdd, so the
+/** Scan the watched roots (.consort in full + the code tree via codeTreeFilter) into
+ *  a stable relpath->ScannedFile map. The code filter also excludes .consort, so the
  *  two roots never double-count. */
 function scan(projectDir: string, consortDir: string): Map<string, ScannedFile> {
   const map = new Map<string, ScannedFile>();
-  // .tdd in full (minus the recorder's own append-only log).
+  // .consort in full (minus the recorder's own append-only log).
   for (const abs of walk(consortDir)) {
     const rel = relative(projectDir, abs);
-    if (NON_ARTIFACT_TDD.has(relative(consortDir, abs))) continue;
-    map.set(rel, { abs, rel, underTdd: true, sha: sha1(abs) });
+    const relConsort = relative(consortDir, abs);
+    if (NON_ARTIFACT_CONSORT.has(relConsort)) continue;
+    if (isRecorderOwned(relConsort)) continue; // the LIVE record's own output under `.consort/` , never a turn's artifact
+    map.set(rel, { abs, rel, underConsort: true, sha: sha1(abs) });
   }
   // The code tree (app/, tests/, alembic/, etc.) via the shared filter, which
-  // skips scaffold-owned dirs (.tdd/.git/scripts/...), junk, and secrets.
+  // skips scaffold-owned dirs (.consort/.git/scripts/...), junk, and secrets.
   const keep = codeTreeFilter(projectDir);
   for (const abs of walk(projectDir, keep)) {
     const rel = relative(projectDir, abs);
     if (map.has(rel)) continue;
-    map.set(rel, { abs, rel, underTdd: false, sha: sha1(abs) });
+    map.set(rel, { abs, rel, underConsort: false, sha: sha1(abs) });
   }
   return map;
 }
@@ -622,14 +650,15 @@ export function turnDirFor(recordDir: string, action: WorkflowAction): string {
 }
 
 /**
- * Record one state-machine turn: write its manifest + the .tdd/code delta it
+ * Record one state-machine turn: write its manifest + the .consort/code delta it
  * produced under turns/<NNNN>-<label>/, refresh the cumulative recorded-artifacts
- * .tdd mirror, and append to turns/index.json. The ordinal is monotonic across
+ * .consort mirror, and append to turns/index.json. The ordinal is monotonic across
  * the whole run (every drive process appends to the same on-disk index), so the
  * timeline is correct even though each feature/sprint is a separate process.
  */
 export function recordTurn(args: RecordTurnArgs): RecordedTurn {
   const { recordDir, projectDir, consortDir, action, step, transcript } = args;
+  const snapshotContent = args.snapshotContent !== false;
   const a = action as Record<string, unknown>;
 
   const prior = readState(recordDir);
@@ -650,29 +679,33 @@ export function recordTurn(args: RecordTurnArgs): RecordedTurn {
   const label = labelForAction(action);
   const dirName = `${pad(ordinal)}-${label}`;
   const turnDir = join(recordDir, "turns", dirName);
-  mkdirSync(join(turnDir, "files"), { recursive: true });
+  mkdirSync(turnDir, { recursive: true });
 
-  const artifactsDir = join(recordDir, "recorded-artifacts");
-
-  // Copy each produced file into the turn's delta, and mirror .tdd files into the
-  // cumulative recorded-artifacts corpus (so replayDesignTurn reads it as-is).
-  for (const rel of produced) {
-    const f = cur.get(rel)!;
-    const dst = join(turnDir, "files", rel);
-    mkdirSync(dirname(dst), { recursive: true });
-    cpSync(f.abs, dst);
-    if (f.underTdd) {
-      const mirror = join(artifactsDir, relative(consortDir, f.abs));
-      mkdirSync(dirname(mirror), { recursive: true });
-      cpSync(f.abs, mirror);
+  // Content snapshot , recorded corpus only. The LIVE record (snapshotContent:false) keeps just the
+  // produced/deleted INDEX computed above; a clicked file is read at HEAD, not from a frozen copy.
+  if (snapshotContent) {
+    mkdirSync(join(turnDir, "files"), { recursive: true });
+    const artifactsDir = join(recordDir, "recorded-artifacts");
+    // Copy each produced file into the turn's delta, and mirror .consort files into the
+    // cumulative recorded-artifacts corpus (so replayDesignTurn reads it as-is).
+    for (const rel of produced) {
+      const f = cur.get(rel)!;
+      const dst = join(turnDir, "files", rel);
+      mkdirSync(dirname(dst), { recursive: true });
+      cpSync(f.abs, dst);
+      if (f.underConsort) {
+        const mirror = join(artifactsDir, relative(consortDir, f.abs));
+        mkdirSync(dirname(mirror), { recursive: true });
+        cpSync(f.abs, mirror);
+      }
     }
-  }
-  // Remove cumulative-mirror entries for deleted .tdd files.
-  for (const rel of deleted) {
-    const abs = join(projectDir, rel);
-    if (abs.startsWith(consortDir)) {
-      const mirror = join(artifactsDir, relative(consortDir, abs));
-      if (existsSync(mirror)) rmSync(mirror, { force: true });
+    // Remove cumulative-mirror entries for deleted .consort files.
+    for (const rel of deleted) {
+      const abs = join(projectDir, rel);
+      if (abs.startsWith(consortDir)) {
+        const mirror = join(artifactsDir, relative(consortDir, abs));
+        if (existsSync(mirror)) rmSync(mirror, { force: true });
+      }
     }
   }
 
@@ -714,6 +747,10 @@ export function recordTurn(args: RecordTurnArgs): RecordedTurn {
     action,
     produced,
     deleted,
+    // false = a LIVE record: produced/deleted are an INDEX only; read the files at HEAD, not from a
+    // frozen turns/<NNNN>/files/ copy (which was not written). Omitted-as-true keeps recorded corpora
+    // byte-identical to before this flag existed.
+    ...(snapshotContent ? {} : { snapshotted: false }),
     ...(transcriptSummary ? { transcript: transcriptSummary } : {}),
   };
   writeFileSync(join(turnDir, "turn.json"), JSON.stringify(manifest, null, 2) + "\n");
