@@ -147,10 +147,14 @@ export function Transport({
             WAITING
           </span>
         ) : (
-          // At the newest event, the run advancing on its own.
+          // At the newest event, an agent working the run forward — an SVG spinner rather than a
+          // dot, so the state reads as active motion.
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-good)", fontWeight: 700 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-good)", animation: "softpulse 1.6s ease-in-out infinite" }} />
-            EXECUTING
+            <svg width={11} height={11} viewBox="0 0 24 24" style={{ animation: "spin 1.1s linear infinite", transformOrigin: "center", transformBox: "fill-box" }}>
+              <path d="M12 3 a 9 9 0 0 1 9 9" fill="none" style={{ stroke: "var(--status-good)" }} strokeWidth={3} strokeLinecap="round" />
+              <path d="M12 21 a 9 9 0 0 1 -9 -9" fill="none" style={{ stroke: "var(--status-good)" }} strokeWidth={3} strokeLinecap="round" />
+            </svg>
+            WORKING
           </span>
         )}
       </div>

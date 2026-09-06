@@ -362,11 +362,11 @@ describe("render — LaneGraph", () => {
 describe("render — Transport", () => {
   const noop = () => {};
 
-  it("renders EXECUTING at the newest event", () => {
+  it("renders WORKING at the newest event", () => {
     const markup = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T15:09:36.000Z" />,
     );
-    expect(markup).toContain("EXECUTING");
+    expect(markup).toContain("WORKING");
     expect(markup).not.toContain("PAUSED");
     expect(markup).toMatchSnapshot();
   });
@@ -376,7 +376,7 @@ describe("render — Transport", () => {
       <Transport at={40} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T19:39:11.000Z" />,
     );
     expect(markup).toContain("PAUSED");
-    expect(markup).not.toContain("EXECUTING");
+    expect(markup).not.toContain("WORKING");
     expect(markup).toMatchSnapshot();
   });
 
@@ -385,7 +385,7 @@ describe("render — Transport", () => {
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} escalated />,
     );
     expect(markup).toContain("RAISED");
-    expect(markup).not.toContain("EXECUTING");
+    expect(markup).not.toContain("WORKING");
     expect(markup).not.toContain("WAITING");
   });
 
@@ -395,7 +395,7 @@ describe("render — Transport", () => {
     );
     expect(markup).toContain("WAITING");
     expect(markup).not.toContain("RAISED");
-    expect(markup).not.toContain("EXECUTING");
+    expect(markup).not.toContain("WORKING");
   });
 
   it("an escalation outranks a gate — RAISED wins when both are set", () => {
