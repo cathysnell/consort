@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { STEP_OUTPUTS, WORKFLOW, gateForNode, type WorkflowNode } from "@/lib/topology";
 import { colorForRole, font, radius } from "@/lib/theme";
+import { activeColorForFocus } from "./active-color";
 import type { DashboardState, GateInfo } from "@/lib/types";
 
 // The Consort lifecycle graph (Figure 1), re-skinned from Kevin's dark SVG to the light
@@ -68,12 +69,10 @@ export function WorkflowGraph({
   // agents own a node is shown by its role DOTS, not the highlight. Reads the ONE focus observation
   // + blockers, so it never disagrees with the other surfaces.
   const focus = state.focus;
-  const activeColor =
-    focus.kind === "escalation"
-      ? "var(--status-critical)"
-      : focus.kind === "gate"
-        ? "var(--status-gate)"
-        : "var(--role-orchestrator)";
+  // The active-highlight colour comes from the ONE shared helper: a working agent's role colour, a
+  // gate's purple, an escalation's red, or slate when the orchestrator is in charge. Same key every
+  // surface uses, so the workflow node, the lane panel, and the step never disagree.
+  const activeColor = activeColorForFocus(focus);
   // The gate DIAMOND the run is parked at also highlights (not just the phase node beside it): find
   // the gate node whose gate name is the one the focus is awaiting, and treat it as active too, so it
   // glows in the gate colour (activeColor is the gate colour while focus.kind === "gate").

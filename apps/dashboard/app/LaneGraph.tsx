@@ -11,6 +11,7 @@ import {
 } from "@/lib/topology";
 import { GATE_KEY_BY_STEP } from "@/lib/gates";
 import { colorForRole, font, radius } from "@/lib/theme";
+import { activeColorForFocus } from "./active-color";
 import { fmtElapsed } from "./AgentBubble";
 import type { DashboardState, LaneStepMeta } from "@/lib/types";
 
@@ -117,6 +118,11 @@ function LanePanel({
   // focus), passed to every lane; step ids are unique per lane, so only the owning lane matches — an
   // unknown/other-lane step (or a gate park, where currentStep is null) marks no lane active.
   const active = currentStep !== null && lane.steps.some((s) => s.id === currentStep);
+  // The active lane's highlight takes the CURRENT ACTOR's colour (the same one focus key every
+  // surface reads): the working agent's role colour, not a fixed slate. A lane is only `active` when
+  // a step is running in it, so this resolves to that agent's colour; slate stays the orchestrator-
+  // in-charge / gate / escalation cases, which don't light a lane panel.
+  const accent = activeColorForFocus(state.focus);
 
   // Lane status takes the LIFECYCLE as its sole authority. The lane's own lit-step count is
   // NOT evidence about completion in either direction, and both directions were shipped bugs:
@@ -164,7 +170,7 @@ function LanePanel({
         // Body carries a subtle tint (surface-panel); only the header band below is the more
         // distinct card surface.
         background: "var(--surface-panel)",
-        border: `1px solid ${active ? "var(--role-orchestrator)" : "var(--border-default)"}`,
+        border: `1px solid ${active ? accent : "var(--border-default)"}`,
         borderRadius: radius.panel,
         overflow: "hidden",
       }}
@@ -180,7 +186,7 @@ function LanePanel({
           padding: "9px 12px",
           // Consistent pane pattern: a distinct header band (card surface) over a flat page body,
           // turning to the in-progress accent when the lane is active.
-          background: active ? "color-mix(in srgb, var(--role-orchestrator) 12%, transparent)" : "var(--surface-card)",
+          background: active ? `color-mix(in srgb, ${accent} 12%, transparent)` : "var(--surface-card)",
           textAlign: "left",
           cursor: "pointer",
         }}
