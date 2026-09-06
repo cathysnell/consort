@@ -380,12 +380,30 @@ describe("render — Transport", () => {
     expect(markup).toMatchSnapshot();
   });
 
-  it("shows RAISED at the newest event when parked on a human decision (HITL)", () => {
+  it("shows RAISED (red) at the newest event when a problem is escalated to a human", () => {
     const markup = renderToStaticMarkup(
-      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} waiting />,
+      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} escalated />,
     );
     expect(markup).toContain("RAISED");
     expect(markup).not.toContain("EXECUTING");
+    expect(markup).not.toContain("WAITING");
+  });
+
+  it("shows WAITING (purple) at the newest event when parked on a normal gate decision", () => {
+    const markup = renderToStaticMarkup(
+      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} awaitingGate />,
+    );
+    expect(markup).toContain("WAITING");
+    expect(markup).not.toContain("RAISED");
+    expect(markup).not.toContain("EXECUTING");
+  });
+
+  it("an escalation outranks a gate — RAISED wins when both are set", () => {
+    const markup = renderToStaticMarkup(
+      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} awaitingGate escalated />,
+    );
+    expect(markup).toContain("RAISED");
+    expect(markup).not.toContain("WAITING");
   });
 
   it("disables step-back at the start and step-forward at the end", () => {

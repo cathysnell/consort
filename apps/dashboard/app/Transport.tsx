@@ -22,13 +22,18 @@ export interface TransportProps {
   onSpeedChange: (speed: number) => void;
   // Timestamp of the event at the playhead, for the clock readout.
   atTimestamp?: string | null;
-  // True when the run is parked on a human decision (a pending gate / escalation — the HITL). At the
-  // newest event this shows RAISED (red) rather than EXECUTING, since the board isn't advancing
-  // until you act.
-  waiting?: boolean;
+  // The run is parked on a human at the newest event, so the board isn't advancing until you act.
+  // Two distinct cases: `escalated` (a problem was raised to you — a GREEN verify failed, etc.)
+  // shows RAISED in red and takes precedence; a plain `awaitingGate` decision shows WAITING in
+  // gate-purple, which is a normal checkpoint, NOT an alarm.
+  awaitingGate?: boolean;
+  escalated?: boolean;
 }
 
-const SPEEDS = [1, 2, 5, 20] as const;
+const SPEEDS = [0.25, 0.5, 1, 2, 5, 20] as const;
+
+// Sub-1 speeds read cleaner as fractions than as "0.25×".
+const fmtSpeed = (s: number): string => (s === 0.25 ? "¼" : s === 0.5 ? "½" : String(s));
 
 export function Transport({
   at,
@@ -39,7 +44,8 @@ export function Transport({
   speed,
   onSpeedChange,
   atTimestamp,
-  waiting = false,
+  awaitingGate = false,
+  escalated = false,
 }: TransportProps) {
   const live = at === null;
   const pos = live ? total : Math.max(0, Math.min(at, total));
@@ -127,12 +133,18 @@ export function Transport({
         {!live ? (
           // Scrubbed back / not following the newest event.
           <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>PAUSED</span>
-        ) : waiting ? (
-          // At the newest event but parked on a human decision (gate / escalation) — the HITL. Red,
-          // to correspond with the raised-to-human state everywhere else on the board.
+        ) : escalated ? (
+          // A problem was raised to a human (red) — corresponds with the raised-to-HIL state
+          // everywhere else on the board.
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-critical-text)", fontWeight: 700 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-critical)", animation: "softpulse 1.6s ease-in-out infinite" }} />
             RAISED
+          </span>
+        ) : awaitingGate ? (
+          // Parked on a normal human decision at a gate (purple) — a checkpoint, not an alarm.
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-gate-text)", fontWeight: 700 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-gate)", animation: "softpulse 1.6s ease-in-out infinite" }} />
+            WAITING
           </span>
         ) : (
           // At the newest event, the run advancing on its own.
@@ -162,7 +174,7 @@ export function Transport({
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {s}×
+            {fmtSpeed(s)}×
           </button>
         ))}
       </div>

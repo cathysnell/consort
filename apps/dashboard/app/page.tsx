@@ -303,7 +303,8 @@ export default function Home() {
               speed={speed}
               onSpeedChange={setSpeed}
               atTimestamp={state.topology.atTimestamp}
-              waiting={state.pendingGate !== null || state.blockers.length > 0}
+              awaitingGate={state.pendingGate !== null}
+              escalated={state.blockers.length > 0}
             />
           </div>
         </>
