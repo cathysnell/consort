@@ -12,17 +12,8 @@ const CFG: Record<AgentStatus, { bg: string; border: string; text: string; label
   idle: { bg: "var(--surface-muted)", border: "var(--border-default)", text: "var(--text-faint)", label: "idle" },
 };
 
-function Spinner({ color }: { color: string }) {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" style={{ animation: "spin 1.1s linear infinite" }}>
-      <path d="M12 3 a 9 9 0 0 1 9 9" fill="none" style={{ stroke: color }} strokeWidth={3} strokeLinecap="round" />
-      <path d="M12 21 a 9 9 0 0 1 -9 -9" fill="none" style={{ stroke: color }} strokeWidth={3} strokeLinecap="round" />
-    </svg>
-  );
-}
-
 const ICON: Record<AgentStatus, string> = {
-  working: "",
+  working: "●", // a static dot , the "working" spinner cycle was removed (its animation never ran)
   "on-deck": "→",
   issue: "⚠",
   waiting: "⏸",
@@ -88,7 +79,7 @@ export function AgentBubble({ agent, showCost, onOpen }: { agent: AgentState; sh
             flexShrink: 0,
           }}
         >
-          {active ? <Spinner color={cfg.text} /> : ICON[agent.status]}
+          {ICON[agent.status]}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--text-strong)", textTransform: "uppercase", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -97,6 +88,13 @@ export function AgentBubble({ agent, showCost, onOpen }: { agent: AgentState; sh
           <div style={{ fontSize: "0.7rem", fontWeight: 600, color: cfg.text, textTransform: "uppercase", letterSpacing: "0.04em" }}>
             {cfg.label}
             {agent.model ? <span style={{ color: "var(--text-faint)", fontWeight: 500 }}> · {agent.model}</span> : null}
+            {/* Elapsed sits on the model row when working, coloured by liveness (green live / amber
+                quiet), so the turn's duration reads alongside its model instead of a separate line. */}
+            {active && elapsed ? (
+              <span style={{ color: live === false ? "var(--status-warning-text)" : "var(--status-good-text)", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                {" "}· {elapsed}{live === false ? " quiet" : live === true ? " live" : ""}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -105,16 +103,6 @@ export function AgentBubble({ agent, showCost, onOpen }: { agent: AgentState; sh
         {agent.status !== "idle" && agent.work ? agent.work : agent.status === "idle" ? <span style={{ color: "var(--text-faint)" }}>—</span> : null}
         {agent.story ? <div style={{ color: "var(--text-faint)", fontSize: "0.68rem", marginTop: 2 }}>{agent.story}</div> : null}
       </div>
-
-      {active && elapsed ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.68rem", color: live === false ? "var(--status-warning-text)" : "var(--status-good-text)" }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: live === false ? "var(--status-warning)" : "var(--status-good)", animation: live === false ? undefined : "softpulse 1.4s ease-in-out infinite" }} />
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>
-            working {elapsed}
-            {live === false ? " · quiet" : live === true ? " · live" : ""}
-          </span>
-        </div>
-      ) : null}
 
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-faint)", marginTop: "auto" }}>
         <span>{agent.turns} turn{agent.turns === 1 ? "" : "s"}</span>
