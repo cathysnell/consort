@@ -985,11 +985,11 @@ export function buildCfg(args: ParsedArgs, featureId: string): DriveEffectsConfi
     // so the executor is the sole agent path. LAKEBASE_CONSORT_USE_MANIFEST_STEPS is a one-cycle escape
     // hatch: set it to 0/false/off/no to force the legacy commandsForAction dispatch (retired in J5).
     useManifestSteps: !/^(0|false|off|no)$/i.test(consortEnv("USE_MANIFEST_STEPS")?.trim() ?? ""),
-    // RECORD lane (Stage G): hand the executor's ReplayRecorderWrapper the just-completed live
-    // turn's transcript, so an executor-dispatched turn records prompt + reasoning + tools alongside
-    // its delta , the SAME source the effects-level withTurnRecording uses. Colocated with
-    // takeLastAgentTranscript (this module) so there's no runtime edge from the executor onto the
-    // runner. The recorder only reads it when RECORD_DIR is set; a normal drive never calls it.
+    // Hand the executor's ReplayRecorderWrapper the just-completed live turn's transcript, so an
+    // executor-dispatched turn records prompt + reasoning + tools alongside its delta , the SAME
+    // source the effects-level withTurnRecording uses. Colocated with takeLastAgentTranscript (this
+    // module) so there's no runtime edge from the executor onto the runner. Read whenever the turn is
+    // recorded: a CAPTURE (RECORD_DIR) OR the always-on LIVE index into `.consort` (every live build).
     takeTranscript: takeLastAgentTranscript,
     instance: args.instance ?? scm?.project_id,
     featureBranch: scm?.branch,

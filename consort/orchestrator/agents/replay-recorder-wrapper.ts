@@ -41,6 +41,12 @@ export interface RecorderContext {
    *  levers are constructed (the levers are private on the agent + off the StepAgent interface, so
    *  they cannot be read off `inner`). Absent (test doubles) => levers.json is `{}`. */
   resolveLevers?: (invocation: AgentInvocation) => Record<string, unknown>;
+  /** LIVE INDEX mode (recordDir === the project's own `.consort`, always-on): record the turn's
+   *  transcript + the produced/deleted file INDEX, but SNAPSHOT NO content , no `files/` copy, no
+   *  recorded-artifacts mirror, no replay-set pre-state, no build-corpus snapshot. A clicked file is
+   *  read at HEAD (may have changed since; not historically accurate, by design). Absent/false =>
+   *  a CAPTURE: snapshot everything (historically accurate + replayable), as before. */
+  liveIndex?: boolean;
 }
 
 /**
@@ -71,15 +77,20 @@ export function wrapWithRecorder(inner: StepAgent, ctx: RecorderContext): StepAg
       // recordTurn (not snapshotted here). Only agent turns get a replay set (this decorator only
       // wraps agent invokes).
       const turnDir = turnDirFor(ctx.recordDir, invocation.action);
-      recordReplaySet({
-        turnDir,
-        projectDir: ctx.projectDir,
-        consortDir: ctx.consortDir,
-        inputs: invocation.inputs,
-        prompt: invocation.instructions.prompt,
-        ...(invocation.instructions.guidelines ? { guidelines: invocation.instructions.guidelines } : {}),
-        ...(ctx.resolveLevers ? { levers: ctx.resolveLevers(invocation) } : {}),
-      });
+      // The replay-set pre-state (full code tree + inputs/prompt/levers) is a CAPTURE artifact for
+      // offline replay/optimization , heavy, and pointless for the always-on LIVE index (which reads
+      // files at HEAD, never replays). Skip it in live-index mode.
+      if (!ctx.liveIndex) {
+        recordReplaySet({
+          turnDir,
+          projectDir: ctx.projectDir,
+          consortDir: ctx.consortDir,
+          inputs: invocation.inputs,
+          prompt: invocation.instructions.prompt,
+          ...(invocation.instructions.guidelines ? { guidelines: invocation.instructions.guidelines } : {}),
+          ...(ctx.resolveLevers ? { levers: ctx.resolveLevers(invocation) } : {}),
+        });
+      }
 
       // Let the inner agent (live claude / contained / replay) produce its delta first. The
       // invocation is forwarded verbatim , the wrapper NEVER alters the inner agent's inputs.
@@ -97,11 +108,13 @@ export function wrapWithRecorder(inner: StepAgent, ctx: RecorderContext): StepAg
         action,
         step: 0,
         ...(transcript ? { transcript } : {}),
+        ...(ctx.liveIndex ? { snapshotContent: false } : {}),
       });
 
       // 2) A navigator/driver turn ALSO snapshots its full code tree into the build corpus
       //    (recorded-build/.../turns/NNN), the per-story build-ordinal replayBuildTurn consumes.
-      if (ctx.recordBuildDir && action.kind === "invoke-role" && (action.role === "navigator" || action.role === "driver") && "story" in action && typeof action.story === "string") {
+      //    CAPTURE only: the live index reads code at HEAD, so it snapshots no build corpus.
+      if (!ctx.liveIndex && ctx.recordBuildDir && action.kind === "invoke-role" && (action.role === "navigator" || action.role === "driver") && "story" in action && typeof action.story === "string") {
         const turn = nextBuildTurnNumber(ctx.recordBuildDir, ctx.featureId, action.story);
         recordBuildTurn({
           recordBuildDir: ctx.recordBuildDir,
@@ -126,7 +139,7 @@ export function wrapWithRecorder(inner: StepAgent, ctx: RecorderContext): StepAg
       //    for a live capture is ctx.takeTranscript being supplied (the live drive supplies it;
       //    replay/migration/tests do not). So enforce the FULL bundle only for a live capture; for a
       //    non-live record still require the base set (turn.json + files/).
-      assertTurnComplete(turnDir, action, { liveCapture: ctx.takeTranscript !== undefined });
+      assertTurnComplete(turnDir, action, ctx.liveIndex ? { liveIndex: true } : { liveCapture: ctx.takeTranscript !== undefined });
   };
 
   // Return a TRUE PASS-THROUGH: every property/method of the inner agent is visible unchanged

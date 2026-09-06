@@ -425,7 +425,14 @@ export function recordReplaySet(args: {
  * and no meaningful pre-state , they legitimately lack the bundle, so a non-live record requires only
  * the base set (turn.json + files/) even for an invoke-role turn.
  */
-export function expectedTurnFiles(action: WorkflowAction, opts: { liveCapture?: boolean } = {}): string[] {
+export function expectedTurnFiles(action: WorkflowAction, opts: { liveCapture?: boolean; liveIndex?: boolean } = {}): string[] {
+  // LIVE INDEX (a live build recording into `.consort`, snapshotContent:false): NO content is
+  // copied, so there is no `files/` delta + no replay-set pre-state. The turn IS still a viewable
+  // timeline entry, so require its manifest + , for an agent turn , its transcript. This is the
+  // always-on record's set; the clicked files are read at HEAD, not from a frozen copy.
+  if (opts.liveIndex) {
+    return action.kind === "invoke-role" ? ["turn.json", "transcript.md"] : ["turn.json"];
+  }
   const base = ["turn.json", "files"];
   if (action.kind !== "invoke-role" || !opts.liveCapture) return base;
   return [
@@ -446,7 +453,7 @@ export function expectedTurnFiles(action: WorkflowAction, opts: { liveCapture?: 
  * rather than silently producing an incomplete corpus (the failure mode that let 11/12 agent turns
  * record with no transcript.md unnoticed). Called at end-of-turn from the record wrapper.
  */
-export function assertTurnComplete(turnDir: string, action: WorkflowAction, opts: { liveCapture?: boolean } = {}): void {
+export function assertTurnComplete(turnDir: string, action: WorkflowAction, opts: { liveCapture?: boolean; liveIndex?: boolean } = {}): void {
   const missing = expectedTurnFiles(action, opts).filter((rel) => !existsSync(join(turnDir, rel)));
   if (missing.length > 0) {
     throw new Error(

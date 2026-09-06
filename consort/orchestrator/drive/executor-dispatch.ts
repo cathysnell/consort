@@ -442,9 +442,21 @@ export async function performTurnViaExecutor(
       ? { buildCorpusRoot: replayBuildDir, buildFeatureId: cfg.featureId, buildConsortDir: cfg.consortDir }
       : {}),
   });
-  if (recordDir) {
+  // Record the agent turn. Two fidelities on ONE path (a corpus can be replayed, a live build can be
+  // seen): an explicit RECORD_DIR is a CAPTURE (snapshot content into that corpus, historically
+  // accurate + replayable); otherwise , a plain LIVE build , record into `.consort` ITSELF as an
+  // INDEX (transcript + the produced/deleted file list, NO content snapshot; clicked files read at
+  // HEAD). During REPLAY we record nothing (the corpus is the input), UNLESS RECORD_DIR is also set
+  // (corpus migration). This mirrors withTurnRecording's perform-path rule for the non-agent turns.
+  // Gate the live index on the transcript seam: a real live DRIVE supplies cfg.takeTranscript
+  // (claude-runner wires takeLastAgentTranscript unconditionally), whereas a hermetic executor
+  // dispatch test supplies none , and must not start writing a `.consort/turns` corpus into its
+  // temp project. Same discriminator assertTurnComplete already uses for a live capture.
+  const liveIndex = !recordDir && !replayDir && cfg.takeTranscript !== undefined;
+  const turnRecordDir = recordDir || (liveIndex ? cfg.consortDir : undefined);
+  if (turnRecordDir) {
     agent = wrapWithRecorder(agent, {
-      recordDir,
+      recordDir: turnRecordDir,
       ...(consortEnv("RECORD_BUILD_DIR")?.trim() ? { recordBuildDir: consortEnv("RECORD_BUILD_DIR")!.trim() } : {}),
       projectDir: cfg.projectDir,
       consortDir: cfg.consortDir,
@@ -456,6 +468,7 @@ export async function performTurnViaExecutor(
       // captured with no duplication of the resolution. Merged with the manifest's agentOptions
       // (model/effort/session), the documented per-step lever home the optimize sweep varies.
       resolveLevers: () => ({ ...(manifest.agentOptions ?? {}), ...((manifest.agent?.config as Record<string, unknown>) ?? {}) }),
+      ...(liveIndex ? { liveIndex: true } : {}),
     });
   }
   const step = new Step(manifest, agent);

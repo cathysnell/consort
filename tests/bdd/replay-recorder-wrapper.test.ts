@@ -119,3 +119,38 @@ describe("wrapWithRecorder: records the inner agent's turn into the corpus", () 
     }
   });
 });
+
+describe("wrapWithRecorder: LIVE INDEX (record into .consort, no content snapshot)", () => {
+  it("records turn.json + transcript.md + produced INDEX, but NO files/ delta and NO replay-set", async () => {
+    const inner = fakeInner();
+    // liveIndex mode with a transcript source (the live drive supplies one).
+    const agent = wrapWithRecorder(inner, {
+      recordDir: consortDir, // the LIVE record targets the project's own .consort
+      projectDir: project,
+      consortDir,
+      featureId: "F1",
+      takeTranscript: () => ({ role: "spec-author", model: "sonnet", prompt: "p", finalText: "authored AC1", tools: ["Read x", "Write y"] }),
+      liveIndex: true,
+    });
+    await agent.invoke(inv());
+
+    const dirs = turnDirs(consortDir);
+    expect(dirs.length).toBe(1);
+    const label = dirs[0];
+    const turnJson = JSON.parse(readFileSync(join(consortDir, "turns", label, "turn.json"), "utf8"));
+    // The INDEX is captured: produced paths + snapshotted:false + the transcript summary.
+    expect(turnJson.produced).toContain(".consort/features/F1/stories/S1-file-stock/acs/AC1.json");
+    expect(turnJson.snapshotted).toBe(false);
+    expect(turnJson.transcript).toMatchObject({ role: "spec-author", model: "sonnet", toolCount: 2 });
+    // The transcript IS persisted (prompt/tools/reasoning viewable).
+    expect(existsSync(join(consortDir, "turns", label, "transcript.md"))).toBe(true);
+    // But NO content snapshot + NO replay-set pre-state (read at HEAD instead).
+    expect(existsSync(join(consortDir, "turns", label, "files"))).toBe(false);
+    expect(existsSync(join(consortDir, "turns", label, "replay-set"))).toBe(false);
+    // And recording into .consort does NOT churn its own output on a subsequent turn.
+    await agent.invoke(inv());
+    const t2 = JSON.parse(readFileSync(join(consortDir, "turns", turnDirs(consortDir).sort()[1], "turn.json"), "utf8"));
+    expect(t2.produced).not.toContain("turns/index.json");
+    expect(t2.produced.some((p: string) => p.startsWith(".consort/turns/"))).toBe(false);
+  });
+});
