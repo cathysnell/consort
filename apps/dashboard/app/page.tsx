@@ -14,7 +14,6 @@ import { useTheme } from "./useTheme";
 import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { latestTurnOrdinalForRole } from "@/lib/derive";
-import { primaryOutputNodeForRole } from "@/lib/topology";
 
 type CostMode = "show" | "hidden";
 
@@ -103,23 +102,11 @@ export default function Home() {
     const ord = latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], role);
     // A recorded-turn corpus (replay) gives the richest view: the role's latest turn WITH its
     // transcript and per-turn produced files. Prefer it whenever both an ordinal and the transcripts
-    // capability are present.
-    if (ord != null && canDrillDown) {
-      setDrilldown({ kind: "turn", ord });
-      return;
-    }
-    // Otherwise show WHAT THE ROLE PRODUCED. A live board has no per-turn corpus — its turn panel
-    // would be an empty shell — but the role's lifecycle-step deliverables live at HEAD and open via
-    // step-outputs, the SAME panel clicking the role's node opens. This is what makes "click the
-    // product-owner → read the intake docs it drafted" work live, instead of "nothing recorded yet".
-    const node = canShowStepOutputs ? primaryOutputNodeForRole(role) : null;
-    if (node) {
-      setDrilldown({ kind: "step", node });
-      return;
-    }
-    // Last resort: a bare ordinal with no transcript corpus (best-effort turn), else the honest role
-    // shell — a bubble is never a dead click.
-    setDrilldown(ord != null ? { kind: "turn", ord } : { kind: "role", role });
+    // capability are present. Otherwise the ROLE panel , the SAME "#— <role>" title + Correspondence
+    // / Artifacts / Code tab layout , whose Artifacts + Code tabs are filled from what the role
+    // produced (its lifecycle-step deliverables at HEAD). The panel's layout + name are unchanged;
+    // only its previously-empty tabs are now populated.
+    setDrilldown(ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role });
   };
 
   return (

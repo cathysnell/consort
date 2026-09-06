@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { nodeById } from "@/lib/topology";
+import { nodeById, primaryOutputNodeForRole } from "@/lib/topology";
 import { colorForRole, font, radius } from "@/lib/theme";
 import type { ArtifactContent, StepOutputAsset, StepOutputs } from "@/lib/types";
 import { buildFileTree, type FileTreeRow } from "@/lib/filetree";
@@ -89,7 +89,7 @@ export function DrilldownPanel({
     case "turn":
       return <TurnBody ord={target.ord} mode={mode} onClose={onClose} />;
     case "role":
-      return <RoleBody role={target.role} onClose={onClose} />;
+      return <RoleBody role={target.role} feature={feature} mode={mode} onClose={onClose} />;
     case "artifact":
       return <ArtifactBody path={target.path} mode={mode} onClose={onClose} />;
     case "step":
@@ -98,26 +98,137 @@ export function DrilldownPanel({
 }
 
 // A role bubble clicked when there's no recorded turn to open (plain live run / role not in the
-// event tail). Opens the panel anyway , the shell + an honest empty body , so a bubble is never a
-// dead click. Once the role takes a turn WITH recording on, the bubble opens the full turn instead.
-function RoleBody({ role, onClose }: { role: string; onClose: () => void }) {
-  // Same chrome as a loaded turn: "#— <role>" title and the three tabs. A role with no recorded
-  // turn has nothing to fill the meta line or the Artifacts/Code panes, so those tabs are inert and
-  // the meta is omitted — but the header + tab structure reads identically to a loaded turn.
+// event tail). SAME chrome as a loaded turn: the "#— <role>" title and the three Correspondence /
+// Artifacts / Code tabs. There is no per-turn transcript live, so Correspondence carries an honest
+// note; but the role's lifecycle-step DELIVERABLES live on disk, so the Artifacts + Code tabs are
+// filled from them (the product-owner's intake docs, a spec-author's proposals, ...). The layout +
+// the title are exactly a turn's — only the source of the files differs (step-outputs, not a turn).
+function RoleBody({
+  role,
+  feature,
+  mode,
+  onClose,
+}: {
+  role: string;
+  feature: string | null;
+  mode: "live" | "replay" | null;
+  onClose: () => void;
+}) {
+  // The lifecycle node whose recorded deliverables this role authors (product-owner → intake, ...),
+  // or null for a role that produces no durable output (then Artifacts/Code are simply empty).
+  const node = primaryOutputNodeForRole(role);
+  const [outputs, setOutputs] = useState<StepOutputs | null>(null);
+  const [tab, setTab] = useState<Tab>("correspondence");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [file, setFile] = useState<ArtifactContent | null>(null);
+
+  // Fetch the role's produced deliverables so Artifacts/Code are populated. Re-scopes with the
+  // pinned feature (the per-feature specs), exactly like StepBody. No node → nothing to fetch.
+  useEffect(() => {
+    setSelected(null);
+    setFile(null);
+    if (!node) {
+      setOutputs({ node: "", feature: feature ?? null, assets: [] });
+      return;
+    }
+    let live = true;
+    setOutputs(null);
+    (async () => {
+      try {
+        const r = await fetch(stepListUrl(node, feature, mode), { cache: "no-store" });
+        const body = await r.json();
+        if (!live) return;
+        setOutputs(r.ok ? (body as StepOutputs) : { node, feature: feature ?? null, assets: [] });
+      } catch {
+        if (live) setOutputs({ node, feature: feature ?? null, assets: [] });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [node, feature, mode]);
+
+  // Selected deliverable's content — same reader the step drill-down uses.
+  useEffect(() => {
+    if (selected === null) {
+      setFile(null);
+      return;
+    }
+    let live = true;
+    setFile(null);
+    (async () => {
+      try {
+        const r = await fetch(stepContentUrl(selected, mode), { cache: "no-store" });
+        const body = await r.json();
+        if (live) setFile(r.ok ? (body as ArtifactContent) : { path: selected, kind: "artifact", content: null, reason: body.error ?? `HTTP ${r.status}` });
+      } catch (e) {
+        if (live) setFile({ path: selected, kind: "artifact", content: null, reason: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [selected, node, feature, mode]);
+
+  const assets: StepOutputAsset[] = outputs?.assets ?? [];
+  const artifacts = assets.filter((a) => a.kind === "artifact");
+  const codeFiles = assets.filter((a) => a.kind === "code");
+  const artCount = artifacts.length;
+  const codeCount = codeFiles.length;
+  const codeRows = buildFileTree(codeFiles.map((a) => a.path));
+  const selectFile = (p: string) => setSelected(p === selected ? null : p);
+  const viewer = (
+    <>
+      {selected ? (
+        <div style={{ fontFamily: font.mono, fontSize: "0.64rem", color: "var(--text-faint)", marginBottom: 6, paddingBottom: 5, borderBottom: `1px solid var(--border-default)`, wordBreak: "break-all" }}>{selected}</div>
+      ) : null}
+      <ContentView file={selected === null ? undefined : file} idle="Select a file to view it." loadingName={selected} />
+    </>
+  );
+
   return (
     <PanelShell accent={colorForRole(role)} title={turnTitle(null, role)} onClose={onClose} bodyScroll={false}>
       <TabRow>
-        <TabButton active onClick={() => {}}>Correspondence</TabButton>
-        <TabButton active={false} onClick={() => {}} disabled>Artifacts</TabButton>
-        <TabButton active={false} onClick={() => {}} disabled>Code</TabButton>
+        <TabButton active={tab === "correspondence"} onClick={() => setTab("correspondence")}>
+          Correspondence
+        </TabButton>
+        <TabButton active={tab === "artifacts"} onClick={() => { setTab("artifacts"); setSelected(null); }}>
+          Artifacts{artCount > 0 ? ` (${artCount})` : ""}
+        </TabButton>
+        <TabButton active={tab === "code"} onClick={() => { setTab("code"); setSelected(null); }}>
+          Code{codeCount > 0 ? ` (${codeCount})` : ""}
+        </TabButton>
       </TabRow>
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-faint)", lineHeight: 1.55 }}>
-        Nothing recorded for <strong style={{ color: "var(--text-muted)" }}>{role}</strong> yet.
-        <div style={{ marginTop: 8 }}>
-          Its transcript (prompt · tools · reasoning), the artifacts it produced, and the code it wrote
-          appear here once it takes a turn with recording on.
+
+      {tab === "correspondence" ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-faint)", lineHeight: 1.55 }}>
+          No transcript recorded for <strong style={{ color: "var(--text-muted)" }}>{role}</strong> yet.
+          <div style={{ marginTop: 8 }}>
+            Its correspondence (prompt · tools · reasoning) appears here once it takes a turn with
+            recording on. What it produced is under Artifacts / Code.
+          </div>
         </div>
-      </div>
+      ) : tab === "artifacts" ? (
+        <SplitPane
+          list={
+            artCount === 0 ? (
+              <Empty>No artifacts.</Empty>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {artifacts.map((a) => (
+                  <FileRow key={a.path} badge="ARTIFACT" badgeColor="var(--text-faint)" label={a.name} sub={a.path} selected={a.path === selected} onSelect={() => selectFile(a.path)} />
+                ))}
+              </div>
+            )
+          }
+          viewer={viewer}
+        />
+      ) : (
+        <SplitPane
+          list={codeCount === 0 ? <Empty>No code.</Empty> : <CodeTree rows={codeRows} selected={selected} onSelect={selectFile} />}
+          viewer={viewer}
+        />
+      )}
     </PanelShell>
   );
 }
