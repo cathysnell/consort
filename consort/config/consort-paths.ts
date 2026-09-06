@@ -97,6 +97,13 @@ export const storyReviewVerdictJson = (tdd: string, f: string, s: string): strin
 export const workflowStateJson = (tdd: string): string => join(tdd, "workflow-state.json");
 export const productOverviewMd = (tdd: string): string => join(tdd, "product-overview.md");
 export const nfrsMd = (tdd: string): string => join(tdd, "nfrs.md");
+/** Intake is "ready" (planning may propose) once BOTH project-level intake docs exist on disk:
+ *  product-overview.md + nfrs.md. The Product Owner intake turn produces them; a fresh project has
+ *  neither, so the drive dispatches that turn FIRST. ONE definition, used by BOTH the drive probe
+ *  (orchestrator-probe) AND the sprint-planning derivation (orchestrator-sprint), so the two can
+ *  never disagree about whether intake is done , the exact split that let the sprint path skip it. */
+export const intakeReadyOnDisk = (tdd: string): boolean =>
+  fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 /** The design corpus dir (`.consort/design/`): the design brief, project-level
  *  design-guide, IA, and staged brand assets , the committed design half of a
  *  feature's spec. */

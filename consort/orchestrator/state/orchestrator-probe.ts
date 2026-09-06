@@ -53,6 +53,7 @@ import {
   readAcArchitecturalNotes,
   architectureJson,
   dbDesignJson,
+  intakeReadyOnDisk,
 } from "../../config/consort-paths.js";
 import { checkDbDesign } from "../validators/conformance/artifact-conformance.js";
 
@@ -127,9 +128,9 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
   // Intake is the precondition of proposing: the Spec Author proposes FROM product-overview.md +
   // nfrs.md, so both must exist before `/plan` advances. Headless the Human Proxy has deposited the
   // recorded seeds (reads true); a fresh interactive project has neither (false), so the drive first
-  // surfaces the PO intake step. (design-brief.md is a UI/design-lane input, not a plan precondition.)
-  const intakeReady =
-    fs.existsSync(path.join(consortDir, "product-overview.md")) && fs.existsSync(path.join(consortDir, "nfrs.md"));
+  // dispatches the PO intake turn. ONE shared derivation with the sprint-planning path (the split
+  // that let `--sprint` skip intake). (design-brief.md is a UI/design-lane input, not a plan precond.)
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && (spec!.stories as unknown[]).length > 0;
   const requestsAuthored = fs.existsSync(featureRequestMd(consortDir, featureId));
 

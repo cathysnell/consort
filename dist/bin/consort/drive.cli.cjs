@@ -6714,6 +6714,9 @@ var escalationFile = (tdd, id) => (0, import_node_path.join)(escalationsDir(tdd)
 var acReviewJson = (tdd, f, s, ac) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, ac, "review.json");
 var storyReviewJson = (tdd, f, s) => (0, import_node_path.join)(cyclesRootDir(tdd), f, s, "review.json");
 var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
+var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
+var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
 var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => (0, import_node_path.join)(tdd, "architecture");
@@ -9906,7 +9909,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
-  const intakeReady = fs8.existsSync(path3.join(consortDir, "product-overview.md")) && fs8.existsSync(path3.join(consortDir, "nfrs.md"));
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs8.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs8.existsSync(featureDeployEvidenceJson(consortDir, featureId));
@@ -14836,7 +14839,7 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   }
   return {
     phase: "planning",
-    planning: { proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},

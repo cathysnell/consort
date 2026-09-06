@@ -6674,6 +6674,9 @@ var escalationsDir = (tdd) => join(tdd, "escalations");
 var acReviewJson = (tdd, f, s, ac) => join(cyclesRootDir(tdd), f, s, ac, "review.json");
 var storyReviewJson = (tdd, f, s) => join(cyclesRootDir(tdd), f, s, "review.json");
 var workflowStateJson = (tdd) => join(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
+var nfrsMd = (tdd) => join(tdd, "nfrs.md");
+var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 var designDir = (tdd) => join(tdd, "design");
 var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => join(tdd, "architecture");
@@ -9516,7 +9519,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
-  const intakeReady = fs15.existsSync(path11.join(consortDir, "product-overview.md")) && fs15.existsSync(path11.join(consortDir, "nfrs.md"));
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
@@ -9912,7 +9915,7 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   }
   return {
     phase: "planning",
-    planning: { proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},

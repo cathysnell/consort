@@ -20,6 +20,7 @@ import {
   hasEstimates,
   readEstimates,
   readBacklog,
+  intakeReadyOnDisk,
 } from "../../consort/config/consort-paths.js";
 import * as fs from "node:fs";
 
@@ -79,7 +80,7 @@ export function deriveSprintPlanningState(
   }
   return {
     phase: "planning",
-    planning: { proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},

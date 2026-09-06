@@ -6686,6 +6686,9 @@ function resolveConsortDir(projectDir = process.cwd()) {
 var featuresDir = (tdd) => join(tdd, "features");
 var planningDir = (tdd) => join(tdd, "planning");
 var workflowStateJson = (tdd) => join(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
+var nfrsMd = (tdd) => join(tdd, "nfrs.md");
+var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureSpecJson = (tdd, f) => join(featureResolved(tdd, f), "feature-spec.json");
@@ -7410,7 +7413,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
-  const intakeReady = fs12.existsSync(path9.join(consortDir, "product-overview.md")) && fs12.existsSync(path9.join(consortDir, "nfrs.md"));
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs12.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs12.existsSync(featureDeployEvidenceJson(consortDir, featureId));

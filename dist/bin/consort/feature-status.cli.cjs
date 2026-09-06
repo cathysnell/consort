@@ -6685,6 +6685,9 @@ function resolveConsortDir(projectDir = process.cwd()) {
 var featuresDir = (tdd) => (0, import_node_path.join)(tdd, "features");
 var planningDir = (tdd) => (0, import_node_path.join)(tdd, "planning");
 var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state.json");
+var productOverviewMd = (tdd) => (0, import_node_path.join)(tdd, "product-overview.md");
+var nfrsMd = (tdd) => (0, import_node_path.join)(tdd, "nfrs.md");
+var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureSpecJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "feature-spec.json");
@@ -7201,7 +7204,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
-  const intakeReady = fs7.existsSync(path3.join(consortDir, "product-overview.md")) && fs7.existsSync(path3.join(consortDir, "nfrs.md"));
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs7.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs7.existsSync(featureDeployEvidenceJson(consortDir, featureId));

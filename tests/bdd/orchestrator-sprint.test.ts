@@ -19,6 +19,7 @@ import {
 } from "../../consort/intake/orchestrator-sprint";
 import { writeEstimates } from "../../consort/config/consort-paths";
 import { writeSprintGates } from "../../consort/gates/sprint-gates";
+import { nextTransition } from "../../consort/orchestrator/drive/orchestrator-drive";
 
 const SPRINT = "sprint-1";
 
@@ -111,10 +112,31 @@ describe("deriveSprintPlanningState", () => {
     writeFileSync(join(fdir, "feature-request.md"), "# request\n");
   }
 
-  it("nothing on disk => all planning flags false", () => {
+  it("nothing on disk => all planning flags false (incl. intakeReady , no product-overview/nfrs)", () => {
     const s = deriveSprintPlanningState(tdd, SPRINT);
     expect(s.phase).toBe("planning");
-    expect(s.planning).toEqual({ proposed: false, estimated: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
+    // intakeReady false with nothing on disk: the sprint drive dispatches the PO intake turn FIRST.
+    // This is the assertion that would have caught the bug where the sprint path skipped intake.
+    expect(s.planning).toEqual({ intakeReady: false, proposed: false, estimated: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
+  });
+
+  // REGRESSION (the sprint-path intake bug): deriveSprintPlanningState fed into nextTransition MUST
+  // dispatch the PO intake turn FIRST when intake is incomplete. The sprint path previously omitted
+  // intakeReady, so the drive skipped intake and went straight to propose (from nothing).
+  it("intake INCOMPLETE (no nfrs.md) => the sprint drive dispatches the PO intake turn, not propose", () => {
+    writeFileSync(join(tdd, "product-overview.md"), "# Overview\n\nA product.\n"); // present
+    // nfrs.md absent => intakeReady false
+    const s = deriveSprintPlanningState(tdd, SPRINT);
+    expect(s.planning?.intakeReady).toBe(false);
+    expect(nextTransition(s)).toEqual({ kind: "invoke-role", role: "product-owner", mode: "intake" });
+  });
+
+  it("intake COMPLETE (product-overview + nfrs) => intakeReady true, past the intake turn to propose", () => {
+    writeFileSync(join(tdd, "product-overview.md"), "# Overview\n\nA product.\n");
+    writeFileSync(join(tdd, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
+    const s = deriveSprintPlanningState(tdd, SPRINT);
+    expect(s.planning?.intakeReady).toBe(true);
+    expect(nextTransition(s)).toEqual({ kind: "invoke-role", role: "spec-author", mode: "propose" });
   });
 
   it("estimated when the Architect wrote planning/estimates.json", () => {

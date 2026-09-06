@@ -7503,6 +7503,7 @@ var storyReviewJson = (tdd, f, s) => join3(cyclesRootDir(tdd), f, s, "review.jso
 var workflowStateJson = (tdd) => join3(tdd, "workflow-state.json");
 var productOverviewMd = (tdd) => join3(tdd, "product-overview.md");
 var nfrsMd = (tdd) => join3(tdd, "nfrs.md");
+var intakeReadyOnDisk = (tdd) => fs.existsSync(productOverviewMd(tdd)) && fs.existsSync(nfrsMd(tdd));
 var designDir = (tdd) => join3(tdd, "design");
 var designGuideJson = (tdd) => join3(designDir(tdd), "design-guide.json");
 var architectureDir = (tdd) => join3(tdd, "architecture");
@@ -11829,7 +11830,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const tddPhase = honorPhase && rawPhase ? rawPhase : "feature";
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== void 0;
-  const intakeReady = fs15.existsSync(path11.join(consortDir, "product-overview.md")) && fs15.existsSync(path11.join(consortDir, "nfrs.md"));
+  const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
