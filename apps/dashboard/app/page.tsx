@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { usePolledState } from "./usePolledState";
-import { AgentBubble } from "./AgentBubble";
 import { Transport } from "./Transport";
 import { WorkflowGraph } from "./WorkflowGraph";
 import { LaneGraph } from "./LaneGraph";
@@ -205,18 +204,8 @@ export default function Home() {
           <StatusBar state={state} showCost={showCost} />
 
           {/* Planning / backlog moved to the LEFT-side pull-out pane (see the flex row above). */}
-
-          <SectionHeader>Current State</SectionHeader>
-          <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            {state.agents.map((a) => (
-              // Clicking a role ALWAYS opens the panel – never a dead click: `onOpenRole` opens the
-              // role's MOST RECENT recorded turn when the aligned recentEvents/recentTurns tail has
-              // one, else the role panel (shell + honest "nothing recorded yet"). NOT gated on
-              // canDrillDown: even with no record corpus, the bubble opens something. The lane's
-              // role-bearing steps share this exact handler.
-              <AgentBubble key={a.role} agent={a} showCost={showCost} onOpen={() => onOpenRole(a.role)} />
-            ))}
-          </section>
+          {/* The "Current State" role-card grid was removed: the lanes + lifecycle graph already show
+              each role's activity, and a role's turn opens from the lane's role-bearing steps. */}
 
           {state.blockers.length > 0 ? <Blockers state={state} /> : null}
             </div>
