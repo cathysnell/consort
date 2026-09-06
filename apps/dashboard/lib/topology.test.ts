@@ -539,6 +539,11 @@ const PY: PyWorkflow = JSON.parse(
 // his table exactly. See lib/topology.ts for the reasoning; both were verified against
 // the 380-event live log and the 421-event corpus log.
 const INTENTIONAL_DEVIATIONS: Record<string, { py: string | undefined; ts: string | undefined; why: string }> = {
+  intake: {
+    py: undefined,
+    ts: "intake",
+    why: "dashboard-native: the metered Product Owner intake turn emits phase=intake; map it to the Intake lifecycle node so the current-sprint graph lights the Intake box while the PO drafts. Kevin's Python had no intake phase (intake was event-driven via intake.supplied, which lights the same node).",
+  },
   assess: {
     py: "plan",
     ts: "build",
@@ -612,6 +617,12 @@ const ADDED_STEPS: {
 }[] = [
   {
     lane: "plan",
+    step: "p-intake-gate",
+    after: "p-intake",
+    why: "the intake gate — the HITL checkpoint AFTER the PO drafts the intake and BEFORE the Spec Author proposes (human reviews/edits/approves). A dashboard-native gate step Kevin's Python lacked; it closes the INTAKE side of the split plan lane and lights from the run's intake gate state.",
+  },
+  {
+    lane: "plan",
     step: "p-breakdown",
     after: "p-req",
     why: "breakdown (spec-author) breaks the committed features into stories — a real plan-lane phase (PHASE_TO_NODE.breakdown === 'plan') that Kevin's Python routed to the Plan node but gave no sub-step; adding it lets the plan lane AND a step light while the backlog is broken down.",
@@ -677,17 +688,13 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       // the rest of the lane is compared to the fixture verbatim. Their own shape is proven below.
       const added = new Set(ADDED_STEPS.filter((a) => a.lane === lane).map((a) => a.step));
       const tsSteps = ts.steps.filter((s) => !added.has(s.id));
-      // Edges through an added step collapse back to the fixture edge: drop any edge touching an
-      // added step, then re-add the predecessor→successor edge it stands in for. With no added
-      // steps this is exactly ts.edges.
+      // Edges collapse through the added steps back to the fixture chain. The ported lanes are LINEAR
+      // (each edge joins consecutive steps), so with the added steps removed the fixture edges are
+      // exactly the consecutive pairs of the remaining steps , IN ORDER (robust to multiple added
+      // steps, unlike a filter-then-append which loses order). With no added steps this equals ts.edges.
       const tsEdges = added.size
-        ? ts.edges.filter((e) => !added.has(e[0]) && !added.has(e[1])).map((e) => [...e])
+        ? tsSteps.slice(0, -1).map((s, i) => [s.id, tsSteps[i + 1].id])
         : ts.edges.map((e) => [...e]);
-      for (const a of ADDED_STEPS.filter((x) => x.lane === lane)) {
-        const before = ts.edges.find((e) => e[1] === a.step);
-        const afterE = ts.edges.find((e) => e[0] === a.step);
-        if (before && afterE) tsEdges.push([before[0], afterE[1]]);
-      }
       expect(tsEdges).toEqual(py.edges);
 
       // Step order matters: it is the order the lane renders in.
@@ -753,11 +760,17 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       expect(idx, `${a.step} must exist in topology`).toBeGreaterThanOrEqual(0);
       expect(afterIdx, `${a.after} (predecessor of ${a.step}) must exist`).toBeGreaterThanOrEqual(0);
       expect(idx, `${a.step} must sit directly after ${a.after}`).toBe(afterIdx + 1);
-      // The added step's phase must route to its own lane in phaseToNode (it's a real lane phase).
       const step = steps[idx];
-      const phases = [step.match?.phase, ...(step.match?.phaseAny ?? [])].filter(Boolean) as string[];
-      expect(phases.length, `${a.step} needs a matching phase`).toBeGreaterThan(0);
-      for (const p of phases) expect(nodeForPhase(p), `${p} routes to lane ${a.lane}`).toBe(a.lane);
+      if (step.gate) {
+        // A GATE step (null match) lights from gate state, not an event phase , so it has no phase to
+        // route. It must be a real gate (gate:true + match:null), consistent with the ported gates.
+        expect(step.match, `${a.step} is a gate , match must be null`).toBeNull();
+      } else {
+        // An event-lit added step's phase must route to its own lane in phaseToNode (a real lane phase).
+        const phases = [step.match?.phase, ...(step.match?.phaseAny ?? [])].filter(Boolean) as string[];
+        expect(phases.length, `${a.step} needs a matching phase`).toBeGreaterThan(0);
+        for (const p of phases) expect(nodeForPhase(p), `${p} routes to lane ${a.lane}`).toBe(a.lane);
+      }
       expect(a.why.length, `${a.step} needs a reason`).toBeGreaterThan(20);
     }
   });

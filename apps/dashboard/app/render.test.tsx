@@ -136,7 +136,10 @@ describe("render — WorkflowGraph", () => {
 // A single lane's header markup, so an assertion about one lane can't be satisfied by
 // another lane's text. Slices from this lane's uppercase name label to the next panel.
 function laneHeader(markup: string, laneId: string): string {
-  const start = markup.indexOf(`>${laneId}<`);
+  // Combined lanes render a split heading, not the bare lane id: plan -> "intake / plan",
+  // deploy -> "deploy / promote". Match the rendered heading text for those.
+  const heading = laneId === "plan" ? "intake / plan" : laneId === "deploy" ? "deploy / promote" : laneId;
+  const start = markup.indexOf(`>${heading}<`);
   if (start === -1) throw new Error(`lane ${laneId} not rendered`);
   const end = markup.indexOf("margin-left:auto", start);
   return markup.slice(start, end === -1 ? start + 400 : end);

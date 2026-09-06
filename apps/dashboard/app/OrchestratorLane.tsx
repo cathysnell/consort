@@ -65,7 +65,7 @@ export function orchestratorStatus(
 
 // The HIL gates the run passes, in lifecycle order. test_list is a design SUB-gate, not one of the
 // human decision points shown here.
-const GATE_ORDER = ["plan", "spec", "acceptance", "deploy", "promote"] as const;
+const GATE_ORDER = ["intake", "plan", "spec", "acceptance", "deploy", "promote"] as const;
 
 // Each gate's status FOR THE CURRENT STORY, derived from the log so the bubbles reset when the story
 // changes instead of showing every gate ever opened. `plan` is sprint-level (not story-scoped); the

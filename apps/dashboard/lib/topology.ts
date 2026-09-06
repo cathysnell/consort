@@ -93,6 +93,12 @@ export const LANE_IDS: readonly LaneId[] = ["plan", "design", "build", "deploy"]
 //   2. No `"estimate "` (trailing space) or `"RED"` key. Those were spelling defenses;
 //      `nodeForPhase` normalizes instead, which covers them and anything similar.
 export const PHASE_TO_NODE: Record<string, string> = {
+  // intake: the metered Product Owner intake turn (phase="intake") drafts product-overview/nfrs/
+  // design-brief. Maps to the Intake lifecycle node so the current-sprint graph lights the Intake
+  // box while the PO drafts. A dashboard-native addition (declared in topology.test's
+  // INTENTIONAL_DEVIATIONS): Kevin's Python had no intake phase (intake was event-driven via
+  // intake.supplied, which still lights the same node).
+  intake: "intake",
   // plan: feature proposal, sizing, request authoring, backlog breakdown
   propose: "plan",
   estimate: "plan",
@@ -236,6 +242,18 @@ const PLAN_LANE: Lane = {
       match: { role: "product-owner", eventPrefix: "intake" },
     },
     {
+      // Dashboard-native gate step (declared in topology.test.ts ADDED_STEPS): the intake gate , the
+      // HITL checkpoint AFTER the PO drafts product-overview/nfrs/design-brief and BEFORE the Spec
+      // Author proposes. Human reviews / edits / approves. Lights (purple) from the run's intake gate
+      // state, like p-gate does for the plan gate. Closes the INTAKE side of the split lane.
+      id: "p-intake-gate",
+      role: null,
+      label: "Intake gate",
+      sub: "human approves intake",
+      gate: true,
+      match: null,
+    },
+    {
       id: "p-propose",
       role: "spec-author",
       label: "Spec author",
@@ -278,7 +296,8 @@ const PLAN_LANE: Lane = {
     },
   ],
   edges: [
-    ["p-intake", "p-propose"],
+    ["p-intake", "p-intake-gate"],
+    ["p-intake-gate", "p-propose"],
     ["p-propose", "p-size"],
     ["p-size", "p-req"],
     ["p-req", "p-breakdown"],

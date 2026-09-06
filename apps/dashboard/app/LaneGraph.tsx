@@ -59,8 +59,12 @@ const LANE_NODE: Record<LaneId, { own: string; after: string[] }> = {
 // The deploy lane is a combined deploy+promote lane; these are its PROMOTE-section steps, so the
 // header dot strip can group promote lights apart from the deploy lights (with a divider between).
 const PROMOTE_STEP_IDS = new Set(["dp-pr", "dp-ci", "dp-promgate", "dp-merge", "dp-promote-hil"]);
+// The plan lane's INTAKE section (the PO's overview/nfrs), split off from the sprint-PLANNING dots
+// (propose → sizing → choose → breakdown → plan gate), mirroring the deploy/promote dot split.
+const INTAKE_STEP_IDS = new Set(["p-intake", "p-intake-gate"]);
 
 const LANE_STEP_GATE: Record<string, string> = {
+  "p-intake-gate": "intake",
   "p-gate": "plan",
   "d-gate": "spec",
   "b-accept": "acceptance",
@@ -194,8 +198,10 @@ function LanePanel({
             minWidth: 62,
           }}
         >
-          {/* The combined ship lane spans two lifecycle nodes, so its heading names both. */}
-          {laneId === "deploy" ? "deploy / promote" : laneId}
+          {/* Combined lanes span two lifecycle nodes, so their heading names both: the ship lane
+              is deploy / promote, and the plan lane opens with intake (the PO's overview/nfrs) then
+              the sprint planning proper , intake / plan. */}
+          {laneId === "deploy" ? "deploy / promote" : laneId === "plan" ? "intake / plan" : laneId}
         </span>
         {/* The ratio is suppressed once a lane is complete. "1/7 steps · complete" contradicts
             itself, and the ratio is the half that's misleading: steps that never light are
@@ -252,6 +258,19 @@ function LanePanel({
                   {deploySteps.map(dot)}
                   <span aria-hidden title="deploy · promote" style={{ width: 1, height: 9, background: "var(--border-strong)", margin: "0 3px", flex: "none" }} />
                   {promoteSteps.map(dot)}
+                </>
+              );
+            }
+            // The plan lane opens with INTAKE (the PO's overview/nfrs) then sprint PLANNING; split the
+            // dots the same way the deploy lane splits deploy vs promote.
+            if (laneId === "plan") {
+              const intakeSteps = steps.filter((s) => INTAKE_STEP_IDS.has(s.id));
+              const planSteps = steps.filter((s) => !INTAKE_STEP_IDS.has(s.id));
+              return (
+                <>
+                  {intakeSteps.map(dot)}
+                  <span aria-hidden title="intake · plan" style={{ width: 1, height: 9, background: "var(--border-strong)", margin: "0 3px", flex: "none" }} />
+                  {planSteps.map(dot)}
                 </>
               );
             }
