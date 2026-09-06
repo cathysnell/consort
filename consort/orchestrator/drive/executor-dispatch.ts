@@ -166,6 +166,10 @@ export function executorDispatched(action: WorkflowAction): boolean {
  */
 export function deterministicAgentless(action: WorkflowAction): boolean {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
+  // product-owner `intake`: a HUMAN-facilitated step (interactive, the PO helps the human author
+  // product-overview.md/nfrs.md; headless the Human Proxy has already deposited them, so this never
+  // fires) , no LLM turn the drive spawns, so it does not go through the executor.
+  if (action.role === "product-owner" && action.mode === "intake") return true;
   if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;

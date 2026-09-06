@@ -176,6 +176,26 @@ describe("nextTransition: UX Designer prerequisite (hoisted above build dispatch
   });
 });
 
+describe("nextTransition: planning lane , intake precondition", () => {
+  // Intake FIRST: with product-overview.md/nfrs.md absent (a fresh interactive project) intakeReady
+  // is false, so the drive surfaces the PO intake step BEFORE propose.
+  it("intakeReady:false -> the PO intake step (before propose)", () => {
+    expect(nextTransition(ws({ phase: "planning", planning: { intakeReady: false, proposed: false, estimated: false, requestsAuthored: false } })))
+      .toEqual({ kind: "invoke-role", role: "product-owner", mode: "intake" });
+  });
+  // intakeReady:true (headless proxy deposited the seeds, or the PO just authored them) -> propose.
+  it("intakeReady:true -> straight to spec-author propose", () => {
+    expect(nextTransition(ws({ phase: "planning", planning: { intakeReady: true, proposed: false, estimated: false, requestsAuthored: false } })))
+      .toEqual({ kind: "invoke-role", role: "spec-author", mode: "propose" });
+  });
+  // GUARDRAIL: intakeReady ABSENT (legacy/hermetic states) is treated as satisfied -> propose,
+  // byte-identical to before the field existed. Intake fires ONLY on an explicit false.
+  it("intakeReady absent -> propose (byte-identical; fires only on explicit false)", () => {
+    expect(nextTransition(ws({ phase: "planning", planning: { proposed: false, estimated: false, requestsAuthored: false } })))
+      .toEqual({ kind: "invoke-role", role: "spec-author", mode: "propose" });
+  });
+});
+
 describe("nextTransition: planning lane", () => {
   it("proposes, estimates, authors requests, sizes the COMMITTED features, approves the PLAN GATE, then completes", () => {
     const base = ws({ phase: "planning", planning: { proposed: false, estimated: false, requestsAuthored: false } });

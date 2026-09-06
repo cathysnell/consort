@@ -9,7 +9,7 @@
 // a newly-allowlisted action from having no dispatch home.
 
 import { describe, it, expect } from "vitest";
-import { executorDispatched } from "../../consort/orchestrator/drive/executor-dispatch";
+import { executorDispatched, deterministicAgentless, assertNotStrandedAgentTurn } from "../../consort/orchestrator/drive/executor-dispatch";
 import { SHIPPED_MANIFESTS, manifestForAction, type StepManifest } from "../../consort/orchestrator/steps/manifest";
 import type { WorkflowAction } from "../../consort/orchestrator/drive/orchestrator-drive";
 
@@ -53,5 +53,16 @@ describe("executor dispatch coverage: allowlist <-> shipped manifests are in bij
     const estimateCommitted = { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" } as unknown as WorkflowAction;
     expect(executorDispatched(authorRequests)).toBe(false);
     expect(executorDispatched(estimateCommitted)).toBe(false);
+  });
+
+  it("product-owner `intake` is a sanctioned deterministic-agentless turn (off the executor, guard OK)", () => {
+    // Intake is human-facilitated (interactive: the PO drafts WITH the human; headless: the Human
+    // Proxy deposited the seeds, so it never fires). Not a drive-spawned agent turn, so it stays OFF
+    // the executor allowlist yet is a SANCTIONED agentless action , the stranded-turn guard must NOT
+    // throw on it (it would if intake were neither executor-dispatched nor sanctioned).
+    const intake = { kind: "invoke-role", role: "product-owner", mode: "intake" } as unknown as WorkflowAction;
+    expect(executorDispatched(intake)).toBe(false);
+    expect(deterministicAgentless(intake)).toBe(true);
+    expect(() => assertNotStrandedAgentTurn(intake)).not.toThrow();
   });
 });

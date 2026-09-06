@@ -167,6 +167,34 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
     featureBranch: ctx.featureBranch,
   });
 
+  // Planning `intake`: the project has no product-overview.md/nfrs.md yet (a fresh interactive
+  // project that took no seed). There is no single CLI , the Product Owner drafts the intake WITH
+  // the human , so it is a MANUAL step (awaiting_human), NOT a bare resume. Surface it so a session
+  // opens the PO interview instead of advancing to `propose` with nothing to propose from. Headless
+  // never reaches here (the Human Proxy has deposited the seeds, so intakeReady is true).
+  if (action.kind === "invoke-role" && "mode" in action && (action as { mode?: string }).mode === "intake") {
+    return [
+      {
+        id: "intake.run",
+        title: "Author the project intake (Product Owner interview)",
+        hil_prompt:
+          "This project has no intake yet. Run the Product Owner intake interview to author it WITH you: " +
+          ".consort/product-overview.md (who/why/how it grows), .consort/nfrs.md (Required R<n> across " +
+          "performance/scalability/security/observability/operability/resilience), and , for a UI product , " +
+          ".consort/design/design-brief.md (## References + brand/interaction/a11y). Then resume; the Spec " +
+          "Author proposes the sprint from it.",
+        kind: "manual",
+        enact: null,
+        note:
+          "No single CLI , the PO drafts FOR the human, who approves (never invent intent). Invoke the " +
+          "`product-owner` agent (.claude/agents/product-owner.md) and follow its intake Method (three short " +
+          "interviews). Commit the artifacts (`git add .consort && git commit -m \"intake: product-overview + " +
+          "nfrs + design-brief\"`), then resume the drive , it re-derives intakeReady=true and proceeds to propose.",
+      },
+      holdOption(),
+    ];
+  }
+
   // Planning `author-requests`: the PO commits WHICH proposed features are in this
   // sprint. This has a dedicated CLI (`consort-sync-backlog`), so it is NOT a bare
   // "resume" (the default) , surface the exact command HERE so a session reads it off
@@ -424,7 +452,9 @@ export function buildNextSnapshot(
   // A human is needed iff the menu offers a DECISION (a gate, or a non-`resume` action
   // like backlog.commit / accept / discard / revise) rather than an autonomous `resume`.
   // `hold` (kind:"noop") is always present and never counts.
-  const awaiting_human = options.some((o) => o.kind === "gate" || (o.kind === "action" && o.id !== "resume"));
+  const awaiting_human = options.some(
+    (o) => o.kind === "gate" || o.kind === "manual" || (o.kind === "action" && o.id !== "resume"),
+  );
   return {
     scope,
     ...(ctx.featureId ? { feature: ctx.featureId } : {}),

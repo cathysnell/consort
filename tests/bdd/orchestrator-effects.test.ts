@@ -733,6 +733,10 @@ describe("buildDriveEffects", () => {
     const featureDir = join(consortDir, "features", "F1");
     mkdirSync(featureDir, { recursive: true });
     writeFileSync(join(consortDir, "workflow-state.json"), JSON.stringify({ phase: "planning" }));
+    // Intake present (product-overview.md + nfrs.md) so intakeReady is true and the drive is past
+    // the PO intake step , the state under test is "proposed + estimated, awaiting author-requests".
+    writeFileSync(join(consortDir, "product-overview.md"), "# Overview\n\nA product.\n");
+    writeFileSync(join(consortDir, "nfrs.md"), "# NFRs\n\n## Required\n- R1 fast\n");
     writeFileSync(join(featureDir, "feature-spec.json"), JSON.stringify({ id: "F1", stories: [] }));
     mkdirSync(join(consortDir, "planning"), { recursive: true });
     writeFileSync(

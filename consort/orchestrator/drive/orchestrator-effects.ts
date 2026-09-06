@@ -575,6 +575,11 @@ function roleTaskBody(
           `estimate already in the file (merge, do not overwrite the candidate sizes). This is the size sync-backlog ` +
           `stamps into the per-sprint backlog, so the committed backlog shows real sizing.`
         );
+      case "intake":
+        // Human-facilitated, not a drive-spawned agent turn: interactively the PO helps the human
+        // author the intake (consort-next surfaces it as a manual step); headless the Human Proxy has
+        // already deposited the recorded seeds, so the drive never reaches here. Prose kept for parity.
+        return `Run the Product Owner intake interview: author ${root}/product-overview.md, ${root}/nfrs.md, and (UI only) ${root}/design/design-brief.md WITH the human, then resume so the Spec Author can propose.`;
       case "author-requests":
         // Unreachable: author-requests is a human-input step the Human Proxy
         // supplies (see commandsForAction); it never spawns a role agent.

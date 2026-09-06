@@ -216,8 +216,35 @@ done. It cannot be responsibly completed unattended:
 
 ### Disposition
 
-**LIVE-PROOF REQUIRED / SUPERVISED.** Documented, not implemented. This is the one remaining piece of
-real work; it needs a human-attended live run.
+**INTERACTIVE onboarding half now IMPLEMENTED (hermetic); headless path preserved; full live e2e still pending.**
+
+Built (on request, after the deferral): the no-seed interactive path now opens the PO to author the
+intake, driven by the deterministic next-action, not just prose.
+
+- **Drive next-action** (`orchestrator-drive.ts`): a new intake precondition in the planning lane ,
+  `if (p.intakeReady === false) → invoke-role product-owner mode:"intake"`, BEFORE `propose`.
+  `intakeReady` is derived from disk in `orchestrator-probe.ts` (product-overview.md + nfrs.md exist)
+  and is OPTIONAL: absent/undefined = satisfied, so intake fires ONLY on an explicit `false` – every
+  existing test + replay corpus is byte-identical (same convention as `committedEstimated === false`).
+- **The two enactments** (exactly the user's model): headless / Human-Proxy → the seeds are already
+  deposited (Phase 3 staging) → `intakeReady` true → straight to spec-author `propose`; interactive,
+  no seed → `intakeReady` false → the drive surfaces the PO intake step.
+- **consort-next** (`next.ts`): the intake action returns a `manual` option `intake.run` and
+  `awaiting_human` was widened to include `kind:"manual"` (a manual step inherently needs the human),
+  so a session opens the PO interview instead of advancing to `propose` with nothing to propose from.
+- **Guard** (`executor-dispatch.ts`): intake is a sanctioned `deterministicAgentless` turn (not a
+  drive-spawned agent), so `assertNotStrandedAgentTurn` passes; new `intake` mode + task-body case.
+- **`commands/start.md`**: the `/plan` routing now runs the Product Owner intake interview FIRST on a
+  no-seed project – invoke the `product-owner` agent, three interviews → product-overview.md / nfrs.md
+  / (UI) design-brief.md, human-approved, commit, then `/plan`. Skips when the artifacts already exist.
+
+Tests (hermetic): `nextTransition` intake-on-false / propose-on-true / propose-on-absent (guardrail);
+probe `intakeReady` both values; `consort-next` surfaces the manual intake option + awaiting_human;
+`deterministicAgentless(intake)` + no stranded-turn throw. Full kit suite **3923 pass**, tsc clean.
+
+**Still pending (live):** an end-to-end interactive run proving the PO agent produces good, approvable
+intake, and one headless run confirming byte-identical seed behavior. The heavier drive-side headless
+*spawn* of the PO (vs. the human-facilitated interactive step built here) remains optional/live-gated.
 
 ---
 

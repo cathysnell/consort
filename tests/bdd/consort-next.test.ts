@@ -217,6 +217,18 @@ describe("buildNextSnapshot: reconciled state, blockers, truthful summary", () =
     expect(backlog.state.open_gates).toEqual([]); // NOT modeled as an open gate
     expect(backlog.awaiting_human).toBe(true); // ...yet a human IS needed (option: backlog.commit)
 
+    // The planning INTAKE step (no product-overview/nfrs yet) is a MANUAL step , the PO drafts the
+    // intake WITH the human, no single CLI , so it also surfaces awaiting_human (via the manual kind).
+    const intake = buildNextSnapshot(
+      "sprint",
+      baseState(),
+      { ...CTX, sprint: "s1" },
+      fixed({ kind: "invoke-role", role: "product-owner", mode: "intake" } as WorkflowAction),
+    );
+    expect(intake.awaiting_human).toBe(true);
+    expect(intake.options.map((o) => o.id)).toContain("intake.run");
+    expect(intake.options.find((o) => o.id === "intake.run")?.kind).toBe("manual");
+
     // A gate + a per-story accept both require the human.
     expect(buildNextSnapshot("feature", baseState(), CTX, fixed({ kind: "accept", story: "S3" })).awaiting_human).toBe(true);
 

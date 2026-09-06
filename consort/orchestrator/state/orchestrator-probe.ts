@@ -124,6 +124,12 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
 
   const spec = readJson(featureSpecJson(consortDir, featureId));
   const proposed = spec !== undefined;
+  // Intake is the precondition of proposing: the Spec Author proposes FROM product-overview.md +
+  // nfrs.md, so both must exist before `/plan` advances. Headless the Human Proxy has deposited the
+  // recorded seeds (reads true); a fresh interactive project has neither (false), so the drive first
+  // surfaces the PO intake step. (design-brief.md is a UI/design-lane input, not a plan precondition.)
+  const intakeReady =
+    fs.existsSync(path.join(consortDir, "product-overview.md")) && fs.existsSync(path.join(consortDir, "nfrs.md"));
   const breakdownDone = Array.isArray(spec?.stories) && (spec!.stories as unknown[]).length > 0;
   const requestsAuthored = fs.existsSync(featureRequestMd(consortDir, featureId));
 
@@ -180,7 +186,7 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, proposed, estimated: hasEstimates(consortDir), requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote,
   };

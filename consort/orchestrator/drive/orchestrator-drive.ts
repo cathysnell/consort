@@ -204,6 +204,13 @@ export function nextTransition(state: DriveState): WorkflowAction {
 
   if (state.phase === "planning") {
     const p = state.planning ?? { proposed: false, estimated: false, requestsAuthored: false };
+    // Intake FIRST: the Spec Author proposes FROM product-overview.md + nfrs.md, so intake must
+    // exist before anything else. Headless the Human Proxy has already deposited the recorded seeds
+    // (intakeReady true), so this is a no-op; a fresh interactive project has none (intakeReady
+    // false) and the drive surfaces the PO intake step to help the human author them. Fires ONLY on
+    // an EXPLICIT `false`: absent/undefined (legacy + hermetic states) is treated as satisfied, so
+    // every existing run is byte-identical (same convention as `committedEstimated === false`).
+    if (p.intakeReady === false) return { kind: "invoke-role", role: "product-owner", mode: "intake" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     // The Architect t-shirt-sizes the candidates before the PO commits, so the
     // PO can pick a backlog that fits sprint capacity (the team's estimation).
