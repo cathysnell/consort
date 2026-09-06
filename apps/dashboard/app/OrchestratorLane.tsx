@@ -115,6 +115,10 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
   // is "waiting on you" when parked at a gate, "coordinating" when a step is actively running. (This
   // is the single source; the lane dots + step cards read the same focus.)
   const focus = state.focus;
+  // An unresolved HIL escalation (a role kicked a problem up , a failed verify that couldn't
+  // auto-heal) is the most urgent state, so it takes precedence over waiting/coordinating and turns
+  // the card RED, matching the agent bubble's "issue" colour. Blockers are the escalation set.
+  const issue = state.blockers.length > 0;
   const waiting = focus.kind === "gate";
   const running = focus.kind === "step";
   // The gate bubbles: the five HIL gates in lifecycle order, scoped to (and resetting with) the
@@ -134,13 +138,13 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
         })()
       : story;
   const gateStatus = storyGateStatus(state.recentEvents, bubbleStory);
-  const flashing = waiting || running;
-  const accent = waiting ? "var(--status-gate)" : "var(--role-orchestrator)";
-  const status = waiting ? "waiting on you" : running ? "coordinating" : "idle";
+  const flashing = issue || waiting || running;
+  const accent = issue ? "var(--status-critical)" : waiting ? "var(--status-gate)" : "var(--role-orchestrator)";
+  const status = issue ? "issue" : waiting ? "waiting on you" : running ? "coordinating" : "idle";
   return (
     <div
       style={{
-        background: waiting ? "var(--status-gate-tint-faint)" : "var(--surface-card)",
+        background: issue ? "var(--status-critical-tint-faint)" : waiting ? "var(--status-gate-tint-faint)" : "var(--surface-card)",
         // Longhands only (no `border` shorthand): the left edge is a 3px accent stripe while the
         // other three sides are 1px, and mixing shorthand with borderLeft warns on rerender.
         borderTop: `1px solid ${flashing ? accent : "var(--border-default)"}`,

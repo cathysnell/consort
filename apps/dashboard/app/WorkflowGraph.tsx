@@ -62,8 +62,19 @@ export function WorkflowGraph({
   // there and needs the whole prefix, so it is derived once rather than recomputed on the client.
   const passed = new Set(state.topology.passedNodes);
   const activeNode = state.topology.activeNode;
-  // Whichever agent is working drives the active node's stroke color, as in Kevin's version.
+  // The active node's colour reflects WHAT is active , the same colour the agent cards + the
+  // orchestrator card use: a HIL issue/escalation is red (status-critical), a parked human gate is
+  // the gate colour, a working agent is its role colour, else the neutral accent. Reads the ONE
+  // focus observation + blockers, so it never disagrees with the other surfaces.
   const activeRole = state.agents.find((a) => a.status === "working")?.role ?? null;
+  const activeColor =
+    state.blockers.length > 0
+      ? "var(--status-critical)"
+      : state.focus.kind === "gate"
+        ? "var(--status-gate)"
+        : activeRole
+          ? colorForRole(activeRole)
+          : "var(--status-accent)";
   const gateState = new Map(state.gates.map((g: GateInfo) => [g.name, g.status]));
 
   // The current sprint's FEATURE + its current state, shown in the panel's header band — mirroring a
@@ -124,7 +135,7 @@ export function WorkflowGraph({
             w={w}
             active={node.id === activeNode}
             passed={passed.has(node.id)}
-            activeRole={activeRole}
+            activeColor={activeColor}
             gateStatus={gateStatusFor(node, gateState)}
             // Only nodes that actually map to deliverables are clickable — clicking a node with
             // no STEP_OUTPUTS entry (shipped, promote gate) would open an empty panel.
@@ -192,7 +203,7 @@ function Node({
   w,
   active,
   passed,
-  activeRole,
+  activeColor,
   gateStatus,
   onSelect,
   selected,
@@ -202,25 +213,27 @@ function Node({
   w: number;
   active: boolean;
   passed: boolean;
-  activeRole: string | null;
+  activeColor: string;
   gateStatus: string | null;
   onSelect?: (nodeId: string) => void;
   selected?: boolean;
 }) {
   const isGate = node.type === "gate";
 
-  // ONLY the active node is highlighted (accent fill + role-coloured border + pulse), matching the
-  // lanes' only-highlight-the-active-step treatment. Reached/approved nodes stay READABLE but quiet
-  // so the one active phase is what pops; a pending human gate keeps a thin gate-coloured border.
+  // ONLY the active node is highlighted (accent fill + the active colour's border + pulse), matching
+  // the lanes' only-highlight-the-active-step treatment. `activeColor` already reflects what is
+  // active (issue red / gate colour / working role / accent). Reached/approved nodes stay READABLE
+  // but quiet so the one active phase pops; a pending human gate keeps a thin gate-coloured border.
   const stroke = active
-    ? activeRole
-      ? colorForRole(activeRole)
-      : "var(--status-accent)"
+    ? activeColor
     : gateStatus === "surfaced"
       ? "var(--status-gate)"
       : "var(--border-default)";
 
-  const fill = active ? "var(--status-accent-tint)" : "var(--surface-inset)";
+  // The active node's FILL is a light tint of the SAME active colour as its border (issue red /
+  // gate colour / working role), via color-mix (as the lane steps do), so the node reads in the
+  // active thing's colour , not a fixed accent tint that disagreed with the border.
+  const fill = active ? `color-mix(in srgb, ${activeColor} 14%, transparent)` : "var(--surface-inset)";
 
   const label = active
     ? "var(--status-accent-text)"
