@@ -281,7 +281,7 @@ export function runHumanProxyCli(argv: string[]): number {
   // Sprint-scoped INTAKE gate: `--sprint <name> --gate intake`. The Human Proxy approves the intake
   // gate headless (writes the approval marker + logs gate.approved("intake")), so replay/CI never
   // park at it. Checked BEFORE the plan-gate branch (that branch matches any --sprint).
-  if (args.sprint && args.gate === "intake") {
+  if (args.sprint && (args.gate as string) === "intake") {
     approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
     process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved\n`);
     return 0;

@@ -82,10 +82,13 @@ describe("roleArtifacts (role -> exactly what that role produced)", () => {
     expect(a.some((p) => p.endsWith("test-list.md"))).toBe(true);
     expect(a.some((p) => p.endsWith("test-list.json"))).toBe(true);
   });
-  it("product-owner -> product overview + nfrs + proposals", () => {
+  it("product-owner -> its intake deliverables (overview + nfrs + design-brief), NOT the spec-author's proposals", () => {
     const a = roleArtifacts(dir, "product-owner", SCOPE);
     expect(a.some((p) => p.endsWith("product-overview.md"))).toBe(true);
-    expect(a.some((p) => p.endsWith("feature-proposals.md"))).toBe(true);
+    expect(a.some((p) => p.endsWith("nfrs.md"))).toBe(true);
+    expect(a.some((p) => p.endsWith(join("design", "design-brief.md")))).toBe(true);
+    // feature-proposals.md is the SPEC-AUTHOR's propose output, not the PO's intake.
+    expect(a.some((p) => p.endsWith("feature-proposals.md"))).toBe(false);
   });
   it("navigator (reflect) -> the story under review", () => {
     const a = roleArtifacts(dir, "navigator", SCOPE);

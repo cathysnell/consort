@@ -13,15 +13,17 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { intakeApprovedMarker } from "../../consort/config/consort-paths.js";
+import { intakeApprovedMarker, resolveConsortDir } from "../../consort/config/consort-paths.js";
 import { logGateApproved } from "../../consort/logging/gate-decision-log.js";
 
 /** Approve the intake gate: write the approval marker (so the drive advances past the gate to the
  *  Spec Author's propose) and log gate.approved("intake") to the shared agent-log trail. Idempotent
- *  (re-writing the marker is harmless). */
-export function approveIntakeGate(consortDir: string, approver: string): void {
-  const marker = intakeApprovedMarker(consortDir);
+ *  (re-writing the marker is harmless). `consortDir` resolves to the project's artifact dir when
+ *  omitted, matching approveSprintPlanGate so both gate doors accept an unset --consort-dir. */
+export function approveIntakeGate(consortDir: string | undefined, approver: string): void {
+  const dir = consortDir ?? resolveConsortDir();
+  const marker = intakeApprovedMarker(dir);
   mkdirSync(dirname(marker), { recursive: true });
   writeFileSync(marker, `${new Date().toISOString()} approved-by:${approver}\n`);
-  logGateApproved({ consortDir, gate: "intake", approver });
+  logGateApproved({ consortDir: dir, gate: "intake", approver });
 }

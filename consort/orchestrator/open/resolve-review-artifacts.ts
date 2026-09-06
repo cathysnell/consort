@@ -97,9 +97,13 @@ export function roleArtifacts(consortDir: string, role: string, opts: { feature?
   };
   switch (role) {
     case "product-owner":
+      // The PO's intake deliverables , what it drafts at the intake step and the human reviews at the
+      // intake gate. design-brief.md is UI-track only (a backend-only project produces none), so it is
+      // simply absent then (add() no-ops on a missing file). feature-proposals.md is the SPEC-AUTHOR's
+      // propose output, not the PO's, so it is not here.
       add(productOverviewMd(consortDir));
       add(nfrsMd(consortDir));
-      add(featureProposalsMd(consortDir));
+      add(designBriefMd(consortDir));
       break;
     case "spec-author":
       if (f) {

@@ -594,7 +594,19 @@ export async function performTurnViaExecutor(
     allowed: () => routerDeps.allowed(readFresh()),
   };
   const ctx = { action, cfg, state, validateBoundDeps: freshRouterDeps };
+  const turnStart = Date.now();
   const result = await execute(step, ctx, executorDeps);
+
+  // Per-turn completion line for the log narrator. The executor does NOT go through the legacy
+  // claude-runner timing emit, so without this a finished agent turn never appears as
+  // "[drive] <role> turn <N>s" in drive-live.log , and consort-watch's turn-done rule + its per-turn
+  // IDE open (openRoleArtifacts) never fire for it. So the product-owner's intake docs (and every
+  // other role's artifacts) are revealed in the editor when the turn completes, same as before the
+  // executor became the sole agent path. Same format watch-classify.ts's turn-done regex expects.
+  if (action.kind === "invoke-role") {
+    const doneModel = (manifest.agentOptions?.model as string | undefined) ?? "live";
+    process.stderr.write(`[drive] ${action.role} turn ${((Date.now() - turnStart) / 1000).toFixed(1)}s (${doneModel})\n`);
+  }
 
   // Divergence guard (replay-only, build turns): the turn synced the recorded snapshot + the postTurn
   // @build-cycle verify has now run live. Because the tree is byte-identical to record-time, the live
