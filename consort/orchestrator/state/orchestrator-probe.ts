@@ -134,6 +134,9 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
   const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && (spec!.stories as unknown[]).length > 0;
   const requestsAuthored = fs.existsSync(featureRequestMd(consortDir, featureId));
+  // In a single-feature drive the backlog IS this one committed feature; its
+  // feature-request.md on disk proves it was selected (backlog gate) + authored.
+  const backlogCommitted = requestsAuthored;
 
   // Deploy is "done" once the Release Engineer produced deploy-evidence.json
   // (the deploy actually ran). The deploy gate's approval is read strictly via
@@ -188,7 +191,7 @@ export function readDriveContext(consortDir: string, featureId: string, projectD
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), backlogCommitted, requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote,
   };

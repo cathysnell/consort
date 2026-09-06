@@ -291,7 +291,20 @@ export function supplyRequests(args: SupplyRequestsArgs = {}): SupplyRequestsRes
   const pairs = args.pairs ?? recordedRequestPairs();
   const supplied: string[] = [];
   const skipped: SupplyRequestsResult["skipped"] = [];
+  // The SELECTION membership = every pair's feature id, regardless of whether a recorded
+  // source exists for it. requested.json is the human's backlog pick (written the same
+  // either way); the recorded-seed COPY only happens for the ids whose source is present,
+  // and an ABSENT source is left for the metered author-requests PO turn to author LIVE.
+  const selected: string[] = [];
   for (const { featureId, from } of pairs) {
+    selected.push(featureId);
+    // Recorded seed PRESENT -> copy it (byte-identical replay: the metered turn then skips
+    // this conformant request). ABSENT -> defer to the live author-requests turn; NOT a
+    // refusal (the human proxy has no recording, but the selection still stands).
+    if (!existsSync(from)) {
+      skipped.push({ featureId, reason: "no recorded source (authored live by the metered PO turn)" });
+      continue;
+    }
     const res = supplyArtifact({
       from,
       to: featureRequestMd(consortDir, featureId),
@@ -303,12 +316,13 @@ export function supplyRequests(args: SupplyRequestsArgs = {}): SupplyRequestsRes
     if (res.ok) supplied.push(featureId);
     else skipped.push({ featureId, reason: res.reason ?? "unknown" });
   }
-  // Record this sprint's requested feature ids so syncBacklog scopes the backlog
-  // to them, through the shared writeRequested (merges, so a resume that
-  // re-supplies never shrinks the set). Only when a sprint is named
-  // (single-sprint/legacy leaves it unscoped for back-compat).
-  if (args.sprint && supplied.length > 0) {
-    writeRequested(consortDir, args.sprint, supplied);
+  // Record this sprint's requested feature ids (the SELECTION membership) so syncBacklog
+  // scopes the backlog to them, through the shared writeRequested (merges, so a resume that
+  // re-supplies never shrinks the set). Membership is the full selection, not only the ids
+  // whose seed was copied — a live request the metered turn will author is still in scope.
+  // Only when a sprint is named (single-sprint/legacy leaves it unscoped for back-compat).
+  if (args.sprint && selected.length > 0) {
+    writeRequested(consortDir, args.sprint, selected);
   }
   return { supplied, skipped };
 }

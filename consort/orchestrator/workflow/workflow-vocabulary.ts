@@ -200,8 +200,20 @@ export interface PlanningState {
    *  with no estimate action, and the backlog is projected without sizes. A
    *  config decision threaded from the CLI, NOT derived from disk. */
   skipSizing?: boolean;
-  /** The Product Owner committed the sprint backlog (authored a feature-request
-   *  per committed feature; sync-backlog projected backlog.json). */
+  /** The BACKLOG gate is approved: the human SELECTED which proposed features enter
+   *  the sprint and committed them (`requested.json` written; sync-backlog projected
+   *  backlog.json). This is the human's pick, distinct from `requestsAuthored` (the
+   *  metered PO turn then AUTHORS each committed feature's feature-request.md). The
+   *  drive parks at the backlog gate until committed. Absent = treated as satisfied
+   *  (legacy/hermetic states that predate the field), so the gate fires ONLY on an
+   *  explicit `false` and every existing run is byte-identical (same convention as
+   *  `intakeApproved` / `committedEstimated`). The deriver always sets it explicitly. */
+  backlogCommitted?: boolean;
+  /** The metered Product Owner `author-requests` turn wrote a feature-request.md per
+   *  COMMITTED feature (the folder ids in requested.json). A recorded seed that already
+   *  exists + conforms is COPIED at the backlog gate (not re-authored), so a seed/replay
+   *  run has this true without the turn firing; only ABSENT (live) requests are authored
+   *  by the turn. */
   requestsAuthored: boolean;
   /** Every COMMITTED backlog feature has a t-shirt estimate under its own id
    *  (estimates.json), so sync-backlog can stamp a per-sprint size. Distinct from
@@ -301,6 +313,7 @@ export type WorkflowAction =
   | { kind: "invoke-role"; role: "product-owner"; mode: "intake" }
   | { kind: "invoke-role"; role: "product-owner"; mode: "author-requests" }
   | { kind: "approve-intake-gate" }
+  | { kind: "approve-backlog-gate" }
   | { kind: "approve-plan-gate" }
   | { kind: "planning-complete" }
   | { kind: "dispatch"; story: string }
@@ -351,7 +364,8 @@ export type WorkflowAction =
  * The single next action for the whole feature workflow. Pure.
  *
  * Precedence:
- *   planning:  propose -> author-requests -> planning-complete.
+ *   planning:  propose -> estimate -> backlog gate -> author-requests ->
+ *              estimate-committed -> plan gate -> planning-complete.
  *   feature:   advance the active build; else dispatch a ready (gate-approved,
  *              unbuilt) story into the idle lane; else advance the design lane;
  *              else (all accepted) feature-complete.
@@ -425,6 +439,7 @@ export function actionLane(action: WorkflowAction): ActionLane {
       return action.role === "navigator" || action.role === "driver" ? "build" : "design";
     }
     case "approve-intake-gate":
+    case "approve-backlog-gate":
     case "approve-plan-gate":
     case "planning-complete":
       return "planning";
@@ -474,6 +489,7 @@ export function isHitlGateAction(action: WorkflowAction): boolean {
   return (
     action.kind === "approve-gate" ||
     action.kind === "approve-intake-gate" ||
+    action.kind === "approve-backlog-gate" ||
     action.kind === "approve-plan-gate" ||
     action.kind === "approve-deploy-gate" ||
     action.kind === "approve-promote-gate" ||
@@ -482,14 +498,16 @@ export function isHitlGateAction(action: WorkflowAction): boolean {
 }
 
 /**
- * Steps where the HUMAN provides an input artifact (not an approval): the
- * Product Owner's feature-requests at `author-requests`. The state machine is
- * identical for a human and the headless proxy, in interactive mode the driver
- * STOPS here so the human provides the requests (directly, or by working with
- * the agents), then re-runs; in proxy mode the Human Proxy supplies the recorded
- * answers when asked. Same transition, only the provider differs.
+ * Steps where the HUMAN provides an input the machine cannot synthesize (not an
+ * approval of already-produced work). There are none today: the sprint's feature
+ * SELECTION is now the BACKLOG GATE (a HITL gate — isHitlGateAction), where the
+ * human picks which proposed features enter the sprint; the per-feature
+ * feature-request.md is then authored by the metered `author-requests` PO turn
+ * (an agent turn, not a human hand-off). Retained as the seam the driver's
+ * pendingInput plumbing keys off, so a future genuine human-input step has one
+ * place to declare itself; it matches nothing now.
  */
-export function isHumanInputAction(action: WorkflowAction): boolean {
-  return action.kind === "invoke-role" && "mode" in action && action.mode === "author-requests";
+export function isHumanInputAction(_action: WorkflowAction): boolean {
+  return false;
 }
 

@@ -183,10 +183,27 @@ describe("commandsForAction: invoke-role -> claude", () => {
     expect(cmds.some((c) => (c as { args?: string[] }).args?.[0] === "supply-proposals")).toBe(false);
   });
 
-  it("author-requests stays DETERMINISTIC (proxy commits the recorded request) even with livePropose", () => {
-    const cmds = commandsForAction({ kind: "invoke-role", role: "product-owner", mode: "author-requests" }, cfg({ recordedRequests: true, livePropose: true }));
+  it("author-requests is a METERED PO turn (claude), not the inline supply-requests CLI", () => {
+    // author-requests no longer intercepts with supply-requests; it dispatches the PO agent to
+    // AUTHOR each committed feature-request.md, then re-projects the backlog post-turn. The recorded-
+    // seed COPY moved to the backlog gate (see the approve-backlog-gate test below).
+    const cmds = commandsForAction({ kind: "invoke-role", role: "product-owner", mode: "author-requests" }, cfg({ recordedRequests: true, livePropose: true, sprintName: "sprint" }));
+    expect(cmds[0]).toMatchObject({ kind: "claude", role: "product-owner" });
+    expect((cmds[0] as { task: string }).task).toMatch(/feature-request\.md/);
+    // NOT the old inline supply-requests CLI.
+    expect(cmds.some((c) => (c as { args?: string[] }).args?.[0] === "supply-requests")).toBe(false);
+    // Post-turn sync-backlog re-projects backlog.json from the just-authored requests.
+    expect(cmds.some((c) => (c as { kind: string }).kind === "sync-backlog")).toBe(true);
+  });
+
+  it("the backlog gate SUPPLIES the recorded requests (supply-requests) + re-syncs the backlog", () => {
+    // The backlog SELECTION/commit — the human proxy copies each recorded seed + writes requested.json
+    // (byte-identical replay), then sync-backlog projects backlog.json. This is where supply-requests
+    // moved from author-requests.
+    const cmds = commandsForAction({ kind: "approve-backlog-gate" }, cfg({ sprintName: "sprint" }));
     expect(cmds[0]).toMatchObject({ kind: "cli", bin: "consort-human-proxy" });
-    expect((cmds[0] as { args: string[] }).args[0]).toBe("supply-requests");
+    expect((cmds[0] as { args: string[] }).args).toEqual(expect.arrayContaining(["--gate", "backlog"]));
+    expect(cmds.some((c) => (c as { kind: string }).kind === "sync-backlog")).toBe(true);
   });
 
   it("propose + breakdown carry the UI-track E2E directive only when the UI track is on", () => {
@@ -300,33 +317,31 @@ describe("commandsForAction: invoke-role -> claude", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  it("author-requests supplies the PO's requests via the Human Proxy + sync-backlog (no LLM spawned)", () => {
-    // author-requests is a human-input step: the state machine asks, and headless
-    // the Human Proxy supplies the recorded feature-requests (logging each), then
-    // sync-backlog projects the backlog. No claude agent invents them.
-    const author = commandsForAction({ kind: "invoke-role", role: "product-owner", mode: "author-requests" }, cfg());
-    expect(author).toHaveLength(2);
-    expect(author[0]).toMatchObject({ kind: "cli", bin: "consort-human-proxy" });
-    expect((author[0] as { args: string[] }).args[0]).toBe("supply-requests");
-    expect(author[1]).toMatchObject({ kind: "sync-backlog" });
-    expect(author.some((c) => (c as { kind?: string }).kind === "claude")).toBe(false);
+  it("author-requests dispatches the PO agent + a post-turn sync-backlog (metered, no inline supply-requests)", () => {
+    // author-requests is now a metered PO turn: it AUTHORS each committed feature-request.md, then
+    // sync-backlog re-projects backlog.json. The recorded-seed copy happens at the backlog gate.
+    const author = commandsForAction({ kind: "invoke-role", role: "product-owner", mode: "author-requests" }, cfg({ sprintName: "sprint" }));
+    expect(author[0]).toMatchObject({ kind: "claude", role: "product-owner" });
+    expect(author.some((c) => (c as { kind: string }).kind === "sync-backlog")).toBe(true);
+    // NOT the old inline supply-requests CLI.
+    expect(author.some((c) => (c as { args?: string[] }).args?.[0] === "supply-requests")).toBe(false);
   });
 
-  it("author-requests scopes supply-requests + sync-backlog to cfg.sprintName (so the deriver reads the SAME sprint's backlog)", () => {
-    // J2 planning stall: author-requests writes backlog.json under `cfg.sprintName ?? "sprint"`,
-    // but deriveSprintPlanningState reads the backlog for the REAL --sprint name. If drivePlanning
-    // leaves sprintName unset, the perform writes sprint "sprint" while the deriver reads e.g.
-    // "stockflow-rerecord-s1" => empty backlog => requestsAuthored stays false => the loop re-derives
-    // author-requests => DRIVER STALL. The two must agree: when sprintName is set, BOTH the
-    // supply-requests and the sync-backlog carry it (this pins the perform side; drive.cli must set it).
+  it("author-requests + the backlog gate scope sync-backlog / supply-requests to cfg.sprintName (deriver reads the SAME sprint)", () => {
+    // J2 planning stall: the backlog must be written under the SAME sprint name the deriver reads.
+    // author-requests' post-turn sync-backlog carries cfg.sprintName; the backlog gate's supply-requests
+    // + sync-backlog carry it too. If drivePlanning leaves sprintName unset the two disagree => empty
+    // backlog => requestsAuthored stays false => the loop re-derives => DRIVER STALL.
     const author = commandsForAction(
       { kind: "invoke-role", role: "product-owner", mode: "author-requests" },
       cfg({ sprintName: "stockflow-rerecord-s1" }),
     );
-    const supply = author[0] as { args: string[] };
+    expect(author.find((c) => (c as { kind: string }).kind === "sync-backlog")).toMatchObject({ kind: "sync-backlog", sprint: "stockflow-rerecord-s1" });
+    const gate = commandsForAction({ kind: "approve-backlog-gate" }, cfg({ sprintName: "stockflow-rerecord-s1" }));
+    const supply = gate[0] as { args: string[] };
     expect(supply.args).toContain("--sprint");
     expect(supply.args[supply.args.indexOf("--sprint") + 1]).toBe("stockflow-rerecord-s1");
-    expect(author[1]).toMatchObject({ kind: "sync-backlog", sprint: "stockflow-rerecord-s1" });
+    expect(gate.find((c) => (c as { kind: string }).kind === "sync-backlog")).toMatchObject({ kind: "sync-backlog", sprint: "stockflow-rerecord-s1" });
   });
 
   it("spec-author breakdown resets partial state, then seeds the pipeline (reset + claude + verify-artifact + sync-breakdown)", () => {
@@ -728,8 +743,8 @@ describe("buildDriveEffects", () => {
 
   it("planNextAction (the --dry-run core) reports the next action + its commands", async () => {
     // Planning, proposed (feature-spec exists) + estimated (Architect sized the
-    // candidates) but the PO has not authored requests -> next is product-owner
-    // author-requests.
+    // candidates) but the human has not committed the backlog (no requested.json / backlog) ->
+    // next is the BACKLOG GATE (the human's feature selection), which precedes author-requests.
     const featureDir = join(consortDir, "features", "F1");
     mkdirSync(featureDir, { recursive: true });
     writeFileSync(join(consortDir, "workflow-state.json"), JSON.stringify({ phase: "planning" }));
@@ -752,11 +767,11 @@ describe("buildDriveEffects", () => {
     );
 
     const plan = await planNextAction(cfg({ consortDir }));
-    expect(plan.action).toEqual({ kind: "invoke-role", role: "product-owner", mode: "author-requests" });
-    // author-requests is a human-input step: the Human Proxy supplies the PO's
-    // recorded feature-requests when asked, then sync-backlog. No LLM.
+    expect(plan.action).toEqual({ kind: "approve-backlog-gate" });
+    // The backlog gate: headless the Human Proxy commits the recorded selection (--gate backlog:
+    // copies the seeds + writes requested.json), then sync-backlog projects the backlog.
     expect(plan.commands[0]).toMatchObject({ kind: "cli", bin: "consort-human-proxy" });
-    expect((plan.commands[0] as { args: string[] }).args[0]).toBe("supply-requests");
+    expect((plan.commands[0] as { args: string[] }).args).toEqual(expect.arrayContaining(["--gate", "backlog"]));
   });
 
   it("planNextAction resolves an agent action's commands the SAME way perform does (J3: --dry-run/interactive preview == what the drive performs; survives J5)", async () => {

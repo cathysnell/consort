@@ -134,6 +134,9 @@ function cfg(consortDir: string, projectDir: string, runner: DriveEffectsConfig[
     deployTarget: "local",
     useManifestSteps: true,
     loopGranularity: "story",
+    // Sprint-scoped, so the product-owner author-requests manifest's @sync-backlog postTurn projects
+    // the backlog (it is a no-op without a sprint name). Harmless for the other manifests.
+    sprintName: "matrix-sprint",
   } as DriveEffectsConfig;
 }
 
@@ -141,8 +144,8 @@ function cfg(consortDir: string, projectDir: string, runner: DriveEffectsConfig[
 const AGENT_MANIFESTS = SHIPPED_MANIFESTS;
 
 describe("every agent manifest dispatches through the executor (A-full #649)", () => {
-  it("covers all 21 shipped manifests (guard: the matrix stays exhaustive)", () => {
-    expect(AGENT_MANIFESTS.length).toBe(21);
+  it("covers all 22 shipped manifests (guard: the matrix stays exhaustive)", () => {
+    expect(AGENT_MANIFESTS.length).toBe(22);
   });
 
   it.each(AGENT_MANIFESTS.map((m) => [m.id, m] as [string, StepManifest]))(
@@ -206,10 +209,11 @@ describe("every agent manifest dispatches through the executor (A-full #649)", (
         expect(bounded, `${manifest.id} must be executor-dispatched`).toBeDefined();
         // (b) the agent turn ran (exactly one claude), and its CLI stream funneled through the runner.
         expect(labels.filter((l) => l.startsWith("claude:"))).toHaveLength(1);
-        // The postTurn CLI stamped (every manifest declares a postTurn: @build-cycle or a role CLI).
+        // The postTurn stamped (every manifest declares a postTurn: @build-cycle / a role CLI, or the
+        // PO author-requests turn's @sync-backlog, which is an in-process sync-backlog DriveCommand).
         if ((manifest.postTurn ?? []).length > 0) {
-          const cliLabels = labels.filter((l) => l.startsWith("cli:"));
-          expect(cliLabels.length, `${manifest.id} should stamp its postTurn CLI`).toBeGreaterThan(0);
+          const postLabels = labels.filter((l) => l.startsWith("cli:") || l === "sync-backlog");
+          expect(postLabels.length, `${manifest.id} should stamp its postTurn CLI`).toBeGreaterThan(0);
         }
         // (c) each declared output exists under its channel root (phase 5 validated it => no block).
         for (const out of manifest.outputs) {

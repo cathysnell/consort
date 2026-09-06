@@ -599,9 +599,22 @@ function roleTaskBody(
           `verbatim). The human reviews + approves these before the Spec Author proposes the sprint from them.`
         );
       case "author-requests":
-        // Unreachable: author-requests is a human-input step the Human Proxy
-        // supplies (see commandsForAction); it never spawns a role agent.
-        return `Provide the sprint's feature-requests.`;
+        // The metered Product Owner author-requests turn: author a feature-request.md per COMMITTED
+        // feature (the folder ids the human selected at the backlog gate, recorded in requested.json)
+        // from the intake (product-overview / nfrs) + the Spec Author's planning/feature-proposals.md.
+        // Draft in the PO's voice; do NOT invent beyond the proposals + intake. SKIP any request that
+        // already exists + conforms (a recorded seed copied at the gate) — that keeps a seed/replay run
+        // byte-identical; only ABSENT (live) requests are authored.
+        return (
+          `Author the sprint's feature requests as the Product Owner. For EACH committed feature (the ` +
+          `folder ids in ${root}/sprints/*/requested.json — the features the human selected at the backlog ` +
+          `gate), WRITE ${root}/features/<F>/feature-request.md: a one-line ask (a '# ' heading) + the ` +
+          `rationale + the user-facing outcome, drafted FROM ${root}/product-overview.md + ${root}/nfrs.md ` +
+          `and the matching section of ${root}/planning/feature-proposals.md. Draft in the PO's voice; do ` +
+          `NOT invent scope beyond what the proposals + intake support. SKIP any feature-request.md that ` +
+          `already exists AND conforms (a recorded seed already placed at the gate) — do not re-author it. ` +
+          `Author ONLY the absent ones.`
+        );
       case "breakdown":
         // Be explicit that the breakdown deliverable is feature-spec.json (the
         // artifact the router + guard gate on), authored FRESH, plus the story
@@ -1456,19 +1469,12 @@ export function commandsForAction(action: WorkflowAction, cfg: DriveEffectsConfi
 
   switch (action.kind) {
     case "invoke-role": {
-      // author-requests is a HUMAN-INPUT step, not an agent task: the state
-      // machine asks for the PO's feature-request.md per committed feature. The
-      // machine is identical for a human and the proxy, interactive, the driver
-      // stops here and the human provides them (directly or via the agents);
-      // headless, the Human Proxy supplies the recorded answers WHEN ASKED (and
-      // logs each). Then sync-backlog (the one writer) projects backlog.json from
-      // exactly what was supplied. No LLM is spawned to invent the requests.
-      if ("mode" in action && action.role === "product-owner" && action.mode === "author-requests") {
-        return [
-          { kind: "cli", bin: HUMAN_PROXY_BIN, args: ["supply-requests", "--tdd-dir", cfg.consortDir, "--approver", approver, "--sprint", cfg.sprintName ?? "sprint"] },
-          { kind: "sync-backlog", sprint: cfg.sprintName ?? "sprint" },
-        ];
-      }
+      // author-requests is now a METERED PO turn (the LLM authors a feature-request.md per
+      // committed feature), so it FALLS THROUGH to buildClaudeCommand below like every other
+      // agent turn — NOT an inline supply-requests CLI. The recorded-seed COPY runs at the
+      // backlog gate (approve-backlog-gate), so a seed/replay run has requestsAuthored true and
+      // never fires this turn; only ABSENT (live) requests are authored here. sync-backlog is
+      // re-run POST-turn (below) so backlog.json reflects the just-authored requests.
       // DETERMINISTIC propose (capture/replay): when the sprint's feature-requests
       // are recorded, project feature-proposals.md from them via the Human Proxy
       // instead of spawning the Spec Author LLM. An LLM propose can write nothing
@@ -1546,6 +1552,13 @@ export function commandsForAction(action: WorkflowAction, cfg: DriveEffectsConfi
       // id-only backlog, so it must be re-synced now). This is what makes the
       // committed backlog carry per-sprint sizing, including on a re-plan sprint.
       if ("mode" in action && action.mode === "estimate-committed" && cfg.sprintName) {
+        cmds.push({ kind: "sync-backlog", sprint: cfg.sprintName });
+      }
+      // After the metered PO author-requests turn writes each committed feature's
+      // feature-request.md, re-project the sprint backlog (the ONE writer) so backlog.json
+      // reflects exactly the requests just authored — the post-turn projection that replaces
+      // the old inline supply-requests+sync-backlog pair (author-requests no longer intercepts).
+      if ("mode" in action && action.mode === "author-requests" && cfg.sprintName) {
         cmds.push({ kind: "sync-backlog", sprint: cfg.sprintName });
       }
       // reads the artifacts on disk and logs any not already in the agent log,
@@ -1740,6 +1753,22 @@ export function commandsForAction(action: WorkflowAction, cfg: DriveEffectsConfi
           bin: HUMAN_PROXY_BIN,
           args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "intake", "--approver", approver, "--tdd-dir", cfg.consortDir],
         },
+      ];
+
+    case "approve-backlog-gate":
+      // HITL BACKLOG gate: the human SELECTS which sized proposals enter the sprint + commits
+      // them. Headless the Human Proxy commits the recorded selection — `--gate backlog` supplies
+      // the recorded feature-requests (COPIES each seed + writes requested.json membership) and
+      // logs gate.approved("backlog"). Then sync-backlog projects backlog.json from the committed
+      // set. A recorded seed is copied here (so the metered author-requests turn skips it, byte-
+      // identical replay); an ABSENT request is left for that turn to author live.
+      return [
+        {
+          kind: "cli",
+          bin: HUMAN_PROXY_BIN,
+          args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "backlog", "--approver", approver, "--tdd-dir", cfg.consortDir],
+        },
+        { kind: "sync-backlog", sprint: cfg.sprintName ?? "sprint" },
       ];
 
     case "approve-plan-gate":

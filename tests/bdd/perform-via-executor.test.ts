@@ -370,14 +370,15 @@ describe("performViaExecutor (#594): driver GREEN through the StepExecutor", () 
     }
   });
 
-  it("returns undefined for a turn NOT on the executor allowlist (author-requests stays legacy)", async () => {
+  it("returns undefined for a turn NOT on the executor allowlist (estimate-committed stays legacy)", async () => {
     // After A-full Stage I every driver build turn (GREEN/refactor/repair/refactor-deploy/
-    // refactor-superseded/green-superseded) IS executor-dispatched, so the not-dispatched exemplar
-    // is a genuinely-legacy turn: author-requests is a human-input step (no agent spawn, no manifest).
+    // refactor-superseded/green-superseded) IS executor-dispatched, and author-requests is now a
+    // metered PO turn. The remaining genuinely-legacy agent turn is estimate-committed (the
+    // backlog-resyncing architect turn: no shipped manifest, deterministic-agentless).
     const projectDir = mkdtempSync(join(tmpdir(), "pve-green-"));
     try {
       const effects = buildDriveEffects(cfg(join(projectDir, ".consort"), projectDir, { useManifestSteps: true }));
-      const legacy: WorkflowAction = { kind: "invoke-role", role: "product-owner", mode: "author-requests" } as WorkflowAction;
+      const legacy: WorkflowAction = { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" } as WorkflowAction;
       expect(await effects.performViaExecutor!(legacy, state, routerDeps)).toBeUndefined();
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
@@ -403,18 +404,18 @@ describe("executorDispatched (Stage 1): the 7 widened design turns take the exec
     ["dba per-story", { kind: "invoke-role", role: "dba", story: RED_STORY }],
     ["test-strategist per-story", { kind: "invoke-role", role: "test-strategist", story: RED_STORY }],
     ["ux-designer", { kind: "invoke-role", role: "ux-designer" }],
+    ["product-owner author-requests", { kind: "invoke-role", role: "product-owner", mode: "author-requests" }],
   ] as unknown as Array<[string, WorkflowAction]>;
 
   it.each(DISPATCHED)("%s is executorDispatched", (_label, action) => {
     expect(executorDispatched(action)).toBe(true);
   });
 
-  // The turns that STAY on the legacy path – the ONLY remaining not-dispatched agent turns after
-  // A-full Stages G/H/I: human-input (author-requests) + the backlog-resyncing estimate-committed
-  // (neither has a shipped manifest). EVERY build turn (RED/GREEN + all self-heal + reflect + the
-  // deploy/superseded variants) is now executor-dispatched.
+  // The turn that STAYS on the legacy path – the ONLY remaining not-dispatched agent turn after
+  // A-full Stages G/H/I + author-requests becoming a metered PO turn: the backlog-resyncing
+  // estimate-committed (no shipped manifest). EVERY build turn (RED/GREEN + all self-heal + reflect +
+  // the deploy/superseded variants) is executor-dispatched, as are both PO planning turns.
   const NOT_DISPATCHED: Array<[string, WorkflowAction]> = [
-    ["product-owner author-requests (human input)", { kind: "invoke-role", role: "product-owner", mode: "author-requests" }],
     ["architect estimate-committed (re-syncs backlog)", { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" }],
   ] as unknown as Array<[string, WorkflowAction]>;
 

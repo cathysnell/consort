@@ -222,6 +222,17 @@ export function nextTransition(state: DriveState): WorkflowAction {
     // `--no-sizing` (p.skipSizing) drops this step: proposed -> author-requests
     // with no estimate action, for a backlog small enough not to need sizing.
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
+    // BACKLOG gate: the human picks WHICH sized proposals enter the sprint + commits
+    // them (requested.json). PARK here until committed — headless the Human Proxy
+    // commits the recorded selection (backlogCommitted true, so replay/CI never park);
+    // interactively the drive stops and surfaces the backlog gate. Distinct from the
+    // authoring turn below: this is the SELECTION, that is the drafting. Fires ONLY on an
+    // EXPLICIT false: absent/undefined (legacy + hermetic literal states) is treated as
+    // satisfied, so every existing run is byte-identical (same convention as intakeApproved).
+    if (p.backlogCommitted === false) return { kind: "approve-backlog-gate" };
+    // The metered Product Owner turn authors a feature-request.md per COMMITTED feature.
+    // A recorded seed already copied at the gate makes requestsAuthored true (the turn
+    // never fires — byte-identical replay); only ABSENT (live) requests are authored here.
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
     // After the PO commits, size the COMMITTED feature(s) by their real ids so
     // sync-backlog can stamp a per-sprint size (the candidate FP estimate above is

@@ -21,6 +21,7 @@ import type { TurnEventKind } from "./turn-events.js";
 // (resolveJsonModule is on.) External/scenario manifests are still loaded from a directory
 // the caller passes explicitly (loadStepManifests(dir)).
 import productOwnerIntakeManifest from "./manifests/product-owner-intake.json" with { type: "json" };
+import productOwnerAuthorRequestsManifest from "./manifests/product-owner-author-requests.json" with { type: "json" };
 import specAuthorBreakdownManifest from "./manifests/spec-author-breakdown.json" with { type: "json" };
 import specAuthorProposeManifest from "./manifests/spec-author-propose.json" with { type: "json" };
 import specAuthorStoryManifest from "./manifests/spec-author-story.json" with { type: "json" };
@@ -188,6 +189,7 @@ export function validateStepManifest(manifest: StepManifest): ManifestValidateRe
  */
 export const SHIPPED_MANIFESTS: StepManifest[] = [
   productOwnerIntakeManifest as StepManifest,
+  productOwnerAuthorRequestsManifest as StepManifest,
   specAuthorBreakdownManifest as StepManifest,
   specAuthorProposeManifest as StepManifest,
   specAuthorStoryManifest as StepManifest,

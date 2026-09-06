@@ -20,6 +20,7 @@ import {
   hasEstimates,
   readEstimates,
   readBacklog,
+  readRequested,
   intakeReadyOnDisk,
   intakeApprovedOnDisk,
 } from "../../consort/config/consort-paths.js";
@@ -64,6 +65,19 @@ export function deriveSprintPlanningState(
   const proposed = fs.existsSync(featureProposalsMd(consortDir));
   const estimated = hasEstimates(consortDir);
   const backlog = readBacklog(consortDir, sprint).features;
+  // backlogCommitted <- the human SELECTED the sprint's features at the backlog gate:
+  // requested.json declares the committed membership. A legacy/unscoped run (no
+  // requested.json but a projected backlog on disk) also counts as committed, so an
+  // existing run is byte-identical. This is the SELECTION (the gate), distinct from the
+  // authoring below. When false (and nothing projected) the machine PARKS at the backlog gate.
+  const requested = readRequested(consortDir, sprint);
+  const backlogCommitted = (requested !== undefined && requested.length > 0) || backlog.length > 0;
+  // requestsAuthored <- the backlog is non-empty AND every backlog feature has a
+  // feature-request.md (the deterministic sync-backlog projection of the committed requests). This
+  // is unchanged from before the split: backlog.json is the observable the metered author-requests
+  // turn's post-turn sync-backlog projects. A live run whose requests are not yet drafted has a
+  // committed selection (backlogCommitted true) but an empty backlog, so this stays false until the
+  // turn authors them; a seed run copies the requests at the gate, so it is true without the turn.
   const requestsAuthored = backlog.length > 0 && backlog.every((f) => hasFeatureRequest(consortDir, f.id));
   // committedEstimated: every committed backlog feature has an estimate under its
   // OWN id (estimates.json keyed by the committed F-id, not the candidate FP id).
@@ -81,7 +95,7 @@ export function deriveSprintPlanningState(
   }
   return {
     phase: "planning",
-    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, backlogCommitted, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},

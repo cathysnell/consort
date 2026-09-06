@@ -304,6 +304,7 @@ export const GATE_KINDS = [
   "approve-gate",
   "design-complete",
   "approve-intake-gate",
+  "approve-backlog-gate",
   "approve-plan-gate",
   "planning-complete",
   "dispatch",

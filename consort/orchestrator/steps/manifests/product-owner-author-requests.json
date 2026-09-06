@@ -1,0 +1,24 @@
+{
+  "id": "product-owner-author-requests",
+  "role": "product-owner",
+  "agent": { "kind": "claude", "config": { "role": "product-owner" } },
+  "match": { "kind": "invoke-role", "role": "product-owner", "mode": "author-requests" },
+  "inputs": [
+    { "id": "product-overview", "source": "feature:product-overview.md", "optional": true, "description": "The PO's product overview , the framing each committed feature-request is drafted from. OPTIONAL so a hermetic dispatch does not fail on its absence." },
+    { "id": "nfrs", "source": "feature:nfrs.md", "optional": true, "description": "The PO's non-functional requirements each committed feature-request accounts for. OPTIONAL." },
+    { "id": "feature-proposals", "source": "feature:planning/feature-proposals.md", "optional": true, "description": "The Spec Author's candidate proposals; the committed feature-request draws its scope from the matching section. OPTIONAL." }
+  ],
+  "outputs": [],
+  "routing": {
+    "produced": { "next": "state-derived" }
+  },
+  "agentOptions": {
+    "model": "opus",
+    "effort": "default",
+    "session": "fresh",
+    "resumeKeyFrom": "role"
+  },
+  "postTurn": [
+    { "bin": "@sync-backlog", "args": [], "when": "after" }
+  ]
+}

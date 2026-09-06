@@ -65,21 +65,14 @@ describe("fold — topology", () => {
     expect(t.atTimestamp).toBe(RUN[RUN.length - 1].timestamp);
   });
 
-  it("at the live edge, the backlog-commit pause parks the ONE focus on the backlog GATE, not the architect", () => {
-    // The drive pauses at author-requests (the Backlog gate) with NO gate.surfaced event, so the last
-    // log event stays the architect's estimate — which would leave p-size "current" (glowing) through
-    // the pause. next.json offering the backlog-commit means the run is parked at the backlog gate:
-    // laneCurrent clears and the ONE focus becomes {kind:"gate",gate:"backlog"} — the single key that
-    // drives the gate node + orchestrator + transport WAITING together.
-    const withBacklog = fold(RUN, snap({ next: { options: [{ id: "backlog.commit", title: "Commit the sprint backlog" }] } }));
-    expect(withBacklog.topology.laneCurrent).toBeNull();
-    expect(withBacklog.focus).toEqual({ kind: "gate", gate: "backlog" });
-  });
-
-  it("the backlog-commit override is live-edge only — scrubbed back keeps the playhead's own step", () => {
-    // next.json describes NOW, so it must not rewrite a past playhead's current step.
-    const scrubbed = fold(RUN, snap({ next: { options: [{ id: "backlog.commit", title: "Commit the sprint backlog" }] } }), 4);
-    expect(scrubbed.topology.laneCurrent).toEqual({ lane: "plan", step: "p-size" });
+  it("a surfaced (not-yet-approved) backlog gate parks the ONE focus on the backlog GATE, from the LOG", () => {
+    // The backlog gate now emits gate.surfaced(gate:"backlog") from the kit like every other gate —
+    // no next.json one-off. The pendingGate scan picks it up, the gate.surfaced playhead clears the
+    // architect's p-size current, and the ONE focus resolves to {kind:"gate",gate:"backlog"} — the
+    // single key that drives the gate node (backlog→p-req) + orchestrator + transport WAITING together.
+    const withBacklogGate = fold([...RUN, ev("gate.surfaced", { gate: "backlog", subject: "sprint s1" })], snap());
+    expect(withBacklogGate.topology.laneCurrent).toBeNull();
+    expect(withBacklogGate.focus).toEqual({ kind: "gate", gate: "backlog" });
   });
 
   it("rewinds with the scrub position — it is pure timeline data", () => {

@@ -35,6 +35,7 @@
 
 import { approveSprintPlanGate } from "../../consort/gates/sprint-gates.js";
 import { approveIntakeGate } from "../../consort/gates/intake-gate.js";
+import { approveBacklogGate } from "../../consort/gates/backlog-gate.js";
 import { drainGatesAsHumanProxy } from "../../consort/gates/human-proxy.js";
 import { approveStoryGateFromDisk, batchedDraftMessage } from "../../consort/pipeline/story-pipeline.js";
 import { resolveConsortDir } from "../../consort/config/consort-paths.js";
@@ -145,6 +146,15 @@ export function runApproveGateCli(argv: string[]): number {
   if (p.sprint && (p.gate as string) === "intake") {
     approveIntakeGate(consortDir, p.approver);
     process.stdout.write(`approve-gate: intake gate for '${p.sprint}' approved by ${p.approver}\n`);
+    return 0;
+  }
+
+  // Sprint BACKLOG gate: `--sprint <name> --gate backlog`. Records the human's sprint-backlog commit
+  // (the feature selection they made in requested.json). Logs gate.approved("backlog"); the SELECTION
+  // itself is declared via consort-sync-backlog. Checked before the plan-gate branch.
+  if (p.sprint && (p.gate as string) === "backlog") {
+    approveBacklogGate(consortDir, p.approver);
+    process.stdout.write(`approve-gate: backlog gate for '${p.sprint}' committed by ${p.approver}\n`);
     return 0;
   }
 

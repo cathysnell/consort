@@ -117,7 +117,7 @@ describe("deriveSprintPlanningState", () => {
     expect(s.phase).toBe("planning");
     // intakeReady false with nothing on disk: the sprint drive dispatches the PO intake turn FIRST.
     // This is the assertion that would have caught the bug where the sprint path skipped intake.
-    expect(s.planning).toEqual({ intakeReady: false, intakeApproved: false, proposed: false, estimated: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
+    expect(s.planning).toEqual({ intakeReady: false, intakeApproved: false, proposed: false, estimated: false, backlogCommitted: false, requestsAuthored: false, committedEstimated: false, gateApproved: false, skipSizing: false });
   });
 
   // REGRESSION (the sprint-path intake bug): deriveSprintPlanningState fed into nextTransition MUST

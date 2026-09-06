@@ -101,7 +101,13 @@ export function executorDispatched(action: WorkflowAction): boolean {
     // / design-brief) from the human's gathered answers – tracked via turn.usage, model-configurable
     // via its manifest agentOptions + roles.product-owner. Planning mode (no reconcile).
     if (action.role === "product-owner" && action.mode === "intake") return true;
-    return false; // author-requests + estimate-committed + any other mode: legacy path.
+    // product-owner author-requests: the metered PO turn that AUTHORS a feature-request.md per
+    // COMMITTED feature (from the intake + proposals), MIRRORING intake — tracked via turn.usage,
+    // model-configurable via its manifest agentOptions + roles.product-owner. A recorded seed already
+    // copied at the backlog gate is skipped (byte-identical replay: requestsAuthored is already true,
+    // so the turn never fires); only ABSENT (live) requests are authored. Planning mode (no reconcile).
+    if (action.role === "product-owner" && action.mode === "author-requests") return true;
+    return false; // estimate-committed + any other mode: legacy path.
   }
   // The per-story / feature design turns carry NO mode and NO buildMode. Distinguish them from the
   // build turns (navigator/driver) by role.
@@ -155,10 +161,11 @@ export function executorDispatched(action: WorkflowAction): boolean {
 /**
  * The SANCTIONED deterministic, agent-LESS invoke-role actions – the ones that legitimately do NOT
  * go through the agent executor because no LLM runs for them:
- *   - product-owner `author-requests` : a HUMAN-INPUT step (the Human Proxy supplies the recorded
- *     feature-requests via SPRINT_REQUESTS; no agent turn, no artifact to record).
  *   - architect-reviewer `estimate-committed` : re-runs the estimate then does a deterministic
  *     sync-backlog to stamp the committed F-keyed sizes (the distinguishing work is the sync).
+ * (product-owner `author-requests` is NO LONGER here: it is now a METERED executor-dispatched PO
+ * turn that authors each committed feature-request.md — see executorDispatched. The recorded-seed
+ * COPY still runs deterministically at the backlog gate, so replay never fires the turn.)
  * These are handled deterministically by `commandsForAction` – NOT a defect, NOT an agent turn on a
  * legacy path. This allowlist is what lets `assertNotStrandedAgentTurn` tell an INTENTIONAL
  * deterministic action apart from a real agent turn that wrongly escaped the executor. The
@@ -170,7 +177,6 @@ export function executorDispatched(action: WorkflowAction): boolean {
  */
 export function deterministicAgentless(action: WorkflowAction): boolean {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
-  if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;
 }
@@ -180,7 +186,9 @@ export function deterministicAgentless(action: WorkflowAction): boolean {
  * agent-log output, so reconcile/agent-log is SKIPPED for them (the executor's materializeOutputs +
  * the legacy commandsForAction path guard on the SAME predicate, keeping the two byte-parallel).
  * `intake` is a planning mode too: the Product Owner's project-level intake docs (product-overview /
- * nfrs / design-brief) are authored once at the .consort root, with no per-feature agent-log. This
+ * nfrs / design-brief) are authored once at the .consort root, with no per-feature agent-log.
+ * `author-requests` likewise: the PO authors the sprint's feature-request.md files (sprint-scoped,
+ * no per-feature agent-log to reconcile), so it skips reconcile like the other planning turns. This
  * is the ONE definition; every site imports it (no drifting copies).
  */
 export function isPlanningMode(action: WorkflowAction): boolean {
@@ -190,7 +198,8 @@ export function isPlanningMode(action: WorkflowAction): boolean {
     (action.mode === "propose" ||
       action.mode === "estimate" ||
       action.mode === "estimate-committed" ||
-      action.mode === "intake")
+      action.mode === "intake" ||
+      action.mode === "author-requests")
   );
 }
 
@@ -210,8 +219,8 @@ export function assertNotStrandedAgentTurn(action: WorkflowAction): void {
   if (executorDispatched(action) || deterministicAgentless(action)) return;
   throw new Error(
     `LEGACY AGENT-PATH GUARD: invoke-role action ${JSON.stringify(action)} is neither executor-` +
-      `dispatched nor a sanctioned deterministic-agentless action (author-requests / estimate-` +
-      `committed). A real agent turn must NEVER run on the legacy commandsForAction path – it would ` +
+      `dispatched nor a sanctioned deterministic-agentless action (estimate-committed). A real agent ` +
+      `turn must NEVER run on the legacy commandsForAction path – it would ` +
       `skip the executor's recording, output validation, and routing contract (silent corruption). ` +
       `Fix: add it to the executor allowlist (executorDispatched) with a shipped manifest, or – if it ` +
       `is genuinely agent-less – to deterministicAgentless. Do NOT run it on legacy. (Likely cause: a ` +
@@ -251,6 +260,14 @@ export function manifestPostTurnCommands(
         const cycle = deps.buildCycleCommand(action, cfg);
         if (cycle) out.push(cycle);
       }
+      continue;
+    }
+    if (p.bin === "@sync-backlog") {
+      // The PO author-requests turn's post-turn projection: re-project backlog.json from the
+      // just-authored feature-request.md files (the ONE writer). Enacted in-process by the runner
+      // (a `sync-backlog` DriveCommand, not a spawned CLI), byte-parallel to the legacy path's
+      // post-turn sync-backlog. Needs the sprint name; a turn with no sprint scope is a no-op.
+      if (cfg.sprintName) out.push({ kind: "sync-backlog", sprint: cfg.sprintName });
       continue;
     }
     out.push({ kind: "cli", bin: resolveBin(p.bin), args: expand(p.args) });

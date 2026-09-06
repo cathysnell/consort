@@ -102,6 +102,14 @@ export function orchestratorLogEvents(
       ];
     case "approve-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "spec", ...withStory } }];
+    case "approve-intake-gate":
+      // The HITL intake gate (the human approved the drafted product-overview/nfrs/design-brief).
+      // Previously fell through to the default reasoning marker — a latent gap that left the intake
+      // approval unlogged on the orchestrator skeleton; now it emits gate.approved like every gate.
+      return [{ ...base, event: "gate.approved", slots: { gate: "intake" } }];
+    case "approve-backlog-gate":
+      // The HITL backlog gate (the human selected + committed the sprint's features).
+      return [{ ...base, event: "gate.approved", slots: { gate: "backlog" } }];
     case "approve-plan-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "plan" } }];
     case "approve-deploy-gate":
@@ -164,6 +172,8 @@ function parkedGateName(gate: WorkflowAction): string | null {
   switch (gate.kind) {
     case "approve-intake-gate":
       return "intake";
+    case "approve-backlog-gate":
+      return "backlog";
     case "approve-plan-gate":
       return "plan";
     case "approve-gate":
@@ -202,12 +212,12 @@ export function parkedGateSurfacedEvent(
   if (!name) return null;
   const story = storyOf(gate);
   // gate.surfaced REQUIRES a non-empty `subject` (the template renders it). Story-
-  // scoped gates (spec/acceptance) name their story; the sprint gates (intake/plan)
+  // scoped gates (spec/acceptance) name their story; the sprint gates (intake/backlog/plan)
   // name the sprint; the feature gates (deploy/promote) name the feature. Each falls
   // back to the gate scope word when the id is unknown, so `subject` is never empty.
   const subject = story
     ? `story ${story}`
-    : name === "intake" || name === "plan"
+    : name === "intake" || name === "backlog" || name === "plan"
       ? `sprint ${ctx.sprint ?? name}`
       : `feature ${ctx.featureId ?? name}`;
   return {
@@ -334,6 +344,8 @@ export function gateEnactCommand(
   switch (gate.kind) {
     case "approve-intake-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "intake", "--approver", you] };
+    case "approve-backlog-gate":
+      return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "backlog", "--approver", you] };
     case "approve-plan-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--approver", you] };
     case "approve-gate": // the per-story spec gate (pipeline.json), NOT feature gates.json

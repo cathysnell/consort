@@ -46,23 +46,26 @@ describe("executor dispatch coverage: allowlist <-> shipped manifests are in bij
     },
   );
 
-  it("the two non-spawn planning turns stay OFF the executor allowlist (deterministic, no manifest-agent spawn)", () => {
-    // author-requests is human-input; estimate-committed re-syncs the backlog. Both are deterministic
-    // (commandsForAction / the J5 deterministic helper), never an executor agent spawn.
-    const authorRequests = { kind: "invoke-role", role: "product-owner", mode: "author-requests" } as unknown as WorkflowAction;
+  it("the one non-spawn planning turn stays OFF the executor allowlist (deterministic, no manifest-agent spawn)", () => {
+    // estimate-committed re-syncs the backlog deterministically (commandsForAction / the J5 helper),
+    // never an executor agent spawn. author-requests is NO LONGER here — it is now a metered PO turn.
     const estimateCommitted = { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" } as unknown as WorkflowAction;
-    expect(executorDispatched(authorRequests)).toBe(false);
     expect(executorDispatched(estimateCommitted)).toBe(false);
+    expect(deterministicAgentless(estimateCommitted)).toBe(true);
   });
 
-  it("product-owner `intake` is an EXECUTOR-dispatched metered turn (tracked via turn.usage), not agentless", () => {
-    // Intake is now a real, metered PO turn: it DRAFTS the intake docs from the human's gathered
-    // answers, so it runs through the executor (turn.usage logs its tokens/cost; model from its
-    // manifest agentOptions). It is therefore ON the executor allowlist and NOT deterministic-agentless
-    // – and the stranded-turn guard is satisfied because it IS executor-dispatched (has a manifest).
-    const intake = { kind: "invoke-role", role: "product-owner", mode: "intake" } as unknown as WorkflowAction;
-    expect(executorDispatched(intake)).toBe(true);
-    expect(deterministicAgentless(intake)).toBe(false);
-    expect(() => assertNotStrandedAgentTurn(intake)).not.toThrow();
+  it("the product-owner planning turns (intake + author-requests) are EXECUTOR-dispatched metered turns (turn.usage), not agentless", () => {
+    // Both DRAFT project/sprint artifacts from the human's inputs, so each runs through the executor
+    // (turn.usage logs its tokens/cost; model from its manifest agentOptions). They are ON the executor
+    // allowlist and NOT deterministic-agentless — and the stranded-turn guard is satisfied because each
+    // IS executor-dispatched (has a shipped manifest). author-requests skips a recorded seed already
+    // copied at the backlog gate, so a replay run never fires it (byte-identical), but the turn itself
+    // is a real metered agent turn when a request is absent (live).
+    for (const mode of ["intake", "author-requests"] as const) {
+      const action = { kind: "invoke-role", role: "product-owner", mode } as unknown as WorkflowAction;
+      expect(executorDispatched(action), `${mode} executorDispatched`).toBe(true);
+      expect(deterministicAgentless(action), `${mode} not agentless`).toBe(false);
+      expect(() => assertNotStrandedAgentTurn(action)).not.toThrow();
+    }
   });
 });

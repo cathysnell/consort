@@ -105,16 +105,17 @@ describe("buildNextOptions: the decision menu per stop", () => {
     expect(acc.note).toMatch(/seed_dev\.py|SEED DATA/i); // offers to seed the review
   });
 
-  it("author-requests surfaces the exact consort-sync-backlog command (no kit-scanning to find it)", () => {
-    // Regression: the planning author-requests step used to fall to the bare "resume"
-    // default, so a session ran consort-next, got no command, and grepped the kit to
-    // rediscover consort-sync-backlog. consort-next must NAME the command itself.
+  it("the backlog gate surfaces the exact consort-sync-backlog command (no kit-scanning to find it)", () => {
+    // The backlog SELECTION is the approve-backlog-gate. consort-next must NAME the command that
+    // commits it (consort-sync-backlog --features), so a session reads it off the menu instead of
+    // grepping the kit to rediscover how the backlog is recorded.
     const opts = buildNextOptions(
-      { kind: "invoke-role", role: "product-owner", mode: "author-requests" } as WorkflowAction,
+      { kind: "approve-backlog-gate" } as WorkflowAction,
       { sprint: "stockflow-s1", approver: "po@example.com" },
     );
     const commit = opts.find((o) => o.id === "backlog.commit")!;
     expect(commit).toBeDefined();
+    expect(commit.kind).toBe("gate");
     expect(commit.enact).toEqual({
       bin: "consort-sync-backlog",
       args: ["--sprint", "stockflow-s1", "--features", "<id[,id...]>"],
@@ -203,19 +204,31 @@ describe("buildNextSnapshot: reconciled state, blockers, truthful summary", () =
     expect(snap.state.stories).toEqual({ S1: "done", S2: "done" });
   });
 
-  it("awaiting_human is the SOLE human-needed signal – TRUE for the backlog pause even though it is an invoke-role with empty open_gates", () => {
-    // The planning author-requests pause is modeled as invoke-role (product-owner) with
-    // EMPTY open_gates, so gating on kind/open_gates read it as "resume" and the session
-    // sat SILENT at the backlog decision. awaiting_human keys on the option menu instead.
+  it("awaiting_human is the SOLE human-needed signal – TRUE for the backlog gate (the human's feature selection)", () => {
+    // The backlog SELECTION is now its own HITL gate (approve-backlog-gate): the human picks which
+    // proposed features enter the sprint. It surfaces a backlog.commit option (kind gate) + carries
+    // "backlog" in open_gates, so awaiting_human catches it directly.
     const backlog = buildNextSnapshot(
+      "sprint",
+      baseState(),
+      { ...CTX, sprint: "s1" },
+      fixed({ kind: "approve-backlog-gate" } as WorkflowAction),
+    );
+    expect(backlog.primary_action.kind).toBe("approve-backlog-gate");
+    expect(backlog.state.open_gates).toEqual(["backlog"]);
+    expect(backlog.awaiting_human).toBe(true); // a human IS needed (option: backlog.commit)
+    expect(backlog.options.map((o) => o.id)).toContain("backlog.commit");
+
+    // The metered author-requests PO turn that FOLLOWS the gate is an ordinary agent turn the drive
+    // RESUMES (it authors each committed feature-request.md) – NOT a human decision.
+    const authorRequests = buildNextSnapshot(
       "sprint",
       baseState(),
       { ...CTX, sprint: "s1" },
       fixed({ kind: "invoke-role", role: "product-owner", mode: "author-requests" } as WorkflowAction),
     );
-    expect(backlog.primary_action.kind).toBe("invoke-role"); // NOT a gate kind
-    expect(backlog.state.open_gates).toEqual([]); // NOT modeled as an open gate
-    expect(backlog.awaiting_human).toBe(true); // ...yet a human IS needed (option: backlog.commit)
+    expect(authorRequests.options.map((o) => o.id)).toContain("resume");
+    expect(authorRequests.awaiting_human).toBe(false);
 
     // The planning INTAKE step is now a metered PO agent turn (it DRAFTS the intake docs from the
     // human's gathered answers), so consort-next treats it like any other agent turn: it offers

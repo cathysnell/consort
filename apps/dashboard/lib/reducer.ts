@@ -487,16 +487,6 @@ export function fold(
   // because the carried-forward feature has ended — that is the F1→F6 handoff at event 214).
   const pinnedDone = pinnedDivergent !== null && (features.find((f) => f.id === feature)?.done ?? false);
   const topology = deriveTopology(slice, feature, pinnedDone);
-  // The Backlog gate (author-requests) awaits the human WITHOUT emitting a gate.surfaced, so the log
-  // has no gate event to park on and the last event is the architect's estimate. At the live edge,
-  // when next.json offers the backlog-commit, treat it as parking at the "backlog" gate: clear the
-  // (architect's) current step here, and set pendingGate = "backlog" below, so the ONE focus becomes
-  // {kind:"gate",gate:"backlog"} — and the gate node, orchestrator, and transport WAITING all light
-  // from that one key. Only at the live edge — next.json describes NOW.
-  const backlogGateAwaiting = atLive && (next?.options ?? []).some((o) => o.id === "backlog.commit");
-  if (backlogGateAwaiting) {
-    topology.laneCurrent = null;
-  }
   // Use where the playhead IS, not what the run has ever touched. `passedNodes` is wrong
   // here: `reflect` maps to the build node, so any design-lane reflect would make an
   // early-design playhead claim "build". The lane the current phase belongs to is the
@@ -537,9 +527,10 @@ export function fold(
     pendingGate = cleared ? null : gname;
     break; // only the most recent surface decides the live wait
   }
-  // The backlog gate has no gate.surfaced event; the live-edge next.json is its only signal. Park on
-  // it here so the ONE focus resolves to the backlog gate (drives node + orchestrator + transport).
-  if (backlogGateAwaiting) pendingGate = "backlog";
+  // The backlog gate now emits gate.surfaced(gate:"backlog") from the kit like every other gate, so
+  // the scan above parks on it from the LOG (its most-recent surface, not yet approved) — no next.json
+  // one-off. focusOf then resolves {kind:"gate",gate:"backlog"} and the GATES registry (backlog→p-req)
+  // lights the node + orchestrator + transport WAITING together.
 
   return {
     ...base,

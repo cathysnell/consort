@@ -10,9 +10,10 @@ import type { WorkflowAction } from "../../consort/orchestrator/workflow/workflo
 const A = (o: Record<string, unknown>): WorkflowAction => ({ kind: "invoke-role", ...o }) as WorkflowAction;
 
 describe("deterministicAgentless: the sanctioned no-LLM invoke-role actions", () => {
-  it("recognizes author-requests + estimate-committed (and nothing else)", () => {
-    expect(deterministicAgentless(A({ role: "product-owner", mode: "author-requests" }))).toBe(true);
+  it("recognizes estimate-committed (and nothing else — author-requests is now a metered turn)", () => {
     expect(deterministicAgentless(A({ role: "architect-reviewer", mode: "estimate-committed" }))).toBe(true);
+    // author-requests is NO LONGER deterministic-agentless: it is a metered executor-dispatched PO turn.
+    expect(deterministicAgentless(A({ role: "product-owner", mode: "author-requests" }))).toBe(false);
     // a real agent turn is NOT deterministic-agentless
     expect(deterministicAgentless(A({ role: "spec-author", mode: "breakdown" }))).toBe(false);
     expect(deterministicAgentless(A({ role: "navigator", story: "S1" }))).toBe(false);
@@ -27,9 +28,10 @@ describe("assertNotStrandedAgentTurn: hard-stop on an agent turn stranded on leg
     expect(() => assertNotStrandedAgentTurn(a)).not.toThrow();
   });
 
-  it("PASSES for a sanctioned deterministic-agentless action (author-requests, estimate-committed)", () => {
-    expect(() => assertNotStrandedAgentTurn(A({ role: "product-owner", mode: "author-requests" }))).not.toThrow();
+  it("PASSES for a sanctioned deterministic-agentless action (estimate-committed) + the metered author-requests turn", () => {
+    // estimate-committed is agentless; author-requests now passes because it IS executor-dispatched.
     expect(() => assertNotStrandedAgentTurn(A({ role: "architect-reviewer", mode: "estimate-committed" }))).not.toThrow();
+    expect(() => assertNotStrandedAgentTurn(A({ role: "product-owner", mode: "author-requests" }))).not.toThrow();
   });
 
   it("PASSES for a non-invoke-role deterministic drive action (gate / dispatch / phase transition)", () => {

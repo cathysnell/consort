@@ -23,6 +23,7 @@ import { applyReviseSelfHeal } from "../../consort/orchestrator/status/revise.js
 import { ARTIFACT_ROOT } from "../../consort/config/consort-paths.js";
 import { approveSprintPlanGate } from "../../consort/gates/sprint-gates.js";
 import { approveIntakeGate } from "../../consort/gates/intake-gate.js";
+import { approveBacklogGate } from "../../consort/gates/backlog-gate.js";
 import type { GateName } from "../../consort/gates/gates.js";
 
 /**
@@ -284,6 +285,25 @@ export function runHumanProxyCli(argv: string[]): number {
   if (args.sprint && (args.gate as string) === "intake") {
     approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
     process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved\n`);
+    return 0;
+  }
+  // Sprint-scoped BACKLOG gate: `--sprint <name> --gate backlog`. Commit the sprint backlog headless:
+  // SUPPLY the recorded feature-requests (COPY each seed + write requested.json membership) so a
+  // seed/replay run is byte-identical (the metered author-requests turn then skips the conformant
+  // seeds), then log gate.approved("backlog"). An ABSENT request is left for that turn to author live.
+  if (args.sprint && (args.gate as string) === "backlog") {
+    const res = supplyRequests({ consortDir: args.consortDir, approver: args.approver, sprint: args.sprint });
+    approveBacklogGate(args.consortDir, args.approver ?? "human-proxy");
+    process.stdout.write(
+      `human-proxy: backlog gate for ${args.sprint} committed` +
+        (res.supplied.length > 0 ? ` (supplied ${res.supplied.length}: ${res.supplied.join(", ")})` : "") +
+        "\n",
+    );
+    if (res.skipped.length > 0) {
+      process.stderr.write(
+        `human-proxy: ${res.skipped.length} request(s) left for the live author-requests turn: ${res.skipped.map((s) => s.featureId).join(", ")}\n`,
+      );
+    }
     return 0;
   }
   // Sprint-scoped plan gate: `--sprint <name> [--gate plan]`. The

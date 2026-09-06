@@ -92,14 +92,13 @@ export interface NextSnapshot {
   /** The decision menu: every valid next choice, each with its enact command +
    *  hil_prompt. Always includes a "hold" checkpoint option. */
   options: NextOption[];
-  /** TRUE when the next move requires a HUMAN decision – a gate, the planning backlog
-   *  commit, or a per-story accept/discard/revise – i.e. NO autonomous `resume` option
-   *  is offered. This is the SOLE signal a session / watcher / the extension should gate
-   *  on: `false` ⇒ resume the drive; `true` ⇒ surface the decision to the human at once.
-   *  Do NOT reverse-engineer it from `primary_action.kind` or `open_gates`: the planning
-   *  `author-requests` pause is modeled as an `invoke-role` (product-owner) with EMPTY
-   *  open_gates, so those two miss it – which is exactly what left the session silent at
-   *  the backlog decision. */
+  /** TRUE when the next move requires a HUMAN decision – a gate (intake / backlog / plan /
+   *  spec / deploy / promote), or a per-story accept/discard/revise – i.e. NO autonomous
+   *  `resume` option is offered. This is the SOLE signal a session / watcher / the extension
+   *  should gate on: `false` ⇒ resume the drive; `true` ⇒ surface the decision to the human at
+   *  once. The backlog SELECTION is now its own `approve-backlog-gate` (a HITL gate carried in
+   *  open_gates), so this catches it directly; the metered `author-requests` turn that follows is
+   *  an ordinary agent turn the drive RESUMES (not a human decision). */
   awaiting_human: boolean;
   /** A plain-language summary of where things stand + what the human is being
    *  asked, for the agent to relay verbatim (truthful phase-complete messaging). */
@@ -167,30 +166,6 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
     featureBranch: ctx.featureBranch,
   });
 
-  // Planning `author-requests`: the PO commits WHICH proposed features are in this
-  // sprint. This has a dedicated CLI (`consort-sync-backlog`), so it is NOT a bare
-  // "resume" (the default) – surface the exact command HERE so a session reads it off
-  // consort-next (the authoritative surface) instead of grepping the kit to rediscover
-  // how the backlog is recorded. The feature-request(s) are already authored (a staged
-  // first-project, or a prior turn), so this is a COMMIT decision, not authoring.
-  if (action.kind === "invoke-role" && "mode" in action && (action as { mode?: string }).mode === "author-requests") {
-    return [
-      {
-        id: "backlog.commit",
-        title: "Commit the sprint backlog",
-        hil_prompt:
-          "Which proposed features are in this sprint? Commit them (by folder id) to lock the backlog; the drive then advances to the plan gate.",
-        kind: "action",
-        enact: { bin: "consort-sync-backlog", args: ["--sprint", ctx.sprint ?? "<sprint>", "--features", "<id[,id...]>"] },
-        note:
-          "Pick the features from .consort/planning/feature-proposals.md and pass their FOLDER ids " +
-          "(e.g. F1-stock-visibility,F2-stock-adjustment) – NOT the proposal's `## F1` heading labels. " +
-          "A pure UI/shell story is not a feature; commit only the features this sprint delivers.",
-      },
-      holdOption(),
-    ];
-  }
-
   switch (action.kind) {
     case "accept": {
       // The richest, highest-stakes menu: the PO's acceptance decision. accept
@@ -237,6 +212,28 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
           enact: gateEnact,
           note: "To request changes instead of approving: edit the drafted docs directly, or edit " +
             ".consort/intake/answers.md and resume so the PO redrafts. Approve only once they reflect your intent.",
+        },
+        holdOption(),
+      ];
+    case "approve-backlog-gate":
+      // The BACKLOG gate: the human picks WHICH proposed features enter the sprint and commits
+      // them. Committing writes requested.json (the selection membership), which flips
+      // backlogCommitted so the drive advances to the metered author-requests turn. Surfaced as a
+      // human decision with the exact command, so a session reads it off consort-next (the
+      // authoritative surface) instead of grepping the kit to rediscover how the backlog is recorded.
+      return [
+        {
+          id: "backlog.commit",
+          title: "Commit the sprint backlog",
+          hil_prompt:
+            "Which proposed features are in this sprint? Commit them (by folder id) to lock the backlog; " +
+            "the drive then dispatches the Product Owner to author each request and advances to the plan gate.",
+          kind: "gate",
+          enact: { bin: "consort-sync-backlog", args: ["--sprint", ctx.sprint ?? "<sprint>", "--features", "<id[,id...]>"] },
+          note:
+            "Pick the features from .consort/planning/feature-proposals.md and pass their FOLDER ids " +
+            "(e.g. F1-stock-visibility,F2-stock-adjustment) – NOT the proposal's `## F1` heading labels. " +
+            "A pure UI/shell story is not a feature; commit only the features this sprint delivers.",
         },
         holdOption(),
       ];
@@ -356,6 +353,8 @@ export function buildNextOptions(action: WorkflowAction, ctx: NextContext): Next
  *  drive would stop at). Empty for a non-gate action. */
 function openGatesOf(action: WorkflowAction): string[] {
   switch (action.kind) {
+    case "approve-backlog-gate":
+      return ["backlog"];
     case "approve-plan-gate":
       return ["plan"];
     case "approve-gate":
