@@ -22,8 +22,9 @@ export interface TransportProps {
   onSpeedChange: (speed: number) => void;
   // Timestamp of the event at the playhead, for the clock readout.
   atTimestamp?: string | null;
-  // True when the run is parked on a human decision (a pending gate / escalation). At the live edge
-  // this shows WAITING rather than LIVE, since the board isn't advancing until you act.
+  // True when the run is parked on a human decision (a pending gate / escalation — the HITL). At the
+  // newest event this shows RAISED (red) rather than EXECUTING, since the board isn't advancing
+  // until you act.
   waiting?: boolean;
 }
 
@@ -100,8 +101,8 @@ export function Transport({
         />
         <TransportButton label="▶|" title="step forward one event" onClick={() => step(1)} disabled={atEnd} />
         <TransportButton
-          label="live"
-          title="follow the live edge"
+          label="latest"
+          title="jump to the newest event"
           active={live}
           onClick={() => { onPlayingChange(false); onChange(null); }}
         />
@@ -130,19 +131,20 @@ export function Transport({
           {atTimestamp ? atTimestamp.slice(11, 19) : "--:--:--"}
         </span>
         {!live ? (
-          // Scrubbed back / not following the live edge.
+          // Scrubbed back / not following the newest event.
           <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>PAUSED</span>
         ) : waiting ? (
-          // At the live edge but parked on a human decision (gate / escalation).
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-gate-text)", fontWeight: 700 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-gate)", animation: "softpulse 1.6s ease-in-out infinite" }} />
-            WAITING
+          // At the newest event but parked on a human decision (gate / escalation) — the HITL. Red,
+          // to correspond with the raised-to-human state everywhere else on the board.
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-critical-text)", fontWeight: 700 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-critical)", animation: "softpulse 1.6s ease-in-out infinite" }} />
+            RAISED
           </span>
         ) : (
-          // Following the live edge, run advancing.
+          // At the newest event, the run advancing on its own.
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-good)", fontWeight: 700 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-good)", animation: "softpulse 1.6s ease-in-out infinite" }} />
-            LIVE
+            EXECUTING
           </span>
         )}
       </div>

@@ -317,23 +317,24 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
       <div>
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "var(--text-strong)" }}>Consort · Agent Mission Control</h1>
-        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
-          {state?.feature ? (
-            <>
-              <strong>{state.feature}</strong> · phase: {state.phase ?? "—"}
-              {state.atLive ? null : ` · viewing event ${state.atEventIndex} of ${state.totalEventCount}`}
-              {/* A divergent pin means the board is FILTERED to a feature the run has moved past.
-                  Say so, in the run's own terms, so it can't be mistaken for a rewind — the
-                  playhead is still where the transport shows it. */}
-              {state.pinnedFeature && state.features.find((f) => f.active) ? (
-                <span style={{ color: "var(--text-faint)" }}>
-                  {" "}
-                  · run is on <strong>{state.features.find((f) => f.active)!.id}</strong>
-                </span>
-              ) : null}
-            </>
-          ) : "waiting for a run…"}
-        </div>
+        {/* No run loaded → no subtitle at all. The top-right feed dot already carries the
+            connecting/running state, so a placeholder line here would just repeat it (and the old
+            "waiting for a run…" wrongly read as a human-wait). It appears once a feature is known. */}
+        {state?.feature ? (
+          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+            <strong>{state.feature}</strong> · phase: {state.phase ?? "—"}
+            {state.atLive ? null : ` · viewing event ${state.atEventIndex} of ${state.totalEventCount}`}
+            {/* A divergent pin means the board is FILTERED to a feature the run has moved past.
+                Say so, in the run's own terms, so it can't be mistaken for a rewind — the
+                playhead is still where the transport shows it. */}
+            {state.pinnedFeature && state.features.find((f) => f.active) ? (
+              <span style={{ color: "var(--text-faint)" }}>
+                {" "}
+                · run is on <strong>{state.features.find((f) => f.active)!.id}</strong>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <FeatureSwitcher features={state?.features ?? []} pinned={pinned} onPin={onPin} />
@@ -381,7 +382,9 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
             {state.source.note ? <span style={{ fontSize: "0.66rem", padding: "2px 4px" }}>⚠</span> : null}
           </span>
         ) : null}
-        <ConnectionStatus connected={connected} lastUpdatedAt={lastUpdatedAt} />
+        {/* Feed health, meaningful only for a live run. In replay there is no feed to be stale, so
+            the source toggle (REPLAY) is the honest signal and this dot is hidden. */}
+        {state?.source?.mode === "replay" ? null : <ConnectionStatus connected={connected} lastUpdatedAt={lastUpdatedAt} />}
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
           <span style={{ color: "var(--text-faint)" }}>cost:</span>
           {(["show", "hidden"] as CostMode[]).map((m) => (
@@ -456,7 +459,7 @@ function ConnectionStatus({ connected, lastUpdatedAt }: { connected: boolean; la
   // if the last poll technically succeeded. 5s is comfortably past normal jitter.
   const stale = ageSec !== null && ageSec > 5;
   const color = !connected ? "var(--status-critical)" : stale ? "var(--status-warning)" : "var(--status-good)";
-  const label = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "live";
+  const label = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "running";
   return (
     <div
       title={lastUpdatedAt === null ? "waiting for first update" : `last update ${ageSec}s ago`}

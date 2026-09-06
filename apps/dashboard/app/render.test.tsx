@@ -362,30 +362,30 @@ describe("render — LaneGraph", () => {
 describe("render — Transport", () => {
   const noop = () => {};
 
-  it("renders following the live edge", () => {
+  it("renders EXECUTING at the newest event", () => {
     const markup = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T15:09:36.000Z" />,
     );
-    expect(markup).toContain("LIVE");
+    expect(markup).toContain("EXECUTING");
     expect(markup).not.toContain("PAUSED");
     expect(markup).toMatchSnapshot();
   });
 
-  it("renders PAUSED when scrubbed back off the live edge, and says so", () => {
+  it("renders PAUSED when scrubbed back off the newest event, and says so", () => {
     const markup = renderToStaticMarkup(
       <Transport at={40} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T19:39:11.000Z" />,
     );
     expect(markup).toContain("PAUSED");
-    expect(markup).not.toContain(">LIVE<");
+    expect(markup).not.toContain("EXECUTING");
     expect(markup).toMatchSnapshot();
   });
 
-  it("shows WAITING at the live edge when parked on a human decision", () => {
+  it("shows RAISED at the newest event when parked on a human decision (HITL)", () => {
     const markup = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} waiting />,
     );
-    expect(markup).toContain("WAITING");
-    expect(markup).not.toContain(">LIVE<");
+    expect(markup).toContain("RAISED");
+    expect(markup).not.toContain("EXECUTING");
   });
 
   it("disables step-back at the start and step-forward at the end", () => {

@@ -88,11 +88,12 @@ export function AgentBubble({ agent, showCost, onOpen }: { agent: AgentState; sh
           <div style={{ fontSize: "0.7rem", fontWeight: 600, color: cfg.text, textTransform: "uppercase", letterSpacing: "0.04em" }}>
             {cfg.label}
             {agent.model ? <span style={{ color: "var(--text-faint)", fontWeight: 500 }}> · {agent.model}</span> : null}
-            {/* Elapsed sits on the model row when working, coloured by liveness (green live / amber
-                quiet), so the turn's duration reads alongside its model instead of a separate line. */}
+            {/* Elapsed sits on the model row when working, coloured by liveness (green = the session
+                is writing, amber = gone quiet), so the turn's duration reads alongside its model
+                instead of a separate line. The colour alone carries liveness — no extra word. */}
             {active && elapsed ? (
               <span style={{ color: live === false ? "var(--status-warning-text)" : "var(--status-good-text)", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
-                {" "}· {elapsed}{live === false ? " quiet" : live === true ? " live" : ""}
+                {" "}· {elapsed}
               </span>
             ) : null}
           </div>
