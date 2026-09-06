@@ -211,6 +211,27 @@ export function turnByEvent(report: CorrelationReport): Map<number, number> {
   return new Map(report.pairings.map((p) => [p.eventIndex, p.turnOrdinal]));
 }
 
+/**
+ * Each role → its LATEST recorded turn ordinal, over the WHOLE turn index (not just a recent
+ * event tail), scoped to the turns the playhead has REACHED. `reached` is the set of turn ordinals
+ * paired at/under the current position (from `report.pairings`), so scrubbing back narrows the map
+ * to the role's latest turn AS OF the playhead. This is what lets a role/lane card open that role's
+ * full turn drill-down (transcript + tools + produced files) even when its turn scrolled out of the
+ * 40-event `recentTurns` tail — the whole point being that EVERY clicked card resolves to a turn,
+ * not a bare shell, whenever the role has one. A turn with no `role` is skipped (nothing to key on).
+ */
+export function latestTurnByRole(
+  turns: readonly Pick<TurnIndexEntry, "ordinal" | "role">[],
+  reached: ReadonlySet<number>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const t of turns) {
+    if (!t.role || !reached.has(t.ordinal)) continue;
+    if (out[t.role] === undefined || t.ordinal > out[t.role]) out[t.role] = t.ordinal;
+  }
+  return out;
+}
+
 /** One-line summary for the UI when a report is unhealthy. Null when healthy. */
 export function driftMessage(report: CorrelationReport): string | null {
   if (report.healthy) return null;

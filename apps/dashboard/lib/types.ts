@@ -190,6 +190,14 @@ export interface SourceMeta {
      * wrong code, which is the exact failure this module exists to prevent.
      */
     recentTurns: (number | null)[];
+    /**
+     * Each role → its LATEST recorded turn ordinal, over the WHOLE corpus (not just the
+     * `recentTurns` tail), scoped to the turns the playhead has reached. Lets a role/lane card open
+     * that role's full turn drill-down (transcript + tools + produced files) even when its turn is
+     * older than the 40-event tail — so every clicked card resolves to its turn, not a bare shell.
+     * Aligned server-side for the same off-by-one reason as `recentTurns`.
+     */
+    latestTurnByRole?: Record<string, number>;
   } | null;
 
   /**

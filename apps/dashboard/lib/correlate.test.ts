@@ -16,7 +16,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { correlate, driftMessage, driftSeverity, kitVersionOfLog, turnByEvent, type TurnIndexEntry } from "./correlate";
+import { correlate, driftMessage, driftSeverity, kitVersionOfLog, latestTurnByRole, turnByEvent, type TurnIndexEntry } from "./correlate";
 import type { AgentLogEvent } from "./types";
 
 const CORPUS_DIR = join(__dirname, "__fixtures__");
@@ -69,6 +69,35 @@ function kevinEventTurn(log: AgentLogEvent[], turns: TurnIndexEntry[]): Record<n
   });
   return eventTurn;
 }
+
+describe("latestTurnByRole — full-corpus role → latest reached turn", () => {
+  const turns: Pick<TurnIndexEntry, "ordinal" | "role">[] = [
+    { ordinal: 1, role: "spec-author" },
+    { ordinal: 2, role: "product-owner" },
+    { ordinal: 5, role: "navigator" },
+    { ordinal: 8, role: "navigator" }, // a later navigator turn , should win over #5
+    { ordinal: 9, role: null }, // no role , skipped
+  ];
+
+  it("keeps each role's HIGHEST reached ordinal, across the whole index (not just a tail)", () => {
+    const reached = new Set([1, 2, 5, 8, 9]);
+    expect(latestTurnByRole(turns, reached)).toEqual({
+      "spec-author": 1,
+      "product-owner": 2,
+      navigator: 8,
+    });
+  });
+
+  it("is scoped to REACHED ordinals, so scrubbing back narrows it", () => {
+    // Playhead before turn 8: navigator's latest reached is #5, and product-owner not yet reached.
+    const reached = new Set([1, 5]);
+    expect(latestTurnByRole(turns, reached)).toEqual({ "spec-author": 1, navigator: 5 });
+  });
+
+  it("returns {} when nothing is reached", () => {
+    expect(latestTurnByRole(turns, new Set())).toEqual({});
+  });
+});
 
 describe("correlate — differential against Kevin's original", () => {
   it("pairs event-for-event identically over the whole corpus", () => {

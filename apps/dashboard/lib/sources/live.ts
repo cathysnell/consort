@@ -42,7 +42,7 @@ import { loadPlanning } from "../planning";
 import { CAPABILITIES, foldSource, type Capability, type DashboardSource } from "../source";
 import { ReplaySource, classify, listFilesUnder, type ParsedTranscript, type TurnDetail } from "./replay";
 import type { StepOutputAsset } from "../types";
-import { correlate, driftMessage, driftSeverity } from "../correlate";
+import { correlate, driftMessage, driftSeverity, latestTurnByRole } from "../correlate";
 import { RECENT_EVENT_TAIL } from "../reducer";
 import type { AgentLogEvent, ArtifactContent, DashboardState, Planning, SnapshotInputs, SourceMeta, StepOutputs } from "../types";
 
@@ -309,6 +309,9 @@ export class LiveSource implements DashboardSource {
       unpairedEvents: report.unpairedEvents.length,
       kitVersionMatch: report.kitVersionMatch,
       recentTurns,
+      // Full-corpus role → latest reached turn (companion turns), so a role/lane card opens that
+      // role's turn even when it is older than the tail. Scoped to the reached (paired) ordinals.
+      latestTurnByRole: latestTurnByRole(rec.turns(), new Set(report.pairings.map((p) => p.turnOrdinal))),
     };
   }
 }

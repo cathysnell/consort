@@ -27,7 +27,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { resolveContained } from "../safepath";
 import { classify, readTextFile } from "../filekind";
-import { correlate, driftMessage, driftSeverity, type CorrelationReport, type TurnIndexEntry } from "../correlate";
+import { correlate, driftMessage, driftSeverity, latestTurnByRole, type CorrelationReport, type TurnIndexEntry } from "../correlate";
 import { RECENT_EVENT_TAIL } from "../reducer";
 import { CAPABILITIES, foldSource, type Capability, type DashboardSource } from "../source";
 import { loadPlanning } from "../planning";
@@ -473,6 +473,10 @@ export class ReplaySource implements DashboardSource {
     const recentTurns: (number | null)[] = [];
     for (let i = start; i < at; i++) recentTurns.push(byEvent.get(i) ?? null);
 
+    // Full-corpus role → latest reached turn, so a role/lane card opens that role's turn even when
+    // it is older than the tail above. Scoped to the turns the playhead has reached (paired ⇒ ≤ at).
+    const reached = new Set(r.pairings.map((p) => p.turnOrdinal));
+
     return {
       healthy: r.healthy,
       severity: driftSeverity(r),
@@ -482,6 +486,7 @@ export class ReplaySource implements DashboardSource {
       unpairedEvents: r.unpairedEvents.length,
       kitVersionMatch: r.kitVersionMatch,
       recentTurns,
+      latestTurnByRole: latestTurnByRole(this.turns(), reached),
     };
   }
 

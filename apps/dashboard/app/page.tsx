@@ -99,13 +99,16 @@ export default function Home() {
   // ordinal for the role, mirroring the bubble's own fallback.
   const onOpenRole = (role: string) => {
     if (!state) return;
-    const ord = latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], role);
-    // A recorded-turn corpus (replay) gives the richest view: the role's latest turn WITH its
-    // transcript and per-turn produced files. Prefer it whenever both an ordinal and the transcripts
-    // capability are present. Otherwise the ROLE panel , the SAME "#— <role>" title + Correspondence
-    // / Artifacts / Code tab layout , whose Artifacts + Code tabs are filled from what the role
-    // produced (its lifecycle-step deliverables at HEAD). The panel's layout + name are unchanged;
-    // only its previously-empty tabs are now populated.
+    // Resolve the role's LATEST reached turn. Prefer the full-corpus map (finds the turn even when
+    // it scrolled out of the 40-event tail) and fall back to the tail scan; this is what makes EVERY
+    // clicked card , a Current-State bubble or a lane step , open that role's full turn drill-down
+    // (step number + Correspondence / tools / reasoning + Artifacts + Code) rather than a bare shell.
+    const ord =
+      state.source?.correlation?.latestTurnByRole?.[role] ??
+      latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], role);
+    // Open the turn whenever the source can serve transcripts (it is, per the capability); only a
+    // role that genuinely never took a recorded turn falls to the ROLE panel (same "#— <role>" title
+    // + tab layout, its Artifacts/Code filled from the role's lifecycle-step deliverables at HEAD).
     setDrilldown(ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role });
   };
 
