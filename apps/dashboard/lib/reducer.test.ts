@@ -65,6 +65,22 @@ describe("fold — topology", () => {
     expect(t.atTimestamp).toBe(RUN[RUN.length - 1].timestamp);
   });
 
+  it("at the live edge, the backlog-commit pause makes the Backlog gate current, not the architect", () => {
+    // The drive pauses at author-requests (the Backlog gate) with NO gate.surfaced event, so the last
+    // log event stays the architect's estimate — which would leave p-size "current" (glowing) through
+    // the pause. next.json offering the backlog-commit means the human is being asked to select the
+    // sprint's features, so the Backlog gate (p-req) is the active locus, and the architect reads done.
+    const withBacklog = fold(RUN, snap({ next: { options: [{ id: "backlog.commit", title: "Commit the sprint backlog" }] } }));
+    expect(withBacklog.topology.laneCurrent).toEqual({ lane: "plan", step: "p-req" });
+    expect(withBacklog.focus).toEqual({ kind: "step", lane: "plan", step: "p-req" });
+  });
+
+  it("the backlog-commit override is live-edge only — scrubbed back keeps the playhead's own step", () => {
+    // next.json describes NOW, so it must not rewrite a past playhead's current step.
+    const scrubbed = fold(RUN, snap({ next: { options: [{ id: "backlog.commit", title: "Commit the sprint backlog" }] } }), 4);
+    expect(scrubbed.topology.laneCurrent).toEqual({ lane: "plan", step: "p-size" });
+  });
+
   it("rewinds with the scrub position — it is pure timeline data", () => {
     const t = fold(RUN, snap(), 2).topology;
     expect(t.laneSteps.plan).toEqual(["p-propose"]);

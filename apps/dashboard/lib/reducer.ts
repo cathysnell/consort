@@ -483,6 +483,15 @@ export function fold(
   // because the carried-forward feature has ended — that is the F1→F6 handoff at event 214).
   const pinnedDone = pinnedDivergent !== null && (features.find((f) => f.id === feature)?.done ?? false);
   const topology = deriveTopology(slice, feature, pinnedDone);
+  // The Backlog gate (author-requests) awaits the human WITHOUT emitting a gate.surfaced, so the last
+  // log event stays the architect's estimate and its sizing step would read "current" (glowing)
+  // right through the pause, while the Backlog gate itself never lights. At the live edge, when
+  // next.json offers the backlog-commit, make the Backlog gate step (p-req) the current locus: it
+  // pulses purple as the awaiting human gate, and the architect's sizing step reads done, not active.
+  // Only at the live edge — next.json describes NOW, so a scrubbed-back playhead keeps its own step.
+  if (atLive && (next?.options ?? []).some((o) => o.id === "backlog.commit")) {
+    topology.laneCurrent = { lane: "plan", step: "p-req" };
+  }
   // Use where the playhead IS, not what the run has ever touched. `passedNodes` is wrong
   // here: `reflect` maps to the build node, so any design-lane reflect would make an
   // early-design playhead claim "build". The lane the current phase belongs to is the
