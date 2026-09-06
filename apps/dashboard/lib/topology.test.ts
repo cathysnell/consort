@@ -11,6 +11,7 @@ import {
   passedNodes,
   nodeForPhase,
   nodeById,
+  primaryOutputNodeForRole,
   gateForNode,
   edgeDone,
   type LaneId,
@@ -95,6 +96,21 @@ describe("topology — graph integrity", () => {
   it("nodeById resolves declared nodes and rejects others", () => {
     expect(nodeById("build")?.label).toBe("Build lane");
     expect(nodeById("nope")).toBeNull();
+  });
+
+  it("primaryOutputNodeForRole routes a role to the output-bearing node it authors", () => {
+    // The product-owner's first output-bearing node is intake (product-overview/nfrs/design-brief),
+    // so a live role click surfaces those deliverables via step-outputs.
+    expect(primaryOutputNodeForRole("product-owner")).toBe("intake");
+    // Build-lane roles map to the build node (pipeline.json / cycles).
+    expect(primaryOutputNodeForRole("driver")).toBe("build");
+    expect(primaryOutputNodeForRole("navigator")).toBe("build");
+    // release-engineer authors deploy (deploy-evidence) before promote.
+    expect(primaryOutputNodeForRole("release-engineer")).toBe("deploy");
+    // A node's role that owns no STEP_OUTPUTS entry, or an unknown role, yields null → the caller
+    // falls back to the empty role shell rather than opening a dead step panel.
+    expect(primaryOutputNodeForRole("orchestrator")).toBeNull();
+    expect(primaryOutputNodeForRole("nobody")).toBeNull();
   });
 });
 

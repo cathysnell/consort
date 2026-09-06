@@ -624,6 +624,17 @@ export function nodeById(id: string): WorkflowNode | null {
   return NODES.find((n) => n.id === id) ?? null;
 }
 
+// The lifecycle node whose recorded deliverables a role AUTHORS — the first node (in lifecycle
+// order) that both lists `role` and has a STEP_OUTPUTS entry. Used by the role drill-down: on a live
+// board (no per-turn transcript corpus) clicking a role opens WHAT IT PRODUCED — e.g. the
+// product-owner → the `intake` node's product-overview/nfrs/design-brief — via the same
+// step-outputs panel the node itself opens. Returns null for a role that authors no output-bearing
+// node (e.g. a gate-only or terminal role), so the caller can fall back to the empty role shell.
+export function primaryOutputNodeForRole(role: string): string | null {
+  const n = NODES.find((node) => node.roles.includes(role as Role) && Object.hasOwn(STEP_OUTPUTS, node.id));
+  return n?.id ?? null;
+}
+
 // Look up a key in one of the maps above without inheriting from Object.prototype.
 // A bare `table[key]` resolves "constructor"/"toString"/"valueOf" to a function, which
 // would flow into a Set<string> in passedNodes and serialize to null over the API — and
