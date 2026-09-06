@@ -288,6 +288,29 @@ describe("recordTurn: LIVE index (snapshotContent:false) – .consort as an alwa
     expect(idx.turns.at(-1)).toMatchObject({ ordinal: rec.ordinal, role: "product-owner", hasTranscript: true });
   });
 
+  it("does NOT record the drive's own transient sinks (drive-live.log / next.json) as produced artifacts", () => {
+    const { proj, consort, record } = mkProject();
+    seedRecorderBaseline({ recordDir: record, projectDir: proj, consortDir: consort });
+    // The turn authors one real artifact, but the drive ALSO writes its narration + advisory sinks
+    // into .consort during the turn (the tee writes drive-live.log live; next.json is rewritten on
+    // stop). Those are the drive's bookkeeping, NOT the turn's deliverables.
+    writeConsort(consort, "product-overview.md", "# Overview\n");
+    writeConsort(consort, "drive-live.log", "[drive] 000 dispatch product-owner for intake\n");
+    writeConsort(consort, "next.json", "{}\n");
+    const rec = recordTurn({
+      recordDir: record,
+      projectDir: proj,
+      consortDir: consort,
+      action: act({ kind: "invoke-role", role: "product-owner", mode: "intake" }),
+      step: 0,
+      transcript: { role: "product-owner", model: "opus", prompt: "draft", finalText: "done", tools: [] },
+      snapshotContent: false,
+    });
+    expect(rec.produced).toContain(".consort/product-overview.md");
+    expect(rec.produced).not.toContain(".consort/drive-live.log");
+    expect(rec.produced).not.toContain(".consort/next.json");
+  });
+
   it("default (snapshotContent omitted) still snapshots content – recorded corpora unchanged", () => {
     const { proj, consort, record } = mkProject();
     seedRecorderBaseline({ recordDir: record, projectDir: proj, consortDir: consort });

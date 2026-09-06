@@ -120,9 +120,13 @@ export interface RecordedTurn {
   deleted: string[];
 }
 
-/** Append-only log + recorder bookkeeping that must NOT count as a turn's
- *  produced artifact (they churn every turn / are the recorder's own state). */
-const NON_ARTIFACT_CONSORT = new Set(["agent-log.jsonl"]);
+/** The drive's OWN transient narration / advisory sinks under `.consort/`, which must NOT count as a
+ *  turn's produced artifact – they churn every turn and are the drive's bookkeeping, not authored
+ *  content. `agent-log.jsonl` (the structured trail) and `drive-live.log` (the stderr narration the
+ *  tee writes DURING the turn, so it always shows up in the delta) and `next.json` (the advisory
+ *  snapshot rewritten on every stop). Before this, a live record recorded `.consort/drive-live.log`
+ *  as a produced artifact of the PO's intake turn – the dashboard then listed it as a deliverable. */
+const NON_ARTIFACT_CONSORT = new Set(["agent-log.jsonl", "drive-live.log", "next.json"]);
 
 /** The recorder's OWN output, which lands under `.consort/` when the LIVE record targets the project
  *  itself (recordDir === consortDir). It must never be scanned as a produced artifact – otherwise the
