@@ -246,6 +246,44 @@ probe `intakeReady` both values; `consort-next` surfaces the manual intake optio
 intake, and one headless run confirming byte-identical seed behavior. The heavier drive-side headless
 *spawn* of the PO (vs. the human-facilitated interactive step built here) remains optional/live-gated.
 
+### Superseded: PO intake is now a METERED executor turn (tokens/model/cost/registerable)
+
+On request (track the PO's tokens/model/cost + set its model), the intake was promoted from the
+deterministic-agentless step above to a real **executor-dispatched, metered** turn. "Both" (a live
+interview AND a tracked turn) is delivered by splitting the work: the coordinating `/consort:start`
+session runs the **interview** (interactive, writes the human's answers to `.consort/intake/answers.md`),
+and the drive dispatches a metered **`product-owner intake`** turn that DRAFTS the three docs from
+those answers. The draft turn logs `turn.usage` (tokens + cost), takes its model from its manifest
+`agentOptions` (`opus` default, settable via `roles.product-owner` / the `intake` step key), and
+registers in telemetry + the dashboard PO card.
+
+Changes:
+- New output validators `productOverviewConformant` / `nfrsConformant` / `designBriefConformant`
+  (validator-registry.ts), each gated to its artifact-conformance kind.
+- New shipped manifest `manifests/product-owner-intake.json` (`match:{mode:"intake"}`, outputs = the
+  three docs at the `.consort` root via the artifact channel, `answers` optional input,
+  `agentOptions.model:"opus"`); imported into `SHIPPED_MANIFESTS`.
+- `executorDispatched(product-owner intake)` → true; removed from `deterministicAgentless`.
+- `outputPathsForAction`: intake case → the three `.consort`-root docs.
+- DRY: extracted the triplicated `isPlanningMode` predicate into ONE exported helper (executor-dispatch.ts),
+  now including `intake`; the 3 copies (2 in orchestrator-effects.ts) call it. Intake is planning-mode
+  (no per-feature reconcile/agent-log), like propose/estimate.
+- `roleTaskBody` intake case → the DRAFT directive (read answers.md + `@software-design-principles` /
+  `@ui-ux-design-principles` + the StockFlow worked example → the three docs; never invent beyond the answers).
+- `consort-next`: removed the interim `manual` intake.run option (intake is a normal dispatched turn now
+  → resume); reverted the `awaiting_human` `manual` widening (no manual option remains).
+- `start.md`: the intake step now = (1) coordinating session interviews → `intake/answers.md`, (2) `/plan`
+  dispatches the metered PO draft turn → review/approve; `intake` added to the model-profile step keys.
+
+Tests (hermetic): flipped the coverage test (intake executor-dispatched, not agentless), the consort-next
+intake test (resume, not manual), the manifest bijection count (20→21, the matrix auto-covers intake),
+and the artifact-channel coverage fixture (adds the three intake docs). Full kit suite **3926 pass**, tsc clean.
+
+**LIVE-PROOF REQUIRED (acceptance):** a no-seed interactive run — interview → `answers.md` → the metered
+`product-owner intake` turn drafts approvable, conformant `product-overview.md` / `nfrs.md` /
+(UI) `design-brief.md`, with the turn's tokens/model/cost showing in telemetry + the PO card — plus a
+seeded run staying byte-identical. Run against the local checkout (kit pointer), since it's drive-side.
+
 ---
 
 ## Summary (for review)

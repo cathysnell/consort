@@ -97,6 +97,10 @@ export function executorDispatched(action: WorkflowAction): boolean {
     // the backlog via a separate legacy branch with no shipped manifest).
     if (action.role === "spec-author" && (action.mode === "breakdown" || action.mode === "propose")) return true;
     if (action.role === "architect-reviewer" && action.mode === "estimate") return true;
+    // product-owner intake: the metered PO turn that DRAFTS the intake docs (product-overview / nfrs
+    // / design-brief) from the human's gathered answers , tracked via turn.usage, model-configurable
+    // via its manifest agentOptions + roles.product-owner. Planning mode (no reconcile).
+    if (action.role === "product-owner" && action.mode === "intake") return true;
     return false; // author-requests + estimate-committed + any other mode: legacy path.
   }
   // The per-story / feature design turns carry NO mode and NO buildMode. Distinguish them from the
@@ -166,13 +170,28 @@ export function executorDispatched(action: WorkflowAction): boolean {
  */
 export function deterministicAgentless(action: WorkflowAction): boolean {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
-  // product-owner `intake`: a HUMAN-facilitated step (interactive, the PO helps the human author
-  // product-overview.md/nfrs.md; headless the Human Proxy has already deposited them, so this never
-  // fires) , no LLM turn the drive spawns, so it does not go through the executor.
-  if (action.role === "product-owner" && action.mode === "intake") return true;
   if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;
+}
+
+/**
+ * The sprint-scoped PLANNING modes. They write no per-feature agent-log to reconcile and declare no
+ * agent-log output, so reconcile/agent-log is SKIPPED for them (the executor's materializeOutputs +
+ * the legacy commandsForAction path guard on the SAME predicate, keeping the two byte-parallel).
+ * `intake` is a planning mode too: the Product Owner's project-level intake docs (product-overview /
+ * nfrs / design-brief) are authored once at the .consort root, with no per-feature agent-log. This
+ * is the ONE definition; every site imports it (no drifting copies).
+ */
+export function isPlanningMode(action: WorkflowAction): boolean {
+  return (
+    action.kind === "invoke-role" &&
+    "mode" in action &&
+    (action.mode === "propose" ||
+      action.mode === "estimate" ||
+      action.mode === "estimate-committed" ||
+      action.mode === "intake")
+  );
 }
 
 /**
@@ -278,6 +297,12 @@ export function outputPathsForAction(action: WorkflowAction, consortDir: string,
     // architect estimate: the planning estimates (planning mode , no reconcile/agent-log).
     if (action.role === "architect-reviewer" && action.mode === "estimate") {
       return { estimates: rel(planningEstimatesJson(consortDir)) };
+    }
+    // product-owner intake: the PO's project-level intake deliverables at the .consort root
+    // (planning mode , no reconcile/agent-log, like propose/estimate). design-brief.md is UI-only,
+    // declared OPTIONAL on the manifest so a backend-only project doesn't fail on its absence.
+    if (action.role === "product-owner" && action.mode === "intake") {
+      return { "product-overview": "product-overview.md", nfrs: "nfrs.md", "design-brief": "design/design-brief.md" };
     }
     return {};
   }
@@ -524,8 +549,7 @@ export async function performTurnViaExecutor(
     // reconcile with the SAME `!isPlanningMode` condition (commandsForAction / commandsFromManifest),
     // so skipping here keeps the executor byte-parallel to the legacy stream ([claude] only).
     materializeOutputs: async () => {
-      const isPlanningMode = "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-      if (isPlanningMode) return;
+      if (isPlanningMode(action)) return;
       await cfg.runner.run({ kind: "cli", bin: deps.logBin, args: ["--reconcile", "--feature", f, "--tdd-dir", cfg.consortDir] });
     },
     // Phase 6.5: the manifest's `after` CLIs , gated on clean validation by the executor. For

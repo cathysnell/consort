@@ -69,6 +69,9 @@ describe("reviewArtifacts COVERS the artifact channel (single source , no drift)
     const F = "F1-x";
     const S = "S1-y";
     // A fixture with every artifact-channel output present at its scoped location.
+    write("product-overview.md"); // product-owner intake turn
+    write("nfrs.md"); // product-owner intake turn
+    write("design/design-brief.md"); // product-owner intake turn (UI track)
     write("planning/estimates.json");
     write("planning/feature-proposals.md");
     write("design/design-guide.json");

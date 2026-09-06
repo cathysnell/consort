@@ -20,7 +20,7 @@ import * as fs from "node:fs";
 import { dirname, join } from "node:path";
 import { nextTransition, type WorkflowAction, type DriveState } from "./orchestrator-drive.js";
 import { manifestForAction, type StepManifestPostTurn } from "../steps/manifest.js";
-import { performTurnViaExecutor, assertNotStrandedAgentTurn } from "./executor-dispatch.js";
+import { performTurnViaExecutor, assertNotStrandedAgentTurn, isPlanningMode } from "./executor-dispatch.js";
 import { assertRouteSatisfiable } from "../steps/assert-route-satisfiable.js";
 import { formatAgentReport } from "../turns/agent-report-formatter.js";
 import type { DriveEffects } from "./orchestrator-run.js";
@@ -576,10 +576,27 @@ function roleTaskBody(
           `stamps into the per-sprint backlog, so the committed backlog shows real sizing.`
         );
       case "intake":
-        // Human-facilitated, not a drive-spawned agent turn: interactively the PO helps the human
-        // author the intake (consort-next surfaces it as a manual step); headless the Human Proxy has
-        // already deposited the recorded seeds, so the drive never reaches here. Prose kept for parity.
-        return `Run the Product Owner intake interview: author ${root}/product-overview.md, ${root}/nfrs.md, and (UI only) ${root}/design/design-brief.md WITH the human, then resume so the Spec Author can propose.`;
+        // The metered Product Owner intake turn: DRAFT the project intake FROM the human's gathered
+        // answers (the coordinating session ran the interview + wrote them to intake/answers.md), the
+        // canon that defines each artifact's shape, and the StockFlow worked example. You draft FOR
+        // the human, who approves; never invent intent , if answers.md is thin, fill only what it
+        // supports and leave the rest for the human to expand at review.
+        return (
+          `Author the project intake for the Product Owner, DRAFTING each artifact FRESH from the human's ` +
+          `answers at ${root}/intake/answers.md (the interview responses; if absent or thin, draft only what ` +
+          `the stated intent supports , never invent). WRITE:\n` +
+          `  - ${root}/product-overview.md , who it's for, its purpose, how it grows, what to see after each ` +
+          `sprint (H1 + body, no implementation detail).\n` +
+          `  - ${root}/nfrs.md , apply @software-design-principles: walk performance / scalability / security / ` +
+          `observability / operability / resilience; record each as a '## Required' item with a stable R<n> id, ` +
+          `plus '## Preferences' and '## Out of bounds'.\n` +
+          `  - ${root}/design/design-brief.md (UI track only) , apply @ui-ux-design-principles: 1-3 reference ` +
+          `sites + what to take from each, brand / interaction / accessibility constraints, and a required ` +
+          `'## References' section.\n` +
+          `Ground the shape in the canon above and the StockFlow worked example under the kit's ` +
+          `examples/first-project/stockflow-seed/intake/ (learn the format + level of detail; never copy it ` +
+          `verbatim). The human reviews + approves these before the Spec Author proposes the sprint from them.`
+        );
       case "author-requests":
         // Unreachable: author-requests is a human-input step the Human Proxy
         // supplies (see commandsForAction); it never spawns a role agent.
@@ -1425,9 +1442,7 @@ export function commandsFromManifest(action: WorkflowAction, cfg: DriveEffectsCo
 
   // reconcile logs whatever landed (skipped for the sprint-scoped planning modes that
   // write no feature artifacts , none of which are manifest-driven yet).
-  const isPlanningMode =
-    "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-  if (f && !isPlanningMode) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
+  if (f && !isPlanningMode(action)) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
 
   return cmds;
 }
@@ -1536,9 +1551,7 @@ export function commandsForAction(action: WorkflowAction, cfg: DriveEffectsConfi
       // so observability never depends on the role's model emitting it. Skipped
       // for the sprint-scoped planning modes (propose / estimate / estimate-committed),
       // which write no feature artifacts to reconcile. (author-requests returned earlier.)
-      const isPlanningMode =
-        "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed");
-      if (f && !isPlanningMode) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
+      if (f && !isPlanningMode(action)) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
       return cmds;
     }
 

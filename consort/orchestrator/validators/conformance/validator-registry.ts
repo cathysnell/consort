@@ -306,6 +306,12 @@ export const acConformant = conformsTo("ac.json");
 export const architectureConformant = conformsTo("architecture.json");
 export const dbDesignConformant = conformsTo("db-design.json");
 export const testListConformant = conformsTo("test-list.json");
+// The Product Owner's intake deliverables (the metered `intake` turn's outputs), each gated to its
+// artifact-conformance kind: product-overview.md / nfrs.md (md-narrative + required sections).
+// design-brief.md is UI-only, so it is declared OPTIONAL on the manifest.
+export const productOverviewConformant = conformsTo("product-overview.md");
+export const nfrsConformant = conformsTo("nfrs.md");
+export const designBriefConformant = conformsTo("design-brief.md");
 
 /**
  * The named-validator registry a manifest resolves against. Add an entry here (code) and
@@ -348,6 +354,11 @@ export const VALIDATOR_REGISTRY: Record<string, OutputValidator> = {
   architectureConformant,
   dbDesignConformant,
   testListConformant,
+  // The PO intake turn's deliverables (product-overview.md / nfrs.md required; design-brief.md
+  // optional, UI-only).
+  productOverviewConformant,
+  nfrsConformant,
+  designBriefConformant,
 };
 
 /**

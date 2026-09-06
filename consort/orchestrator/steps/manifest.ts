@@ -20,6 +20,7 @@ import type { TurnEventKind } from "./turn-events.js";
 // the build , no runtime fs read, no __dirname/dist path to keep in sync, no copy step.
 // (resolveJsonModule is on.) External/scenario manifests are still loaded from a directory
 // the caller passes explicitly (loadStepManifests(dir)).
+import productOwnerIntakeManifest from "./manifests/product-owner-intake.json" with { type: "json" };
 import specAuthorBreakdownManifest from "./manifests/spec-author-breakdown.json" with { type: "json" };
 import specAuthorProposeManifest from "./manifests/spec-author-propose.json" with { type: "json" };
 import specAuthorStoryManifest from "./manifests/spec-author-story.json" with { type: "json" };
@@ -186,6 +187,7 @@ export function validateStepManifest(manifest: StepManifest): ManifestValidateRe
  * file under ./manifests/ AND an import line here. No runtime fs, no dist path.
  */
 export const SHIPPED_MANIFESTS: StepManifest[] = [
+  productOwnerIntakeManifest as StepManifest,
   specAuthorBreakdownManifest as StepManifest,
   specAuthorProposeManifest as StepManifest,
   specAuthorStoryManifest as StepManifest,

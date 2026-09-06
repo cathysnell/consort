@@ -141,8 +141,8 @@ function cfg(consortDir: string, projectDir: string, runner: DriveEffectsConfig[
 const AGENT_MANIFESTS = SHIPPED_MANIFESTS;
 
 describe("every agent manifest dispatches through the executor (A-full #649)", () => {
-  it("covers all 20 shipped manifests (guard: the matrix stays exhaustive)", () => {
-    expect(AGENT_MANIFESTS.length).toBe(20);
+  it("covers all 21 shipped manifests (guard: the matrix stays exhaustive)", () => {
+    expect(AGENT_MANIFESTS.length).toBe(21);
   });
 
   it.each(AGENT_MANIFESTS.map((m) => [m.id, m] as [string, StepManifest]))(

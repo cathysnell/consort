@@ -55,14 +55,14 @@ describe("executor dispatch coverage: allowlist <-> shipped manifests are in bij
     expect(executorDispatched(estimateCommitted)).toBe(false);
   });
 
-  it("product-owner `intake` is a sanctioned deterministic-agentless turn (off the executor, guard OK)", () => {
-    // Intake is human-facilitated (interactive: the PO drafts WITH the human; headless: the Human
-    // Proxy deposited the seeds, so it never fires). Not a drive-spawned agent turn, so it stays OFF
-    // the executor allowlist yet is a SANCTIONED agentless action , the stranded-turn guard must NOT
-    // throw on it (it would if intake were neither executor-dispatched nor sanctioned).
+  it("product-owner `intake` is an EXECUTOR-dispatched metered turn (tracked via turn.usage), not agentless", () => {
+    // Intake is now a real, metered PO turn: it DRAFTS the intake docs from the human's gathered
+    // answers, so it runs through the executor (turn.usage logs its tokens/cost; model from its
+    // manifest agentOptions). It is therefore ON the executor allowlist and NOT deterministic-agentless
+    // , and the stranded-turn guard is satisfied because it IS executor-dispatched (has a manifest).
     const intake = { kind: "invoke-role", role: "product-owner", mode: "intake" } as unknown as WorkflowAction;
-    expect(executorDispatched(intake)).toBe(false);
-    expect(deterministicAgentless(intake)).toBe(true);
+    expect(executorDispatched(intake)).toBe(true);
+    expect(deterministicAgentless(intake)).toBe(false);
     expect(() => assertNotStrandedAgentTurn(intake)).not.toThrow();
   });
 });
