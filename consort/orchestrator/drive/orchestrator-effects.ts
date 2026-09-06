@@ -587,8 +587,9 @@ function roleTaskBody(
           `the stated intent supports – never invent). WRITE:\n` +
           `  - ${root}/product-overview.md – who it's for, its purpose, how it grows, what to see after each ` +
           `sprint (H1 + body, no implementation detail).\n` +
-          `  - ${root}/nfrs.md – apply @software-design-principles: walk performance / scalability / security / ` +
-          `observability / operability / resilience; record each as a '## Required' item with a stable R<n> id, ` +
+          `  - ${root}/nfrs.md – apply @software-design-principles + @architectural-design-principles: walk architecture ` +
+          `layering / performance / scalability / security / observability / operability / resilience; record each as a ` +
+          `'## Required' item with a stable R<n> id, ` +
           `plus '## Preferences' and '## Out of bounds'.\n` +
           `  - ${root}/design/design-brief.md (UI track only) – apply @ui-ux-design-principles: 1-3 reference ` +
           `sites + what to take from each, brand / interaction / accessibility constraints, and a required ` +
