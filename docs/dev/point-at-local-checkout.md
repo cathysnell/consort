@@ -80,6 +80,25 @@ export LAKEBASE_KIT_DIR=/Users/kevin.hartman/code/databricks-solutions/consort
 ./scripts/lk consort-next --sprint <name>     # runs THIS repo's dist bins
 ```
 
+### Do I need this if I'm running interactively in Claude?
+
+Being interactive does **not** remove the need — it only changes *who* types `./scripts/lk`, not where
+the shim resolves the kit. Split by which half of a change you're testing:
+
+- **Plugin-side behavior** (a `/consort:*` command's prose, a skill — e.g. the `start.md` PO-intake
+  onboarding step): **no** `LAKEBASE_KIT_DIR` needed. It loads from the plugin (section 1); Claude
+  reads and follows it.
+- **Runtime-kit behavior** (anything in the `dist/` CLIs — the drive, `consort-next`, the probe, gates
+  — e.g. the deterministic `intakeReady` / `awaiting_human` surfacing): **yes.** A scaffolded project's
+  `./scripts/lk` resolves the *pinned cache* by default, which is the **published** release — an
+  UNPUSHED branch's code is only reached via `LAKEBASE_KIT_DIR`.
+
+**Interactive gotcha:** every command Claude runs is a **fresh shell initialized from your profile**;
+env vars do NOT persist between tool calls. So a one-off `export LAKEBASE_KIT_DIR=…` typed in your
+terminal will NOT be seen by the `./scripts/lk` calls Claude makes. Make it stick one of two ways:
+- put the `export` in your `~/.zshrc` (every shell Claude spawns inherits it), **or**
+- ask Claude to prefix each `./scripts/lk` call with `LAKEBASE_KIT_DIR=$REPO` inline.
+
 Notes:
 - It reads the **built `dist/`**, so after changing kit source run `npm run build` in `REPO` first
   (the committed `dist/` here already includes the intake change).
