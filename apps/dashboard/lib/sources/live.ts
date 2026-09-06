@@ -297,7 +297,16 @@ export class LiveSource implements DashboardSource {
     const recentTurns: (number | null)[] = [];
     for (let i = start; i < at; i++) recentTurns.push(byLiveIndex.get(i) ?? null);
 
-    const absent = report.unpairedEvents.filter((u) => u.reason === "role-absent");
+    // A role's FIRST turn is in-flight on the live edge too: its phase.start lands in the log before
+    // its turn is recorded to the companion, so correlate() reports it role-ABSENT — the exact same
+    // code a genuinely-different run produces (an active architect-reviewer with no recorded turn yet
+    // lit a false "corpus pairing unreliable" banner). Distinguish them by POSITION: an unpaired
+    // event with NO later PAIRED event is the trailing in-flight edge (healthy, like a role-exhausted
+    // tail); only a role-absent event that a later event has already paired PAST is real corpus
+    // disagreement. (With zero pairings, lastPairedIdx = -1, so nothing counts as drift — the very
+    // start of a recording never alarms.)
+    const lastPairedIdx = report.pairings.reduce((m, p) => Math.max(m, p.eventIndex), -1);
+    const absent = report.unpairedEvents.filter((u) => u.reason === "role-absent" && u.eventIndex < lastPairedIdx);
     const healthy = absent.length === 0 && report.kitVersionMatch !== false;
     // Severity must track THIS LOCAL `healthy`, not `report.healthy`. `report.healthy` also trips on
     // a role-exhausted tail (the in-flight turn the companion hasn't recorded yet) — the NORMAL live

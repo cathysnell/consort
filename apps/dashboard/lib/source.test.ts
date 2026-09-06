@@ -290,6 +290,63 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     expect(c.severity).toBe("ok"); // → DriftBanner renders nothing
     expect(c.message).toBeNull();
   });
+
+  it("stays 'ok' when a NEW role's first turn is in-flight at the live edge (role-absent tail)", () => {
+    // The regression: architect-reviewer becomes active, its phase.start lands, but its FIRST turn
+    // isn't recorded to the companion yet → correlate() reports it role-ABSENT (list.length 0), the
+    // same code a different run gives. Because it's the TRAILING event (nothing pairs after it), it's
+    // the normal live edge, not drift — so no "corpus pairing unreliable" banner.
+    const ev = (ts: string, event: string, role: string) =>
+      JSON.stringify({ timestamp: ts, level: "info", role, event, message: "", metadata: { phase: "design" } });
+    writeFileSync(
+      join(proj, ".consort", "agent-log.jsonl"),
+      [
+        ev("2026-01-01T10:00:05Z", "phase.start", "navigator"), // pairs with the recorded turn
+        ev("2026-01-01T10:00:09Z", "phase.start", "architect-reviewer"), // first turn in-flight, not recorded yet
+      ].join("\n"),
+    );
+    mkdirSync(join(rec, "turns"), { recursive: true });
+    writeFileSync(
+      join(rec, "turns", "index.json"),
+      JSON.stringify({ turns: [{ ordinal: 5, step: 0, label: "nav", kind: "invoke-role", role: "navigator", dir: "0005-navigator", producedCount: 0, deletedCount: 0 }] }),
+    );
+    writeFileSync(join(rec, "agent-log.jsonl"), ev("2026-01-01T10:00:05Z", "phase.start", "navigator"));
+    process.env.CONSORT_RECORD_DIR = rec;
+
+    const c = new LiveSource().correlationSummary();
+    expect(c.paired).toBe(1);
+    expect(c.unpairedEvents).toBe(1); // the in-flight architect-reviewer turn
+    expect(c.healthy).toBe(true); // NOT drift — the trailing edge
+    expect(c.severity).toBe("ok");
+    expect(c.message).toBeNull();
+  });
+
+  it("flags a role-absent event as drift when a LATER event pairs past it (genuinely different run)", () => {
+    // Not the live edge: an absent role sits BEFORE a later successful pairing, so it can't be an
+    // in-flight tail — the companion truly has no turns for it. This is the real "different run"
+    // signal the banner is for, and it must still warn.
+    const ev = (ts: string, event: string, role: string) =>
+      JSON.stringify({ timestamp: ts, level: "info", role, event, message: "", metadata: { phase: "design" } });
+    writeFileSync(
+      join(proj, ".consort", "agent-log.jsonl"),
+      [
+        ev("2026-01-01T10:00:05Z", "phase.start", "architect-reviewer"), // absent — and NOT trailing
+        ev("2026-01-01T10:00:09Z", "phase.start", "navigator"), // pairs, so the absence above is interior
+      ].join("\n"),
+    );
+    mkdirSync(join(rec, "turns"), { recursive: true });
+    writeFileSync(
+      join(rec, "turns", "index.json"),
+      JSON.stringify({ turns: [{ ordinal: 5, step: 0, label: "nav", kind: "invoke-role", role: "navigator", dir: "0005-navigator", producedCount: 0, deletedCount: 0 }] }),
+    );
+    writeFileSync(join(rec, "agent-log.jsonl"), ev("2026-01-01T10:00:05Z", "phase.start", "architect-reviewer"));
+    process.env.CONSORT_RECORD_DIR = rec;
+
+    const c = new LiveSource().correlationSummary();
+    expect(c.healthy).toBe(false);
+    expect(c.severity).toBe("warning");
+    expect(c.message).toContain("architect-reviewer");
+  });
 });
 
 describe("resolveSource — mode selection", () => {
