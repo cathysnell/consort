@@ -230,8 +230,8 @@ function Node({
   // but quiet so the one active phase pops; a pending human gate keeps a thin gate-coloured border.
   const stroke = active
     ? activeColor
-    : gateStatus === "surfaced"
-      ? "var(--status-gate)"
+    : gateStatus === "surfaced" || gateStatus === "approved"
+      ? "var(--status-gate)" // a reached human gate stays PURPLE (done or pending), never grey
       : "var(--border-default)";
 
   // The active node's FILL is a light tint of the SAME active colour as its border (issue red /

@@ -192,15 +192,18 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
         </div>
       ) : null}
 
-      {/* The five HIL gates in lifecycle order, scoped to the current story: approved (green),
-          the one the run is parked at (focus) pulses purple, still-to-come are dim. Resets when the
-          story changes because storyGateStatus only counts the current story's gate events. */}
+      {/* The five HIL gates in lifecycle order, scoped to the current story. A gate that has been
+          reached is PURPLE — approved (done) and pending alike — with the one the run is parked at
+          (focus) pulsing; still-to-come gates are dim grey. Purple, not green, marks a done human
+          gate. Resets when the story changes because storyGateStatus only counts the current
+          story's gate events. */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
         {GATE_ORDER.map((g) => {
           const st = gateStatus[g];
           const isFocus = focus.kind === "gate" && focus.gate === g;
-          const border = st === "approved" ? "var(--status-good)" : st === "pending" || isFocus ? "var(--status-gate)" : "var(--border-default)";
-          const color = st === "approved" ? "var(--status-good)" : st === "pending" || isFocus ? "var(--status-gate-text)" : "var(--text-faint)";
+          const reached = st === "approved" || st === "pending" || isFocus;
+          const border = reached ? "var(--status-gate)" : "var(--border-default)";
+          const color = reached ? "var(--status-gate-text)" : "var(--text-faint)";
           return (
             <span
               key={g}

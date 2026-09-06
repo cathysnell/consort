@@ -302,7 +302,7 @@ function gateTintFor(step: LaneStep, state: DashboardState): string {
   if (state.focus.kind === "gate" && gateName === state.focus.gate) return "var(--status-gate)";
   const g = state.gates.find((x) => x.name === gateName);
   if (!g) return "var(--border-strong)";
-  return g.status === "approved" ? "var(--status-good)" : "var(--status-gate)";
+  return "var(--status-gate)"; // a reached human gate is purple whether open or approved (done), never green
 }
 
 // --------------------------------------------------------------------------- the graph
@@ -770,9 +770,7 @@ function StepBox({
     : step.escalation
       ? "var(--status-critical)" // a raise-to-HIL terminal reads CRITICAL (red), distinct from amber branches + purple gates
       : isHumanGate
-        ? state === "gate-approved"
-          ? "var(--status-good)"
-          : "var(--status-gate)"
+        ? "var(--status-gate)" // a human gate is PURPLE whether pending, parked, or approved (done) — never green
         : "var(--border-default)";
 
   // A LIGHT tint in the step's own colour on the active turn. color-mix is required because

@@ -376,6 +376,21 @@ describe("laneProgress / passedNodes", () => {
     expect([...p.done.build]).toEqual(["b-red", "b-green"]);
   });
 
+  it("a gate.approved at the playhead is not `current` — the surfacing agent stops glowing", () => {
+    // The PO drafts intake, then the intake gate is approved. gate.approved carries the PO's role
+    // and phase, so it MATCHES the PO's p-intake step — which would re-light the product owner the
+    // instant intake is approved ("glowing again" past the phase). A gate boundary is not agent
+    // work, so `current` must be null; p-intake stays in the done set.
+    const withGate = [
+      ev("phase.start", "product-owner", { phase: "intake" }),
+      ev("gate.surfaced", "product-owner", { phase: "intake", gate: "intake" }),
+      ev("gate.approved", "product-owner", { phase: "intake", gate: "intake" }),
+    ];
+    const p = laneProgress(withGate);
+    expect(p.current).toBeNull(); // no step glows at the gate boundary
+    expect(p.done.plan.has("p-intake")).toBe(true); // the PO's drafting still reads as done
+  });
+
   // --- feature scoping ------------------------------------------------------
   // Lane progress described the whole RUN, not the current feature. On a multi-feature run
   // that is wrong in a user-visible way: in the stockflow-rerecord corpus, at event 230 the

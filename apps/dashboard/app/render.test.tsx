@@ -293,7 +293,9 @@ describe("render — LaneGraph", () => {
     const approved = renderToStaticMarkup(
       <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }] }} />,
     );
-    expect(specStroke(approved)).toBe("var(--status-good)"); // cleared → green, no step data changed
+    // A human gate stays PURPLE once approved (done) — never green. Both states are read from the
+    // run's gates (a match-less gate step would otherwise be grey), which is what this guards.
+    expect(specStroke(approved)).toBe("var(--status-gate)");
   });
 
   it("PULSES only the gate the run is PARKED at (pendingGate), glowing purple — not every open gate", () => {

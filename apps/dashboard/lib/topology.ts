@@ -878,7 +878,16 @@ export function laneProgress(events: AgentLogEvent[], upTo?: number, feature?: s
   // carried-phase event as the done-set (via `eventsWithFeature` → `withPhase`), so the two views
   // agree; a gate.surfaced/handoff still maps to no role step (wrong role), so a gate park stays
   // step-less.
-  const current: LaneHit | null = playhead ? laneStepForEvent(playhead) : null;
+  //
+  // A gate.surfaced / gate.approved is a HITL boundary, not agent work, so it must never be the
+  // actively-running `current`: a gate.approved carries the surfacing role + its phase, so it
+  // matches that role's step and would re-light it AFTER the phase is done — the product owner
+  // "glowing again" the instant intake is approved. The gate's own step still reads its
+  // done/approved colour from the gate state (stepState), independent of `current`.
+  const current: LaneHit | null =
+    playhead && playhead.event !== "gate.surfaced" && playhead.event !== "gate.approved"
+      ? laneStepForEvent(playhead)
+      : null;
 
   return { done, last, current };
 }
