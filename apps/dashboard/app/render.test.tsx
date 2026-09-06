@@ -122,6 +122,22 @@ describe("render — WorkflowGraph", () => {
     expect(markup).toContain("· not reached");
   });
 
+  it("highlights the awaited gate diamond in the gate colour when parked at a gate", () => {
+    // Parked at the intake gate: the phase node beside it AND the gate diamond itself both glow in
+    // the gate colour (status-gate). The diamond (gateForNode intakegate = intake) reads "active now"
+    // at a 3px stroke, not merely the thin surfaced border.
+    const parked: DashboardState = {
+      ...state,
+      blockers: [],
+      focus: { kind: "gate", gate: "intake" },
+      topology: { ...state.topology, activeNode: "intake" },
+    };
+    const markup = renderToStaticMarkup(<WorkflowGraph state={parked} />);
+    expect(markup).toMatch(/intake gate · gate[^<]*· active now/); // the diamond is active, not just reached
+    expect(markup).toContain("var(--status-gate)"); // highlighted in the gate colour
+    expect(markup).toContain("stroke-width=\"3\""); // active-strength stroke
+  });
+
   it("marks gates as diamonds, not phases", () => {
     // A human decision point must never read as just another phase node.
     const markup = renderToStaticMarkup(<WorkflowGraph state={state} />);

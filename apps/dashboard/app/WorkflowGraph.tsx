@@ -66,15 +66,21 @@ export function WorkflowGraph({
   // orchestrator card use: a HIL issue/escalation is red (status-critical), a parked human gate is
   // the gate colour, a working agent is its role colour, else the neutral accent. Reads the ONE
   // focus observation + blockers, so it never disagrees with the other surfaces.
+  const focus = state.focus;
   const activeRole = state.agents.find((a) => a.status === "working")?.role ?? null;
   const activeColor =
     state.blockers.length > 0
       ? "var(--status-critical)"
-      : state.focus.kind === "gate"
+      : focus.kind === "gate"
         ? "var(--status-gate)"
         : activeRole
           ? colorForRole(activeRole)
           : "var(--status-accent)";
+  // The gate DIAMOND the run is parked at also highlights (not just the phase node beside it): find
+  // the gate node whose gate name is the one the focus is awaiting, and treat it as active too, so it
+  // glows in the gate colour (activeColor is the gate colour while focus.kind === "gate").
+  const awaitedGateNode =
+    focus.kind === "gate" ? WORKFLOW.nodes.find((n) => n.type === "gate" && gateForNode(n.id) === focus.gate)?.id ?? null : null;
   const gateState = new Map(state.gates.map((g: GateInfo) => [g.name, g.status]));
 
   // The current sprint's FEATURE + its current state, shown in the panel's header band — mirroring a
@@ -133,7 +139,7 @@ export function WorkflowGraph({
             node={node}
             x={x}
             w={w}
-            active={node.id === activeNode}
+            active={node.id === activeNode || node.id === awaitedGateNode}
             passed={passed.has(node.id)}
             activeColor={activeColor}
             gateStatus={gateStatusFor(node, gateState)}
