@@ -227,7 +227,7 @@ export function EventTicker({
               <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{e.timestamp.slice(11, 19)}</span>
               {/* Message column (reference `.m`): #ord · event · [role] · message, wrapping. */}
               <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {openTurn ? <span style={{ color: "var(--status-accent)", fontWeight: 700 }}>#{turn} </span> : null}
+                {openTurn ? <span style={{ color: "var(--status-selection)", fontWeight: 700 }}>#{turn} </span> : null}
                 <span style={{ fontWeight: 700, color: eventColor }}>{e.event}</span>{" "}
                 <span style={{ color: "var(--text-muted)" }}>[{e.role ?? "?"}]</span>{" "}
                 <span style={{ color: "var(--text-body)" }}>{e.message}</span>

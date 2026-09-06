@@ -894,7 +894,7 @@ function StepBody({ node, feature, mode, onClose }: { node: string; feature: str
   const meta = <MetaChips items={[<span style={HEAD_LABEL}>STEP OUTPUTS</span>, outputs?.feature]} />;
 
   return (
-    <PanelShell accent={"var(--status-accent)"} title={label} meta={meta} onClose={onClose}>
+    <PanelShell accent={"var(--status-selection)"} title={label} meta={meta} onClose={onClose}>
       {error ? (
         <div style={{ fontSize: "0.78rem", color: "var(--status-critical-text)" }}>{error}</div>
       ) : !outputs ? (

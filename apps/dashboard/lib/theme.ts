@@ -104,6 +104,11 @@ export const status = {
 
   onDeck: "#3B82F6",
   onDeckTint: "rgba(59, 130, 246, 0.08)",
+
+  // SELECTION accent (lime-green): the ONE colour shared by every "this is the selected item" cue ,
+  // the selected node's dashed ring, the drill-down's square badge, and the log's #<ordinal> marker.
+  // Change this single token and all three move together (--status-selection).
+  selection: "#65A30D",
 } as const;
 
 // --- role palette -----------------------------------------------------------
@@ -211,6 +216,8 @@ export const statusDark: Tokens<typeof status> = {
 
   onDeck: "#60A5FA", // brightened blue for a dark ground
   onDeckTint: "rgba(96,165,250,0.14)",
+
+  selection: "#A3E635", // brighter lime for a dark ground (see --status-selection in the light block)
 };
 
 // Role hues from Kevin's c1…c10, mapped to preserve the light theme's semantics where it

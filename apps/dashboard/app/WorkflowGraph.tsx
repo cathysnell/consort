@@ -259,19 +259,20 @@ function Node({
       }}
     >
       <title>{clickable ? `${title} · click for step outputs` : title}</title>
-      {/* Selection ring: a dashed accent outline, distinct from the active-now glow/pulse, so a
-          node can read as "selected for its outputs" and "active now" at the same time. */}
+      {/* Selection ring: a dashed LIME outline (--status-selection, the shared selection accent),
+          distinct from the active-now glow/pulse, so a node can read as "selected for its outputs"
+          and "active now" at the same time. */}
       {selected ? (
         isGate ? (
           <polygon
             points={`${x + w / 2},${CENTER_Y - NODE_H / 2 - 5} ${x + w + 5},${CENTER_Y} ${x + w / 2},${CENTER_Y + NODE_H / 2 + 5} ${x - 5},${CENTER_Y}`}
             fill="none"
-            style={{ stroke: "var(--status-accent)" }}
+            style={{ stroke: "var(--status-selection)" }}
             strokeWidth={2}
             strokeDasharray="3 2"
           />
         ) : (
-          <rect x={x - 4} y={PAD - 4} width={w + 8} height={NODE_H + 8} rx={10} fill="none" style={{ stroke: "var(--status-accent)" }} strokeWidth={2} strokeDasharray="3 2" />
+          <rect x={x - 4} y={PAD - 4} width={w + 8} height={NODE_H + 8} rx={10} fill="none" style={{ stroke: "var(--status-selection)" }} strokeWidth={2} strokeDasharray="3 2" />
         )
       ) : null}
       {isGate ? (
