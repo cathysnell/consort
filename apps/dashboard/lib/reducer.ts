@@ -67,10 +67,14 @@ export const ENABLE_PERMISSION_BANNER = false;
 export const ENABLE_WAITING_BANNER = false;
 
 // The SINGLE derivation of the run's focus (see DashboardState.focus). Mutually exclusive and
-// ordered: an actively-running step wins (so a lingering pendingGate from an earlier phase never
-// also reads as "waiting" while a step runs); then the gate the run is parked at; else idle. Every
-// surface reads state.focus rather than recombining laneCurrent/pendingGate itself.
-export function focusOf(s: Pick<DashboardState, "topology" | "pendingGate">): Focus {
+// ordered: an open ESCALATION (a raised-to-human problem) wins — the run is parked on it; then an
+// actively-running step (so a lingering pendingGate from an earlier phase never reads as "waiting"
+// while a step runs); then the GATE the run is parked at; else idle. This ONE observation is what
+// links every surface — the lane node, the lifecycle node, the orchestrator card, and the transport
+// WAITING/RAISED all read state.focus rather than recombining laneCurrent / pendingGate / blockers
+// themselves. focus.kind "gate" carries the gate key; "escalation" is a raised problem.
+export function focusOf(s: Pick<DashboardState, "topology" | "pendingGate" | "blockers">): Focus {
+  if (s.blockers.length > 0) return { kind: "escalation" };
   if (s.topology.laneCurrent) return { kind: "step", lane: s.topology.laneCurrent.lane, step: s.topology.laneCurrent.step };
   if (s.pendingGate) return { kind: "gate", gate: s.pendingGate };
   return { kind: "idle" };
@@ -483,14 +487,15 @@ export function fold(
   // because the carried-forward feature has ended — that is the F1→F6 handoff at event 214).
   const pinnedDone = pinnedDivergent !== null && (features.find((f) => f.id === feature)?.done ?? false);
   const topology = deriveTopology(slice, feature, pinnedDone);
-  // The Backlog gate (author-requests) awaits the human WITHOUT emitting a gate.surfaced, so the last
-  // log event stays the architect's estimate and its sizing step would read "current" (glowing)
-  // right through the pause, while the Backlog gate itself never lights. At the live edge, when
-  // next.json offers the backlog-commit, make the Backlog gate step (p-req) the current locus: it
-  // pulses purple as the awaiting human gate, and the architect's sizing step reads done, not active.
-  // Only at the live edge — next.json describes NOW, so a scrubbed-back playhead keeps its own step.
-  if (atLive && (next?.options ?? []).some((o) => o.id === "backlog.commit")) {
-    topology.laneCurrent = { lane: "plan", step: "p-req" };
+  // The Backlog gate (author-requests) awaits the human WITHOUT emitting a gate.surfaced, so the log
+  // has no gate event to park on and the last event is the architect's estimate. At the live edge,
+  // when next.json offers the backlog-commit, treat it as parking at the "backlog" gate: clear the
+  // (architect's) current step here, and set pendingGate = "backlog" below, so the ONE focus becomes
+  // {kind:"gate",gate:"backlog"} — and the gate node, orchestrator, and transport WAITING all light
+  // from that one key. Only at the live edge — next.json describes NOW.
+  const backlogGateAwaiting = atLive && (next?.options ?? []).some((o) => o.id === "backlog.commit");
+  if (backlogGateAwaiting) {
+    topology.laneCurrent = null;
   }
   // Use where the playhead IS, not what the run has ever touched. `passedNodes` is wrong
   // here: `reflect` maps to the build node, so any design-lane reflect would make an
@@ -532,6 +537,9 @@ export function fold(
     pendingGate = cleared ? null : gname;
     break; // only the most recent surface decides the live wait
   }
+  // The backlog gate has no gate.surfaced event; the live-edge next.json is its only signal. Park on
+  // it here so the ONE focus resolves to the backlog gate (drives node + orchestrator + transport).
+  if (backlogGateAwaiting) pendingGate = "backlog";
 
   return {
     ...base,
@@ -568,7 +576,7 @@ export function fold(
     orchestratorActivity: latestOrchestratorActivity(slice),
     pendingGate,
     // The one focus observation, derived once here; every surface reads it (see focusOf).
-    focus: focusOf({ topology, pendingGate }),
+    focus: focusOf({ topology, pendingGate, blockers }),
     // Per-step model/effort/cost/turns for the step cards, folded over the full slice.
     laneStepMeta: laneStepMeta(slice),
     lane,

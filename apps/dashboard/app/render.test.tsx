@@ -269,33 +269,30 @@ describe("render — LaneGraph", () => {
       <LaneGraph state={withTopology({ passedNodes: [], activeNode: null, laneCurrent: null })} />,
     );
     expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
-    expect(markup).toContain("7/8 steps"); // build: 8 lightable now (b-refactor added); this pre-remodel corpus lit 7 (no b-refactor event)
-    // Plan reads 2/5: 5 lightable now (p-intake + p-breakdown added), and this pre-p-intake
-    // render-state snapshot lit only p-propose + p-size (p-req never lights — its product-owner emits
-    // gate.approved, not the author-requests phase; p-intake/p-breakdown weren't in the topology when
-    // the snapshot was captured).
-    expect(markup).toContain("2/5 steps");
+    expect(markup).toContain("7/8 steps"); // build: 8 lightable (b-verify, an automated role-owned gate, still counts); lit 7
+    // Plan reads 2/4: p-intake, p-propose, p-size, p-breakdown — the backlog gate (p-req) is now a
+    // HUMAN gate, excluded from the ratio like the intake/plan gates. This pre-p-intake render-state
+    // snapshot lit only p-propose + p-size.
+    expect(markup).toContain("2/4 steps");
   });
 
-  it("takes gate state from the run's gates, not from the step data", () => {
-    // A lane gate can never light from laneSteps, so its only honest source is state.gates.
-    // Assert on a COLLAPSED lane's gate dot: the expanded lane in this fixture is build,
-    // whose only gate (b-verify) has a real match predicate and is already lit.
-    // Assert on the SPEC gate's OWN node stroke (title → rect), not the whole markup: now that all
-    // lanes are expanded, other lanes' pending human gates (plan, acceptance) legitimately render
-    // purple too, so a blanket "no purple" check would spuriously fail. This isolates the spec gate.
+  it("a gate's colour comes from the parked-gate focus, not its gate state", () => {
+    // The unified model: a gate is purple ONLY while it is the gate the run is currently PARKED at
+    // (the ONE focus). Its gates.json status (open/approved) no longer colours it — a passed or
+    // merely-open gate that isn't the focus is neutral, so purple never lingers past the parked
+    // moment. Isolate the SPEC gate's own node stroke (title → rect).
     const specStroke = (m: string): string | null =>
       m.match(/Spec gate[\s\S]*?<rect[^>]*?stroke:(var\(--status-[a-z]+\))/)?.[1] ?? null;
 
-    const open = renderToStaticMarkup(<LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }] }} />);
-    expect(specStroke(open)).toBe("var(--status-gate)"); // surfaced-but-unapproved → HITL purple
+    // Not the parked gate → neutral, regardless of gate status (border-default is not a status-* var).
+    const idleOpen = renderToStaticMarkup(<LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], focus: { kind: "idle" } }} />);
+    expect(specStroke(idleOpen)).toBeNull();
+    const idleApproved = renderToStaticMarkup(<LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }], focus: { kind: "idle" } }} />);
+    expect(specStroke(idleApproved)).toBeNull();
 
-    const approved = renderToStaticMarkup(
-      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }] }} />,
-    );
-    // A human gate stays PURPLE once approved (done) — never green. Both states are read from the
-    // run's gates (a match-less gate step would otherwise be grey), which is what this guards.
-    expect(specStroke(approved)).toBe("var(--status-gate)");
+    // Parked at the spec gate → purple, from the ONE focus.
+    const parked = renderToStaticMarkup(<LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], focus: { kind: "gate", gate: "spec" } }} />);
+    expect(specStroke(parked)).toBe("var(--status-gate)");
   });
 
   it("PULSES only the gate the run is PARKED at (pendingGate), glowing purple — not every open gate", () => {
@@ -307,9 +304,9 @@ describe("render — LaneGraph", () => {
     const backingRectFor = (m: string): string =>
       m.match(/<title>Spec gate[\s\S]*?<rect[^>]*style="([^"]*)"/)?.[1] ?? "";
 
-    // Parked at the spec gate: it pulses WHITE and wears a purple border.
+    // Parked at the spec gate (focus): it pulses WHITE and wears a purple border.
     const parked = renderToStaticMarkup(
-      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "spec" })} />,
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], focus: { kind: "gate", gate: "spec" } }} />,
     );
     expect(backingRectFor(parked)).toContain("glowpulse"); // the live wait → pulses (SVG-visible glow)
     expect(backingRectFor(parked)).toContain("var(--text-strong)"); // glows WHITE, like the bubble cards
@@ -317,13 +314,13 @@ describe("render — LaneGraph", () => {
 
     // Spec gate still `open` but the drive is parked ELSEWHERE (acceptance): spec must NOT pulse.
     const elsewhere = renderToStaticMarkup(
-      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "open" }], pendingGate: "acceptance" })} />,
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "open" }], focus: { kind: "gate", gate: "acceptance" } }} />,
     );
     expect(backingRectFor(elsewhere)).not.toContain("glowpulse"); // open but not the live wait → quiet
 
     // Cleared: no pulse.
     const approved = renderToStaticMarkup(
-      <LaneGraph state={withFocus({ ...state, gates: [{ name: "spec", status: "approved" }], pendingGate: null })} />,
+      <LaneGraph state={{ ...state, gates: [{ name: "spec", status: "approved" }], focus: { kind: "idle" } }} />,
     );
     expect(backingRectFor(approved)).not.toContain("glowpulse"); // cleared → quiet, no pulse
   });
@@ -357,7 +354,7 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
     expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render even when empty
     expect(markup).toContain("not started");
-    expect(markup).toContain("0/5 steps"); // plan: 5 lightable steps (incl. p-intake + p-breakdown), none reached
+    expect(markup).toContain("0/4 steps"); // plan: 4 lightable steps (p-intake/propose/size/breakdown; the backlog gate is a human gate, excluded), none reached
   });
 });
 

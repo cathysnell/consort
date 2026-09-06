@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fold, emptyState } from "./reducer";
+import { fold, emptyState, focusOf } from "./reducer";
 import {
   blockersFromLog,
   storiesFromLog,
@@ -65,14 +65,15 @@ describe("fold — topology", () => {
     expect(t.atTimestamp).toBe(RUN[RUN.length - 1].timestamp);
   });
 
-  it("at the live edge, the backlog-commit pause makes the Backlog gate current, not the architect", () => {
+  it("at the live edge, the backlog-commit pause parks the ONE focus on the backlog GATE, not the architect", () => {
     // The drive pauses at author-requests (the Backlog gate) with NO gate.surfaced event, so the last
     // log event stays the architect's estimate — which would leave p-size "current" (glowing) through
-    // the pause. next.json offering the backlog-commit means the human is being asked to select the
-    // sprint's features, so the Backlog gate (p-req) is the active locus, and the architect reads done.
+    // the pause. next.json offering the backlog-commit means the run is parked at the backlog gate:
+    // laneCurrent clears and the ONE focus becomes {kind:"gate",gate:"backlog"} — the single key that
+    // drives the gate node + orchestrator + transport WAITING together.
     const withBacklog = fold(RUN, snap({ next: { options: [{ id: "backlog.commit", title: "Commit the sprint backlog" }] } }));
-    expect(withBacklog.topology.laneCurrent).toEqual({ lane: "plan", step: "p-req" });
-    expect(withBacklog.focus).toEqual({ kind: "step", lane: "plan", step: "p-req" });
+    expect(withBacklog.topology.laneCurrent).toBeNull();
+    expect(withBacklog.focus).toEqual({ kind: "gate", gate: "backlog" });
   });
 
   it("the backlog-commit override is live-edge only — scrubbed back keeps the playhead's own step", () => {
@@ -475,6 +476,28 @@ describe("storyKey — a story is (feature, id), unambiguously", () => {
     // Measured: no feature or story id in either log contains `/` or `~`, so the escaping is
     // defensive and must not alter the keys in use.
     expect(storyKey("F1-stock-visibility", "S1-file-stock")).toBe("F1-stock-visibility/S1-file-stock");
+  });
+});
+
+describe("focusOf — the ONE observation that drives every gate surface from one key", () => {
+  // focus is what links the lane node, the lifecycle node, the orchestrator card, and the transport
+  // WAITING/RAISED: gate → all glow purple + WAITING; escalation → all glow red + RAISED. Priority
+  // is escalation > step > gate > idle, and a gate carries its key so the right node/bubble lights.
+  const f = (laneCurrent: { lane: string; step: string } | null, pendingGate: string | null, blockers: unknown[]) =>
+    focusOf({ topology: { laneCurrent }, pendingGate, blockers } as Parameters<typeof focusOf>[0]);
+
+  it("escalation (an open blocker) outranks a running step and a pending gate → RAISED everywhere", () => {
+    expect(f({ lane: "build", step: "b-green" }, "spec", [{}])).toEqual({ kind: "escalation" });
+  });
+  it("a running step outranks a lingering pending gate", () => {
+    expect(f({ lane: "build", step: "b-green" }, "spec", [])).toEqual({ kind: "step", lane: "build", step: "b-green" });
+  });
+  it("a parked gate carries its key when nothing is running → that gate's node + bubble + WAITING", () => {
+    expect(f(null, "spec", [])).toEqual({ kind: "gate", gate: "spec" });
+    expect(f(null, "backlog", [])).toEqual({ kind: "gate", gate: "backlog" });
+  });
+  it("idle when nothing is parked or running", () => {
+    expect(f(null, null, [])).toEqual({ kind: "idle" });
   });
 });
 

@@ -11,6 +11,7 @@
 // human-decided and fail closed.
 
 import type { AgentLogEvent, LaneStepMeta, Role } from "./types";
+import { GATE_KEY_BY_NODE } from "./gates";
 // One definition of "which feature does this event belong to", shared with the story
 // derivation. derive.ts does not import this module, so there is no cycle.
 import { featureIdOf } from "./derive";
@@ -124,15 +125,10 @@ export const PHASE_TO_NODE: Record<string, string> = {
   promote: "promote",
 };
 
-// Which gate node reflects which gate name in the run's gate state.
-export const GATE_NODE_TO_GATE: Record<string, string> = {
-  intakegate: "intake",
-  plangate: "plan",
-  specgate: "spec",
-  acceptancegate: "acceptance",
-  deploygate: "deploy",
-  promgate: "promote",
-};
+// Which gate node reflects which gate name in the run's gate state. Derived from the ONE gate
+// registry (lib/gates.ts) rather than hand-listed here, so the lane node, lifecycle node, and
+// orchestrator bubble can never disagree about a gate's key.
+export const GATE_NODE_TO_GATE: Record<string, string> = GATE_KEY_BY_NODE;
 
 // --------------------------------------------------------------------------- step outputs
 
@@ -745,6 +741,14 @@ export interface LaneHit {
   step: string;
 }
 
+// Every gate step id, across all lanes. A gate is a HITL/verify checkpoint, not agent work, so it
+// must never be the actively-running `current` step (a gate.approved carries the surfacing role +
+// its phase and would otherwise re-light that role's step after the phase is done). The gate's own
+// glow comes from the run's parked-gate focus, not from being `current`.
+const GATE_STEP_IDS: ReadonlySet<string> = new Set(
+  LANE_IDS.flatMap((lane) => WORKFLOW.lanes[lane].steps.filter((s) => s.gate).map((s) => s.id)),
+);
+
 // First sub-step (lanes in plan→design→build order, steps in declared order) that this
 // event lights, or null. First match wins, as in the original.
 export function laneStepForEvent(e: AgentLogEvent | null | undefined): LaneHit | null {
@@ -885,15 +889,16 @@ export function laneProgress(events: AgentLogEvent[], upTo?: number, feature?: s
   // agree; a gate.surfaced/handoff still maps to no role step (wrong role), so a gate park stays
   // step-less.
   //
-  // A gate.surfaced / gate.approved is a HITL boundary, not agent work, so it must never be the
-  // actively-running `current`: a gate.approved carries the surfacing role + its phase, so it
-  // matches that role's step and would re-light it AFTER the phase is done — the product owner
-  // "glowing again" the instant intake is approved. The gate's own step still reads its
-  // done/approved colour from the gate state (stepState), independent of `current`.
-  const current: LaneHit | null =
+  // `current` is never a HITL boundary. TWO guards: (1) a gate.surfaced/gate.approved event is not
+  // agent work — and a gate.approved carries the surfacing role + phase, so it matches THAT role's
+  // step (e.g. the PO's p-intake at intake approval) and would re-light it after the phase is done;
+  // (2) a GATE step (e.g. the backlog commit, which lights from author-requests events) is a
+  // checkpoint, not work. The gate's glow comes from the run's parked-gate focus, not from `current`.
+  const hit =
     playhead && playhead.event !== "gate.surfaced" && playhead.event !== "gate.approved"
       ? laneStepForEvent(playhead)
       : null;
+  const current: LaneHit | null = hit && !GATE_STEP_IDS.has(hit.step) ? hit : null;
 
   return { done, last, current };
 }

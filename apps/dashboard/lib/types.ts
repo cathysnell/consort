@@ -329,6 +329,7 @@ export interface SnapshotInputs {
 export type Focus =
   | { kind: "step"; lane: string; step: string }
   | { kind: "gate"; gate: string }
+  | { kind: "escalation" }
   | { kind: "idle" };
 
 export interface DashboardState {

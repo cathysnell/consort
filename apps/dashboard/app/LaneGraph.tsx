@@ -9,6 +9,7 @@ import {
   type LaneId,
   type LaneStep,
 } from "@/lib/topology";
+import { GATE_KEY_BY_STEP } from "@/lib/gates";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { fmtElapsed } from "./AgentBubble";
 import type { DashboardState, LaneStepMeta } from "@/lib/types";
@@ -63,16 +64,7 @@ const PROMOTE_STEP_IDS = new Set(["dp-pr", "dp-ci", "dp-promgate", "dp-merge", "
 // (propose → sizing → choose → breakdown → plan gate), mirroring the deploy/promote dot split.
 const INTAKE_STEP_IDS = new Set(["p-intake", "p-intake-gate"]);
 
-const LANE_STEP_GATE: Record<string, string> = {
-  "p-intake-gate": "intake",
-  "p-gate": "plan",
-  "d-gate": "spec",
-  "b-accept": "acceptance",
-  "dp-gate": "deploy",
-  "dp-promgate": "promote",
-};
-
-type StepState = "done" | "current" | "pending" | "gate-open" | "gate-current" | "gate-approved";
+type StepState = "done" | "current" | "pending" | "gate-current" | "escalation-current";
 
 export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpenRole?: (role: string) => void }) {
   // The run's active step, from the ONE focus observation. Step ids are unique across lanes, so a
@@ -115,9 +107,11 @@ function LanePanel({
 }) {
   // Each lane card collapses to just its header (name · status · dot strip) on a header click.
   const [collapsed, setCollapsed] = useState(false);
-  // Gates are excluded from the ratio: they never light from events, so counting them would
-  // cap every lane below 100% forever.
-  const lightable = lane.steps.filter((s) => s.match !== null);
+  // HUMAN gates are excluded from the ratio — a HITL checkpoint is not a work step. Most have no
+  // match (never light); the backlog gate DOES carry a match (it lights from the author-requests
+  // events), so exclude human gates by (gate && role === null), which catches it too. The automated
+  // VERIFY checkpoint (gate:true but role release-engineer) DOES real work and stays counted.
+  const lightable = lane.steps.filter((s) => s.match !== null && !(s.gate && s.role === null));
   const reached = lightable.filter((s) => done.has(s.id)).length;
   // Active = the focus step belongs to THIS lane. currentStep is the run's single active step (from
   // focus), passed to every lane; step ids are unique per lane, so only the owning lane matches — an
@@ -227,12 +221,21 @@ function LanePanel({
         <span style={{ display: "flex", alignItems: "center", gap: 3, marginLeft: "auto" }}>
           {(() => {
             const dot = (s: LaneStep) => {
-              // Active from the ONE focus: the running step, OR the gate the run is parked at.
-              // focus is mutually exclusive (step XOR gate XOR …), so a lingering gate never flashes
-              // while a step runs — no per-surface laneCurrent/pendingGate juggling.
-              const active = s.id === currentStep || (state.focus.kind === "gate" && !!s.gate && LANE_STEP_GATE[s.id] === state.focus.gate);
+              // Active from the ONE focus: the running step, the gate the run is parked at, or the
+              // escalation terminal it is parked on. focus is mutually exclusive (step XOR gate XOR
+              // escalation XOR idle), so nothing double-flashes — no per-surface juggling.
+              const gateKey = GATE_KEY_BY_STEP[s.id];
+              const parkedGate = state.focus.kind === "gate" && !!gateKey && gateKey === state.focus.gate;
+              const parkedEsc = state.focus.kind === "escalation" && s.escalation === true;
+              const active = s.id === currentStep || parkedGate || parkedEsc;
               const reached = done.has(s.id) || active;
-              const dotColor = s.role ? colorForRole(s.role) : s.gate ? gateTintFor(s, state) : "var(--border-strong)";
+              const dotColor = s.role
+                ? colorForRole(s.role)
+                : parkedEsc
+                  ? "var(--status-critical)"
+                  : s.gate
+                    ? gateTintFor(s, state)
+                    : "var(--border-strong)";
               return (
                 <span
                   key={s.id}
@@ -294,17 +297,10 @@ function LanePanel({
 }
 
 function gateTintFor(step: LaneStep, state: DashboardState): string {
-  const gateName = LANE_STEP_GATE[step.id];
-  // A human gate with no formal gate-state mapping (the backlog-commit lights from events, not a
-  // gates.json record) is still purple — gateTintFor is only reached for roleless (human) gates.
-  if (!gateName) return "var(--status-gate)";
-  // The gate the run is PARKED at reads purple even when it's not a snapshot gate (acceptance is
-  // log-derived, never in state.gates). `focus.kind === "gate"` already means the run is parked (no
-  // active step), so no separate laneCurrent guard is needed.
-  if (state.focus.kind === "gate" && gateName === state.focus.gate) return "var(--status-gate)";
-  const g = state.gates.find((x) => x.name === gateName);
-  if (!g) return "var(--border-strong)";
-  return "var(--status-gate)"; // a reached human gate is purple whether open or approved (done), never green
+  // A gate dot is purple ONLY while it is the gate the run is currently parked at (the ONE focus).
+  // A passed or upcoming gate is neutral — purple never lingers on a gate the run has moved past.
+  const key = GATE_KEY_BY_STEP[step.id];
+  return key && state.focus.kind === "gate" && key === state.focus.gate ? "var(--status-gate)" : "var(--border-strong)";
 }
 
 // --------------------------------------------------------------------------- the graph
@@ -672,18 +668,18 @@ function stepState(
   state: DashboardState,
 ): StepState {
   if (s.id === currentStep) return "current";
+  // The ONE gate the run is parked at pulses ("gate-current"); the escalation terminal the run is
+  // parked on pulses red ("escalation-current"). Both read from the single focus. Every OTHER gate —
+  // passed or upcoming — is neutral; purple/red is only ever the currently-parked one.
+  const gateKey = GATE_KEY_BY_STEP[s.id];
+  if (gateKey && state.focus.kind === "gate" && gateKey === state.focus.gate) return "gate-current";
+  if (s.escalation && state.focus.kind === "escalation") return "escalation-current";
   if (done.has(s.id)) return "done";
-  // Gates never light from events; take their state from the run's gate list so a cleared
-  // gate reads as cleared instead of pending forever.
-  if (s.gate && s.match === null) {
-    const gateName = LANE_STEP_GATE[s.id];
-    const g = gateName ? state.gates.find((x) => x.name === gateName) : undefined;
-    if (g?.status === "approved") return "gate-approved";
-    // The gate the run is parked at pulses ("gate-current") — read from the ONE focus. `focus.kind
-    // === "gate"` already implies no step is running, so a lingering gate from an earlier phase
-    // reads as a quiet "gate-open" (below), never a pulse, while a step is active.
-    if (gateName && state.focus.kind === "gate" && gateName === state.focus.gate) return "gate-current";
-    if (g) return "gate-open";
+  // A gate that has been REACHED (approved, or its later sibling reached) reads as done, not pending,
+  // so the label dims like any passed step (colour is neutral either way).
+  if (s.gate) {
+    const g = gateKey ? state.gates.find((x) => x.name === gateKey) : undefined;
+    if (g) return "done";
   }
   return "pending";
 }
@@ -750,44 +746,37 @@ function StepBox({
 }) {
   const isGate = step.gate === true;
 
-  // The active turn is set apart by its PULSE ALONE — no static accent fill or thick border. It
-  // otherwise looks like any other reached step; only the glowpulse (below) marks it. Each step
-  // carries its agent's colour via the role stripe regardless. Gates and escalation terminals DO
-  // keep a distinct colour: a HUMAN gate (gate:true with NO owning agent, role === null) is purple;
-  // a raise-to-HIL terminal is critical red; the automated VERIFY checkpoint (the one gate that DOES
-  // own a role, release-engineer) is NOT a human gate and stays neutral. Keyed on role rather than
-  // `match === null` so a human gate that lights from events (the backlog-commit, which carries the
-  // author-requests events) still reads purple.
-  const isHumanGate = isGate && step.role === null;
+  // Colour comes from WHICH kind of thing is the current locus — the ONE focus decides it:
+  //   active turn ("current")        → the agent's colour (or accent if roleless)
+  //   parked gate ("gate-current")   → purple
+  //   parked escalation ("escalation-current") → critical red
+  //   everything else — a passed or upcoming gate, an inactive escalation terminal, a done step —
+  //   is NEUTRAL. Purple/red never linger on a gate/terminal the run has moved past; only the
+  //   currently-parked one lights. All three get the WHITE pulse + thick border (the `highlighted`).
   const active = state === "current"; // the current turn
-  // The ONE human gate the drive is parked at (state = "gate-current") is the active locus even
-  // though it never lights from an event; it pulses too, in PURPLE (its human-gate hue), and keeps
-  // its purple border. Other still-open gates ("gate-open") keep the border but stay quiet.
-  const gateWaiting = state === "gate-current";
-  // Like the Current-State bubble cards: the active turn / parked gate gets a THICK COLOURED border
-  // (the agent's colour for a turn, purple for a human gate) and a WHITE pulse. The border colour is
-  // the only static cue; there is no tint fill.
+  const gateWaiting = state === "gate-current"; // the parked human gate
+  const escalationActive = state === "escalation-current"; // the escalation the run is parked on
+  const highlighted = active || gateWaiting || escalationActive;
   const stroke = active
     ? step.role
       ? colorForRole(step.role)
-      : step.gate
-        ? "var(--status-gate)" // an active human gate (e.g. awaiting the backlog commit) pulses PURPLE, not accent
-        : "var(--status-accent)"
-    : step.escalation
-      ? "var(--status-critical)" // a raise-to-HIL terminal reads CRITICAL (red), distinct from amber branches + purple gates
-      : isHumanGate
-        ? "var(--status-gate)" // a human gate is PURPLE whether pending, parked, or approved (done) — never green
+      : "var(--status-accent)"
+    : gateWaiting
+      ? "var(--status-gate)"
+      : escalationActive
+        ? "var(--status-critical)"
         : "var(--border-default)";
 
-  // A LIGHT tint in the step's own colour on the active turn. color-mix is required because
-  // colorForRole returns a `var(--role-*)` and you cannot append an alpha to a var() (the old
-  // `${var()}26` was invalid CSS for every role-coloured step). Sits on TOP of the opaque backing
+  // A LIGHT tint in the locus's own colour. color-mix is required because colorForRole returns a
+  // `var(--role-*)` and you cannot append an alpha to a var(). Sits on TOP of the opaque backing
   // rect, so the outside-only white glow is unaffected and nothing bleeds through the tint.
   const fill = active
     ? `color-mix(in srgb, ${step.role ? colorForRole(step.role) : "var(--status-accent)"} 7%, transparent)`
     : gateWaiting
       ? "color-mix(in srgb, var(--status-gate) 7%, transparent)"
-      : "var(--surface-inset)";
+      : escalationActive
+        ? "color-mix(in srgb, var(--status-critical) 7%, transparent)"
+        : "var(--surface-inset)";
 
   // The pulse glows WHITE, exactly like the bubble cards (their softpulse glows in currentColor,
   // which is --text-strong — white on the dark theme). The border, not the glow, carries the colour.
@@ -837,7 +826,7 @@ function StepBox({
           when the box's own fill is a translucent tint (a parked gate's gate-tint). glowpulse animates
           an SVG-honoured drop-shadow in currentColor: the agent's colour, or gate-purple for a parked
           gate. This pulse is the ONLY cue for the active step. */}
-      {active || gateWaiting ? (
+      {highlighted ? (
         <rect
           x={x}
           y={y}
@@ -854,7 +843,7 @@ function StepBox({
         height={STEP_H}
         rx={isGate ? 4 : 8}
         style={{ fill, stroke }}
-        strokeWidth={active || gateWaiting ? 2.5 : 1.4}
+        strokeWidth={highlighted ? 2.5 : 1.4}
         strokeDasharray={step.branch ? "5 3" : undefined}
       />
       {/* Role bar: the agent's colour as a bar along the TOP edge, tying the card to its bubble.
@@ -898,7 +887,7 @@ function StepBox({
           fontSize: 7.5,
           // On the active turn / parked gate the non-white text takes the border colour (the agent's
           // colour for a turn, gate-purple for a parked gate).
-          fill: active || gateWaiting ? stroke : state === "pending" ? "var(--text-faint)" : "var(--text-muted)",
+          fill: highlighted ? stroke : state === "pending" ? "var(--text-faint)" : "var(--text-muted)",
           fontFamily: font.sans,
         }}
       >
@@ -915,7 +904,7 @@ function StepBox({
           x={x + STEP_W / 2}
           y={y + 49}
           textAnchor="middle"
-          style={{ fontSize: 7.5, fill: active || gateWaiting ? stroke : "var(--text-muted)", fontFamily: font.mono }}
+          style={{ fontSize: 7.5, fill: highlighted ? stroke : "var(--text-muted)", fontFamily: font.mono }}
         >
           {modelEffort}
         </text>
@@ -925,7 +914,7 @@ function StepBox({
           x={x + STEP_W / 2}
           y={y + 60}
           textAnchor="middle"
-          style={{ fontSize: 7.5, fontWeight: 600, fill: active || gateWaiting ? stroke : "var(--text-body)", fontFamily: font.mono }}
+          style={{ fontSize: 7.5, fontWeight: 600, fill: highlighted ? stroke : "var(--text-body)", fontFamily: font.mono }}
         >
           {turnsCost}
         </text>

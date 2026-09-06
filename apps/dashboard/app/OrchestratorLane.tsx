@@ -2,6 +2,7 @@
 
 import type { AgentLogEvent, DashboardState } from "@/lib/types";
 import { font, radius } from "@/lib/theme";
+import { LIFECYCLE_GATE_KEYS } from "@/lib/gates";
 
 // The scrum-master / orchestrator coordination panel (the template's top `.lane` box): what the
 // deterministic driver is doing right now — its latest dispatch, and the recent gate coordination
@@ -65,7 +66,10 @@ export function orchestratorStatus(
 
 // The HIL gates the run passes, in lifecycle order. test_list is a design SUB-gate, not one of the
 // human decision points shown here.
-const GATE_ORDER = ["intake", "plan", "spec", "acceptance", "deploy", "promote"] as const;
+// The lifecycle HIL gates, in order — derived from the ONE gate registry (lib/gates.ts). The
+// backlog gate is lane-only (no lifecycle node), so it is absent here; the run parking at it still
+// glows the card purple via the focus, it just has no bubble on this row.
+const GATE_ORDER: readonly string[] = LIFECYCLE_GATE_KEYS;
 
 // Each gate's status FOR THE CURRENT STORY, derived from the log so the bubbles reset when the story
 // changes instead of showing every gate ever opened. `plan` is sprint-level (not story-scoped); the
@@ -115,10 +119,12 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
   // is "waiting on you" when parked at a gate, "coordinating" when a step is actively running. (This
   // is the single source; the lane dots + step cards read the same focus.)
   const focus = state.focus;
-  // An unresolved HIL escalation (a role kicked a problem up , a failed verify that couldn't
-  // auto-heal) is the most urgent state, so it takes precedence over waiting/coordinating and turns
-  // the card RED, matching the agent bubble's "issue" colour. Blockers are the escalation set.
-  const issue = state.blockers.length > 0;
+  // All three states come from the ONE focus: an unresolved HIL escalation (focus "escalation" — a
+  // role kicked a problem up, a failed verify that couldn't auto-heal) is the most urgent and turns
+  // the card RED; a parked gate (focus "gate") turns it purple; a running step (focus "step") is
+  // coordinating. focusOf already ranks escalation > step > gate, so reading focus.kind here needs no
+  // separate blockers check — the same key that glows the gate node + flips the transport.
+  const issue = focus.kind === "escalation";
   const waiting = focus.kind === "gate";
   const running = focus.kind === "step";
   // The gate bubbles: the five HIL gates in lifecycle order, scoped to (and resetting with) the

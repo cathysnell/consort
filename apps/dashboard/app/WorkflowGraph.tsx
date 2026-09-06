@@ -69,7 +69,7 @@ export function WorkflowGraph({
   // + blockers, so it never disagrees with the other surfaces.
   const focus = state.focus;
   const activeColor =
-    state.blockers.length > 0
+    focus.kind === "escalation"
       ? "var(--status-critical)"
       : focus.kind === "gate"
         ? "var(--status-gate)"
@@ -225,14 +225,11 @@ function Node({
   const isGate = node.type === "gate";
 
   // ONLY the active node is highlighted (accent fill + the active colour's border + pulse), matching
-  // the lanes' only-highlight-the-active-step treatment. `activeColor` already reflects what is
-  // active (issue red / gate colour / working role / accent). Reached/approved nodes stay READABLE
-  // but quiet so the one active phase pops; a pending human gate keeps a thin gate-coloured border.
-  const stroke = active
-    ? activeColor
-    : gateStatus === "surfaced" || gateStatus === "approved"
-      ? "var(--status-gate)" // a reached human gate stays PURPLE (done or pending), never grey
-      : "var(--border-default)";
+  // the lanes' only-highlight-the-active-step treatment. `activeColor` reflects what is active (issue
+  // red / gate purple / working role). A passed or upcoming gate is NEUTRAL — purple/red is only ever
+  // the gate the run is currently parked at (the `active` awaitedGateNode); it never lingers on a
+  // gate the run has moved past.
+  const stroke = active ? activeColor : "var(--border-default)";
 
   // The active node's FILL is a light tint of the SAME active colour as its border (issue red /
   // gate colour / working role), via color-mix (as the lane steps do), so the node reads in the
