@@ -452,8 +452,23 @@ function LaneSvg({
     // its dashed line matches its "next cycle" label; branch/failure edges are amber; every other
     // happy-path edge is grey.
     const nextCycle = sameRow && q.col < p.col && !o.branch;
-    const stroke = o.branch ? "var(--status-warning)" : nextCycle ? "var(--status-good-text)" : "var(--border-strong)";
-    const marker = o.branch ? "url(#lg-arrow-branch)" : nextCycle ? "url(#lg-arrow-cycle)" : "url(#lg-arrow)";
+    // An edge whose TARGET is a raise-to-HIL escalation terminal is RED, not the amber of the
+    // recoverable failure branches (assess -> repair/perm) , escalating to a human is not a self-heal.
+    const toEscalation = lane.steps.find((s) => s.id === to)?.escalation === true;
+    const stroke = o.branch
+      ? toEscalation
+        ? "var(--status-critical)"
+        : "var(--status-warning)"
+      : nextCycle
+        ? "var(--status-good-text)"
+        : "var(--border-strong)";
+    const marker = o.branch
+      ? toEscalation
+        ? "url(#lg-arrow-escalation)"
+        : "url(#lg-arrow-branch)"
+      : nextCycle
+        ? "url(#lg-arrow-cycle)"
+        : "url(#lg-arrow)";
     let d: string;
     let lx = 0;
     let ly = 0;
@@ -519,7 +534,7 @@ function LaneSvg({
     const labelText = o.label ?? (sameRow && q.col < p.col && !o.branch ? "next cycle" : undefined);
     // Branch labels (verify fails / regression / re-verify) are amber; the happy-path "next cycle"
     // label reads green to match its loop line – not muted.
-    const labelFill = o.branch ? "var(--status-warning-text)" : "var(--status-good-text)";
+    const labelFill = o.branch ? (toEscalation ? "var(--status-critical-text)" : "var(--status-warning-text)") : "var(--status-good-text)";
     return (
       <g key={`${from}->${to}`}>
         <path
@@ -555,6 +570,9 @@ function LaneSvg({
           </marker>
           <marker id="lg-arrow-branch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-warning)" }} />
+          </marker>
+          <marker id="lg-arrow-escalation" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-critical)" }} />
           </marker>
           <marker id="lg-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--status-good-text)" }} />
