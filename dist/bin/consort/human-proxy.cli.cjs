@@ -7900,6 +7900,51 @@ function emitAgentLogEvent(input, opts = {}) {
   return event;
 }
 
+// consort/logging/gate-decision-log.ts
+init_cjs_shims();
+function logGateApproved(a) {
+  try {
+    emitAgentLogEvent(
+      {
+        role: a.role ?? "product-owner",
+        level: "info",
+        event: "gate.approved",
+        feature_id: a.featureId,
+        slots: {
+          gate: a.gate,
+          ...a.story ? { story: a.story } : {},
+          ...a.artifacts ? { artifacts: a.artifacts } : {},
+          approver: a.approver,
+          validated: true
+        }
+      },
+      { consortDir: a.consortDir }
+    );
+  } catch {
+  }
+}
+function logGateRejected(a) {
+  try {
+    emitAgentLogEvent(
+      {
+        role: a.role ?? "product-owner",
+        level: "warn",
+        event: "gate.rejected",
+        feature_id: a.featureId,
+        slots: {
+          gate: a.gate,
+          ...a.story ? { story: a.story } : {},
+          reason: a.reason,
+          approver: a.approver,
+          validated: false
+        }
+      },
+      { consortDir: a.consortDir }
+    );
+  } catch {
+  }
+}
+
 // consort/gates/gate-conformance-guard.ts
 init_cjs_shims();
 var import_node_fs = require("fs");
@@ -8461,31 +8506,10 @@ function resolveArtifactInputs(gate, fdir, promoteRef, consortDir, featureId) {
 
 // consort/gates/human-proxy.ts
 function logHitlDecision(consortDir, featureId, approver, decision) {
-  try {
-    if (decision.kind === "approved") {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "info",
-          event: "gate.approved",
-          feature_id: featureId,
-          slots: { gate: decision.gate, artifacts: decision.artifacts, approver, validated: true }
-        },
-        { consortDir }
-      );
-    } else {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "warn",
-          event: "gate.rejected",
-          feature_id: featureId,
-          slots: { gate: decision.gate, reason: decision.reason, approver, validated: false }
-        },
-        { consortDir }
-      );
-    }
-  } catch {
+  if (decision.kind === "approved") {
+    logGateApproved({ consortDir, featureId, approver, gate: decision.gate, artifacts: decision.artifacts });
+  } else {
+    logGateRejected({ consortDir, featureId, approver, gate: decision.gate, reason: decision.reason });
   }
 }
 var HUMAN_PROXY = "human-proxy";
@@ -9088,6 +9112,7 @@ function approveSprintPlanGate(args) {
     }
   };
   writeSprintGates(updated, { consortDir });
+  logGateApproved({ consortDir, gate: "plan", approver: args.approver });
   return { ok: true, state: updated, alreadyApproved: false };
 }
 

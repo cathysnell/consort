@@ -6768,6 +6768,70 @@ init_cjs_shims();
 // consort/architecture/architecture-conventions.ts
 init_cjs_shims();
 
+// consort/logging/gate-decision-log.ts
+init_cjs_shims();
+
+// consort/logging/agent-log.ts
+init_cjs_shims();
+
+// consort/config/consort-env.ts
+init_cjs_shims();
+var ENV_PREFIXES = ["LAKEBASE_CONSORT_", "LAKEBASE_SFTDD_", "LAKEBASE_TDD_"];
+var ENV_PREFIX = ENV_PREFIXES[0];
+
+// consort/logging/agent-log-events.ts
+init_cjs_shims();
+var EVENT_TEMPLATES = {
+  // Orchestration lifecycle (code-emitted)
+  "handoff": { template: "dispatch {{to_role}} for {{phase}}" },
+  "phase.start": { template: "{{role}} START {{phase}}" },
+  "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
+  "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
+  // Gates (code surfaces; HIL / Human Proxy decides)
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.approved": { template: "GATE {{gate}} APPROVED" },
+  "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
+  "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
+  // Intake & planning
+  "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
+  "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
+  // Artifacts & design (agent-emitted)
+  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
+  "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
+  "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
+  "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
+  "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
+  "runner.missing": { template: "NO RUNNER for layer {{layer}} (test {{test_id}})" },
+  // Experiment lifecycle (code-emitted)
+  "experiment.cut": { template: "EXPERIMENT cut for {{story}}" },
+  "experiment.accepted": { template: "EXPERIMENT accepted (merged) for {{story}}" },
+  "experiment.discarded": { template: "EXPERIMENT discarded for {{story}}: {{reason}}" },
+  "experiment.revised": { template: "EXPERIMENT revised for {{story}}: {{reason}}" },
+  // Deploy / verify (code-emitted from the deploy CLI)
+  "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
+  "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
+  "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
+  "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
+  "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
+  // UX adherence
+  "adherence.passed": { template: "ADHERENCE passed {{scope}}" },
+  "adherence.failed": { template: "ADHERENCE failed {{scope}}: {{diffs}}" },
+  // Per-turn model usage (code-emitted by the runner from the claude -p result).
+  // input_tokens is the turn's CONTEXT SIZE (prompt the model processed); the
+  // cache_* + cost_usd ride in metadata (not template slots, so not required).
+  "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
+  // Generic (agent-emitted; debug / interim)
+  "reasoning": { template: "{{note}}" },
+  "progress": { template: "{{note}} , {{step}}" }
+};
+var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
+
 // consort/pipeline/story-pipeline.ts
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };

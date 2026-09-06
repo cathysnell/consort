@@ -7485,6 +7485,9 @@ import { join as join23, dirname as dirname13 } from "path";
 // consort/architecture/architecture-conventions.ts
 init_esm_shims();
 
+// consort/logging/gate-decision-log.ts
+init_esm_shims();
+
 // consort/pipeline/story-pipeline.ts
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };

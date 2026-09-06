@@ -6651,7 +6651,7 @@ init_esm_shims();
 
 // consort/gates/sprint-gates.ts
 init_esm_shims();
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync4, renameSync, unlinkSync, writeFileSync as writeFileSync2 } from "fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync3, readFileSync as readFileSync5, renameSync, unlinkSync, writeFileSync as writeFileSync2 } from "fs";
 
 // consort/gates/gate-hash.ts
 init_esm_shims();
@@ -7372,94 +7372,12 @@ function canonicalArtifactName(path2) {
   return base;
 }
 
-// consort/gates/sprint-gates.ts
-var SPRINT_GATES_SCHEMA_VERSION = 1;
-var PLAN_GATE_ARTIFACT = "feature-proposals.md";
-function defaultSprintGatesState(sprint) {
-  return {
-    sprint,
-    schema_version: SPRINT_GATES_SCHEMA_VERSION,
-    gates: { plan: { status: "open", history: [] } }
-  };
-}
-function sprintGatesFile(consortDir, sprint) {
-  return sprintGatesJson(consortDir, sprint);
-}
-function readSprintGates(sprint, opts = {}) {
-  const consortDir = opts.consortDir ?? resolveConsortDir();
-  const file = sprintGatesFile(consortDir, sprint);
-  if (!existsSync4(file)) return defaultSprintGatesState(sprint);
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync4(file, "utf8"));
-  } catch (err) {
-    const cause = err instanceof Error ? err.message : String(err);
-    throw new Error(`sprint gates.json at ${file} is not valid JSON: ${cause}`);
-  }
-  const plan = parsed.gates?.plan ?? { status: "open", history: [] };
-  return {
-    sprint,
-    schema_version: parsed.schema_version ?? SPRINT_GATES_SCHEMA_VERSION,
-    gates: { plan: { status: plan.status, approver: plan.approver, approved_at: plan.approved_at, artifact_hashes: plan.artifact_hashes, history: plan.history ?? [] } }
-  };
-}
-function writeSprintGates(state, opts = {}) {
-  const consortDir = opts.consortDir ?? resolveConsortDir();
-  mkdirSync2(sprintDir(consortDir, state.sprint), { recursive: true });
-  const file = sprintGatesJson(consortDir, state.sprint);
-  const tmp = `${file}.tmp.${process.pid}.${Date.now()}`;
-  writeFileSync2(tmp, JSON.stringify(state, null, 2) + "\n", "utf8");
-  try {
-    renameSync(tmp, file);
-  } catch (err) {
-    try {
-      unlinkSync(tmp);
-    } catch {
-    }
-    throw err;
-  }
-}
-function approveSprintPlanGate(args) {
-  if (!args.hitlApproved) return { ok: false, reason: "hitlApproved must be true (the plan gate is HITL)" };
-  if (args.approver.length === 0) return { ok: false, reason: "approver must not be empty" };
-  const consortDir = args.consortDir ?? resolveConsortDir();
-  const file = featureProposalsMd(consortDir);
-  if (!existsSync4(file)) {
-    return { ok: false, reason: `${PLAN_GATE_ARTIFACT} not found (no sprint plan to review)` };
-  }
-  const content = readFileSync4(file, "utf8");
-  const conf = checkArtifactConformance(PLAN_GATE_ARTIFACT, content);
-  if (!conf.ok) {
-    return { ok: false, reason: `${PLAN_GATE_ARTIFACT} not conformant: ${(conf.violations ?? []).join("; ")}` };
-  }
-  const state = readSprintGates(args.sprint, { consortDir });
-  if (state.gates.plan.status !== "open") {
-    return { ok: true, state, alreadyApproved: true };
-  }
-  const ts = (args.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-  const hashes = { [PLAN_GATE_ARTIFACT]: hashArtifact(content) };
-  const updated = {
-    ...state,
-    gates: {
-      plan: {
-        status: "approved",
-        approver: args.approver,
-        approved_at: ts,
-        artifact_hashes: hashes,
-        history: [
-          ...state.gates.plan.history,
-          { action: "approved", at: ts, approver: args.approver, artifact_hashes: hashes }
-        ]
-      }
-    }
-  };
-  writeSprintGates(updated, { consortDir });
-  return { ok: true, state: updated, alreadyApproved: false };
-}
-
-// consort/gates/human-proxy.ts
+// consort/logging/gate-decision-log.ts
 init_esm_shims();
-import { existsSync as existsSync13, readFileSync as readFileSync13, writeFileSync as writeFileSync9, mkdirSync as mkdirSync8 } from "fs";
+
+// consort/logging/agent-log.ts
+init_esm_shims();
+import { appendFileSync, existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync4 } from "fs";
 
 // consort/config/consort-env.ts
 init_esm_shims();
@@ -7490,18 +7408,285 @@ function warnLegacyEnv(legacyName, suffix) {
   }
 }
 
+// consort/logging/agent-log.ts
+import { dirname as dirname2, join as join4 } from "path";
+
+// consort/logging/agent-log-events.ts
+init_esm_shims();
+var EVENT_TEMPLATES = {
+  // Orchestration lifecycle (code-emitted)
+  "handoff": { template: "dispatch {{to_role}} for {{phase}}" },
+  "phase.start": { template: "{{role}} START {{phase}}" },
+  "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
+  "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
+  // Gates (code surfaces; HIL / Human Proxy decides)
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.approved": { template: "GATE {{gate}} APPROVED" },
+  "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
+  "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
+  // Intake & planning
+  "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
+  "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
+  // Artifacts & design (agent-emitted)
+  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
+  "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
+  "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
+  "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
+  "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
+  "runner.missing": { template: "NO RUNNER for layer {{layer}} (test {{test_id}})" },
+  // Experiment lifecycle (code-emitted)
+  "experiment.cut": { template: "EXPERIMENT cut for {{story}}" },
+  "experiment.accepted": { template: "EXPERIMENT accepted (merged) for {{story}}" },
+  "experiment.discarded": { template: "EXPERIMENT discarded for {{story}}: {{reason}}" },
+  "experiment.revised": { template: "EXPERIMENT revised for {{story}}: {{reason}}" },
+  // Deploy / verify (code-emitted from the deploy CLI)
+  "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
+  "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
+  "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
+  "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
+  "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
+  // UX adherence
+  "adherence.passed": { template: "ADHERENCE passed {{scope}}" },
+  "adherence.failed": { template: "ADHERENCE failed {{scope}}: {{diffs}}" },
+  // Per-turn model usage (code-emitted by the runner from the claude -p result).
+  // input_tokens is the turn's CONTEXT SIZE (prompt the model processed); the
+  // cache_* + cost_usd ride in metadata (not template slots, so not required).
+  "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
+  // Generic (agent-emitted; debug / interim)
+  "reasoning": { template: "{{note}}" },
+  "progress": { template: "{{note}} , {{step}}" }
+};
+var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
+function isKnownEvent(name) {
+  return Object.prototype.hasOwnProperty.call(EVENT_TEMPLATES, name);
+}
+var AgentLogEventError = class extends Error {
+};
+function renderEventMessage(event, slots = {}) {
+  if (!isKnownEvent(event)) {
+    throw new AgentLogEventError(
+      `unknown agent-log event "${event}" (not in the closed vocabulary). Allowed: ${AGENT_LOG_EVENT_NAMES.join(", ")}`
+    );
+  }
+  const tmpl = EVENT_TEMPLATES[event].template;
+  return tmpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_full, name) => {
+    const v = slots[name];
+    if (v === void 0 || v === null || v === "") {
+      throw new AgentLogEventError(`agent-log event "${event}" is missing required slot "${name}"`);
+    }
+    return String(v);
+  });
+}
+
+// consort/logging/agent-log.ts
+function logFilePath(consortDir) {
+  return join4(consortDir, "agent-log.jsonl");
+}
+function mirrorToRecordDir(text) {
+  const recordDir = consortEnv("RECORD_DIR")?.trim();
+  if (!recordDir) return;
+  try {
+    const dst = join4(recordDir, "agent-log.jsonl");
+    mkdirSync2(dirname2(dst), { recursive: true });
+    appendFileSync(dst, text, "utf8");
+  } catch {
+  }
+}
+function buildAgentLogEvent(input, now) {
+  const slots = input.slots ?? {};
+  const renderCtx = {
+    role: input.role,
+    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
+    ...input.phase !== void 0 ? { phase: input.phase } : {},
+    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
+    ...slots
+  };
+  const message = renderEventMessage(input.event, renderCtx);
+  const metadata = {
+    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
+    ...input.phase !== void 0 ? { phase: input.phase } : {},
+    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
+    ...slots,
+    ...input.metadata ?? {}
+  };
+  const event = {
+    timestamp: input.timestamp ?? now().toISOString(),
+    level: input.level,
+    role: input.role,
+    // model + effort sit right after role (the per-turn dispatch events carry them).
+    ...input.model ? { model: input.model } : {},
+    ...input.effort ? { effort: input.effort } : {},
+    event: input.event,
+    message,
+    ...Object.keys(metadata).length > 0 ? { metadata } : {}
+  };
+  const validate = getValidator("agent-log-event.schema.json");
+  if (!validate(event)) {
+    throw new Error(`invalid agent log event: ${formatSchemaErrors(validate).join("; ")}`);
+  }
+  return event;
+}
+function emitAgentLogEvent(input, opts = {}) {
+  const consortDir = opts.consortDir ?? resolveConsortDir();
+  const now = opts.now ?? (() => /* @__PURE__ */ new Date());
+  const event = buildAgentLogEvent(input, now);
+  const line = `${JSON.stringify(event)}
+`;
+  appendFileSync(logFilePath(consortDir), line, "utf8");
+  mirrorToRecordDir(line);
+  return event;
+}
+
+// consort/logging/gate-decision-log.ts
+function logGateApproved(a) {
+  try {
+    emitAgentLogEvent(
+      {
+        role: a.role ?? "product-owner",
+        level: "info",
+        event: "gate.approved",
+        feature_id: a.featureId,
+        slots: {
+          gate: a.gate,
+          ...a.story ? { story: a.story } : {},
+          ...a.artifacts ? { artifacts: a.artifacts } : {},
+          approver: a.approver,
+          validated: true
+        }
+      },
+      { consortDir: a.consortDir }
+    );
+  } catch {
+  }
+}
+function logGateRejected(a) {
+  try {
+    emitAgentLogEvent(
+      {
+        role: a.role ?? "product-owner",
+        level: "warn",
+        event: "gate.rejected",
+        feature_id: a.featureId,
+        slots: {
+          gate: a.gate,
+          ...a.story ? { story: a.story } : {},
+          reason: a.reason,
+          approver: a.approver,
+          validated: false
+        }
+      },
+      { consortDir: a.consortDir }
+    );
+  } catch {
+  }
+}
+
+// consort/gates/sprint-gates.ts
+var SPRINT_GATES_SCHEMA_VERSION = 1;
+var PLAN_GATE_ARTIFACT = "feature-proposals.md";
+function defaultSprintGatesState(sprint) {
+  return {
+    sprint,
+    schema_version: SPRINT_GATES_SCHEMA_VERSION,
+    gates: { plan: { status: "open", history: [] } }
+  };
+}
+function sprintGatesFile(consortDir, sprint) {
+  return sprintGatesJson(consortDir, sprint);
+}
+function readSprintGates(sprint, opts = {}) {
+  const consortDir = opts.consortDir ?? resolveConsortDir();
+  const file = sprintGatesFile(consortDir, sprint);
+  if (!existsSync5(file)) return defaultSprintGatesState(sprint);
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync5(file, "utf8"));
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    throw new Error(`sprint gates.json at ${file} is not valid JSON: ${cause}`);
+  }
+  const plan = parsed.gates?.plan ?? { status: "open", history: [] };
+  return {
+    sprint,
+    schema_version: parsed.schema_version ?? SPRINT_GATES_SCHEMA_VERSION,
+    gates: { plan: { status: plan.status, approver: plan.approver, approved_at: plan.approved_at, artifact_hashes: plan.artifact_hashes, history: plan.history ?? [] } }
+  };
+}
+function writeSprintGates(state, opts = {}) {
+  const consortDir = opts.consortDir ?? resolveConsortDir();
+  mkdirSync3(sprintDir(consortDir, state.sprint), { recursive: true });
+  const file = sprintGatesJson(consortDir, state.sprint);
+  const tmp = `${file}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync2(tmp, JSON.stringify(state, null, 2) + "\n", "utf8");
+  try {
+    renameSync(tmp, file);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err;
+  }
+}
+function approveSprintPlanGate(args) {
+  if (!args.hitlApproved) return { ok: false, reason: "hitlApproved must be true (the plan gate is HITL)" };
+  if (args.approver.length === 0) return { ok: false, reason: "approver must not be empty" };
+  const consortDir = args.consortDir ?? resolveConsortDir();
+  const file = featureProposalsMd(consortDir);
+  if (!existsSync5(file)) {
+    return { ok: false, reason: `${PLAN_GATE_ARTIFACT} not found (no sprint plan to review)` };
+  }
+  const content = readFileSync5(file, "utf8");
+  const conf = checkArtifactConformance(PLAN_GATE_ARTIFACT, content);
+  if (!conf.ok) {
+    return { ok: false, reason: `${PLAN_GATE_ARTIFACT} not conformant: ${(conf.violations ?? []).join("; ")}` };
+  }
+  const state = readSprintGates(args.sprint, { consortDir });
+  if (state.gates.plan.status !== "open") {
+    return { ok: true, state, alreadyApproved: true };
+  }
+  const ts = (args.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
+  const hashes = { [PLAN_GATE_ARTIFACT]: hashArtifact(content) };
+  const updated = {
+    ...state,
+    gates: {
+      plan: {
+        status: "approved",
+        approver: args.approver,
+        approved_at: ts,
+        artifact_hashes: hashes,
+        history: [
+          ...state.gates.plan.history,
+          { action: "approved", at: ts, approver: args.approver, artifact_hashes: hashes }
+        ]
+      }
+    }
+  };
+  writeSprintGates(updated, { consortDir });
+  logGateApproved({ consortDir, gate: "plan", approver: args.approver });
+  return { ok: true, state: updated, alreadyApproved: false };
+}
+
 // consort/gates/human-proxy.ts
+init_esm_shims();
+import { existsSync as existsSync13, readFileSync as readFileSync13, writeFileSync as writeFileSync9, mkdirSync as mkdirSync8 } from "fs";
 import { dirname as dirname7, basename as basename2 } from "path";
 
 // consort/gates/approve-gate.ts
 init_esm_shims();
-import { existsSync as existsSync7, readFileSync as readFileSync7, writeFileSync as writeFileSync5 } from "fs";
-import { join as join6 } from "path";
+import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync5 } from "fs";
+import { join as join7 } from "path";
 
 // consort/gates/gates-lock.ts
 init_esm_shims();
-import { closeSync, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync5, unlinkSync as unlinkSync2, writeFileSync as writeFileSync3 } from "fs";
-import { join as join4 } from "path";
+import { closeSync, mkdirSync as mkdirSync4, openSync, readFileSync as readFileSync6, unlinkSync as unlinkSync2, writeFileSync as writeFileSync3 } from "fs";
+import { join as join5 } from "path";
 var GatesLockBusyError = class extends Error {
   constructor(featureId, heldByPid, retries) {
     super(
@@ -7554,7 +7739,7 @@ function isEexist(err) {
 }
 function readHeldByPid(lockPath) {
   try {
-    const text = readFileSync5(lockPath, "utf8");
+    const text = readFileSync6(lockPath, "utf8");
     const n = Number(text.trim());
     return Number.isFinite(n) && n > 0 ? n : null;
   } catch {
@@ -7563,8 +7748,8 @@ function readHeldByPid(lockPath) {
 }
 function gatesLockFilePath(consortDir, featureId) {
   const dir = requireFeatureDir(consortDir, featureId);
-  mkdirSync3(dir, { recursive: true });
-  return join4(dir, ".gates.lock");
+  mkdirSync4(dir, { recursive: true });
+  return join5(dir, ".gates.lock");
 }
 function defaultSleep(ms) {
   const buf = new Int32Array(new SharedArrayBuffer(4));
@@ -7573,8 +7758,8 @@ function defaultSleep(ms) {
 
 // consort/gates/gates.ts
 init_esm_shims();
-import { existsSync as existsSync6, readFileSync as readFileSync6, renameSync as renameSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync4 } from "fs";
-import { join as join5 } from "path";
+import { existsSync as existsSync7, readFileSync as readFileSync7, renameSync as renameSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync4 } from "fs";
+import { join as join6 } from "path";
 var GATES_SCHEMA_VERSION = 1;
 var GATE_NAMES = ["spec", "plan", "test_list", "promote", "deploy"];
 var GATE_STATUSES = ["open", "approved", "superseded", "withdrawn"];
@@ -7594,10 +7779,10 @@ function defaultGatesState(featureId) {
 function readGates(featureId, opts = {}) {
   const consortDir = opts.consortDir ?? resolveConsortDir();
   const file = gatesFilePath(consortDir, featureId);
-  if (!existsSync6(file)) {
+  if (!existsSync7(file)) {
     return defaultGatesState(featureId);
   }
-  const raw = readFileSync6(file, "utf8");
+  const raw = readFileSync7(file, "utf8");
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -7627,7 +7812,7 @@ function writeGates(state, opts = {}) {
   }
 }
 function gatesFilePath(consortDir, featureId) {
-  return join5(requireFeatureDir(consortDir, featureId), "gates.json");
+  return join6(requireFeatureDir(consortDir, featureId), "gates.json");
 }
 function validateGatesState(parsed, file) {
   if (typeof parsed !== "object" || parsed === null) {
@@ -7764,7 +7949,7 @@ function approveGate(args) {
   );
 }
 function appendSelectionLog(consortDir, entry) {
-  const logPath = join6(consortDir, "selection-log.md");
+  const logPath = join7(consortDir, "selection-log.md");
   const hashList = Object.entries(entry.capturedHashes).map(([name, hash]) => `  - \`${name}\`: \`sha256:${hash}\``).join("\n");
   const lines = [
     "",
@@ -7775,148 +7960,11 @@ function appendSelectionLog(consortDir, entry) {
     ""
   ];
   const text = lines.join("\n");
-  if (existsSync7(logPath)) {
-    writeFileSync5(logPath, readFileSync7(logPath, "utf8") + text);
+  if (existsSync8(logPath)) {
+    writeFileSync5(logPath, readFileSync8(logPath, "utf8") + text);
   } else {
     writeFileSync5(logPath, text);
   }
-}
-
-// consort/logging/agent-log.ts
-init_esm_shims();
-import { appendFileSync, existsSync as existsSync8, mkdirSync as mkdirSync4, readFileSync as readFileSync8 } from "fs";
-import { dirname as dirname2, join as join7 } from "path";
-
-// consort/logging/agent-log-events.ts
-init_esm_shims();
-var EVENT_TEMPLATES = {
-  // Orchestration lifecycle (code-emitted)
-  "handoff": { template: "dispatch {{to_role}} for {{phase}}" },
-  "phase.start": { template: "{{role}} START {{phase}}" },
-  "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
-  "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
-  // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
-  "gate.approved": { template: "GATE {{gate}} APPROVED" },
-  "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
-  "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
-  // Intake & planning
-  "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
-  "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
-  // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
-  "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
-  // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
-  "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
-  "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
-  "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
-  "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
-  "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
-  "runner.missing": { template: "NO RUNNER for layer {{layer}} (test {{test_id}})" },
-  // Experiment lifecycle (code-emitted)
-  "experiment.cut": { template: "EXPERIMENT cut for {{story}}" },
-  "experiment.accepted": { template: "EXPERIMENT accepted (merged) for {{story}}" },
-  "experiment.discarded": { template: "EXPERIMENT discarded for {{story}}: {{reason}}" },
-  "experiment.revised": { template: "EXPERIMENT revised for {{story}}: {{reason}}" },
-  // Deploy / verify (code-emitted from the deploy CLI)
-  "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
-  "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
-  "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
-  "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
-  "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
-  "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
-  // UX adherence
-  "adherence.passed": { template: "ADHERENCE passed {{scope}}" },
-  "adherence.failed": { template: "ADHERENCE failed {{scope}}: {{diffs}}" },
-  // Per-turn model usage (code-emitted by the runner from the claude -p result).
-  // input_tokens is the turn's CONTEXT SIZE (prompt the model processed); the
-  // cache_* + cost_usd ride in metadata (not template slots, so not required).
-  "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
-  // Generic (agent-emitted; debug / interim)
-  "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
-};
-var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
-function isKnownEvent(name) {
-  return Object.prototype.hasOwnProperty.call(EVENT_TEMPLATES, name);
-}
-var AgentLogEventError = class extends Error {
-};
-function renderEventMessage(event, slots = {}) {
-  if (!isKnownEvent(event)) {
-    throw new AgentLogEventError(
-      `unknown agent-log event "${event}" (not in the closed vocabulary). Allowed: ${AGENT_LOG_EVENT_NAMES.join(", ")}`
-    );
-  }
-  const tmpl = EVENT_TEMPLATES[event].template;
-  return tmpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_full, name) => {
-    const v = slots[name];
-    if (v === void 0 || v === null || v === "") {
-      throw new AgentLogEventError(`agent-log event "${event}" is missing required slot "${name}"`);
-    }
-    return String(v);
-  });
-}
-
-// consort/logging/agent-log.ts
-function logFilePath(consortDir) {
-  return join7(consortDir, "agent-log.jsonl");
-}
-function mirrorToRecordDir(text) {
-  const recordDir = consortEnv("RECORD_DIR")?.trim();
-  if (!recordDir) return;
-  try {
-    const dst = join7(recordDir, "agent-log.jsonl");
-    mkdirSync4(dirname2(dst), { recursive: true });
-    appendFileSync(dst, text, "utf8");
-  } catch {
-  }
-}
-function buildAgentLogEvent(input, now) {
-  const slots = input.slots ?? {};
-  const renderCtx = {
-    role: input.role,
-    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
-    ...input.phase !== void 0 ? { phase: input.phase } : {},
-    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
-    ...slots
-  };
-  const message = renderEventMessage(input.event, renderCtx);
-  const metadata = {
-    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
-    ...input.phase !== void 0 ? { phase: input.phase } : {},
-    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
-    ...slots,
-    ...input.metadata ?? {}
-  };
-  const event = {
-    timestamp: input.timestamp ?? now().toISOString(),
-    level: input.level,
-    role: input.role,
-    // model + effort sit right after role (the per-turn dispatch events carry them).
-    ...input.model ? { model: input.model } : {},
-    ...input.effort ? { effort: input.effort } : {},
-    event: input.event,
-    message,
-    ...Object.keys(metadata).length > 0 ? { metadata } : {}
-  };
-  const validate = getValidator("agent-log-event.schema.json");
-  if (!validate(event)) {
-    throw new Error(`invalid agent log event: ${formatSchemaErrors(validate).join("; ")}`);
-  }
-  return event;
-}
-function emitAgentLogEvent(input, opts = {}) {
-  const consortDir = opts.consortDir ?? resolveConsortDir();
-  const now = opts.now ?? (() => /* @__PURE__ */ new Date());
-  const event = buildAgentLogEvent(input, now);
-  const line = `${JSON.stringify(event)}
-`;
-  appendFileSync(logFilePath(consortDir), line, "utf8");
-  mirrorToRecordDir(line);
-  return event;
 }
 
 // consort/gates/gate-conformance-guard.ts
@@ -8488,31 +8536,10 @@ function resolveArtifactInputs(gate, fdir, promoteRef, consortDir, featureId) {
 
 // consort/gates/human-proxy.ts
 function logHitlDecision(consortDir, featureId, approver, decision) {
-  try {
-    if (decision.kind === "approved") {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "info",
-          event: "gate.approved",
-          feature_id: featureId,
-          slots: { gate: decision.gate, artifacts: decision.artifacts, approver, validated: true }
-        },
-        { consortDir }
-      );
-    } else {
-      emitAgentLogEvent(
-        {
-          role: "product-owner",
-          level: "warn",
-          event: "gate.rejected",
-          feature_id: featureId,
-          slots: { gate: decision.gate, reason: decision.reason, approver, validated: false }
-        },
-        { consortDir }
-      );
-    }
-  } catch {
+  if (decision.kind === "approved") {
+    logGateApproved({ consortDir, featureId, approver, gate: decision.gate, artifacts: decision.artifacts });
+  } else {
+    logGateRejected({ consortDir, featureId, approver, gate: decision.gate, reason: decision.reason });
   }
 }
 var HUMAN_PROXY = "human-proxy";
@@ -8649,6 +8676,7 @@ function approveStoryGateFromDisk(consortDir, feature, story, opts) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
   writePipeline(consortDir, pipeline);
+  logGateApproved({ consortDir, gate: "spec", story, featureId: feature, approver: opts.approver });
   return { ok: true, queue: pipeline.build_queue };
 }
 

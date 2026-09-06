@@ -10162,6 +10162,9 @@ function readConventions(consortDir) {
   }
 }
 
+// consort/logging/gate-decision-log.ts
+init_esm_shims();
+
 // consort/pipeline/story-pipeline.ts
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };

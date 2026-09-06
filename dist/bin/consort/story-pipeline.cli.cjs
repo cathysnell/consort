@@ -6646,8 +6646,8 @@ init_cjs_shims();
 
 // consort/pipeline/story-pipeline.ts
 init_cjs_shims();
-var import_fs2 = require("fs");
-var import_path5 = require("path");
+var import_fs3 = require("fs");
+var import_path6 = require("path");
 
 // consort/config/consort-paths.ts
 init_cjs_shims();
@@ -7141,6 +7141,200 @@ function storyRequiresE2eReason(fdir, story) {
   return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" , the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
 }
 
+// consort/logging/gate-decision-log.ts
+init_cjs_shims();
+
+// consort/logging/agent-log.ts
+init_cjs_shims();
+var import_fs2 = require("fs");
+
+// consort/config/consort-env.ts
+init_cjs_shims();
+var ENV_PREFIXES = ["LAKEBASE_CONSORT_", "LAKEBASE_SFTDD_", "LAKEBASE_TDD_"];
+var ENV_PREFIX = ENV_PREFIXES[0];
+var LEGACY_REMOVAL_VERSION = "v0.4.0";
+var warnedLegacyEnv = /* @__PURE__ */ new Set();
+function consortEnv(suffix, env = process.env) {
+  for (let i = 0; i < ENV_PREFIXES.length; i++) {
+    const name = `${ENV_PREFIXES[i]}${suffix}`;
+    const v = env[name];
+    if (v !== void 0) {
+      if (i > 0) warnLegacyEnv(name, suffix);
+      return v;
+    }
+  }
+  return void 0;
+}
+function warnLegacyEnv(legacyName, suffix) {
+  if (warnedLegacyEnv.has(legacyName)) return;
+  warnedLegacyEnv.add(legacyName);
+  try {
+    process.stderr.write(
+      `[deprecated] ${legacyName} is a legacy sftdd/tdd-era env name; use ${ENV_PREFIX}${suffix} instead (removed in consort ${LEGACY_REMOVAL_VERSION}). Still honored for now.
+`
+    );
+  } catch {
+  }
+}
+
+// consort/logging/agent-log.ts
+var import_path5 = require("path");
+
+// consort/logging/agent-log-events.ts
+init_cjs_shims();
+var EVENT_TEMPLATES = {
+  // Orchestration lifecycle (code-emitted)
+  "handoff": { template: "dispatch {{to_role}} for {{phase}}" },
+  "phase.start": { template: "{{role}} START {{phase}}" },
+  "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
+  "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
+  // Gates (code surfaces; HIL / Human Proxy decides)
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.approved": { template: "GATE {{gate}} APPROVED" },
+  "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
+  "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
+  // Intake & planning
+  "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
+  "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
+  // Artifacts & design (agent-emitted)
+  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
+  "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
+  "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
+  "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
+  "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
+  "runner.missing": { template: "NO RUNNER for layer {{layer}} (test {{test_id}})" },
+  // Experiment lifecycle (code-emitted)
+  "experiment.cut": { template: "EXPERIMENT cut for {{story}}" },
+  "experiment.accepted": { template: "EXPERIMENT accepted (merged) for {{story}}" },
+  "experiment.discarded": { template: "EXPERIMENT discarded for {{story}}: {{reason}}" },
+  "experiment.revised": { template: "EXPERIMENT revised for {{story}}: {{reason}}" },
+  // Deploy / verify (code-emitted from the deploy CLI)
+  "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
+  "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
+  "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
+  "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
+  "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
+  // UX adherence
+  "adherence.passed": { template: "ADHERENCE passed {{scope}}" },
+  "adherence.failed": { template: "ADHERENCE failed {{scope}}: {{diffs}}" },
+  // Per-turn model usage (code-emitted by the runner from the claude -p result).
+  // input_tokens is the turn's CONTEXT SIZE (prompt the model processed); the
+  // cache_* + cost_usd ride in metadata (not template slots, so not required).
+  "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
+  // Generic (agent-emitted; debug / interim)
+  "reasoning": { template: "{{note}}" },
+  "progress": { template: "{{note}} , {{step}}" }
+};
+var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
+function isKnownEvent(name) {
+  return Object.prototype.hasOwnProperty.call(EVENT_TEMPLATES, name);
+}
+var AgentLogEventError = class extends Error {
+};
+function renderEventMessage(event, slots = {}) {
+  if (!isKnownEvent(event)) {
+    throw new AgentLogEventError(
+      `unknown agent-log event "${event}" (not in the closed vocabulary). Allowed: ${AGENT_LOG_EVENT_NAMES.join(", ")}`
+    );
+  }
+  const tmpl = EVENT_TEMPLATES[event].template;
+  return tmpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_full, name) => {
+    const v = slots[name];
+    if (v === void 0 || v === null || v === "") {
+      throw new AgentLogEventError(`agent-log event "${event}" is missing required slot "${name}"`);
+    }
+    return String(v);
+  });
+}
+
+// consort/logging/agent-log.ts
+function logFilePath(consortDir) {
+  return (0, import_path5.join)(consortDir, "agent-log.jsonl");
+}
+function mirrorToRecordDir(text) {
+  const recordDir = consortEnv("RECORD_DIR")?.trim();
+  if (!recordDir) return;
+  try {
+    const dst = (0, import_path5.join)(recordDir, "agent-log.jsonl");
+    (0, import_fs2.mkdirSync)((0, import_path5.dirname)(dst), { recursive: true });
+    (0, import_fs2.appendFileSync)(dst, text, "utf8");
+  } catch {
+  }
+}
+function buildAgentLogEvent(input, now) {
+  const slots = input.slots ?? {};
+  const renderCtx = {
+    role: input.role,
+    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
+    ...input.phase !== void 0 ? { phase: input.phase } : {},
+    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
+    ...slots
+  };
+  const message = renderEventMessage(input.event, renderCtx);
+  const metadata = {
+    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
+    ...input.phase !== void 0 ? { phase: input.phase } : {},
+    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
+    ...slots,
+    ...input.metadata ?? {}
+  };
+  const event = {
+    timestamp: input.timestamp ?? now().toISOString(),
+    level: input.level,
+    role: input.role,
+    // model + effort sit right after role (the per-turn dispatch events carry them).
+    ...input.model ? { model: input.model } : {},
+    ...input.effort ? { effort: input.effort } : {},
+    event: input.event,
+    message,
+    ...Object.keys(metadata).length > 0 ? { metadata } : {}
+  };
+  const validate = getValidator("agent-log-event.schema.json");
+  if (!validate(event)) {
+    throw new Error(`invalid agent log event: ${formatSchemaErrors(validate).join("; ")}`);
+  }
+  return event;
+}
+function emitAgentLogEvent(input, opts = {}) {
+  const consortDir = opts.consortDir ?? resolveConsortDir();
+  const now = opts.now ?? (() => /* @__PURE__ */ new Date());
+  const event = buildAgentLogEvent(input, now);
+  const line = `${JSON.stringify(event)}
+`;
+  (0, import_fs2.appendFileSync)(logFilePath(consortDir), line, "utf8");
+  mirrorToRecordDir(line);
+  return event;
+}
+
+// consort/logging/gate-decision-log.ts
+function logGateApproved(a) {
+  try {
+    emitAgentLogEvent(
+      {
+        role: a.role ?? "product-owner",
+        level: "info",
+        event: "gate.approved",
+        feature_id: a.featureId,
+        slots: {
+          gate: a.gate,
+          ...a.story ? { story: a.story } : {},
+          ...a.artifacts ? { artifacts: a.artifacts } : {},
+          approver: a.approver,
+          validated: true
+        }
+      },
+      { consortDir: a.consortDir }
+    );
+  } catch {
+  }
+}
+
 // consort/pipeline/story-pipeline.ts
 var STORY_STATUSES = [
   "designing",
@@ -7159,13 +7353,13 @@ function pipelinePath(consortDir, featureId) {
 }
 function readPipeline(consortDir, featureId) {
   const p = pipelinePath(consortDir, featureId);
-  if (!(0, import_fs2.existsSync)(p)) return initPipeline(featureId);
-  return JSON.parse((0, import_fs2.readFileSync)(p, "utf8"));
+  if (!(0, import_fs3.existsSync)(p)) return initPipeline(featureId);
+  return JSON.parse((0, import_fs3.readFileSync)(p, "utf8"));
 }
 function writePipeline(consortDir, pipeline) {
   const p = pipelinePath(consortDir, pipeline.feature_id);
-  (0, import_fs2.mkdirSync)((0, import_path5.dirname)(p), { recursive: true });
-  (0, import_fs2.writeFileSync)(p, JSON.stringify(pipeline, null, 2) + "\n");
+  (0, import_fs3.mkdirSync)((0, import_path6.dirname)(p), { recursive: true });
+  (0, import_fs3.writeFileSync)(p, JSON.stringify(pipeline, null, 2) + "\n");
 }
 function setStoryStatus(pipeline, storyId, status) {
   const existing = pipeline.stories[storyId];
@@ -7176,11 +7370,11 @@ function syncBreakdownToPipeline(consortDir, featureId) {
   const storiesDir2 = storiesDir(consortDir, featureId);
   const pipeline = readPipeline(consortDir, featureId);
   const added = [];
-  if ((0, import_fs2.existsSync)(storiesDir2)) {
-    for (const storyId of (0, import_fs2.readdirSync)(storiesDir2).sort()) {
+  if ((0, import_fs3.existsSync)(storiesDir2)) {
+    for (const storyId of (0, import_fs3.readdirSync)(storiesDir2).sort()) {
       let isDir = false;
       try {
-        isDir = (0, import_fs2.statSync)((0, import_path5.join)(storiesDir2, storyId)).isDirectory();
+        isDir = (0, import_fs3.statSync)((0, import_path6.join)(storiesDir2, storyId)).isDirectory();
       } catch {
         isDir = false;
       }
@@ -7198,7 +7392,7 @@ function resetIncompleteBreakdown(consortDir, featureId) {
   const specPath = featureSpecJson(consortDir, featureId);
   let complete = false;
   try {
-    const spec = JSON.parse((0, import_fs2.readFileSync)(specPath, "utf8"));
+    const spec = JSON.parse((0, import_fs3.readFileSync)(specPath, "utf8"));
     complete = Array.isArray(spec.stories) && spec.stories.length > 0;
   } catch {
     complete = false;
@@ -7206,8 +7400,8 @@ function resetIncompleteBreakdown(consortDir, featureId) {
   if (complete) return { reset: false };
   let reset = false;
   for (const p of [storiesDir(consortDir, featureId), specPath, featureSpecMd(consortDir, featureId)]) {
-    if ((0, import_fs2.existsSync)(p)) {
-      (0, import_fs2.rmSync)(p, { recursive: true, force: true });
+    if ((0, import_fs3.existsSync)(p)) {
+      (0, import_fs3.rmSync)(p, { recursive: true, force: true });
       reset = true;
     }
   }
@@ -7235,14 +7429,14 @@ function completeActive(pipeline) {
 }
 function storyHasAcceptanceCriteria(consortDir, featureId, storyId) {
   const acsDir2 = acsDir(consortDir, featureId, storyId);
-  if (!(0, import_fs2.existsSync)(acsDir2)) return false;
-  return (0, import_fs2.readdirSync)(acsDir2).some((f) => f.endsWith(".json"));
+  if (!(0, import_fs3.existsSync)(acsDir2)) return false;
+  return (0, import_fs3.readdirSync)(acsDir2).some((f) => f.endsWith(".json"));
 }
 function findBatchedDraftStories(consortDir, featureId, pipeline, gatingStoryId) {
   const storiesDir2 = storiesDir(consortDir, featureId);
-  if (!(0, import_fs2.existsSync)(storiesDir2)) return [];
+  if (!(0, import_fs3.existsSync)(storiesDir2)) return [];
   const offenders = [];
-  for (const storyId of (0, import_fs2.readdirSync)(storiesDir2)) {
+  for (const storyId of (0, import_fs3.readdirSync)(storiesDir2)) {
     if (storyId === gatingStoryId) continue;
     if (!storyHasAcceptanceCriteria(consortDir, featureId, storyId)) continue;
     const status = pipeline.stories[storyId]?.status;
@@ -7299,6 +7493,7 @@ function approveStoryGateFromDisk(consortDir, feature, story, opts) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
   writePipeline(consortDir, pipeline);
+  logGateApproved({ consortDir, gate: "spec", story, featureId: feature, approver: opts.approver });
   return { ok: true, queue: pipeline.build_queue };
 }
 function withdrawStoryGate(pipeline, storyId, opts) {
@@ -7405,8 +7600,8 @@ function storyDesignFingerprint(consortDir, feature, story) {
 
 // consort/intake/spec-sync.ts
 init_cjs_shims();
-var import_fs3 = require("fs");
-var import_path6 = require("path");
+var import_fs4 = require("fs");
+var import_path7 = require("path");
 var STORY_ALLOWED_KEYS = /* @__PURE__ */ new Set(["id", "asA", "iWantTo", "soThat", "acs", "feature_id", "independence", "external_ref"]);
 function parseStoryNarrative(md) {
   const grab = (label) => {
@@ -7423,15 +7618,15 @@ function parseStoryNarrative(md) {
 }
 function normalizeStoryJson(consortDir, featureId) {
   const stories = storiesDir(consortDir, featureId);
-  if (!(0, import_fs3.existsSync)(stories)) return [];
+  if (!(0, import_fs4.existsSync)(stories)) return [];
   const changed = [];
-  for (const s of (0, import_fs3.readdirSync)(stories)) {
-    const dir = (0, import_path6.join)(stories, s);
-    const file = (0, import_path6.join)(dir, "story.json");
-    if (!(0, import_fs3.existsSync)(file)) continue;
+  for (const s of (0, import_fs4.readdirSync)(stories)) {
+    const dir = (0, import_path7.join)(stories, s);
+    const file = (0, import_path7.join)(dir, "story.json");
+    if (!(0, import_fs4.existsSync)(file)) continue;
     let obj;
     try {
-      obj = JSON.parse((0, import_fs3.readFileSync)(file, "utf8"));
+      obj = JSON.parse((0, import_fs4.readFileSync)(file, "utf8"));
     } catch {
       continue;
     }
@@ -7440,12 +7635,12 @@ function normalizeStoryJson(consortDir, featureId) {
       obj.feature_id = obj.feature;
       mutated = true;
     }
-    const mdPath = (0, import_path6.join)(dir, "story.md");
+    const mdPath = (0, import_path7.join)(dir, "story.md");
     const needsNarrative = ["asA", "iWantTo", "soThat"].some(
       (k) => typeof obj[k] !== "string" || obj[k].trim().length === 0
     );
-    if (needsNarrative && (0, import_fs3.existsSync)(mdPath)) {
-      const narrative = parseStoryNarrative((0, import_fs3.readFileSync)(mdPath, "utf8"));
+    if (needsNarrative && (0, import_fs4.existsSync)(mdPath)) {
+      const narrative = parseStoryNarrative((0, import_fs4.readFileSync)(mdPath, "utf8"));
       for (const k of ["asA", "iWantTo", "soThat"]) {
         const cur = obj[k];
         if ((typeof cur !== "string" || cur.trim().length === 0) && narrative[k]) {
@@ -7461,7 +7656,7 @@ function normalizeStoryJson(consortDir, featureId) {
       }
     }
     if (mutated) {
-      (0, import_fs3.writeFileSync)(file, JSON.stringify(obj, null, 2) + "\n");
+      (0, import_fs4.writeFileSync)(file, JSON.stringify(obj, null, 2) + "\n");
       changed.push(s);
     }
   }
@@ -7472,13 +7667,13 @@ function healAndReportStoryNarrative(consortDir, featureId) {
   const healed = normalizeStoryJson(consortDir, featureId);
   const stories = storiesDir(consortDir, featureId);
   const missing = [];
-  if ((0, import_fs3.existsSync)(stories)) {
-    for (const s of (0, import_fs3.readdirSync)(stories)) {
-      const file = (0, import_path6.join)(stories, s, "story.json");
-      if (!(0, import_fs3.existsSync)(file)) continue;
+  if ((0, import_fs4.existsSync)(stories)) {
+    for (const s of (0, import_fs4.readdirSync)(stories)) {
+      const file = (0, import_path7.join)(stories, s, "story.json");
+      if (!(0, import_fs4.existsSync)(file)) continue;
       let obj;
       try {
-        obj = JSON.parse((0, import_fs3.readFileSync)(file, "utf8"));
+        obj = JSON.parse((0, import_fs4.readFileSync)(file, "utf8"));
       } catch {
         missing.push({ story: s, fields: ["<unparseable story.json>"] });
         continue;
@@ -7496,174 +7691,6 @@ function healAndReportStoryNarrative(consortDir, featureId) {
 init_cjs_shims();
 var import_node_fs8 = require("fs");
 var import_node_path9 = require("path");
-
-// consort/logging/agent-log.ts
-init_cjs_shims();
-var import_fs4 = require("fs");
-
-// consort/config/consort-env.ts
-init_cjs_shims();
-var ENV_PREFIXES = ["LAKEBASE_CONSORT_", "LAKEBASE_SFTDD_", "LAKEBASE_TDD_"];
-var ENV_PREFIX = ENV_PREFIXES[0];
-var LEGACY_REMOVAL_VERSION = "v0.4.0";
-var warnedLegacyEnv = /* @__PURE__ */ new Set();
-function consortEnv(suffix, env = process.env) {
-  for (let i = 0; i < ENV_PREFIXES.length; i++) {
-    const name = `${ENV_PREFIXES[i]}${suffix}`;
-    const v = env[name];
-    if (v !== void 0) {
-      if (i > 0) warnLegacyEnv(name, suffix);
-      return v;
-    }
-  }
-  return void 0;
-}
-function warnLegacyEnv(legacyName, suffix) {
-  if (warnedLegacyEnv.has(legacyName)) return;
-  warnedLegacyEnv.add(legacyName);
-  try {
-    process.stderr.write(
-      `[deprecated] ${legacyName} is a legacy sftdd/tdd-era env name; use ${ENV_PREFIX}${suffix} instead (removed in consort ${LEGACY_REMOVAL_VERSION}). Still honored for now.
-`
-    );
-  } catch {
-  }
-}
-
-// consort/logging/agent-log.ts
-var import_path7 = require("path");
-
-// consort/logging/agent-log-events.ts
-init_cjs_shims();
-var EVENT_TEMPLATES = {
-  // Orchestration lifecycle (code-emitted)
-  "handoff": { template: "dispatch {{to_role}} for {{phase}}" },
-  "phase.start": { template: "{{role}} START {{phase}}" },
-  "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
-  "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
-  // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
-  "gate.approved": { template: "GATE {{gate}} APPROVED" },
-  "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
-  "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
-  // Intake & planning
-  "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
-  "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
-  // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
-  "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
-  // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
-  "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
-  "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
-  "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
-  "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
-  "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
-  "runner.missing": { template: "NO RUNNER for layer {{layer}} (test {{test_id}})" },
-  // Experiment lifecycle (code-emitted)
-  "experiment.cut": { template: "EXPERIMENT cut for {{story}}" },
-  "experiment.accepted": { template: "EXPERIMENT accepted (merged) for {{story}}" },
-  "experiment.discarded": { template: "EXPERIMENT discarded for {{story}}: {{reason}}" },
-  "experiment.revised": { template: "EXPERIMENT revised for {{story}}: {{reason}}" },
-  // Deploy / verify (code-emitted from the deploy CLI)
-  "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
-  "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
-  "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
-  "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
-  "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
-  "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
-  // UX adherence
-  "adherence.passed": { template: "ADHERENCE passed {{scope}}" },
-  "adherence.failed": { template: "ADHERENCE failed {{scope}}: {{diffs}}" },
-  // Per-turn model usage (code-emitted by the runner from the claude -p result).
-  // input_tokens is the turn's CONTEXT SIZE (prompt the model processed); the
-  // cache_* + cost_usd ride in metadata (not template slots, so not required).
-  "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
-  // Generic (agent-emitted; debug / interim)
-  "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
-};
-var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
-function isKnownEvent(name) {
-  return Object.prototype.hasOwnProperty.call(EVENT_TEMPLATES, name);
-}
-var AgentLogEventError = class extends Error {
-};
-function renderEventMessage(event, slots = {}) {
-  if (!isKnownEvent(event)) {
-    throw new AgentLogEventError(
-      `unknown agent-log event "${event}" (not in the closed vocabulary). Allowed: ${AGENT_LOG_EVENT_NAMES.join(", ")}`
-    );
-  }
-  const tmpl = EVENT_TEMPLATES[event].template;
-  return tmpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_full, name) => {
-    const v = slots[name];
-    if (v === void 0 || v === null || v === "") {
-      throw new AgentLogEventError(`agent-log event "${event}" is missing required slot "${name}"`);
-    }
-    return String(v);
-  });
-}
-
-// consort/logging/agent-log.ts
-function logFilePath(consortDir) {
-  return (0, import_path7.join)(consortDir, "agent-log.jsonl");
-}
-function mirrorToRecordDir(text) {
-  const recordDir = consortEnv("RECORD_DIR")?.trim();
-  if (!recordDir) return;
-  try {
-    const dst = (0, import_path7.join)(recordDir, "agent-log.jsonl");
-    (0, import_fs4.mkdirSync)((0, import_path7.dirname)(dst), { recursive: true });
-    (0, import_fs4.appendFileSync)(dst, text, "utf8");
-  } catch {
-  }
-}
-function buildAgentLogEvent(input, now) {
-  const slots = input.slots ?? {};
-  const renderCtx = {
-    role: input.role,
-    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
-    ...input.phase !== void 0 ? { phase: input.phase } : {},
-    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
-    ...slots
-  };
-  const message = renderEventMessage(input.event, renderCtx);
-  const metadata = {
-    ...input.feature_id !== void 0 ? { feature_id: input.feature_id } : {},
-    ...input.phase !== void 0 ? { phase: input.phase } : {},
-    ...input.cycle_id !== void 0 ? { cycle_id: input.cycle_id } : {},
-    ...slots,
-    ...input.metadata ?? {}
-  };
-  const event = {
-    timestamp: input.timestamp ?? now().toISOString(),
-    level: input.level,
-    role: input.role,
-    // model + effort sit right after role (the per-turn dispatch events carry them).
-    ...input.model ? { model: input.model } : {},
-    ...input.effort ? { effort: input.effort } : {},
-    event: input.event,
-    message,
-    ...Object.keys(metadata).length > 0 ? { metadata } : {}
-  };
-  const validate = getValidator("agent-log-event.schema.json");
-  if (!validate(event)) {
-    throw new Error(`invalid agent log event: ${formatSchemaErrors(validate).join("; ")}`);
-  }
-  return event;
-}
-function emitAgentLogEvent(input, opts = {}) {
-  const consortDir = opts.consortDir ?? resolveConsortDir();
-  const now = opts.now ?? (() => /* @__PURE__ */ new Date());
-  const event = buildAgentLogEvent(input, now);
-  const line = `${JSON.stringify(event)}
-`;
-  (0, import_fs4.appendFileSync)(logFilePath(consortDir), line, "utf8");
-  mirrorToRecordDir(line);
-  return event;
-}
 
 // consort/smells/smells.ts
 init_cjs_shims();

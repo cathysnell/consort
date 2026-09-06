@@ -17403,6 +17403,9 @@ init_esm_shims();
 import { existsSync as existsSync52, readFileSync as readFileSync47, readdirSync as readdirSync30, statSync as statSync19 } from "fs";
 import { join as join55, dirname as dirname26 } from "path";
 
+// consort/logging/gate-decision-log.ts
+init_esm_shims();
+
 // consort/pipeline/story-pipeline.ts
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };

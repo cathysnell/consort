@@ -17415,6 +17415,9 @@ init_cjs_shims();
 var import_node_fs28 = require("fs");
 var import_node_path32 = require("path");
 
+// consort/logging/gate-decision-log.ts
+init_cjs_shims();
+
 // consort/pipeline/story-pipeline.ts
 function initPipeline(featureId) {
   return { version: 1, feature_id: featureId, stories: {}, build_queue: [], build_active: null };
