@@ -69,6 +69,10 @@ Drive the workflow through the **deterministic orchestrator** (`consort-drive`),
          2. **NFR → `.consort/nfrs.md`** – walk the categories (performance, scalability, security, observability, operability, resilience); record each as a `## Required` item with a stable `R<n>` id, plus `## Preferences` / `## Out of bounds`.
          3. **UX → `.consort/design/design-brief.md`** (UI track only) – 1-3 reference sites + what to take from each, and brand / interaction / accessibility constraints (a required `## References`).
 
+         **The PO does not build these from scratch – it works from reference:** the canon that defines HOW each artifact is shaped, plus a worked example of all three.
+         - **Canon (the how):** `@software-design-principles` for `nfrs.md` (the NFR categories to walk) and `@ui-ux-design-principles` for `product-overview.md` + `design-brief.md` (user-centered framing, the accessibility/interaction bar). The `product-owner` agent already applies these; name them so the interview is grounded in the canon, not improvised.
+         - **Worked example (the shape):** the StockFlow seed's own filled-in intake at `examples/first-project/stockflow-seed/intake/{product-overview,nfrs,design-brief}.md` in the kit – read it as the reference template for the format + level of detail (an EXAMPLE to learn the shape from, never copied into this project).
+
          Ask the human, draft each artifact, let them review + approve (revise until they sign off – never invent intent), then commit: `git add .consort && git commit -m "intake: product-overview + nfrs + design-brief"`. **SKIP this whole step when the artifacts already exist** (the StockFlow seed path, or a project resumed mid-flow). Then proceed to:
        - **`/plan`** (Spec Author proposes from the intake; the PO authors the next sprint's requests, folding in what the last working software revealed).
      - A feature has a `feature-request.md` but no conformant `test-list.json` -> **`/design <feature-id>`**.
