@@ -147,15 +147,9 @@ export function Transport({
             WAITING
           </span>
         ) : (
-          // At the newest event, an agent working the run forward — an SVG spinner rather than a
-          // dot, so the state reads as active motion.
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--status-good)", fontWeight: 700 }}>
-            <svg width={11} height={11} viewBox="0 0 24 24" style={{ animation: "spin 1.1s linear infinite", transformOrigin: "center", transformBox: "fill-box" }}>
-              <path d="M12 3 a 9 9 0 0 1 9 9" fill="none" style={{ stroke: "var(--status-good)" }} strokeWidth={3} strokeLinecap="round" />
-              <path d="M12 21 a 9 9 0 0 1 -9 -9" fill="none" style={{ stroke: "var(--status-good)" }} strokeWidth={3} strokeLinecap="round" />
-            </svg>
-            WORKING
-          </span>
+          // At the newest event, an agent working the run forward. No glyph — the active step
+          // already flashes on the board, so this is just the label.
+          <span style={{ color: "var(--status-good)", fontWeight: 700 }}>WORKING</span>
         )}
       </div>
 

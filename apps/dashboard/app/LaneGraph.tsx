@@ -641,11 +641,9 @@ function LaneSvg({
         )}
 
         {lane.steps.map((s) => {
-          // For the CURRENT step, surface its agent's live turn state: a spinner while the session is
-          // writing, a pause glyph when it's gone quiet, and the elapsed working time. Only the
-          // current step needs it, so the lookup + Date.now() cost is paid once per lane.
+          // For the CURRENT step, surface the elapsed working time. Only the current step needs it,
+          // so the lookup + Date.now() cost is paid once per lane.
           const agent = s.id === currentStep && s.role ? state.agents.find((a) => a.role === s.role) : undefined;
-          const live = agent ? agent.sessionActive : null;
           const elapsed = agent?.turnStartTs ? fmtElapsed(Math.max(0, Date.now() - Date.parse(agent.turnStartTs))) : null;
           return (
             <StepBox
@@ -655,7 +653,6 @@ function LaneSvg({
               y={pos.get(s.id)!.y}
               state={stepState(s, done, currentStep, state)}
               meta={state.laneStepMeta?.[s.id] ?? null}
-              live={live}
               elapsed={elapsed}
               onOpenRole={onOpenRole}
             />
@@ -738,7 +735,6 @@ function StepBox({
   y,
   state,
   meta,
-  live,
   elapsed,
   onOpenRole,
 }: {
@@ -747,7 +743,6 @@ function StepBox({
   y: number;
   state: StepState;
   meta?: LaneStepMeta | null;
-  live?: boolean | null; // current step only: session writing (true) / quiet (false) / unknown (null)
   elapsed?: string | null; // current step only: formatted time since the turn started
   onOpenRole?: (role: string) => void;
 }) {
@@ -931,29 +926,8 @@ function StepBox({
           {turnsCost}
         </text>
       ) : null}
-      {/* Current-step turn indicator (left of the title): a spinner while the session is writing, a
-          pause glyph when it's gone quiet — plus the elapsed working time at the top-right. Only the
-          active step carries live/elapsed. */}
-      {active && live === true ? (
-        <svg
-          x={x + 4}
-          y={y + 5}
-          width={11}
-          height={11}
-          viewBox="0 0 24 24"
-          style={{ animation: "spin 1.1s linear infinite", transformOrigin: "center", transformBox: "fill-box" }}
-        >
-          <path d="M12 3 a 9 9 0 0 1 9 9" fill="none" style={{ stroke }} strokeWidth={3} strokeLinecap="round" />
-          <path d="M12 21 a 9 9 0 0 1 -9 -9" fill="none" style={{ stroke }} strokeWidth={3} strokeLinecap="round" />
-        </svg>
-      ) : active && live === false ? (
-        // Session has gone quiet — the turn is open but not writing: a pause glyph.
-        <g>
-          <rect x={x + 5} y={y + 6} width={2.4} height={9} rx={1} style={{ fill: stroke }} />
-          <rect x={x + 9} y={y + 6} width={2.4} height={9} rx={1} style={{ fill: stroke }} />
-        </g>
-      ) : null}
-      {active && live !== null && elapsed ? (
+      {/* Elapsed working time on the active step, top-right. */}
+      {active && elapsed ? (
         <text x={x + STEP_W - 5} y={y + 14} textAnchor="end" style={{ fontSize: 7, fill: stroke, fontFamily: font.mono }}>
           {elapsed}
         </text>
