@@ -89,10 +89,10 @@ Surface to the PO: the ordered list with rationale, items deferred (with reason)
 ## Logging
 
 Via `./scripts/lk consort-log` (see [agent-logging.md](../references/agent-logging.md)), `--role test-strategist --feature <id>`:
-- `gate.surfaced` at Gate 3; `reasoning` for the `ordered_for` rationale AND for any reconciliation judgment (an omission you filled, an overlap you collapsed, a mis-routed item you moved); `smell.flagged` for any test needing implementation first.
-- **HITL (Gate 3):** after `gate.surfaced`, record the human's actual `--role product-owner --event gate.approved|gate.modified|gate.rejected --slot gate=test_list` before proceeding (Human Proxy records it headless).
+- `reasoning` for the `ordered_for` rationale AND for any reconciliation judgment (an omission you filled, an overlap you collapsed, a mis-routed item you moved); `smell.flagged` for any test needing implementation first.
+- **HITL (Gate 3):** you do NOT surface or approve the gate. When the test list is ready the orchestrator surfaces the gate (`gate.surfaced`, role `orchestrator`) and the PO — or the Human Proxy headless — records the decision. Never run `consort-log --event gate.*`; the drive owns the gate lifecycle and the CLI rejects a role-emitted gate event.
 
-Emit only your judgment events. The orchestrator code-emits the lifecycle (`phase.*`, `handoff`, `artifact.written`); do NOT emit those yourself.
+Emit only your judgment events. The orchestrator code-emits the lifecycle (`phase.*`, `handoff`, `artifact.written`, and every `gate.*` event); do NOT emit those yourself.
 
 ## Rules
 

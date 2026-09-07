@@ -26,6 +26,29 @@ import { reconcileArtifactLog } from "../../consort/logging/log-reconcile.js";
 import { reconstituteAgentLog } from "../../consort/logging/log-reconstitute.js";
 import { recordBlockingSmellFlag } from "../../consort/gates/escalation.js";
 
+/** The gate lifecycle is owned by the deterministic drive: the orchestrator code-emits
+ *  gate.surfaced and the Human Proxy / approve-gate CLI code-emits the decision, both
+ *  in-process (orchestrator-logging.ts / gate-decision-log.ts) with role "orchestrator"
+ *  or "product-owner" and the lane-correct gate name. A role agent shelling out
+ *  `consort-log --event gate.*` from inside its own turn double-logs the gate under the
+ *  wrong role AND at the wrong lane position (e.g. an architect re-surfacing gate=plan
+ *  mid-design re-lights the already-approved planning gate). Agents emit only their
+ *  JUDGMENT events; this CLI — the agent's only door — rejects the gate lifecycle. The
+ *  in-process lib (emitAgentLogEvent) still allows them, which is the drive's door. */
+const GATE_LIFECYCLE_EVENTS: ReadonlySet<string> = new Set([
+  "gate.surfaced",
+  "gate.approved",
+  "gate.rejected",
+  "gate.modified",
+]);
+
+const GATE_LIFECYCLE_REJECTION =
+  "the gate lifecycle (gate.surfaced/gate.approved/gate.rejected/gate.modified) is " +
+  "owned by the deterministic drive — the orchestrator surfaces it and the Human Proxy " +
+  "records the decision, code-emitted with the correct role + lane-scoped gate name. A " +
+  "role agent must NOT emit a gate event via consort-log; emit only your judgment events " +
+  "(reasoning, smell.flagged, concern.flagged, open.question).";
+
 interface ParsedArgs {
   read?: boolean;
   reconcile?: boolean;
@@ -96,8 +119,10 @@ Emit:
                from the event's template; you fill its slots.
     --slot k=v fill one template slot (repeatable). A missing required slot is
                rejected (exit 3). The event NAME carries the phase; slots carry
-               the specifics. NOTE: cycle.* events are CODE-emitted by the
-               orchestration, agents do not emit them.
+               the specifics. NOTE: cycle.* AND the gate lifecycle (gate.surfaced/
+               gate.approved/gate.rejected/gate.modified) are CODE-emitted by the
+               deterministic drive (orchestrator surfaces, Human Proxy decides);
+               a role agent emitting one here is REJECTED (exit 3).
     --feature <id>   --phase <p>   --cycle <id>   --data '<json of extra slots>'
 
 Batch emit (ONE process + ONE append for a turn's several events, not N spawns):
@@ -216,6 +241,10 @@ export function runAgentLogCli(argv: string[]): number {
         process.stderr.write(`Error: each --events item needs string role, level, event.\n`);
         return 2;
       }
+      if (GATE_LIFECYCLE_EVENTS.has(el.event)) {
+        process.stderr.write(`consort-log --events: ${GATE_LIFECYCLE_REJECTION}\n`);
+        return 3;
+      }
       const slots: Record<string, unknown> = { ...((el.slots as Record<string, unknown>) ?? {}) };
       if (typeof el.data === "string") {
         try {
@@ -249,6 +278,10 @@ export function runAgentLogCli(argv: string[]): number {
   if (!a.role || !a.level || !a.event) {
     process.stderr.write(`Error: emit requires --role --level --event (+ the event's --slot values), or --events for a batch.\n\n${HELP}\n`);
     return 2;
+  }
+  if (GATE_LIFECYCLE_EVENTS.has(a.event)) {
+    process.stderr.write(`consort-log: ${GATE_LIFECYCLE_REJECTION}\n`);
+    return 3;
   }
   const slots: Record<string, unknown> = { ...(a.slots ?? {}) };
   if (a.data !== undefined) {

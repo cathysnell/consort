@@ -87,7 +87,7 @@ Every gate is two-sided and logged; the proceed is gated by the response:
    - `--event gate.rejected --slot gate=<gate> --slot reason="<why>"`
    Capture the actual decision (+ `--data`), not a paraphrase; record any answered open questions.
 
-In practice these gate events are emitted by the Human Proxy / deterministic driver, not hand-written by a role. In Human Proxy mode the same `product-owner` `gate.*` events are emitted (after validating the artifact's expected elements); only `data.approver` differs, so an auditor sees exactly where a human was, or wasn't, in the loop.
+These gate events are ALWAYS emitted by the deterministic driver / Human Proxy in-process (orchestrator surfaces with the lane-correct gate name; the Human Proxy records the decision), NEVER hand-written by a role: the `consort-log` CLI — a role agent's only door to the log — REJECTS a `gate.*` event (exit 3), so the schema above documents what the drive emits, not something a role runs. A role hand-emitting a gate event would double-log it under the wrong role and lane (e.g. an architect re-surfacing `gate=plan` mid-design re-lights the already-approved planning gate). In Human Proxy mode the same `product-owner` `gate.*` events are emitted (after validating the artifact's expected elements); only `data.approver` differs, so an auditor sees exactly where a human was, or wasn't, in the loop.
 
 ## 5. Where it does NOT go
 
