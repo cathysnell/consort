@@ -78,6 +78,12 @@ export function WorkflowGraph({
   // glows in the gate colour (activeColor is the gate colour while focus.kind === "gate").
   const awaitedGateNode =
     focus.kind === "gate" ? WORKFLOW.nodes.find((n) => n.type === "gate" && gateForNode(n.id) === focus.gate)?.id ?? null : null;
+  // ...and the PHASE node feeding that gate (the edge INTO it): the deploy gate gates the Release
+  // Engineer's Deploy phase, so its node glows purple too — not only the gate diamond — so the agent
+  // whose work is under review reads as parked, matching the lane panel + that role's bubble.
+  const awaitedGatePhaseNode = awaitedGateNode
+    ? WORKFLOW.edges.find(([, to]) => to === awaitedGateNode)?.[0] ?? null
+    : null;
   const gateState = new Map(state.gates.map((g: GateInfo) => [g.name, g.status]));
 
   // The current sprint's FEATURE + its current state, shown in the panel's header band — mirroring a
@@ -136,7 +142,7 @@ export function WorkflowGraph({
             node={node}
             x={x}
             w={w}
-            active={node.id === activeNode || node.id === awaitedGateNode}
+            active={node.id === activeNode || node.id === awaitedGateNode || node.id === awaitedGatePhaseNode}
             passed={passed.has(node.id)}
             activeColor={activeColor}
             gateStatus={gateStatusFor(node, gateState)}

@@ -10,6 +10,7 @@ import {
   latestOrchestratorActivity,
 } from "./derive";
 import type { AgentLogEvent, SnapshotInputs } from "./types";
+import { GATE_ROLE_BY_KEY } from "./gates";
 
 function ev(
   event: string,
@@ -481,8 +482,28 @@ describe("focusOf — the ONE observation that drives every gate surface from on
   const f = (laneCurrent: { lane: string; step: string } | null, pendingGate: string | null, blockers: unknown[]) =>
     focusOf({ topology: { laneCurrent }, pendingGate, blockers } as Parameters<typeof focusOf>[0]);
 
-  it("escalation (an open blocker) outranks a running step and a pending gate → RAISED everywhere", () => {
-    expect(f({ lane: "build", step: "b-green" }, "spec", [{}])).toEqual({ kind: "escalation" });
+  it("escalation (an open blocker) outranks a running step and a pending gate → RAISED", () => {
+    // A source-less blocker falls back to the lane the run is parked in (build → b-hil).
+    expect(f({ lane: "build", step: "b-green" }, "spec", [{ source: "" }])).toEqual({ kind: "escalation", step: "b-hil" });
+  });
+  it("carries the SPECIFIC raise-to-HIL terminal so only that lane's box flashes, keyed by source", () => {
+    // deploy-verify → the deploy lane's dp-hil, EVEN while a build step was the last lit one.
+    expect(f({ lane: "build", step: "b-verify" }, null, [{ source: "deploy-verify" }])).toEqual({ kind: "escalation", step: "dp-hil" });
+    // a driver regression → the build lane's b-hil.
+    expect(f({ lane: "deploy", step: "dp-verify" }, null, [{ source: "driver-green" }])).toEqual({ kind: "escalation", step: "b-hil" });
+    // an unrecognised source (e.g. a promote/SCM failure) falls back to the parked lane's terminal.
+    expect(f({ lane: "deploy", step: "dp-merge" }, null, [{ source: "scm-merge" }])).toEqual({ kind: "escalation", step: "dp-promote-hil" });
+  });
+  it("a design-reflect escalation (unmapped smell, laneCurrent null) flashes the DESIGN HIL via activeNode", () => {
+    // The escalation.raised event matches no lane step, so laneCurrent is null at the park; the
+    // reliable signal is the lifecycle node the run is at. A reflect-phase smell → activeNode "design"
+    // → d-hil (was: step null, so NO lane flashed for a design-phase HIL).
+    const focus = focusOf({
+      topology: { laneCurrent: null, activeNode: "design" },
+      pendingGate: null,
+      blockers: [{ source: "smell:reflect-testlist-defect" }],
+    } as Parameters<typeof focusOf>[0]);
+    expect(focus).toEqual({ kind: "escalation", step: "d-hil" });
   });
   it("a running step outranks a lingering pending gate", () => {
     expect(f({ lane: "build", step: "b-green" }, "spec", [])).toEqual({ kind: "step", lane: "build", step: "b-green" });
@@ -493,6 +514,27 @@ describe("focusOf — the ONE observation that drives every gate surface from on
   });
   it("idle when nothing is parked or running", () => {
     expect(f(null, null, [])).toEqual({ kind: "idle" });
+  });
+});
+
+describe("a parked gate lights the REVIEWED agent's bubble (not the orchestrator that surfaced it)", () => {
+  // The orchestrator surfaces EVERY gate (gate.surfaced role=orchestrator), so keying the "waiting"
+  // bubble off the surfacer alone always lit the orchestrator. The deploy/promote gates gate the
+  // Release Engineer's lane, so its bubble must light instead.
+  it("registry maps deploy + promote to the release engineer", () => {
+    expect(GATE_ROLE_BY_KEY.deploy).toBe("release-engineer");
+    expect(GATE_ROLE_BY_KEY.promote).toBe("release-engineer");
+  });
+
+  it("deploy gate → the release-engineer bubble reads 'waiting'", () => {
+    const s = fold([ev("gate.surfaced", { gate: "deploy" }, { role: "orchestrator" })], snap());
+    expect(s.focus).toEqual({ kind: "gate", gate: "deploy" });
+    expect(s.agents.find((a) => a.role === "release-engineer")?.status).toBe("waiting");
+  });
+
+  it("a multi-role gate (spec) has no registered reviewer, so it does NOT light the release-engineer", () => {
+    const s = fold([ev("gate.surfaced", { gate: "spec" }, { role: "orchestrator" })], snap());
+    expect(s.agents.find((a) => a.role === "release-engineer")?.status).not.toBe("waiting");
   });
 });
 
@@ -846,9 +888,9 @@ describe("fold — multi-feature run (stockflow-rerecord corpus)", () => {
     // on phase.end/workflow with nothing reopened yet. The bug was that it STAYED complete.
     expect(fold(events, snap(), 215).lane).toBe("plan"); // sprint 2's plan lane opens (propose = planning)
     expect(fold(events, snap(), 230).lane).toBe("design"); // F6 is designing
-    expect(fold(events, snap(), 260).lane).toBe("build"); // ...and building
+    expect(fold(events, snap(), 260).lane).toBe("design"); // still design — event 260 is a navigator REFLECT (design→reflect), not build
     expect(fold(events, snap(), 300).lane).not.toBe("complete");
-    expect(fold(events, snap(), 380).lane).toBe("build");
+    expect(fold(events, snap(), 380).lane).toBe("build"); // now building (assess = honest-GREEN, → build)
     // The run really has ended at the log's end, and only there.
     expect(fold(events, snap()).lane).toBe("complete");
     expect(fold(events, snap(), 421).lane).toBe("complete");

@@ -329,7 +329,9 @@ export interface SnapshotInputs {
 export type Focus =
   | { kind: "step"; lane: string; step: string }
   | { kind: "gate"; gate: string }
-  | { kind: "escalation" }
+  // `step` = the SPECIFIC raise-to-HIL terminal the run is parked on (e.g. "b-hil", "dp-hil"), so
+  // only that one lane's escalation box flashes red — not every lane's. null when undeterminable.
+  | { kind: "escalation"; step: string | null }
   | { kind: "idle" };
 
 export interface DashboardState {

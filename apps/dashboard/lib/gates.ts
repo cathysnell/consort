@@ -16,6 +16,8 @@
 // once: the parked gate's node glows, the orchestrator glows, and the transport reads WAITING.
 // A new gate is a single row here, not an edit in six files.
 
+import type { Role } from "./types";
+
 export interface GateDef {
   /** The gate name carried in the run's gate state / gate.surfaced / gate.approved / next.json. */
   key: string;
@@ -23,6 +25,11 @@ export interface GateDef {
   laneStep: string;
   /** The lifecycle-spine node id (WorkflowGraph), or null for a lane-only gate (the backlog commit). */
   node: string | null;
+  /** The agent whose WORK this gate reviews — its bubble lights "waiting on you" while the gate is
+   *  parked. The deterministic orchestrator SURFACES every gate, so lighting the surfacer alone always
+   *  lit the orchestrator; the deploy/promote gates gate the Release Engineer's lane, so they name it
+   *  here. Omitted for the multi-role planning/design/build gates, which fall back to the surfacer. */
+  role?: Role;
 }
 
 // In lifecycle order. `backlog` sits after intake (the human commits the sized backlog before the
@@ -33,9 +40,15 @@ export const GATES: readonly GateDef[] = [
   { key: "plan", laneStep: "p-gate", node: "plangate" },
   { key: "spec", laneStep: "d-gate", node: "specgate" },
   { key: "acceptance", laneStep: "b-accept", node: "acceptancegate" },
-  { key: "deploy", laneStep: "dp-gate", node: "deploygate" },
-  { key: "promote", laneStep: "dp-promgate", node: "promgate" },
+  { key: "deploy", laneStep: "dp-gate", node: "deploygate", role: "release-engineer" },
+  { key: "promote", laneStep: "dp-promgate", node: "promgate", role: "release-engineer" },
 ] as const;
+
+/** Gate key → the agent whose work it reviews (its bubble lights "waiting"). Absent = fall back to
+ *  the gate's surfacer (the orchestrator). */
+export const GATE_ROLE_BY_KEY: Record<string, Role> = Object.fromEntries(
+  GATES.filter((g) => g.role).map((g) => [g.key, g.role as Role]),
+);
 
 /** Lane step id → gate key (replaces LaneGraph's LANE_STEP_GATE). */
 export const GATE_KEY_BY_STEP: Record<string, string> = Object.fromEntries(GATES.map((g) => [g.laneStep, g.key]));

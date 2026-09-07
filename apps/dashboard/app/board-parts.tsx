@@ -88,7 +88,11 @@ function artifactPathOf(e: DashboardState["recentEvents"][number]): string | nul
 const EVENT_LEGEND: { match: (event: string) => boolean; color: string; label: string }[] = [
   { match: (e) => e.startsWith("gate"), color: "var(--status-gate)", label: "gate" },
   { match: (e) => e.startsWith("escalation"), color: "var(--status-critical-text)", label: "escalation" },
-  { match: (e) => e.startsWith("deploy") || e.startsWith("verify"), color: "var(--status-good)", label: "deploy / verify" },
+  // deploy.* / verify.* are ALL the Release Engineer's deterministic substrate events (logDeployEvent
+  // stamps role="release-engineer"), so they read in the RE's own role colour — the same mint the
+  // deploy lane's steps carry — instead of a generic "good" green. (A FAILURE stays red via the
+  // level branch above.)
+  { match: (e) => e.startsWith("deploy") || e.startsWith("verify"), color: colorForRole("release-engineer"), label: "deploy / verify" },
 ];
 
 /** The categorical colour for a state-transition event kind, or null to fall back to the level colour. */

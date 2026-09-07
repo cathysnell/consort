@@ -417,12 +417,14 @@ function ContentView({
   return <Pre>{file.content}</Pre>;
 }
 
-function Pre({ children }: { children: React.ReactNode }) {
+// `fill` makes the block GROW to fill its flex parent and scroll INSIDE that bound (the transcript's
+// top/bottom sections), instead of the fixed maxHeight the standalone file viewer uses.
+function Pre({ children, fill }: { children: React.ReactNode; fill?: boolean }) {
   return (
     <pre
       style={{
         margin: 0,
-        maxHeight: 420,
+        ...(fill ? { flex: "1 1 0", minHeight: 0 } : { maxHeight: 420 }),
         overflow: "auto",
         background: "var(--surface-inset)",
         border: `1px solid var(--border-default)`,
@@ -440,10 +442,12 @@ function Pre({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+// `fill` makes the section grow to share the panel height (its label fixed, its body flexing) so a
+// `fill` Pre inside it scrolls within that bound — used for the transcript's Prompt / Reasoning.
+function Section({ label, children, fill }: { label: string; children: React.ReactNode; fill?: boolean }) {
   return (
-    <div>
-      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+    <div style={fill ? { flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column" } : undefined}>
+      <div style={{ flex: "none", fontSize: "0.62rem", fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
       {children}
     </div>
   );
@@ -598,7 +602,8 @@ function TurnBody({ ord, mode, onClose }: { ord: number; mode: "live" | "replay"
       ) : !turn ? (
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-faint)" }}>Loading turn {ord}…</div>
       ) : tab === "correspondence" ? (
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 16px" }}>
+        // Bounded (no outer scroll): TranscriptView's own top/bottom sections scroll within this box.
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "14px 16px" }}>
           <TranscriptView turn={turn} />
         </div>
       ) : tab === "artifacts" ? (
@@ -734,9 +739,12 @@ export function TranscriptView({ turn }: { turn: TurnPayload }) {
   // than three flat sections a viewer has to mentally assign a direction to.
   const role = turn.role ?? "agent";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <Section label={`▸ Prompt → ${role}`}>
-        <Pre>{prompt || "(empty)"}</Pre>
+    // Fills the (bounded) tab body: the Prompt (top) and Reasoning (bottom) sections GROW to share
+    // the height and each scrolls on its own, so a long prompt or long reasoning never pushes the
+    // whole panel into one outer scroll. The Tools list keeps its own fixed-height scroll between them.
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0 }}>
+      <Section label={`▸ Prompt → ${role}`} fill>
+        <Pre fill>{prompt || "(empty)"}</Pre>
       </Section>
       {tools.length > 0 ? (
         <Section label={`◂ Tools ${role} invoked (${tools.length})`}>
@@ -759,8 +767,8 @@ export function TranscriptView({ turn }: { turn: TurnPayload }) {
         </Section>
       ) : null}
       {reasoning ? (
-        <Section label={`◂ ${role}'s final reasoning`}>
-          <Pre>{reasoning}</Pre>
+        <Section label={`◂ ${role}'s final reasoning`} fill>
+          <Pre fill>{reasoning}</Pre>
         </Section>
       ) : null}
     </div>

@@ -49,6 +49,15 @@ export interface StepMatch {
   // the deploy lane, whose deterministic steps light off specific orchestrator events
   // (deploy.start / deploy.verified) rather than a role+phase the way the LLM-agent lanes do.
   event?: string;
+  // Additional AND-constraint: the event MESSAGE must contain this substring. The promote sub-steps
+  // (prepare-pr / wait-ci / merge) emit no distinct event NAME — only the orchestrator's per-action
+  // `reasoning` narration ("orchestrator: <kind>") — so they share phaseAny:["promote"] and are
+  // told apart by the narration. Combined with phaseAny it scopes to the promote phase, so a
+  // build-lane "merge" can't light dp-merge.
+  messageIncludes?: string;
+  // AND-constraint (exclusion): reject when the message contains ANY of these. dp-pr uses it to own
+  // the promote phase.start + the prepare-pr narration while yielding wait-ci/merge to dp-ci/dp-merge.
+  messageNotIncludes?: string[];
 }
 
 export interface LaneStep {
@@ -111,15 +120,19 @@ export const PHASE_TO_NODE: Record<string, string> = {
   breakdown: "design",
   feature: "plan",
   workflow: "plan",
-  // design: spec-first, per story
+  // design: spec-first, per story. `reflect` is the Navigator's critique of the ASSEMBLED design
+  // (the design→reflect→revise loop before the spec gate), so it lights the DESIGN node/lane — the
+  // design lane's d-nav step matches the same {navigator, buildMode:reflect, phase:reflect} turn.
+  // (Was "build": it is a navigator buildMode like assess/review, but unlike those it runs in DESIGN,
+  // not the honest-GREEN cycle — mapping it to build lit build during design + polluted passedNodes.)
   design: "design",
+  reflect: "design",
   // build: the honest-GREEN cycle
   build: "build",
   red: "build",
   green: "build",
   refactor: "build",
   review: "build",
-  reflect: "build",
   repair: "build",
   assess: "build",
   "assess-refactor": "build",
@@ -462,7 +475,11 @@ const BUILD_LANE: Lane = {
       label: "Navigator",
       sub: "assess: regression or supersession?",
       branch: true,
-      match: { role: "navigator", buildModeAny: ["assess", "assess-refactor", "assess-deploy"] },
+      // NOT "assess-deploy": that is the DEPLOY lane's assess (dp-assess) — a deploy-verify
+      // contamination check, not a build-cycle regression. Claiming it here anchored the deploy
+      // self-heal to the wrong lane's Navigator bubble. `assess` + `assess-refactor` are the
+      // build-cycle assesses that belong here.
+      match: { role: "navigator", buildModeAny: ["assess", "assess-refactor"] },
     },
     {
       id: "b-repair",
@@ -525,10 +542,10 @@ const BUILD_LANE: Lane = {
 // promote sub-steps emit no per-step events (only the promote phase.start + the promote gate), so
 // they share a `phaseAny:["promote"]` predicate — structural, faithful to what the kit logs.
 //
-// The self-heal arm (deploy-verify contamination) mirrors the build lane's assess fan-out. Note
-// the deliberate overlap: `assess-deploy` also matches the build lane's `b-assess`, which precedes
-// this lane in LANE_IDS and therefore claims the event — so `dp-assess` is structural (it renders,
-// but never lights). `refactor-deploy` has no build-lane claimant, so `dp-refactor` does light.
+// The self-heal arm (deploy-verify contamination) mirrors the build lane's assess fan-out. Both
+// deploy-heal build modes are OWNED here, so they light the Navigator/Driver bubbles in THIS lane,
+// not the build lane's: `assess-deploy` -> `dp-assess` (the build lane's `b-assess` no longer
+// matches it), and `refactor-deploy` -> `dp-refactor` (never had a build-lane claimant).
 const DEPLOY_LANE: Lane = {
   title: "DEPLOY / PROMOTE",
   steps: [
@@ -547,19 +564,26 @@ const DEPLOY_LANE: Lane = {
       match: { event: "deploy.verified" },
     },
     { id: "dp-gate", role: null, label: "deploy gate", sub: "human check", gate: true, match: null },
+    // The three promote sub-steps emit no distinct event NAME — only the orchestrator's per-action
+    // `reasoning` narration ("orchestrator: prepare-pr" / "wait-ci" / "merge"). They all sit in the
+    // `promote` phase, so each is told apart by that narration (AND-scoped to the phase so a
+    // build-lane "merge" can't light dp-merge). Before this they shared phaseAny:["promote"] and
+    // first-match kept the playhead pinned on dp-pr through wait-ci AND merge (the bug: dp-pr lit
+    // while the run was already merging). dp-pr owns the promote phase.start + the prepare-pr
+    // narration (it EXCLUDES wait-ci/merge); dp-ci/dp-merge claim their own narration.
     {
       id: "dp-pr",
       role: "release-engineer",
       label: "Prepare PR",
       sub: "open PR",
-      match: { phaseAny: ["promote"] },
+      match: { phaseAny: ["promote"], messageNotIncludes: ["wait-ci", "merge"] },
     },
     {
       id: "dp-ci",
       role: "release-engineer",
       label: "Wait CI",
       sub: "CI green",
-      match: { phaseAny: ["promote"] },
+      match: { phaseAny: ["promote"], messageIncludes: "wait-ci" },
     },
     { id: "dp-promgate", role: null, label: "promote gate", sub: "human check", gate: true, match: null },
     {
@@ -567,7 +591,7 @@ const DEPLOY_LANE: Lane = {
       role: "release-engineer",
       label: "Merge",
       sub: "release to parent tier",
-      match: { phaseAny: ["promote"] },
+      match: { phaseAny: ["promote"], messageIncludes: "merge" },
     },
     {
       id: "dp-assess",
@@ -728,6 +752,12 @@ export function matchesStep(m: StepMatch | null, e: AgentLogEvent): boolean {
 
   if (m.role && e.role !== m.role) return false;
 
+  // AND-constraints on the message (the promote sub-steps' narration). Applied before the phaseAny
+  // early-return so they combine with it rather than being skipped.
+  const msg = typeof e.message === "string" ? e.message : "";
+  if (m.messageIncludes && !msg.includes(m.messageIncludes)) return false;
+  if (m.messageNotIncludes && m.messageNotIncludes.some((s) => msg.includes(s))) return false;
+
   const phase = phaseOf(e);
   const bm = buildModeOf(e);
 
@@ -777,8 +807,8 @@ export function laneStepForEvent(e: AgentLogEvent | null | undefined): LaneHit |
 // each step's phase.start, and the cost + turn count of the turns credited to it. A turn.usage carries
 // cost but not buildMode, so it cannot be matched to a build step directly — instead each role's
 // most-recent phase.start fixes the step its next turn.usage is credited to. First-match wins across
-// lanes (laneStepForEvent), so an event two steps share (assess-deploy lights both b-assess and
-// dp-assess) is counted once, on the build step, exactly as the lane lighting resolves it.
+// lanes (laneStepForEvent), so each buildMode maps to exactly one step (e.g. assess-deploy -> the
+// deploy lane's dp-assess), counted once there, exactly as the lane lighting resolves it.
 export function laneStepMeta(events: AgentLogEvent[]): Record<string, LaneStepMeta> {
   const meta: Record<string, LaneStepMeta> = {};
   const lastStepForRole: Record<string, string> = {};

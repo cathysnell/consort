@@ -94,7 +94,11 @@ export function Transport({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <TransportButton label="⏮" title="jump to start" onClick={() => { onPlayingChange(false); onChange(0); }} />
-        <TransportButton label="◀" title="step back one event" onClick={() => step(-1)} disabled={pos <= 0} />
+        {/* The two STEP buttons are a mirrored pair — bar-then-triangle |◀ and triangle-then-bar ▶| —
+            the frame-step convention (step to the previous / next boundary), distinct from the bare
+            play triangle ▶. Before, step-back was a bare ◀ and step-forward a barred ▶|, so they read
+            as unrelated controls. */}
+        <TransportButton label="|◀" title="step back one event" onClick={() => step(-1)} disabled={pos <= 0} />
         <TransportButton
           label={playing ? "❚❚" : "▶"}
           title={playing ? "pause" : "play"}
@@ -106,6 +110,11 @@ export function Transport({
           }}
         />
         <TransportButton label="▶|" title="step forward one event" onClick={() => step(1)} disabled={atEnd} />
+        {/* Jump to end == GO LIVE: `at=null` snaps to the newest event AND, on an active run, keeps
+            following the live edge as new events arrive (the natural "watch it happen now" state); on
+            a finished run it simply pins at the last event. Stops playback so you're following, not
+            replaying. Disabled when already following live (nothing to jump to). Mirror of ⏮. */}
+        <TransportButton label="⏭" title="jump to end (follow live)" onClick={() => { onPlayingChange(false); onChange(null); }} disabled={live} />
       </div>
 
       <input

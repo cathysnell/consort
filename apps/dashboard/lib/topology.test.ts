@@ -585,6 +585,11 @@ const INTENTIONAL_DEVIATIONS: Record<string, { py: string | undefined; ts: strin
     ts: "build",
     why: "every assess* event carries buildMode: assess* and is the honest-GREEN decision; his own b-assess step already matched it in the build lane",
   },
+  reflect: {
+    py: "build",
+    ts: "design",
+    why: "reflect is the Navigator's critique of the ASSEMBLED design (design→reflect→revise, before the spec gate) — the design lane's d-nav step matches the same {navigator, buildMode:reflect, phase:reflect} turn. Unlike assess/review (honest-GREEN build turns) it runs in DESIGN, so mapping it to build lit the build node + polluted passedNodes during design, and left a design-phase HIL with no lane to flash.",
+  },
   "assess-refactor": {
     py: undefined,
     ts: "build",
@@ -667,8 +672,8 @@ const ADDED_STEPS: {
 ];
 
 // Declared dashboard-side departures from Kevin's Python at the MATCH-predicate level (a ported
-// step whose match the dashboard intentionally widened). Applied to the fixture side of the verbatim
-// comparison, and proven to be a real difference below.
+// step whose match the dashboard intentionally changed — widened or narrowed). Applied to the
+// fixture side of the verbatim comparison, and proven to be a real difference below.
 const MATCH_DEVIATIONS: { lane: (typeof PORTED_LANE_IDS)[number]; step: string; py: Record<string, unknown>; ts: Record<string, unknown>; why: string }[] = [
   {
     lane: "plan",
@@ -676,6 +681,13 @@ const MATCH_DEVIATIONS: { lane: (typeof PORTED_LANE_IDS)[number]; step: string; 
     py: { role: "product-owner", eventPrefix: "intake" },
     ts: { role: "product-owner", eventPrefix: "intake", phaseAny: ["intake"] },
     why: "p-intake must light from the metered PO intake turn (phase='intake' on phase.start/turn.usage), not only the seed's intake.supplied event. matchesStep ORs eventPrefix with role+phase, so p-intake gains phaseAny:['intake'] while still matching the seed event.",
+  },
+  {
+    lane: "build",
+    step: "b-assess",
+    py: { role: "navigator", buildModeAny: ["assess", "assess-refactor", "assess-deploy"] },
+    ts: { role: "navigator", buildModeAny: ["assess", "assess-refactor"] },
+    why: "assess-deploy is the DEPLOY lane's assess (dp-assess) — a deploy-verify contamination check, not a build-cycle regression. Claiming it here anchored the deploy self-heal to the wrong lane's Navigator bubble, so b-assess is narrowed to the two build-cycle assesses and dp-assess now owns assess-deploy.",
   },
 ];
 
@@ -961,25 +973,34 @@ describe("topology — the deploy lane (dashboard-native)", () => {
     }
   });
 
-  it("lights deploy/verify from deploy.* events and the promote steps from the promote phase", () => {
+  it("lights deploy/verify from deploy.* events and advances the promote steps by their narration", () => {
     expect(laneStepForEvent(ev("deploy.start", "release-engineer"))).toEqual({ lane: "deploy", step: "dp-deploy" });
     expect(laneStepForEvent(ev("deploy.verified", "release-engineer"))).toEqual({ lane: "deploy", step: "dp-verify" });
-    // The promote sub-steps emit no per-step events, so the promote phase.start lights the first
-    // of them (dp-pr) — the section is structural, faithful to what the kit actually logs.
+    // The promote phase.start (no per-step narration yet) lights the first sub-step, dp-pr.
     expect(laneStepForEvent(ev("phase.start", "release-engineer", { phase: "promote" }))).toEqual({
       lane: "deploy",
       step: "dp-pr",
     });
+    // The promote sub-steps emit no distinct event NAME — only the orchestrator's per-action reasoning
+    // narration — so the playhead ADVANCES through them by that narration (was: pinned on dp-pr for the
+    // whole promote phase, so wait-ci/merge never lit). Built raw because this file's `ev` fixes
+    // message to "" (the narration is what tells the sub-steps apart).
+    const promoteReason = (kind: string): AgentLogEvent => ({
+      timestamp: "2026-08-05T12:00:00.000Z", level: "info", role: "orchestrator",
+      event: "reasoning", message: `orchestrator: ${kind}`, metadata: { phase: "promote" },
+    });
+    expect(laneStepForEvent(promoteReason("prepare-pr"))).toEqual({ lane: "deploy", step: "dp-pr" });
+    expect(laneStepForEvent(promoteReason("wait-ci"))).toEqual({ lane: "deploy", step: "dp-ci" });
+    expect(laneStepForEvent(promoteReason("merge"))).toEqual({ lane: "deploy", step: "dp-merge" });
   });
 
-  it("documents the assess-deploy overlap: build's b-assess claims it, dp-assess never lights", () => {
-    // dp-assess and b-assess both match buildMode assess-deploy; build precedes deploy in
-    // LANE_IDS, so the build lane wins. dp-assess renders (the recovery arm is drawn) but is never
-    // the lit step — a deliberate, documented overlap, not a bug.
+  it("anchors the deploy self-heal to the DEPLOY lane: assess-deploy -> dp-assess, refactor-deploy -> dp-refactor", () => {
+    // The deploy-verify self-heal is the DEPLOY lane's Navigator/Driver work, so it must light the
+    // deploy lane's bubbles — NOT the build lane's b-assess (which no longer matches assess-deploy).
     expect(
       laneStepForEvent(ev("phase.start", "navigator", { phase: "assess", buildMode: "assess-deploy" })),
-    ).toEqual({ lane: "build", step: "b-assess" });
-    // refactor-deploy, by contrast, has no build-lane claimant, so dp-refactor does light.
+    ).toEqual({ lane: "deploy", step: "dp-assess" });
+    // refactor-deploy likewise: no build-lane claimant, so dp-refactor (Scope-deploy) lights.
     expect(
       laneStepForEvent(ev("phase.start", "driver", { phase: "refactor", buildMode: "refactor-deploy" })),
     ).toEqual({ lane: "deploy", step: "dp-refactor" });

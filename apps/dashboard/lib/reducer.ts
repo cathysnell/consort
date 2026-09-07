@@ -40,6 +40,7 @@ import {
   latestOrchestratorActivity,
 } from "./derive";
 import { LANE_IDS, laneProgress, laneStepMeta, nodeForPhase, passedNodes } from "./topology";
+import { GATE_ROLE_BY_KEY } from "./gates";
 
 // A Claude session that wrote its transcript within this window counts as "actively
 // working" — Consort only logs at turn boundaries, so a long turn otherwise looks frozen.
@@ -72,10 +73,57 @@ export const ENABLE_WAITING_BANNER = false;
 // WAITING/RAISED all read state.focus rather than recombining laneCurrent / pendingGate / blockers
 // themselves. focus.kind "gate" carries the gate key; "escalation" is a raised problem.
 export function focusOf(s: Pick<DashboardState, "topology" | "pendingGate" | "blockers">): Focus {
-  if (s.blockers.length > 0) return { kind: "escalation" };
+  if (s.blockers.length > 0) return { kind: "escalation", step: escalationStepId(s.blockers[0], s.topology) };
   if (s.topology.laneCurrent) return { kind: "step", lane: s.topology.laneCurrent.lane, step: s.topology.laneCurrent.step };
   if (s.pendingGate) return { kind: "gate", gate: s.pendingGate };
   return { kind: "idle" };
+}
+
+// The ONE raise-to-HIL terminal an open escalation is parked on, so ONLY that lane's HIL box
+// flashes red (was: every lane's, because the focus carried no locus).
+//
+// 1. The escalation SOURCE is the most specific origin: `deploy-verify` is the deploy lane's
+//    verify-assess terminal; the driver/spec-defect/auth escalations arise in the build loop.
+// 2. Everything else (a design-reflect `smell:*`, a genuine-regression HIL, a promote SCM failure)
+//    belongs to the lane the run is PARKED in. The `escalation.raised` event matches no lane step,
+//    so `laneCurrent` is usually NULL at the park — the reliable signal is the lifecycle node the run
+//    is at (`activeNode` = nodeForPhase of the phase in force, e.g. `design` while the navigator
+//    reflects). Fall back to laneCurrent, then null (intake/plan have no HIL box → nothing flashes).
+function escalationStepId(
+  blocker: Blocker | undefined,
+  topology: Pick<DashboardState["topology"], "activeNode" | "laneCurrent">,
+): string | null {
+  switch (blocker?.source) {
+    case "deploy-verify":
+      return "dp-hil";
+    case "driver-green":
+    case "driver-refactor":
+    case "spec-defect":
+    case "auth-expired":
+    case "verify.failed": // a build-cycle GREEN-verify failure (deploy's own verify uses "deploy-verify")
+      return "b-hil";
+  }
+  // activeNode distinguishes deploy (verify-assess → dp-hil) from promote (SCM failure → dp-promote-hil).
+  switch (topology.activeNode) {
+    case "design":
+      return "d-hil";
+    case "build":
+      return "b-hil";
+    case "deploy":
+      return "dp-hil";
+    case "promote":
+      return "dp-promote-hil";
+  }
+  switch (topology.laneCurrent?.lane) {
+    case "design":
+      return "d-hil";
+    case "build":
+      return "b-hil";
+    case "deploy":
+      return "dp-promote-hil";
+    default:
+      return null;
+  }
 }
 
 // An empty board, used for the error paths and as the shape reference.
@@ -677,13 +725,15 @@ function deriveWaiting(
 
   if (pendingGate || openGates.length > 0 || gateOption) {
     const gateName = pendingGate?.gate ?? openGates[0] ?? null;
-    // The role to light "waiting on you" is whoever SURFACED the gate. findPendingGate nulls out the
-    // moment ANY event follows the gate.surfaced – and the release-engineer's deploy/verify
-    // legitimately runs while an acceptance gate stays open (gate.surfaced → deploy.* → verify.* →
-    // phase.end), so pendingGate.role is null and NO bubble got lit at a genuinely-open gate. When a
-    // gate is still open, recover the surfacer from the LAST gate.surfaced event (the orchestrator
-    // surfaces gates) so the parked role is highlighted instead of nothing.
-    let surfacedRole: Role | null = pendingGate?.role ?? null;
+    // The role to light "waiting on you". PREFER the gate's REVIEWED role (registry): the
+    // orchestrator surfaces EVERY gate, so keying off the surfacer alone always lit the orchestrator
+    // — but the deploy/promote gates gate the Release Engineer's work, so its bubble should light.
+    // Fall back to whoever SURFACED the gate for the multi-role gates (no registered role):
+    // findPendingGate nulls out the moment ANY event follows gate.surfaced – and the RE's
+    // deploy/verify legitimately runs while an acceptance gate stays open (gate.surfaced → deploy.* →
+    // verify.* → phase.end), so pendingGate.role is null and NO bubble got lit; recover the surfacer
+    // from the LAST gate.surfaced event so the parked role is highlighted instead of nothing.
+    let surfacedRole: Role | null = (gateName ? GATE_ROLE_BY_KEY[gateName] ?? null : null) ?? pendingGate?.role ?? null;
     if (!surfacedRole) {
       for (let i = events.length - 1; i >= 0; i--) {
         if (events[i].event === "gate.surfaced") {

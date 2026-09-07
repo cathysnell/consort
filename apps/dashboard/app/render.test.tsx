@@ -143,6 +143,22 @@ describe("render — WorkflowGraph", () => {
     const markup = renderToStaticMarkup(<WorkflowGraph state={state} />);
     expect((markup.match(/<polygon/g) ?? []).length).toBe(6); // intake/plan/spec/acceptance/deploy/promote gates
   });
+
+  it("lights the PHASE node feeding the awaited gate (deploy gate → the Deploy / release-engineer node)", () => {
+    // At the deploy gate with NO active phase, the Deploy phase node must STILL glow purple because it
+    // feeds the awaited gate — so the agent whose work is under review (release-engineer) reads as
+    // parked, not only the gate diamond. activeNode:null proves this is the feed-the-gate logic, not
+    // an independently-active phase.
+    const parked: DashboardState = {
+      ...state,
+      blockers: [],
+      focus: { kind: "gate", gate: "deploy" },
+      topology: { ...state.topology, activeNode: null },
+    };
+    const markup = renderToStaticMarkup(<WorkflowGraph state={parked} />);
+    expect(markup).toMatch(/Deploy · active now · release-engineer/); // the Deploy PHASE node (roles present), not just the diamond
+    expect(markup).toContain("var(--status-gate)"); // in the gate colour
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -405,16 +421,18 @@ describe("render — Transport", () => {
     expect(markup).not.toContain("WAITING");
   });
 
-  it("disables step-back at the start and step-forward at the end", () => {
+  it("disables step-back at the start, and step-forward + jump-to-end at the live edge", () => {
     const atStart = renderToStaticMarkup(
       <Transport at={0} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={1} onSpeedChange={noop} />,
     );
-    // two disabled buttons would mean both ends; at the start only step-back is disabled
+    // at event 0 (not live): only step-back is disabled — you can still step forward + jump to end.
     expect((atStart.match(/disabled=""/g) ?? []).length).toBe(1);
     const atEnd = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={1} onSpeedChange={noop} />,
     );
-    expect((atEnd.match(/disabled=""/g) ?? []).length).toBe(1);
+    // following the live edge (at=null): BOTH end controls are inert — step-forward AND jump-to-end
+    // (jump-to-end == go-live, and you're already live).
+    expect((atEnd.match(/disabled=""/g) ?? []).length).toBe(2);
   });
 
   it("handles an empty log without producing a broken range input", () => {
@@ -684,19 +702,21 @@ describe("render — DrilldownPanel", () => {
     expect(state.recentEvents.some((e) => e.event.startsWith("gate") && e.level !== "warn" && e.level !== "error")).toBe(true);
     expect((markup.match(/var\(--status-gate\)/g) ?? []).length).toBeGreaterThan(1);
     expect(state.recentEvents.some((e) => (e.event.startsWith("deploy") || e.event.startsWith("verify")) && e.level !== "warn" && e.level !== "error")).toBe(true);
-    expect((markup.match(/var\(--status-good\)/g) ?? []).length).toBeGreaterThan(1);
+    // deploy/verify events read in the Release Engineer's role colour (they are ALL the RE's work),
+    // so their swatch + rows carry --role-release-engineer, not the generic --status-good.
+    expect((markup.match(/var\(--role-release-engineer\)/g) ?? []).length).toBeGreaterThan(1);
   });
 
-  it("does NOT paint a failed deploy/verify green — a warn/error row keeps its level colour", () => {
-    // The demo hazard: `deploy.failed` matches the deploy/verify rule, but painting it green reads
-    // as success. At error level the category colour is withheld, so the only --status-good in the
-    // markup is the legend swatch (count 1), and the row shows the error colour instead.
+  it("does NOT paint a failed deploy/verify with the RE category colour — a warn/error row keeps its level colour", () => {
+    // The demo hazard: `deploy.failed` matches the deploy/verify rule, but painting it the category
+    // colour reads as success. At error level the category colour is withheld, so the only
+    // --role-release-engineer in the markup is the legend swatch (count 1), and the row shows red.
     const failed = {
       ...state,
       recentEvents: [{ timestamp: "2026-08-05T00:00:00.000Z", level: "error", role: "release-engineer", event: "deploy.failed", message: "DEPLOY failed", metadata: {} }],
     } as DashboardState;
     const markup = renderToStaticMarkup(<EventTicker state={failed} />);
-    expect((markup.match(/var\(--status-good\)/g) ?? []).length).toBe(1); // legend only, no green row
+    expect((markup.match(/var\(--role-release-engineer\)/g) ?? []).length).toBe(1); // legend swatch only, no coloured row
     expect(markup).toContain("var(--status-critical-text)"); // the failure reads as error
   });
 

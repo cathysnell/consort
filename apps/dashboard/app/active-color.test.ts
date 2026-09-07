@@ -13,7 +13,7 @@ describe("activeColorForFocus — the active colour follows who is in charge", (
   });
 
   it("an escalation → red (RAISING)", () => {
-    expect(activeColorForFocus({ kind: "escalation" })).toBe("var(--status-critical)");
+    expect(activeColorForFocus({ kind: "escalation", step: "b-hil" })).toBe("var(--status-critical)");
   });
 
   it("idle → slate, the orchestrator in charge", () => {

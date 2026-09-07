@@ -9,7 +9,7 @@ import {
   type LaneId,
   type LaneStep,
 } from "@/lib/topology";
-import { GATE_KEY_BY_STEP } from "@/lib/gates";
+import { GATE_KEY_BY_STEP, GATE_STEP_BY_KEY } from "@/lib/gates";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { activeColorForFocus } from "./active-color";
 import { fmtElapsed } from "./AgentBubble";
@@ -114,10 +114,14 @@ function LanePanel({
   // VERIFY checkpoint (gate:true but role release-engineer) DOES real work and stays counted.
   const lightable = lane.steps.filter((s) => s.match !== null && !(s.gate && s.role === null));
   const reached = lightable.filter((s) => done.has(s.id)).length;
-  // Active = the focus step belongs to THIS lane. currentStep is the run's single active step (from
-  // focus), passed to every lane; step ids are unique per lane, so only the owning lane matches — an
-  // unknown/other-lane step (or a gate park, where currentStep is null) marks no lane active.
-  const active = currentStep !== null && lane.steps.some((s) => s.id === currentStep);
+  // Active = this lane owns the focus. Either the running step is in THIS lane (step ids are unique
+  // per lane), OR the run is PARKED at a gate whose lane step is in THIS lane — so the deploy/promote
+  // lane lights (purple, via activeColorForFocus) while parked at the deploy gate, not just the gate
+  // node's dot. A gate park has currentStep null, which is why the step check alone missed it.
+  const gateStep = state.focus.kind === "gate" ? GATE_STEP_BY_KEY[state.focus.gate] : null;
+  const active =
+    (currentStep !== null && lane.steps.some((s) => s.id === currentStep)) ||
+    (gateStep != null && lane.steps.some((s) => s.id === gateStep));
   // The active lane's highlight takes the CURRENT ACTOR's colour (the same one focus key every
   // surface reads): the working agent's role colour, not a fixed slate. A lane is only `active` when
   // a step is running in it, so this resolves to that agent's colour; slate stays the orchestrator-
@@ -232,7 +236,7 @@ function LanePanel({
               // escalation XOR idle), so nothing double-flashes — no per-surface juggling.
               const gateKey = GATE_KEY_BY_STEP[s.id];
               const parkedGate = state.focus.kind === "gate" && !!gateKey && gateKey === state.focus.gate;
-              const parkedEsc = state.focus.kind === "escalation" && s.escalation === true;
+              const parkedEsc = state.focus.kind === "escalation" && s.escalation === true && state.focus.step === s.id;
               const active = s.id === currentStep || parkedGate || parkedEsc;
               const reached = done.has(s.id) || active;
               const dotColor = s.role
@@ -679,7 +683,8 @@ function stepState(
   // passed or upcoming — is neutral; purple/red is only ever the currently-parked one.
   const gateKey = GATE_KEY_BY_STEP[s.id];
   if (gateKey && state.focus.kind === "gate" && gateKey === state.focus.gate) return "gate-current";
-  if (s.escalation && state.focus.kind === "escalation") return "escalation-current";
+  // Only the ONE HIL terminal the run is parked on flashes red — not every lane's raise-to-HIL box.
+  if (s.escalation && state.focus.kind === "escalation" && state.focus.step === s.id) return "escalation-current";
   if (done.has(s.id)) return "done";
   // A gate that has been REACHED (approved, or its later sibling reached) reads as done, not pending,
   // so the label dims like any passed step (colour is neutral either way).
@@ -907,9 +912,9 @@ function StepBox({
       ) : null}
       {modelEffort ? (
         <text
-          x={x + STEP_W / 2}
+          x={x + 8}
           y={y + 49}
-          textAnchor="middle"
+          textAnchor="start"
           style={{ fontSize: 7.5, fill: highlighted ? stroke : "var(--text-muted)", fontFamily: font.mono }}
         >
           {modelEffort}
@@ -925,9 +930,10 @@ function StepBox({
           {turnsCost}
         </text>
       ) : null}
-      {/* Elapsed working time on the active step, top-right. */}
+      {/* Elapsed working time on the active step — on the model·effort row, right-aligned (the
+          model·effort label is left-aligned to make room), not the top-right corner. */}
       {active && elapsed ? (
-        <text x={x + STEP_W - 5} y={y + 14} textAnchor="end" style={{ fontSize: 7, fill: stroke, fontFamily: font.mono }}>
+        <text x={x + STEP_W - 8} y={y + 49} textAnchor="end" style={{ fontSize: 7.5, fill: stroke, fontFamily: font.mono }}>
           {elapsed}
         </text>
       ) : null}
