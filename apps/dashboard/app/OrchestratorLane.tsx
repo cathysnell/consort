@@ -1,68 +1,13 @@
 "use client";
 
-import type { AgentLogEvent, DashboardState } from "@/lib/types";
+import type { DashboardState } from "@/lib/types";
 import { font, radius } from "@/lib/theme";
 import { LIFECYCLE_GATE_KEYS } from "@/lib/gates";
 
 // The scrum-master / orchestrator coordination panel (the template's top `.lane` box): what the
-// deterministic driver is doing right now — its latest dispatch, and the recent gate coordination
-// it has surfaced. Replaces the old "live build not recording" fidelity slot. Everything is derived
-// from the folded state (recentEvents + gates + blockers), so it works live and scrubbed alike.
-
-export interface OrchestratorStatus {
-  /** The current dispatch line, from the most recent handoff (message, else synthesized). */
-  current: string | null;
-  /** A one-line coordination detail: "dispatch to <role> (<phase>)". */
-  coord: string | null;
-  /** Recent gate coordination rows, e.g. "acceptance: story S3-…" — newest last, deduped, capped. */
-  gateRows: string[];
-  /** Open gates (gate) + escalations/blockers (esc), for the chip row. */
-  chips: { kind: "gate" | "esc"; label: string }[];
-}
-
-const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
-
-/** Pure derivation of the orchestrator's coordination status from the folded event tail + gates +
- *  blockers. Kept separate from the component so it is unit-tested directly. */
-export function orchestratorStatus(
-  events: AgentLogEvent[],
-  gates: DashboardState["gates"],
-  blockers: DashboardState["blockers"],
-): OrchestratorStatus {
-  // Most recent handoff → the current dispatch. `to_role` + `phase` synthesize the line when the
-  // event carried no message.
-  let current: string | null = null;
-  let coord: string | null = null;
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    if (e.event !== "handoff") continue;
-    const md = (e.metadata ?? {}) as Record<string, unknown>;
-    const to = str(md.to_role);
-    const phase = str(md.phase);
-    current = str(e.message) ?? (to ? `dispatch ${to}${phase ? ` for ${phase}` : ""}` : "coordinating");
-    coord = to ? `dispatch to ${to}${phase ? ` (${phase})` : ""}` : null;
-    break;
-  }
-
-  // Recent gate coordination rows (gate.surfaced / gate.approved), newest last, deduped, capped.
-  const rows: string[] = [];
-  for (const e of events) {
-    if (e.event !== "gate.surfaced" && e.event !== "gate.approved") continue;
-    const md = (e.metadata ?? {}) as Record<string, unknown>;
-    const gate = str(md.gate) ?? "gate";
-    const subject = str(md.subject) ?? str(md.story);
-    const row = subject ? `${gate}: story ${subject}` : gate;
-    if (!rows.includes(row)) rows.push(row);
-  }
-  const gateRows = rows.slice(-6);
-
-  // Chips: unresolved gates + escalations/blockers.
-  const chips: { kind: "gate" | "esc"; label: string }[] = [];
-  for (const g of gates) if (g.status !== "approved") chips.push({ kind: "gate", label: g.name });
-  for (const b of blockers) chips.push({ kind: "esc", label: b.source });
-
-  return { current, coord, gateRows, chips };
-}
+// deterministic driver is doing right now — its current dispatch, the story it is driving, the run's
+// turn/cost tally, and the lifecycle HIL gates for that story. Everything is derived from the folded
+// state, so it works live and scrubbed alike.
 
 // The HIL gates the run passes, in lifecycle order. test_list is a design SUB-gate, not one of the
 // human decision points shown here.
@@ -101,7 +46,6 @@ export function storyGateStatus(events: DashboardState["recentEvents"], story: s
 }
 
 export function OrchestratorLane({ state }: { state: DashboardState }) {
-  const { gateRows } = orchestratorStatus(state.recentEvents, state.gates, state.blockers);
   // The orchestrator runs the drive session itself, so its card carries the run's own vitals: the
   // dispatch it is on now ("orchestrator START <phase>" + the story it's driving), the running
   // tally of turns it has driven, and the session's cumulative cost. Both totals are RUN-level
@@ -187,16 +131,6 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
         run: {turns} turn{turns === 1 ? "" : "s"} · ${cost.toFixed(2)}
       </div>
-
-      {gateRows.length > 0 ? (
-        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-          {gateRows.map((r) => (
-            <div key={r} style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: font.mono }}>
-              {r}
-            </div>
-          ))}
-        </div>
-      ) : null}
 
       {/* The five HIL gates in lifecycle order, scoped to the current story. A gate that has been
           reached is PURPLE — approved (done) and pending alike — with the one the run is parked at
