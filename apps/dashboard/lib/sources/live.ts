@@ -38,7 +38,7 @@ import { resolveContained } from "../safepath";
 import { STEP_OUTPUTS } from "../topology";
 import { loadPlanning } from "../planning";
 import { CAPABILITIES, foldSource, type Capability, type DashboardSource } from "../source";
-import { ReplaySource, classify, listFilesUnder, type ParsedTranscript, type TurnDetail } from "./replay";
+import { ReplaySource, classify, listFilesUnder, expandStepSpec, type ParsedTranscript, type TurnDetail } from "./replay";
 import type { StepOutputAsset } from "../types";
 import { correlate, driftMessage, driftSeverity, latestTurnByRole } from "../correlate";
 import { RECENT_EVENT_TAIL } from "../reducer";
@@ -204,19 +204,21 @@ export class LiveSource implements DashboardSource {
       assets.push({ path: rel, name: basename(rel), kind: classify(basename(root) + "/" + rel) });
     };
     for (const spec of specs) {
-      if (spec.perFeature && !feature) continue;
-      const rel = feature ? spec.path.split("<F>").join(feature) : spec.path;
-      const abs = resolveContained(root, rel);
-      if (abs === null) continue; // escaped containment or absent
-      try {
-        const st = statSync(abs);
-        if (spec.dir && st.isDirectory()) {
-          for (const child of listFilesUnder(root, abs)) add(child);
-        } else if (st.isFile()) {
-          add(rel);
+      // expandStepSpec substitutes <F> (feature) and <S> (each story dir) — shared with ReplaySource
+      // so live + replay expand identically; each path is then existence-checked at HEAD below.
+      for (const rel of expandStepSpec(root, spec, feature)) {
+        const abs = resolveContained(root, rel);
+        if (abs === null) continue; // escaped containment or absent
+        try {
+          const st = statSync(abs);
+          if (spec.dir && st.isDirectory()) {
+            for (const child of listFilesUnder(root, abs)) add(child);
+          } else if (st.isFile()) {
+            add(rel);
+          }
+        } catch {
+          /* not present at HEAD — dropped, as elsewhere */
         }
-      } catch {
-        /* not present at HEAD — dropped, as elsewhere */
       }
     }
     return { node, feature, assets };

@@ -156,13 +156,20 @@ export const GATE_NODE_TO_GATE: Record<string, string> = GATE_KEY_BY_NODE;
  * (or the legacy `.sftdd/`). It may carry a `<F>` placeholder a source substitutes with the
  * feature id in scope; a `perFeature` spec is simply skipped when no feature is in scope.
  *
+ * `perStory` additionally carries an `<S>` placeholder the source expands across EVERY story dir
+ * of the feature (`features/<F>/stories/*`), so one spec surfaces a per-story artifact for all
+ * stories at once — the way the design lane's reflect verdicts / per-story test lists / breakdowns
+ * exist once per story. `perStory` implies a feature is in scope (skipped otherwise).
+ *
  * `dir` marks a directory whose files are listed rather than a single file — the honest-GREEN
  * cycle writes many files under `cycles/<F>/`, and deploy under `deploy/`, so those are browsed
- * rather than named one by one.
+ * rather than named one by one. `dir` + `perStory` lists a per-story directory (e.g. each story's
+ * `acs/`) across all stories.
  */
 export interface StepOutputSpec {
   path: string;
   perFeature?: boolean;
+  perStory?: boolean;
   dir?: boolean;
 }
 
@@ -180,10 +187,10 @@ export interface StepOutputSpec {
  * ACCEPTANCE gate (per-story) opens `pipeline.json`, where each story's acceptance decision is
  * recorded. The terminal `shipped` shows the promoted sprint (as `promote` does).
  *
- * KNOWN LIMITATION: per-story artifacts (story.json, test-list-per-story.json, reflect-verdict.json,
- * per-story deploy-evidence.json, acs/*) can't be named here — a spec supports `<F>` but no `<S>`, and
- * a bare `stories` dir-scan would flood + mix in build/deploy files. Surfacing them needs a per-story
- * spec kind; the aggregate feature-level artifacts stand in for now.
+ * Per-story artifacts are surfaced via `perStory` specs (an `<S>` the source expands across every
+ * story dir), so the design lane's per-story breakdowns / reflect verdicts, the spec gate's per-story
+ * test lists + acceptance criteria, and per-story deploy evidence are all inspectable — nothing on
+ * disk is left unreachable.
  */
 export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
   intake: [
@@ -223,6 +230,11 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
     // The Test Strategist authors the test list in the design lane (the spec gate then reviews it).
     { path: "features/<F>/test-list.md", perFeature: true },
     { path: "features/<F>/test-list.json", perFeature: true },
+    // Per-story design outputs: the Spec Author's breakdown (story.md/json) and the Navigator's
+    // pre-build reflect verdict, one of each per story.
+    { path: "features/<F>/stories/<S>/story.md", perFeature: true, perStory: true },
+    { path: "features/<F>/stories/<S>/story.json", perFeature: true, perStory: true },
+    { path: "features/<F>/stories/<S>/reflect-verdict.json", perFeature: true, perStory: true },
   ],
   // The spec + test-list gate reviews the SPEC and the TEST LIST, so it opens both — each in its
   // human (.md) and machine (.json) form — plus its decision record. feature-spec also appears under
@@ -233,6 +245,10 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
     { path: "features/<F>/test-list.md", perFeature: true },
     { path: "features/<F>/test-list.json", perFeature: true },
     { path: "features/<F>/gates.json", perFeature: true },
+    // Per-story: the per-story test list the test-list gate reviews, and each story's acceptance
+    // criteria (acs/), the spec the gate is deciding on.
+    { path: "features/<F>/stories/<S>/test-list-per-story.json", perFeature: true, perStory: true },
+    { path: "features/<F>/stories/<S>/acs", perFeature: true, perStory: true, dir: true },
   ],
   build: [
     { path: "features/<F>/pipeline.json", perFeature: true },
@@ -246,6 +262,8 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
   deploy: [
     { path: "features/<F>/deploy-evidence.json", perFeature: true },
     { path: "deploy", dir: true },
+    // Each story carries its own deploy evidence (per-story deploy-verify).
+    { path: "features/<F>/stories/<S>/deploy-evidence.json", perFeature: true, perStory: true },
   ],
   deploygate: [{ path: "features/<F>/gates.json", perFeature: true }],
   promote: [{ path: "sprints", dir: true }],

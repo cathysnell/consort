@@ -141,6 +141,25 @@ describe("topology — graph integrity", () => {
     );
   });
 
+  it("surfaces per-story artifacts via <S> specs, so nothing per-story is unreachable", () => {
+    // A perStory spec carries an <S> the sources expand across every story dir; each such spec must
+    // also be perFeature (it lives under features/<F>/stories) and its path must contain <S>.
+    const perStory = Object.entries(STEP_OUTPUTS).flatMap(([node, specs]) =>
+      specs.filter((s) => s.perStory).map((s) => ({ node, path: s.path })),
+    );
+    expect(perStory.length).toBeGreaterThan(0);
+    for (const { path } of perStory) {
+      expect(path).toContain("<S>");
+      expect(path).toContain("<F>");
+    }
+    const pathsOf = (node: string) => STEP_OUTPUTS[node].filter((s) => s.perStory).map((s) => s.path);
+    // design → breakdown + reflect verdict; specgate → per-story test list + acs; deploy → per-story
+    // deploy evidence. These were the previously-unreachable per-story deliverables.
+    expect(pathsOf("design")).toContain("features/<F>/stories/<S>/reflect-verdict.json");
+    expect(pathsOf("specgate")).toContain("features/<F>/stories/<S>/test-list-per-story.json");
+    expect(pathsOf("deploy")).toContain("features/<F>/stories/<S>/deploy-evidence.json");
+  });
+
   it("nodeById resolves declared nodes and rejects others", () => {
     expect(nodeById("build")?.label).toBe("Build lane");
     expect(nodeById("nope")).toBeNull();

@@ -23,7 +23,7 @@
 // Everything here is read lazily and cached, because `getState` runs per request while a
 // corpus is immutable on disk.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { resolveContained } from "../safepath";
 import { classify, readTextFile } from "../filekind";
@@ -32,7 +32,7 @@ import { RECENT_EVENT_TAIL } from "../reducer";
 import { CAPABILITIES, foldSource, type Capability, type DashboardSource } from "../source";
 import { loadPlanning } from "../planning";
 import { loadCorrespondence, type CorrespondenceEntry } from "../correspondence";
-import { STEP_OUTPUTS } from "../topology";
+import { STEP_OUTPUTS, type StepOutputSpec } from "../topology";
 import type {
   AgentLogEvent,
   ArtifactContent,
@@ -227,6 +227,17 @@ function isFile(abs: string): boolean {
  */
 export function listFilesUnder(root: string, absDir: string, cap = 60): string[] {
   const out: string[] = [];
+  // Base the returned paths on the REALPATH of root: `resolveContained` hands back a realpath'd
+  // `absDir`, so if root is itself a symlink (macOS's tmpdir /var -> /private/var), a plain
+  // `relative(root, abs)` yields a broken `../../…` path. realpath both ends so the result is the
+  // clean root-relative path that round-trips back through the containment-guarded reader.
+  const base = (() => {
+    try {
+      return realpathSync(root);
+    } catch {
+      return root;
+    }
+  })();
   const walk = (dir: string) => {
     if (out.length >= cap) return;
     let entries;
@@ -240,11 +251,42 @@ export function listFilesUnder(root: string, absDir: string, cap = 60): string[]
       if (out.length >= cap) break;
       const abs = join(dir, e.name);
       if (e.isDirectory()) walk(abs);
-      else if (e.isFile()) out.push(relative(root, abs));
+      else if (e.isFile()) out.push(relative(base, abs));
     }
   };
   walk(absDir);
   return out;
+}
+
+/**
+ * The story dir NAMES under `features/<feature>/stories` (e.g. "S1-file-stock"), sorted; `[]` when
+ * the dir is absent or would escape containment. The `<S>` substitution uses the on-disk dir name,
+ * so a slug-suffixed story dir (`S1-<slug>`) resolves correctly.
+ */
+export function listStoryDirs(root: string, feature: string): string[] {
+  const abs = resolveContained(root, `features/${feature}/stories`);
+  if (abs === null) return [];
+  try {
+    return readdirSync(abs, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Expand one STEP_OUTPUTS spec to the ROOT-RELATIVE paths it names: substitute `<F>` for the feature
+ * and, for a `perStory` spec, `<S>` for each of the feature's story dirs. Returns `[]` when a
+ * per-feature/per-story spec has no feature in scope. Shared by BOTH sources so live and replay expand
+ * placeholders identically; each source then does its own file/dir existence handling on the paths.
+ */
+export function expandStepSpec(root: string, spec: StepOutputSpec, feature: string | null): string[] {
+  if ((spec.perFeature || spec.perStory) && !feature) return [];
+  const withF = feature ? spec.path.split("<F>").join(feature) : spec.path;
+  if (!spec.perStory) return [withF];
+  return listStoryDirs(root, feature as string).map((s) => withF.split("<S>").join(s));
 }
 
 /** The corpus dir from the environment. Mirrors `projectDir()` in consort.ts. */
@@ -410,16 +452,16 @@ export class ReplaySource implements DashboardSource {
     };
 
     for (const spec of specs) {
-      if (spec.perFeature && !feature) continue;
-      // `<F>` → the feature in scope. split/join rather than replaceAll so the lib target the
-      // repo compiles under doesn't matter.
-      const rel = feature ? spec.path.split("<F>").join(feature) : spec.path;
-      const abs = resolveContained(root, rel);
-      if (abs === null) continue; // escaped containment or absent — both dropped, as elsewhere
-      if (spec.dir) {
-        for (const child of listFilesUnder(root, abs)) add(child);
-      } else if (isFile(abs)) {
-        add(rel);
+      // expandStepSpec substitutes <F> (feature) and <S> (each story dir), so a per-story spec
+      // yields one path per story; each is then existence-checked below (dropped if absent).
+      for (const rel of expandStepSpec(root, spec, feature ?? null)) {
+        const abs = resolveContained(root, rel);
+        if (abs === null) continue; // escaped containment or absent — both dropped, as elsewhere
+        if (spec.dir) {
+          for (const child of listFilesUnder(root, abs)) add(child);
+        } else if (isFile(abs)) {
+          add(rel);
+        }
       }
     }
     return { node, feature: feature ?? null, assets };

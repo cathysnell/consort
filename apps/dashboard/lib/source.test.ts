@@ -157,6 +157,36 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     expect(src.stepOutputContent!(overview.path).content).toContain("# Overview");
   });
 
+  it("expands a perStory spec across EVERY story dir (design lane's per-story outputs)", () => {
+    // The design node lists per-story reflect verdicts / breakdowns via <S>; each story dir on disk
+    // must yield its own asset so nothing per-story is left unreachable.
+    const root = join(proj, ".consort");
+    for (const s of ["S1-file-stock", "S2-locations"]) {
+      mkdirSync(join(root, "features", "F1", "stories", s), { recursive: true });
+      writeFileSync(join(root, "features", "F1", "stories", s, "reflect-verdict.json"), "{}");
+      writeFileSync(join(root, "features", "F1", "stories", s, "story.md"), "# story\n");
+    }
+    const paths = new LiveSource().stepOutputs!("design", "F1").assets.map((a) => a.path);
+    expect(paths).toContain("features/F1/stories/S1-file-stock/reflect-verdict.json");
+    expect(paths).toContain("features/F1/stories/S2-locations/reflect-verdict.json");
+    expect(paths).toContain("features/F1/stories/S1-file-stock/story.md");
+  });
+
+  it("expands a perStory DIR spec — each story's acs/ (spec gate)", () => {
+    const root = join(proj, ".consort");
+    mkdirSync(join(root, "features", "F1", "stories", "S1", "acs"), { recursive: true });
+    writeFileSync(join(root, "features", "F1", "stories", "S1", "acs", "AC1-file.md"), "# ac\n");
+    writeFileSync(join(root, "features", "F1", "stories", "S1", "acs", "AC1-file.json"), "{}");
+    const paths = new LiveSource().stepOutputs!("specgate", "F1").assets.map((a) => a.path);
+    expect(paths).toContain("features/F1/stories/S1/acs/AC1-file.md");
+    expect(paths).toContain("features/F1/stories/S1/acs/AC1-file.json");
+  });
+
+  it("a perStory spec with no feature in scope is skipped (no throw, no per-story assets)", () => {
+    const paths = new LiveSource().stepOutputs!("design", null).assets.map((a) => a.path);
+    expect(paths.some((p) => p.includes("/stories/"))).toBe(false);
+  });
+
   it("does NOT key off the project's own .consort/turns (the shipped-A3 detection bug)", () => {
     // The record lane writes ELSEWHERE, never the watched .consort/. A stray turns/ or
     // correspondence.jsonl under .consort/ must NOT read as recording without a configured dir.
