@@ -15,6 +15,7 @@
 import { mergeExperimentIntoFeature, type ExperimentBranchOps } from "./experiment-lifecycle.js";
 import { deleteExperiment } from "./experiment.js";
 import { readPipeline, writePipeline, acceptStory } from "../pipeline/story-pipeline.js";
+import { logGateApproved } from "../logging/gate-decision-log.js";
 import { mergePaired } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import { commitExperimentCode } from "../pipeline/cycle-record.js";
 import { applySchemaMigrations } from "@databricks-solutions/lakebase-scm-utils/lakebase";
@@ -90,6 +91,14 @@ export async function mergeAndAcceptStory(
   const p = readPipeline(args.consortDir, args.featureId);
   acceptStory(p, args.storyId, { approver: args.approver, at });
   writePipeline(args.consortDir, p);
+  // The acceptance gate CLEARS here. This is the ONE funnel EVERY acceptance path reaches — the drive's
+  // dispatched accept action, the headless proxy, and a direct `consort-experiment merge` all land here
+  // (acceptStory is called from nowhere else). Emit gate.approved("acceptance") so the acceptance
+  // gate.surfaced always has a paired approved (the uniform gate lifecycle the dashboard's pending-gate
+  // scan clears on). Before this, when the merge resolved OUTSIDE the dispatched accept action (headless),
+  // NO clearing event was logged, so the dashboard kept the acceptance box "pending" — flashing it
+  // between build/design steps for the rest of the story. Best-effort (never blocks the accept).
+  logGateApproved({ consortDir: args.consortDir, gate: "acceptance", story: args.storyId, featureId: args.featureId, approver: args.approver });
 }
 
 /** Build the `consort-experiment merge` argv for a PO acceptance from the

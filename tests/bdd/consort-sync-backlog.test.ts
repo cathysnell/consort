@@ -40,6 +40,22 @@ afterEach(() => {
   rmSync(tdd, { recursive: true, force: true });
 });
 
+describe("the backlog gate gets a paired gate.approved (the sync-backlog door clears it)", () => {
+  it("approveBacklogGate logs gate.approved(backlog) — the paired approved the surfaced backlog gate needs", async () => {
+    // consort-sync-backlog (the consort-next enact the human/proxy runs to commit the backlog) calls
+    // this on a successful commit, POST-surface, so the dashboard's pending-gate scan clears the
+    // backlog gate.surfaced. Before this, sync-backlog committed the selection but logged NO approval,
+    // so the backlog box flashed until the plan gate superseded it.
+    const { approveBacklogGate } = await import("../../consort/gates/backlog-gate.js");
+    approveBacklogGate(tdd, "product-owner");
+    const logPath = join(tdd, "agent-log.jsonl");
+    const evs = existsSync(logPath)
+      ? readFileSync(logPath, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { event: string; metadata?: { gate?: string } })
+      : [];
+    expect(evs.some((e) => e.event === "gate.approved" && e.metadata?.gate === "backlog")).toBe(true);
+  });
+});
+
 describe("requested.json membership (readRequested / writeRequested)", () => {
   it("absent => undefined (unscoped); present => the ids", () => {
     expect(readRequested(tdd, SPRINT)).toBeUndefined();

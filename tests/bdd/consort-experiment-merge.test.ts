@@ -5,7 +5,7 @@
 // Hermetic: the side-effectful ops are faked (no git / Lakebase).
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -77,6 +77,23 @@ describe("mergeAndAcceptStory", () => {
     expect(p.stories[S].experiment?.status).toBe("merged");
     expect(p.stories[S].status).toBe("done");
     expect(p.stories[S].acceptance?.decision).toBe("accepted");
+  });
+
+  it("emits gate.approved(acceptance) at the merge funnel — clears the acceptance gate on EVERY path", async () => {
+    // The dashboard's pending-gate scan clears the acceptance gate.surfaced on a later
+    // gate.approved(acceptance). Since acceptStory is called ONLY from here, emitting it here means
+    // the clear lands whether acceptance resolved via the dispatched accept action, the headless
+    // proxy, or a direct CLI — the gap that left the acceptance box flashing for the rest of a story.
+    seedExperiment("active");
+    const { ops } = recordingOps();
+    await mergeAndAcceptStory(acceptArgs(), ops);
+    const logPath = join(tdd, "agent-log.jsonl");
+    const evs = existsSync(logPath)
+      ? readFileSync(logPath, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { event: string; metadata?: { gate?: string; story?: string } })
+      : [];
+    const approved = evs.find((e) => e.event === "gate.approved" && e.metadata?.gate === "acceptance");
+    expect(approved, "acceptance gate.approved must be logged at the merge funnel").toBeTruthy();
+    expect(approved?.metadata?.story).toBe(S);
   });
 
   it("is idempotent: an already-MERGED experiment skips the merge but ensures acceptance", async () => {

@@ -24,20 +24,23 @@
 //          feature-request.md files first, or fix the declared membership).
 
 import { resolveConsortDir, syncBacklog, writeRequested, hasFeatureRequest } from "../../consort/config/consort-paths.js";
+import { approveBacklogGate } from "../../consort/gates/backlog-gate.js";
 
 interface Parsed {
   sprint?: string;
   projectDir: string;
   tddDir?: string;
   features: string[];
+  approver: string;
   json: boolean;
 }
 
 function parse(argv: string[]): Parsed {
-  const out: Parsed = { projectDir: process.cwd(), features: [], json: false };
+  const out: Parsed = { projectDir: process.cwd(), features: [], approver: "product-owner", json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--sprint" && i + 1 < argv.length) out.sprint = argv[++i];
+    else if (a === "--approver" && i + 1 < argv.length) out.approver = argv[++i];
     else if (a === "--project-dir" && i + 1 < argv.length) out.projectDir = argv[++i];
     else if (a === "--tdd-dir" && i + 1 < argv.length) out.tddDir = argv[++i];
     // Repeatable AND comma-separated: --features F1,F2 or --features F1 --features F2.
@@ -80,6 +83,12 @@ if (p.features.length > 0) {
 
 const backlog = syncBacklog(consortDir, p.sprint);
 const ids = backlog.features.map((f) => f.id);
+
+// The backlog gate CLEARS here: this is the door the human/proxy actually runs (the consort-next
+// enact), so log gate.approved("backlog") when the commit lands — the paired approved every gate
+// needs. Without it the backlog gate.surfaced (the drive's interactive park) stayed pending, so the
+// dashboard flashed the backlog box. Best-effort inside approveBacklogGate; only on a real commit.
+if (ids.length > 0) approveBacklogGate(consortDir, p.approver);
 
 if (p.json) {
   process.stdout.write(`${JSON.stringify(backlog)}\n`);

@@ -124,6 +124,11 @@ export function orchestratorLogEvents(
       // each a distinct, timestamped span for the timing report.)
       return [{ role: "release-engineer", level: "info", feature_id, event: "phase.start", slots: { phase: "promote" } }];
     case "accept":
+      // The drive-action narration. NOTE the gate.approved("acceptance") that CLEARS the gate is NOT
+      // emitted here — this case only fires when the drive DISPATCHES a standalone accept action, but
+      // the acceptance/merge also resolves via the headless proxy / a direct CLI, where this never
+      // runs. The clearing is emitted at the ONE funnel every path reaches: mergeAndAcceptStory (which
+      // is the sole caller of acceptStory). See consort/experiment/experiment-merge.ts.
       return [{ ...base, event: "experiment.accepted", slots: { ...withStory } }];
     case "cut-experiment":
       return [{ ...base, event: "experiment.cut", slots: { ...withStory } }];

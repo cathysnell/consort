@@ -168,6 +168,15 @@ describe("orchestratorLogEvents: pure action -> canonical log events", () => {
     }
   });
 
+  it("the dispatched accept action logs experiment.accepted (the gate.approved that CLEARS acceptance is at the merge funnel)", () => {
+    // This case fires only when the drive DISPATCHES a standalone accept action. The acceptance-gate
+    // CLEAR (gate.approved) is NOT emitted here — the merge also resolves headless / via a direct CLI
+    // where this never runs — it is emitted at mergeAndAcceptStory (acceptStory's sole caller), which
+    // every path reaches. See experiment-merge.test for that.
+    const evs = orchestratorLogEvents({ kind: "accept", story: "S1-file-bug" } as WorkflowAction, { featureId: "F1" });
+    expect(evs.some((e) => e.event === "experiment.accepted")).toBe(true);
+  });
+
   it("every emitted event has role/level/event AND renders from its template + slots (no missing slot)", () => {
     const action = { kind: "invoke-role", role: "driver", story: "S1" } as WorkflowAction;
     for (const e of orchestratorLogEvents(action, { featureId: "F1" })) {
