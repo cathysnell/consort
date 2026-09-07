@@ -324,9 +324,13 @@ export function fold(
     }
     return null;
   };
-  // The feature the playhead naturally sits on, before any pin.
-  const playheadFeature =
-    atLive ? next?.feature ?? featureFromLog() : featureFromLog() ?? next?.feature ?? null;
+  // The feature the playhead naturally sits on, before any pin. At the live edge, prefer next.json's
+  // current feature. Scrubbed back, the LOG is the truth — do NOT fall back to next.json's feature:
+  // that is the run's CURRENT (future) feature, and attributing a PRE-feature playhead (intake /
+  // propose / estimate, all stamped feature_id "") to it scoped those events out, so activeNode went
+  // null and the Intake box never lit (nor turned purple at the intake gate). Null here = "no feature
+  // yet", which is honest and leaves the sprint-level intake unscoped so it lights.
+  const playheadFeature = atLive ? next?.feature ?? featureFromLog() : featureFromLog();
 
   // Every feature the window has touched — the switcher's list, and the validity check for a
   // pin. A pin naming a feature not in this window is stale (scrubbed before it appears, or a
