@@ -24,6 +24,12 @@ import {
   storyResolved,
   featureDeployEvidenceJson,
   workflowStateJson,
+  architectureJson,
+  architectureMd,
+  dbDesignJson,
+  dbDesignMd,
+  designGuideJson,
+  designDir,
 } from "../config/consort-paths.js";
 import { readPipeline, writePipeline } from "../pipeline/story-pipeline.js";
 import { PHASE_OWNER_KEY } from "./workflow-phase.js";
@@ -86,13 +92,29 @@ export function reopenStoryForRedesign(
     }
   }
 
-  // 3. The FEATURE-level deploy gate. Reopening ANY story makes the feature no-longer-complete,
-  //    so its `deploy-evidence.json` (the deploy gate's artifact) is STALE – yet the feature
-  //    deploy gate is derived from it and would stay OPEN over a mid-redesign story (you cannot
-  //    re-approve a deploy for a feature being re-designed; reopening a story otherwise stranded
-  //    the gate, forcing a hand-clear). Back it up + clear it so the gate evaporates and the
-  //    feature re-deploy-verifies after the rebuild. It is feature-level (outside storyRoot), so
-  //    it is backed up under an explicit name rather than the story-relative `backup()`.
+  // Drop the FEATURE deploy gate, reset the pipeline entry -> designing (spec gate + experiment +
+  // acceptance), and clear the coarse phase, so the drive re-enters the design lane. Shared with
+  // reopenStoryFromRole (the scoped reopen) so both revisions re-gate cleanly.
+  resetBuildStateForReopen(consortDir, feature, story, backupDir, cleared);
+
+  return { backupDir, cleared };
+}
+
+/** Drop the feature deploy gate + reset the story's pipeline entry to `designing` (clearing the
+ *  spec gate, experiment record, and acceptance) + clear the coarse phase, backing each up. Shared
+ *  by the full reopen (`reopenStoryForRedesign`) and the scoped `reopenStoryFromRole`: a design
+ *  revision of ANY scope invalidates the spec gate + the build, so the gate must be re-surfaced +
+ *  re-approved (fresh integrity) and the experiment rebuilt, not left approved over changed design. */
+function resetBuildStateForReopen(
+  consortDir: string,
+  feature: string,
+  story: string,
+  backupDir: string,
+  cleared: string[],
+): void {
+  // The FEATURE-level deploy gate. Reopening ANY story makes the feature no-longer-complete, so its
+  // `deploy-evidence.json` is STALE – yet the deploy gate is derived from it and would stay OPEN over
+  // a mid-redesign story. Back it up + clear it (feature-level, so an explicit backup name).
   const fde = featureDeployEvidenceJson(consortDir, feature);
   if (fs.existsSync(fde)) {
     const dest = join(backupDir, "feature-deploy-evidence.json");
@@ -102,17 +124,10 @@ export function reopenStoryForRedesign(
     cleared.push("../deploy-evidence.json (feature deploy gate)");
   }
 
-  // 4. Reset the PIPELINE entry so the derivation re-enters the DESIGN lane for this story. This
-  //    is the piece that makes reopening a DONE + merged + ACCEPTED story actually work: the
-  //    feature phase is derived from each entry's status + acceptance (deriveFeaturePhase), so a
-  //    still-`accepted` entry keeps the feature reading complete and the engine routes to DEPLOY ,
-  //    never re-dispatching the Spec Author. reopen-story previously left the entry untouched, so
-  //    reopening an accepted story stranded the deploy gate and forced hand-surgery across
-  //    reopen-story + set-status + rebuild-story + withdraw-gate (which lands inconsistent). Clear
-  //    the entry to a bare `designing` – dropping the spec gate, experiment, AND acceptance in one
-  //    write – and pull it off the build lane. Idempotent + safe for a not-yet-accepted story
-  //    (its acceptance/experiment are already absent). Best-effort: a missing/malformed pipeline
-  //    still leaves the artifacts above reverted.
+  // Reset the PIPELINE entry so the derivation re-enters the DESIGN lane for this story. The feature
+  // phase is derived from each entry's status + acceptance, so a still-`accepted` entry keeps the
+  // feature reading complete and routes to DEPLOY. Clear the entry to a bare `designing` – dropping
+  // the spec gate, experiment, AND acceptance in one write – and pull it off the build lane. Idempotent.
   try {
     const pipeline = readPipeline(consortDir, feature);
     if (pipeline.stories[story]) {
@@ -126,12 +141,9 @@ export function reopenStoryForRedesign(
     /* no/ malformed pipeline: the artifact clear above already reverts the design output */
   }
 
-  // 5. Reset the COARSE driver phase so the drive re-enters design/build for this feature. The
-  //    drive routes on the per-PROJECT coarse `phase` (workflow-state.json), a STORED slot that
-  //    advanced to "deploy" when the feature completed – it is NOT derived, so the pipeline reset
-  //    above does not move it and the drive would keep routing to DEPLOY. Clearing the phase + its
-  //    owner makes the probe RE-DERIVE the true phase from this feature's (now-reset) artifacts ,
-  //    the FEIP-8022 un-owned re-derive path (deploy-evidence + gates + pipeline). Backed up.
+  // Reset the COARSE driver phase (workflow-state.json) so the probe RE-DERIVES the true phase from
+  // this feature's now-reset artifacts (the un-owned re-derive path). It is a STORED slot, not
+  // derived, so the pipeline reset above does not move it. Backed up.
   try {
     const wsFile = workflowStateJson(consortDir);
     if (fs.existsSync(wsFile)) {
@@ -149,6 +161,124 @@ export function reopenStoryForRedesign(
   } catch {
     /* best-effort: the derivation still re-reads the reset pipeline + deploy-evidence */
   }
+}
 
+/** The design lane in EXECUTION order. Reopening `--from` a role reverts that role's output + every
+ *  later role's, keeps the upstream design, and the drive's design derivation (nextDesignAction)
+ *  then re-derives the resume point from artifact PRESENCE (testListReady <- storyTestListJson,
+ *  reflectionPassed <- reflect-verdict, dbaDesigned <- db-design.json, architectAnnotated <-
+ *  architecture.json + per-AC notes, ...), so it resumes AT that role, re-runs the tail, re-surfaces
+ *  the spec gate, and rebuilds. `spec-author` is the full reopen (reopenStoryForRedesign). */
+export type DesignLaneRole = "spec-author" | "ux-designer" | "architect-reviewer" | "dba" | "test-strategist" | "navigator";
+export const DESIGN_LANE_ORDER: DesignLaneRole[] = [
+  "spec-author",
+  "ux-designer",
+  "architect-reviewer",
+  "dba",
+  "test-strategist",
+  "navigator",
+];
+
+/** Reopen a story to a SPECIFIC design role — the proportionate alternative to the full
+ *  reopenStoryForRedesign. Reverts `fromRole`'s output + everything downstream (keeping the upstream
+ *  design), then resets the build state (deploy gate + pipeline -> designing + coarse phase) so the
+ *  drive re-derives the resume point at `fromRole`, re-runs the design tail, and re-gates cleanly.
+ *  `test-strategist` / `navigator` are STORY-local (only that story is affected); the feature-level
+ *  roles (`architect-reviewer` / `dba` / `ux-designer`) revert feature-shared artifacts, so a
+ *  sibling story not yet gated re-derives too — the CLI surfaces that. `spec-author` == full reopen. */
+export function reopenStoryFromRole(
+  consortDir: string,
+  feature: string,
+  story: string,
+  fromRole: DesignLaneRole,
+  opts: { now?: () => Date } = {},
+): ReopenResult {
+  if (fromRole === "spec-author") return reopenStoryForRedesign(consortDir, feature, story, opts);
+
+  const now = opts.now ?? (() => new Date());
+  const storyRoot = storyResolved(consortDir, feature, story);
+  const stamp = now().toISOString().replace(/[:.]/g, "-");
+  const backupDir = join(consortDir, `.backup-${basename(storyRoot)}-reopen-${fromRole}-${stamp}`);
+  const cleared: string[] = [];
+
+  const backupTo = (p: string, name: string): void => {
+    const dest = join(backupDir, name);
+    fs.mkdirSync(dirname(dest), { recursive: true });
+    fs.cpSync(p, dest, { recursive: true });
+  };
+  const clearFile = (p: string, label: string, backupName: string): void => {
+    if (!fs.existsSync(p)) return;
+    backupTo(p, backupName);
+    fs.rmSync(p, { recursive: true, force: true });
+    cleared.push(label);
+  };
+
+  // The artifacts each role produces, whose ABSENCE re-triggers that role in nextDesignAction.
+  // Clearing from `fromRole` onward makes the drive resume at `fromRole`. storyPlanJson (the design-
+  // spec analyzer's terminal output) is downstream of every role, so any reopen clears it.
+  const clearForRole: Record<Exclude<DesignLaneRole, "spec-author">, () => void> = {
+    "ux-designer": () => {
+      clearFile(designGuideJson(consortDir), "design/design-guide.json (UX)", "design-guide.json");
+      clearFile(join(designDir(consortDir), "design-guide.md"), "design/design-guide.md (UX)", "design-guide.md");
+      clearFile(join(designDir(consortDir), "ia.md"), "design/ia.md (UX)", "ia.md");
+    },
+    "architect-reviewer": () => {
+      clearFile(architectureJson(consortDir, feature), "architecture.json (feature)", "architecture.json");
+      clearFile(architectureMd(consortDir, feature), "architecture.md (feature)", "architecture.md");
+      // architectAnnotated also keys on per-AC architectural_notes; strip them so the architect
+      // re-annotates from scratch (the ACs themselves — the spec-author's work — are kept).
+      stripArchitecturalNotes(consortDir, feature, story, backupDir, cleared);
+    },
+    "dba": () => {
+      clearFile(dbDesignJson(consortDir, feature), "db-design.json (feature)", "db-design.json");
+      clearFile(dbDesignMd(consortDir, feature), "db-design.md (feature)", "db-design.md");
+    },
+    "test-strategist": () => {
+      clearFile(storyTestListJson(consortDir, feature, story), "test-list-per-story.json (test-strategist)", "test-list-per-story.json");
+    },
+    "navigator": () => {
+      clearFile(reflectVerdictJson(consortDir, feature, story), "reflect-verdict.json (reflect)", "reflect-verdict.json");
+    },
+  };
+
+  const startIdx = DESIGN_LANE_ORDER.indexOf(fromRole);
+  for (const role of DESIGN_LANE_ORDER.slice(startIdx)) {
+    if (role === "spec-author") continue; // unreachable (handled above), keeps the type total
+    clearForRole[role]();
+  }
+  // The design-spec plan is terminal (downstream of the whole lane) — stale after any revision.
+  clearFile(storyPlanJson(consortDir, feature, story), "plan.json (design-spec)", "plan.json");
+
+  resetBuildStateForReopen(consortDir, feature, story, backupDir, cleared);
   return { backupDir, cleared };
+}
+
+/** Strip the `architectural_notes` field from every AC of a story (backed up), so architectAnnotated
+ *  flips false and the Architect re-annotates. Keeps the ACs (the Spec Author's work) intact. */
+function stripArchitecturalNotes(
+  consortDir: string,
+  feature: string,
+  story: string,
+  backupDir: string,
+  cleared: string[],
+): void {
+  const dir = acsDir(consortDir, feature, story);
+  if (!fs.existsSync(dir)) return;
+  let stripped = 0;
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".json")) continue;
+    const p = join(dir, name);
+    try {
+      const ac = JSON.parse(fs.readFileSync(p, "utf8")) as Record<string, unknown>;
+      if (!("architectural_notes" in ac)) continue;
+      fs.mkdirSync(join(backupDir, "acs"), { recursive: true });
+      fs.cpSync(p, join(backupDir, "acs", name));
+      delete ac.architectural_notes;
+      fs.writeFileSync(p, JSON.stringify(ac, null, 2) + "\n");
+      stripped++;
+    } catch {
+      /* leave a malformed ac.json untouched */
+    }
+  }
+  if (stripped > 0) cleared.push(`acs/*.json architectural_notes stripped (${stripped}) — architect re-annotates`);
 }

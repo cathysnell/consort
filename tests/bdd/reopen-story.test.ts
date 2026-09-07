@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { reopenStoryForRedesign } from "../../consort/gates/reopen-story";
+import { reopenStoryForRedesign, reopenStoryFromRole } from "../../consort/gates/reopen-story";
 import { storyAcIds } from "../../consort/config/consort-paths";
 
 let tdd: string;
@@ -61,6 +61,67 @@ describe("reopenStoryForRedesign", () => {
     write(`features/${F}/stories/${S}/story.json`, { id: S, acs: [] });
     const res = reopenStoryForRedesign(tdd, F, S);
     expect(res.cleared).toHaveLength(0);
+  });
+
+  describe("reopenStoryFromRole (scoped — the proportionate go-back)", () => {
+    // A fully-designed + built + accepted story: the case where a build failure turns out to be an
+    // upstream DESIGN defect (a flaky/mis-calibrated test) and only a slice must be re-authored.
+    function seedFullyDesigned(): void {
+      write(`features/${F}/stories/${S}/story.json`, { id: S, asA: "op", iWantTo: "x", soThat: "y", acs: ["AC1-a"] });
+      write(`features/${F}/stories/${S}/acs/AC1-a.json`, { id: "AC1-a", given: "g", when: "w", then: "t", architectural_notes: "layer: service" });
+      write(`features/${F}/architecture.json`, { feature_id: F, service_backed: true });
+      write(`features/${F}/db-design.json`, { feature_id: F, tables: [] });
+      write(`features/${F}/stories/${S}/test-list-per-story.json`, { feature_id: F, story_id: S, items: [{ id: "T1" }] });
+      write(`features/${F}/stories/${S}/reflect-verdict.json`, { version: 1, passed: true, findings: [] });
+      write(`features/${F}/stories/${S}/plan.json`, { steps: [] });
+      write(`features/${F}/pipeline.json`, {
+        version: 1, feature_id: F,
+        stories: { [S]: { status: "done", gate: { status: "approved", history: [] }, experiment: { status: "merged", branch: "exp1", instance: 1 }, acceptance: { decision: "accepted", history: [] } } },
+        build_queue: [S], build_active: S,
+      });
+      write(`features/${F}/deploy-evidence.json`, { deployed: true });
+      write(`workflow-state.json`, { phase: "deploy", phase_feature_id: F });
+    }
+
+    it("--from test-strategist: clears test-list+reflect+plan, KEEPS ACs+architecture+db, re-gates", () => {
+      seedFullyDesigned();
+      const res = reopenStoryFromRole(tdd, F, S, "test-strategist", { now: () => new Date("2026-09-07T00:00:00Z") });
+      // Reverted from the test-strategist downstream.
+      expect(existsSync(sp("test-list-per-story.json"))).toBe(false);
+      expect(existsSync(sp("reflect-verdict.json"))).toBe(false);
+      expect(existsSync(sp("plan.json"))).toBe(false);
+      // KEPT (upstream): the ACs (hasAcs still true), the architecture, and the schema — NOT re-run.
+      expect(storyAcIds(tdd, F, S).length).toBeGreaterThan(0);
+      expect(existsSync(join(tdd, `features/${F}/architecture.json`))).toBe(true);
+      expect(existsSync(join(tdd, `features/${F}/db-design.json`))).toBe(true);
+      const ac = JSON.parse(readFileSync(sp("acs/AC1-a.json"), "utf8")) as { architectural_notes?: unknown };
+      expect(ac.architectural_notes).toBeDefined(); // architect not reverted
+      // Re-gated: pipeline -> designing, deploy-evidence gone (so the spec gate re-surfaces cleanly).
+      const pl = JSON.parse(readFileSync(join(tdd, `features/${F}/pipeline.json`), "utf8")) as { stories: Record<string, unknown> };
+      expect(pl.stories[S]).toEqual({ status: "designing" });
+      expect(existsSync(join(tdd, `features/${F}/deploy-evidence.json`))).toBe(false);
+      expect(existsSync(join(res.backupDir, "test-list-per-story.json"))).toBe(true); // backed up
+    });
+
+    it("--from architect-reviewer: reverts architecture + strips AC notes + downstream, KEEPS the ACs", () => {
+      seedFullyDesigned();
+      reopenStoryFromRole(tdd, F, S, "architect-reviewer", { now: () => new Date("2026-09-07T00:00:00Z") });
+      expect(existsSync(join(tdd, `features/${F}/architecture.json`))).toBe(false);
+      expect(existsSync(join(tdd, `features/${F}/db-design.json`))).toBe(false);
+      expect(existsSync(sp("test-list-per-story.json"))).toBe(false);
+      // The ACs are kept (spec-author's work) but their architectural_notes are stripped so the
+      // Architect re-annotates (architectAnnotated flips false).
+      expect(storyAcIds(tdd, F, S).length).toBeGreaterThan(0);
+      const ac = JSON.parse(readFileSync(sp("acs/AC1-a.json"), "utf8")) as { architectural_notes?: unknown; given?: string };
+      expect(ac.architectural_notes).toBeUndefined();
+      expect(ac.given).toBe("g"); // AC content preserved
+    });
+
+    it("--from spec-author delegates to the full reopen (acs[] emptied)", () => {
+      seedFullyDesigned();
+      reopenStoryFromRole(tdd, F, S, "spec-author");
+      expect(storyAcIds(tdd, F, S).length).toBe(0);
+    });
   });
 
   it("reopening a DONE + merged + ACCEPTED story resets the pipeline entry, deploy gate, and coarse phase", () => {
