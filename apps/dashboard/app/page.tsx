@@ -14,7 +14,7 @@ import type { DashboardState, StoryProgress } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { latestTurnOrdinalForRole } from "@/lib/derive";
 
-type CostMode = "show" | "hidden";
+type CostMode = "show" | "hide";
 
 export default function Home() {
   // `at` drives time travel: null follows the live edge, a number pins the fold there.
@@ -406,7 +406,7 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
         {state?.source?.mode === "replay" ? null : <ConnectionStatus connected={connected} lastUpdatedAt={lastUpdatedAt} />}
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
           <span style={{ color: "var(--text-faint)" }}>cost:</span>
-          {(["show", "hidden"] as CostMode[]).map((m) => (
+          {(["show", "hide"] as CostMode[]).map((m) => (
             <button
               key={m}
               onClick={() => setCostMode(m)}
@@ -479,24 +479,33 @@ function ConnectionStatus({ connected, lastUpdatedAt }: { connected: boolean; la
   const stale = ageSec !== null && ageSec > 5;
   const color = !connected ? "var(--status-critical)" : stale ? "var(--status-warning)" : "var(--status-good)";
   // Feed/connection health, NOT the run's state: is the board polling + getting fresh updates.
-  // "connected" (was "running", which collided with the transport's RUNNING run-state label).
-  const label = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "connected";
+  // A muted "feed" caption names WHAT this measures (was a bare "connected"/"running", which read
+  // as the run's state — and "running" collided with the transport's RUNNING label); the colored
+  // status word then reads as the feed's health: healthy / no update · Ns / reconnecting.
+  const status = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "healthy";
+  // The colored status word carries the health, so the healthy state needs NO dot — a green dot
+  // here just doubled the LIVE RUN badge's own green dot on the same row. Show a dot ONLY as an
+  // alarm (stale/reconnecting), pulsing, so a frozen board still announces itself.
+  const alarm = !connected || stale;
   return (
     <div
       title={lastUpdatedAt === null ? "waiting for first update" : `last update ${ageSec}s ago`}
-      style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", color }}
+      style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem" }}
     >
-      <span
-        style={{
-          width: 9,
-          height: 9,
-          borderRadius: "50%",
-          background: color,
-          display: "inline-block",
-          animation: stale && connected ? "softpulse 1.6s ease-in-out infinite" : undefined,
-        }}
-      />
-      {label}
+      {alarm ? (
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: color,
+            display: "inline-block",
+            animation: stale && connected ? "softpulse 1.6s ease-in-out infinite" : undefined,
+          }}
+        />
+      ) : null}
+      <span style={{ color: "var(--text-faint)" }}>feed:</span>
+      <span style={{ color, fontWeight: 600 }}>{status}</span>
     </div>
   );
 }
