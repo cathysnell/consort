@@ -81,6 +81,23 @@ describe("consort-log CLI rejects a gate lifecycle event inside a --events batch
   });
 });
 
+describe("consort-log --note / --message fill the reasoning `note` slot (the 'three tries to log' fix)", () => {
+  it.each(["--note", "--message"])("%s lands a reasoning event on the FIRST try (no missing-slot throw)", (flag) => {
+    const code = runAgentLogCli([
+      "--role", "driver",
+      "--level", "info",
+      "--event", "reasoning",
+      flag, "GREEN: 17/17 pass against the real branch",
+      "--tdd-dir", tdd,
+    ]);
+    expect(code).toBe(0);
+    const events = readAgentLog({ consortDir: tdd });
+    expect(events).toHaveLength(1);
+    expect(events[0].event).toBe("reasoning");
+    expect(events[0].message).toContain("GREEN: 17/17 pass against the real branch"); // reasoning template is "{{note}}"
+  });
+});
+
 describe("the drive's door stays open: the in-process lib still emits gate.* (not the CLI)", () => {
   it("emitAgentLogEvent(gate.surfaced) writes the canonical drive event", () => {
     const ev = emitAgentLogEvent(

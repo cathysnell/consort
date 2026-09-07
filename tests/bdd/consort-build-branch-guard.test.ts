@@ -9,7 +9,7 @@
 // it instead of swallowing (so the run fails loud, not silently un-committed).
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -126,5 +126,13 @@ describe("greenOpenCycle fails loud on a protected tier (re-throw wiring, FEIP-8
     writeFileSync(join(proj, "app.py"), "x = 1\n");
     const g = await greenOpenCycle({ consortDir: ptdd, featureId: F, story: S, verify: pass });
     expect(g.recorded).toBe(true);
+    // The honest verify RUN is now on the log, not just its cycle.green verdict: a cycle.verified
+    // event records the branch it ran against, the outcome, and the verify summary.
+    const log = readFileSync(join(ptdd, "agent-log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const verified = log.find((e) => e.event === "cycle.verified");
+    expect(verified, "greenOpenCycle emits cycle.verified for the honest verify").toBeTruthy();
+    expect(verified.metadata.outcome).toBe("passed");
+    expect(verified.metadata.branch).toBe("experiment-s1-exp1");
+    expect(verified.metadata.summary).toBe("verify passed (test stub)");
   });
 });

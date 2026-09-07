@@ -77,7 +77,7 @@ function hasAgentInstruction(name: string): boolean {
 
 const CODE_EMITTED = new Set<string>([
   "artifact.written",
-  "cycle.red", "cycle.green", "cycle.review", "cycle.refactored",
+  "cycle.red", "cycle.green", "cycle.verified", "cycle.review", "cycle.refactored",
   "deploy.start", "deploy.verified", "deploy.failed",
   // Deterministic deploy-step events emitted by deployToTarget (it computes
   // reachability + the verify outcome). Promoted from agent-only.

@@ -541,6 +541,23 @@ export async function greenOpenCycle(
       /* advisory scan: a gate error must never fail the cycle */
     }
   }
+  // Record the honest verify RUN against the branch, not just its verdict. The migration + the
+  // real-branch test suite ran here, but only cycle.green (the driver's code change) reached the log,
+  // so the verify — its branch, outcome, and summary — was invisible. Emit it for BOTH pass and fail
+  // (a fail continues to the escalation below, now with the verify result already on the trail).
+  logCycleEvent(consortDir, {
+    role: "driver",
+    level: result.passed ? "info" : "warn",
+    event: "cycle.verified",
+    feature_id: featureId,
+    cycle_id: open.cycle_id,
+    slots: {
+      ac: open.ac_id ?? "unknown",
+      branch: open.branch_id ?? "?",
+      outcome: result.passed ? "passed" : "failed",
+      summary: (result.summary ?? (result.passed ? "all tests passed" : "verify failed")).slice(0, 500),
+    },
+  });
   if (open.layer && open.experiment_slug) {
     recordRunnerOutcome({ scope, cycleId: open.cycle_id, experimentSlug: open.experiment_slug, passed: result.passed });
   }

@@ -59,6 +59,7 @@
         "concern.flagged",
         "cycle.red",
         "cycle.green",
+        "cycle.verified",
         "cycle.review",
         "cycle.refactored",
         "smell.flagged",

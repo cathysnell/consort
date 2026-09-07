@@ -92,6 +92,11 @@ function parseArgs(argv: string[]): ParsedArgs {
         if (eq > 0) (out.slots ??= {})[kv.slice(0, eq)] = kv.slice(eq + 1);
         break;
       }
+      // `note` is the reasoning event's slot and the one agents reach for most. Accept --note and
+      // --message as aliases for `--slot note=` so a role's FIRST logging attempt lands, instead of
+      // silently emitting an off-template event that throws for a missing `note` slot — the observed
+      // "three tries to log" flakiness (a driver tried --message, then --note, then --slot note=).
+      case "--note": case "--message": (out.slots ??= {}).note = argv[++i]; break;
       case "--feature": out.feature = argv[++i]; break;
       case "--phase": out.phase = argv[++i]; break;
       case "--cycle": out.cycle = argv[++i]; break;
@@ -123,6 +128,8 @@ Emit:
                gate.approved/gate.rejected/gate.modified) are CODE-emitted by the
                deterministic drive (orchestrator surfaces, Human Proxy decides);
                a role agent emitting one here is REJECTED (exit 3).
+    --note <t> alias for --slot note=<t> (also --message). note is the slot the
+               reasoning event renders, so this is the reliable one-flag way to log a note.
     --feature <id>   --phase <p>   --cycle <id>   --data '<json of extra slots>'
 
 Batch emit (ONE process + ONE append for a turn's several events, not N spawns):
