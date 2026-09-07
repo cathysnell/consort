@@ -11,7 +11,7 @@ import { FeatureStatusSection } from "./FeatureStatusSection";
 import { OrchestratorLane } from "./OrchestratorLane";
 import { DriftBanner, LogPane, SidePane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
-import type { DashboardState, StoryProgress } from "@/lib/types";
+import type { DashboardState } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { latestTurnOrdinalForRole } from "@/lib/derive";
 
@@ -193,9 +193,19 @@ export default function Home() {
               activity — replacing the old fidelity ("not recording") banner. */}
           <OrchestratorLane state={state} />
 
-          {/* Cost breakdown, directly under the orchestrator card (which shows the running turn/cost
-              TOTAL) — the per-agent contribution that total decomposes into. Moved up from the foot
-              of the Status section; still gated by the cost toggle. */}
+          {/* Current test health (red vs green) + stories completed — the run's live state, kept at
+              the top (above the cost row). The redundant "· run complete / · in progress" run-state
+              label was dropped: that state is already on the orchestrator card + Current-sprint graph.
+              This bar's value is the current red/green tally + how many stories are done. */}
+          <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 16, marginBottom: 12 }}>
+            <BuildLane state={state} active={state.lane === "build"} complete={state.lane === "complete"} />
+            <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
+              <Metric label="Completed" value={`${state.progress.storiesDone}/${state.progress.storiesTotal}`} />
+            </div>
+          </div>
+
+          {/* Cost breakdown, under the health bar — the per-agent contribution total (the orchestrator
+              card no longer repeats a cost figure). Gated by the cost toggle. */}
           {showCost ? (
             <div style={{ background: "var(--surface-card)", border: `1px solid var(--border-default)`, borderRadius: radius.card, padding: "12px 16px", marginBottom: 12 }}>
               <CostBar state={state} />
@@ -223,9 +233,6 @@ export default function Home() {
 
           <SectionHeader>Lanes</SectionHeader>
           <LaneGraph state={state} onOpenRole={onOpenRole} />
-
-          <SectionHeader>Status</SectionHeader>
-          <StatusBar state={state} />
 
           {/* Planning / backlog moved to the LEFT-side pull-out pane (see the flex row above). */}
           {/* The "Current State" role-card grid was removed: the lanes + lifecycle graph already show
@@ -419,30 +426,33 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
         {/* Feed health, meaningful only for a live run. In replay there is no feed to be stale, so
             the source toggle (REPLAY) is the honest signal and this dot is hidden. */}
         {state?.source?.mode === "replay" ? null : <ConnectionStatus connected={connected} lastUpdatedAt={lastUpdatedAt} />}
+        {/* "cost:" label + one toggle button whose label is the current STATE: "shown" while cost is
+            visible, "hidden" while not. Click flips it. "shown" is inverted (black fill = on); "hidden"
+            is a plain white chip — text-strong bg / surface-card text so the inversion holds in both
+            themes (light: black-on-white; dark: white-on-dark). minWidth stops it jiggling. */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
           <span style={{ color: "var(--text-faint)" }}>cost:</span>
-          {(["show", "hide"] as CostMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setCostMode(m)}
-              style={{
-                border: `1px solid var(--border-default)`,
-                // Selected = inverted chip. Uses text-strong (not surface-terminal) as the bg so
-                // it inverts in BOTH themes: in light text-strong == surface-terminal (#111827,
-                // unchanged), in dark it flips to #fff so the surface-card label stays legible.
-                background: costMode === m ? "var(--text-strong)" : "var(--surface-card)",
-                color: costMode === m ? "var(--surface-card)" : "var(--text-muted)",
-                borderRadius: 6,
-                padding: "3px 8px",
-                fontSize: "0.7rem",
-                cursor: "pointer",
-              }}
-            >
-              {m}
-            </button>
-          ))}
+          <button
+            onClick={() => setCostMode(costMode === "show" ? "hide" : "show")}
+            title={costMode === "show" ? "Hide cost" : "Show cost"}
+            style={{
+              border: `1px solid var(--border-default)`,
+              background: costMode === "show" ? "var(--text-strong)" : "var(--surface-card)",
+              color: costMode === "show" ? "var(--surface-card)" : "var(--text-muted)",
+              borderRadius: 6,
+              padding: "3px 8px",
+              fontSize: "0.7rem",
+              cursor: "pointer",
+              minWidth: 52,
+            }}
+          >
+            {costMode === "show" ? "shown" : "hidden"}
+          </button>
         </div>
-        <ThemeToggle />
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
+          <span style={{ color: "var(--text-faint)" }}>mode:</span>
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   );
@@ -454,7 +464,7 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
   const dark = theme === "dark";
-  const label = theme === null ? "Toggle theme" : dark ? "Switch to light mode" : "Switch to dark mode";
+  const label = theme === null ? "Toggle theme" : dark ? "Dark mode — switch to light" : "Light mode — switch to dark";
   return (
     <button
       onClick={toggle}
@@ -472,7 +482,9 @@ function ThemeToggle() {
         minWidth: 30,
       }}
     >
-      {theme === null ? "◐" : dark ? "☀" : "☾"}
+      {/* Glyph shows the CURRENT mode (not the target action): moon = dark, sun = light. ◐ until
+          mounted. The tooltip still says what a click does. */}
+      {theme === null ? "◐" : dark ? "☾" : "☀"}
     </button>
   );
 }
@@ -578,29 +590,6 @@ function FeatureSwitcher({ features, pinned, onPin }: { features: DashboardState
   );
 }
 
-function StatusBar({ state }: { state: DashboardState }) {
-  const designActive = state.lane === "design";
-  // A complete run has no active lane — neither bar should claim "in progress".
-  const buildActive = state.lane === "build";
-  return (
-    <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* DESIGN lane → BUILD lane → per-story rows → Stories count. The gate chips were removed:
-          they duplicated the orchestrator card's gate bubbles and, unlike those, never "stayed lit"
-          (they coloured only on a literal gate.approved, which the kit rarely logs, and omitted any
-          gate not yet surfaced). The orchestrator's per-story, inference-backed bubbles are the one
-          gate display. */}
-      <DesignLane phases={state.designPhases} active={designActive} />
-      <BuildLane state={state} active={buildActive} complete={state.lane === "complete"} />
-
-      {state.stories.length > 0 ? <StoryTracks stories={state.stories} /> : null}
-
-      <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
-        <Metric label="Stories" value={`${state.progress.storiesDone}/${state.progress.storiesTotal}`} />
-      </div>
-    </div>
-  );
-}
-
 function CostBar({ state }: { state: DashboardState }) {
   const total = state.totalCost;
   const contributors = state.agents.filter((a) => a.cost > 0).sort((a, b) => b.cost - a.cost);
@@ -636,57 +625,6 @@ function CostBar({ state }: { state: DashboardState }) {
   );
 }
 
-const PHASE_CFG = {
-  "not-started": { bg: "var(--surface-inset)", border: "var(--border-default)", text: "var(--text-faint)" },
-  "in-progress": { bg: "var(--status-accent-tint)", border: "var(--status-accent)", text: "var(--status-accent-text)" },
-  complete: { bg: "var(--status-good-tint)", border: "var(--status-good)", text: "var(--status-good-text)" },
-} as const;
-
-function DesignLane({ phases, active }: { phases: DashboardState["designPhases"]; active: boolean }) {
-  // Three honest states from the phases, not a binary: in progress when the lane is active; else
-  // complete ONLY if every phase completed; else not started (the run is still at intake / planning,
-  // before design begins , where a binary "active ? in progress : complete" wrongly read "complete").
-  const label = active ? "· in progress" : phases.every((p) => p.status === "complete") ? "· complete" : "· not started";
-  return (
-    <div style={{ opacity: active ? 1 : 0.55 }}>
-      <div style={{ fontSize: "0.7rem", color: active ? "var(--text-strong)" : "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 700 }}>
-        Design {label}
-      </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        {phases.map((p) => {
-          const cfg = PHASE_CFG[p.status];
-          return (
-            <div
-              key={p.name}
-              title={`${p.name}: ${p.status}${p.looping ? " (design⇄reflect loop)" : ""}`}
-              style={{
-                flex: 1,
-                padding: "7px 6px",
-                borderRadius: 7,
-                background: cfg.bg,
-                border: `2px solid ${p.current ? "var(--status-accent)" : cfg.border}`,
-                boxShadow: p.current ? `0 0 12px var(--status-accent-glow)` : "none",
-                textAlign: "center",
-                position: "relative",
-                animation: p.looping ? "softpulse 2s ease-in-out infinite" : undefined,
-                color: p.looping ? "var(--status-accent)" : undefined,
-                transition: "all 0.4s ease",
-              }}
-            >
-              <span style={{ fontSize: "0.68rem", fontWeight: 600, color: cfg.text, textTransform: "uppercase", letterSpacing: "0.02em" }}>
-                {p.name}
-              </span>
-              {p.looping && p.name === "reflect" ? (
-                <span style={{ position: "absolute", right: 4, top: 2, fontSize: "0.6rem", color: "var(--status-accent)" }}>↺</span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function BuildLane({ state, active, complete }: { state: DashboardState; active: boolean; complete?: boolean }) {
   const { testTotal, testByStatus: t, testPct, testsHistorical } = state.progress;
   const seg = (n: number, color: string, label: string) =>
@@ -706,7 +644,7 @@ function BuildLane({ state, active, complete }: { state: DashboardState; active:
       <div style={{ opacity: 0.75 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: 6, gap: 12 }}>
           <span style={{ color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-            Build
+            Tests
           </span>
           <span
             style={{ color: "var(--text-faint)" }}
@@ -734,8 +672,11 @@ function BuildLane({ state, active, complete }: { state: DashboardState; active:
   return (
     <div style={{ opacity: active || complete ? 1 : 0.55 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: 6 }}>
+        {/* No run-state suffix (· run complete / · in progress): the run's state is already on the
+            orchestrator card + the Current-sprint graph. This bar's value is the CURRENT red/green
+            test health, so it just labels itself. */}
         <span style={{ color: active || complete ? "var(--text-strong)" : "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-          Build {complete ? "· run complete" : active ? "· in progress" : testTotal === 0 ? "· not started" : "· pending"}
+          Tests
         </span>
         <span style={{ color: "var(--text-muted)" }}>
           {testTotal > 0 ? (
@@ -763,66 +704,6 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div>
       <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
       <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--text-strong)", fontVariantNumeric: "tabular-nums" }}>{value}</div>
-    </div>
-  );
-}
-
-// Per-story lifecycle: each row is a Design → Build → Done mini-track. Design & build
-// iterate per story, so this shows e.g. "S1 done · S2 building · S3 still in design".
-function StoryTracks({ stories }: { stories: StoryProgress[] }) {
-  return (
-    <div>
-      <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 700 }}>
-        Stories
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {stories.map((s) => (
-          <StoryRow key={s.id} s={s} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StoryRow({ s }: { s: StoryProgress }) {
-  // three steps; each is done / current / pending / discarded
-  const discarded = s.status === "discarded";
-  const designState = s.stage === "design" && !s.designComplete ? "current" : "done"; // design always reached
-  const buildState = s.stage === "build" ? "current" : s.stage === "done" ? "done" : s.designComplete ? "pending" : "pending";
-  // A story in the done stage is FINISHED — the done step settles to static green (or gold
-  // for a discard), never "current" (which pulses, misreading as still-working).
-  const doneState = discarded ? "discarded" : s.stage === "done" ? "done" : "pending";
-  const steps: { label: string; state: "done" | "current" | "pending" | "discarded"; note?: string | null }[] = [
-    { label: "design", state: designState, note: s.designPhase ? `→ ${s.designPhase}` : null },
-    { label: "build", state: buildState },
-    { label: discarded ? "discarded" : "done", state: doneState },
-  ];
-  const stepColor = (st: string) =>
-    st === "done" ? { bg: "var(--status-good-tint)", border: "var(--status-good)", text: "var(--status-good-text)" }
-    : st === "discarded" ? { bg: "var(--status-discarded-tint)", border: "var(--status-discarded)", text: "var(--status-discarded-text)" }
-    : st === "current" ? { bg: "var(--status-accent-tint)", border: "var(--status-accent)", text: "var(--status-accent-text)" }
-    : { bg: "var(--surface-inset)", border: "var(--border-default)", text: "var(--text-faint)" };
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: s.stage === "done" ? 0.7 : 1 }}>
-      <span style={{ width: 168, fontSize: "0.72rem", color: s.active ? "var(--text-strong)" : "var(--text-muted)", fontWeight: s.active ? 700 : 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {s.active ? "▸ " : ""}{s.id}
-      </span>
-      <div style={{ display: "flex", gap: 4, flex: 1 }}>
-        {steps.map((step) => {
-          const c = stepColor(step.state);
-          return (
-            <div
-              key={step.label}
-              title={`${step.label}: ${step.state}${step.note ? " " + step.note : ""}`}
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "4px 6px", borderRadius: 6, background: c.bg, border: `1.5px solid ${c.border}`, animation: step.state === "current" ? "softpulse 2s ease-in-out infinite" : undefined, color: step.state === "current" ? c.border : undefined }}
-            >
-              <span style={{ fontSize: "0.62rem", fontWeight: 600, color: c.text, textTransform: "uppercase", letterSpacing: "0.02em" }}>
-                {step.label}{step.state === "current" && step.note ? ` ${step.note}` : ""}
-              </span>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

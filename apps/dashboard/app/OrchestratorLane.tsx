@@ -48,13 +48,14 @@ export function storyGateStatus(events: DashboardState["recentEvents"], story: s
 export function OrchestratorLane({ state }: { state: DashboardState }) {
   // The orchestrator runs the drive session itself, so its card carries the run's own vitals: the
   // dispatch it is on now ("orchestrator START <phase>" + the story it's driving), the running
-  // tally of turns it has driven, and the session's cumulative cost. Both totals are RUN-level
-  // (summed across every agent) — the orchestrator's OWN turn count is zero (it's deterministic),
-  // which is not what you want to see; the tally of turns it has orchestrated is.
+  // tally of turns it has driven, and the sprint's total story count. Turns are RUN-level (summed
+  // across every agent) — the orchestrator's OWN turn count is zero (it's deterministic), which is
+  // not what you want to see; the tally of turns it has orchestrated is. Cost is NOT shown here — the
+  // cost breakdown bar (below) already carries the total, so repeating it was redundant.
   const activity = state.orchestratorActivity;
   const story = activity?.story ?? state.stories.find((s) => s.active)?.id ?? null;
   const turns = state.agents.reduce((sum, a) => sum + a.turns, 0);
-  const cost = state.totalCost;
+  const storiesTotal = state.progress.storiesTotal;
   // The card carries the orchestrator's SLATE identity (its role colour), and turns PURPLE only when
   // it's WAITING on a human (an open gate/escalation). It pulses while active or waiting and goes
   // quiet once the run completes. `softpulse` glows in `currentColor`, so `accent` (set as the card
@@ -126,10 +127,10 @@ export function OrchestratorLane({ state }: { state: DashboardState }) {
       {story ? (
         <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--status-accent-text)", marginTop: 2 }}>▸ {story}</div>
       ) : null}
-      {/* RUN totals, summed across every agent – NOT the orchestrator's own (it is deterministic and
-          spends nothing). Labeled "run" so the number isn't misread as the orchestrator's cost. */}
+      {/* RUN scope: turns driven (summed across every agent — NOT the orchestrator's own, which is
+          zero) + the sprint's total story count. Cost lives in the cost bar below, not here. */}
       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-        run: {turns} turn{turns === 1 ? "" : "s"} · ${cost.toFixed(2)}
+        run: {turns} turn{turns === 1 ? "" : "s"} · {storiesTotal} stor{storiesTotal === 1 ? "y" : "ies"}
       </div>
 
       {/* The five HIL gates in lifecycle order, scoped to the current story. A gate that has been

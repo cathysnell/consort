@@ -12,7 +12,7 @@ import type { DashboardState, GateInfo } from "@/lib/types";
 //
 // Node lighting comes straight from lib/topology.ts:
 //   passed  → a phase this run has reached (green)
-//   active  → the phase the playhead is in (accent + glow, matching DesignLane's treatment)
+//   active  → the phase the playhead is in (accent + glow, the active-highlight treatment)
 //   dim     → not yet reached
 // Gate nodes additionally show approved/surfaced from the run's gate state.
 //
