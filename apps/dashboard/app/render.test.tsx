@@ -268,12 +268,12 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(
       <LaneGraph state={withTopology({ passedNodes: [], activeNode: null, laneCurrent: null })} />,
     );
-    expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
+    expect(markup).toContain("6/7 steps"); // design: 7 lightable (d-gate + d-hil excluded; d-breakdown is a new lightable step this pre-breakdown fixture doesn't light), 6 lit
     expect(markup).toContain("7/8 steps"); // build: 8 lightable (b-verify, an automated role-owned gate, still counts); lit 7
-    // Plan reads 2/5: p-intake, p-propose, p-size, p-req (the PO authoring turn), p-breakdown — the
-    // Backlog gate (p-backlog-gate) is a HUMAN gate, excluded from the ratio like intake/plan. This
+    // Plan reads 2/4: p-intake, p-propose, p-size, p-req (the PO authoring turn) — the Backlog gate is
+    // excluded (human gate), and breakdown is now a DESIGN-lane step (d-breakdown), not plan. This
     // pre-p-intake render-state snapshot lit only p-propose + p-size.
-    expect(markup).toContain("2/5 steps");
+    expect(markup).toContain("2/4 steps");
   });
 
   it("a gate's colour comes from the parked-gate focus, not its gate state", () => {
@@ -354,7 +354,7 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
     expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render even when empty
     expect(markup).toContain("not started");
-    expect(markup).toContain("0/5 steps"); // plan: 5 lightable steps (p-intake/propose/size/req/breakdown; the Backlog gate is a human gate, excluded), none reached
+    expect(markup).toContain("0/4 steps"); // plan: 4 lightable steps (p-intake/propose/size/req; Backlog gate excluded, breakdown moved to design), none reached
   });
 });
 

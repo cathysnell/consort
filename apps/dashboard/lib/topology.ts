@@ -105,7 +105,10 @@ export const PHASE_TO_NODE: Record<string, string> = {
   estimate: "plan",
   "estimate-committed": "plan",
   "author-requests": "plan",
-  breakdown: "plan",
+  // breakdown is a DESIGN-lane construct: the kit runs it per-feature at the design entry (after the
+  // plan gate), so it lights the design node + lane, not plan. Declared vs Kevin's Python (which
+  // routed it to plan) in topology.test's INTENTIONAL_DEVIATIONS.
+  breakdown: "design",
   feature: "plan",
   workflow: "plan",
   // design: spec-first, per story
@@ -300,18 +303,6 @@ const PLAN_LANE: Lane = {
       match: { role: "product-owner", phaseAny: ["author-requests", "feature"] },
     },
     {
-      // Dashboard-native step (declared in topology.test.ts ADDED_STEPS): Kevin's Python routes the
-      // `breakdown` phase to the Plan node (PHASE_TO_NODE.breakdown === "plan") but gave it no
-      // sub-step, so while the spec author breaks the committed features into stories the plan LANE
-      // lit but no STEP did. This makes breakdown light both the lane and a step, in lifecycle order
-      // (choose features → break them into stories → plan gate).
-      id: "p-breakdown",
-      role: "spec-author",
-      label: "Spec author",
-      sub: "backlog breakdown",
-      match: { role: "spec-author", phase: "breakdown" },
-    },
-    {
       id: "p-gate",
       role: null,
       label: "Plan gate",
@@ -326,8 +317,7 @@ const PLAN_LANE: Lane = {
     ["p-propose", "p-size"],
     ["p-size", "p-backlog-gate"],
     ["p-backlog-gate", "p-req"],
-    ["p-req", "p-breakdown"],
-    ["p-breakdown", "p-gate"],
+    ["p-req", "p-gate"],
   ] as const,
   // No raise-to-HIL: the escalate outcome fires only on a failed run, a build-level smell, or a
   // spec smell with its revise budget spent (step.ts route()) — all of which live in build/design,
@@ -339,6 +329,17 @@ const PLAN_LANE: Lane = {
 const DESIGN_LANE: Lane = {
   title: "Design lane  ·  spec-first (per story)",
   steps: [
+    {
+      // Breakdown is a DESIGN-lane construct: after the plan gate, the Spec Author breaks the
+      // committed feature into its stories as the ENTRY to design (the kit runs it per-feature via
+      // nextDesignAction, before the UX guide). Its own agent bubble — a spec-author turn that
+      // decomposes the feature into stories — sitting BEFORE the UX designer.
+      id: "d-breakdown",
+      role: "spec-author",
+      label: "Spec author",
+      sub: "break into stories",
+      match: { role: "spec-author", phase: "breakdown" },
+    },
     {
       id: "d-ux",
       role: "ux-designer",
@@ -388,6 +389,7 @@ const DESIGN_LANE: Lane = {
     },
   ],
   edges: [
+    ["d-breakdown", "d-ux"],
     ["d-ux", "d-spec"],
     ["d-spec", "d-arch"],
     ["d-arch", "d-dba"],

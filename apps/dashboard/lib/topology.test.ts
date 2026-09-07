@@ -575,6 +575,11 @@ const INTENTIONAL_DEVIATIONS: Record<string, { py: string | undefined; ts: strin
     ts: "intake",
     why: "dashboard-native: the metered Product Owner intake turn emits phase=intake; map it to the Intake lifecycle node so the current-sprint graph lights the Intake box while the PO drafts. Kevin's Python had no intake phase (intake was event-driven via intake.supplied, which lights the same node).",
   },
+  breakdown: {
+    py: "plan",
+    ts: "design",
+    why: "breakdown is a DESIGN-lane construct: the kit runs it per-feature at the design entry (after the plan gate, before the UX guide) via nextDesignAction, so it lights the design node + lane. Kevin's Python routed it to plan.",
+  },
   assess: {
     py: "plan",
     ts: "build",
@@ -654,10 +659,10 @@ const ADDED_STEPS: {
     why: "the Backlog gate — the HITL checkpoint AFTER the architect sizes the proposals and BEFORE the PO authors the requests: the human picks which sized features enter the sprint. A dashboard-native gate step Kevin's Python lacked; it lights purple from the run's backlog gate state (gate.surfaced(backlog)).",
   },
   {
-    lane: "plan",
-    step: "p-breakdown",
-    after: "p-req",
-    why: "breakdown (spec-author) breaks the committed features into stories — a real plan-lane phase (PHASE_TO_NODE.breakdown === 'plan') that Kevin's Python routed to the Plan node but gave no sub-step; adding it lets the plan lane AND a step light while the backlog is broken down.",
+    lane: "design",
+    step: "d-breakdown",
+    after: "", // "" = first step in the lane (no predecessor); breakdown is the design entry, before d-ux
+    why: "breakdown (spec-author) breaks the committed feature into stories as the ENTRY to design (the kit runs it per-feature via nextDesignAction, after the plan gate and before the UX guide). PHASE_TO_NODE.breakdown === 'design' routes it here; a dashboard-native design step Kevin's Python lacked, sitting first, before d-ux.",
   },
 ];
 
@@ -787,15 +792,31 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
 
       // Dashboard-native added steps are declared departures; filter them off the topology side so
       // the rest of the lane is compared to the fixture verbatim. Their own shape is proven below.
-      const added = new Set(ADDED_STEPS.filter((a) => a.lane === lane).map((a) => a.step));
+      const addedSteps = ADDED_STEPS.filter((a) => a.lane === lane);
+      const added = new Set(addedSteps.map((a) => a.step));
       const tsSteps = ts.steps.filter((s) => !added.has(s.id));
-      // Edges collapse through the added steps back to the fixture chain. The ported lanes are LINEAR
-      // (each edge joins consecutive steps), so with the added steps removed the fixture edges are
-      // exactly the consecutive pairs of the remaining steps – IN ORDER (robust to multiple added
-      // steps, unlike a filter-then-append which loses order). With no added steps this equals ts.edges.
-      const tsEdges = added.size
-        ? tsSteps.slice(0, -1).map((s, i) => [s.id, tsSteps[i + 1].id])
-        : ts.edges.map((e) => [...e]);
+      // Edges collapse through each added step back to the fixture chain — removing the step's in/out
+      // edges and reconnecting its neighbours (in.from → out.to), exactly like ADDED_NODES does for
+      // the spine. A FIRST-position added step (no in-edge, e.g. d-breakdown before d-ux) just drops
+      // its out-edge; a last-position one drops its in-edge. This uses the REAL edges, so a lane with
+      // an off-spine terminal (design's d-hil, reached by a backEdge, never a forward edge) collapses
+      // correctly — unlike a consecutive-pairs reconstruction, which would invent a d-gate→d-hil edge.
+      let tsEdges = ts.edges.map((e) => [...e] as string[]);
+      for (const a of addedSteps) {
+        const inIdx = tsEdges.findIndex((e) => e[1] === a.step);
+        const outIdx = tsEdges.findIndex((e) => e[0] === a.step);
+        if (inIdx >= 0 && outIdx >= 0) {
+          const collapsed = [tsEdges[inIdx][0], tsEdges[outIdx][1]];
+          const rm = new Set([tsEdges[inIdx], tsEdges[outIdx]]);
+          const at = inIdx;
+          tsEdges = tsEdges.filter((e) => !rm.has(e));
+          tsEdges.splice(at, 0, collapsed);
+        } else if (outIdx >= 0) {
+          tsEdges = tsEdges.filter((_, i) => i !== outIdx); // first step: drop its out-edge
+        } else if (inIdx >= 0) {
+          tsEdges = tsEdges.filter((_, i) => i !== inIdx); // last step: drop its in-edge
+        }
+      }
       expect(tsEdges).toEqual(py.edges);
 
       // Step order matters: it is the order the lane renders in.
@@ -873,11 +894,16 @@ describe("topology — data fidelity vs Kevin's Python WORKFLOW", () => {
       const py = PY.lanes[a.lane].steps.find((s) => s.id === a.step);
       const steps = WORKFLOW.lanes[a.lane].steps;
       const idx = steps.findIndex((s) => s.id === a.step);
-      const afterIdx = steps.findIndex((s) => s.id === a.after);
       expect(py, `${a.step} must be absent from the fixture`).toBeUndefined();
       expect(idx, `${a.step} must exist in topology`).toBeGreaterThanOrEqual(0);
-      expect(afterIdx, `${a.after} (predecessor of ${a.step}) must exist`).toBeGreaterThanOrEqual(0);
-      expect(idx, `${a.step} must sit directly after ${a.after}`).toBe(afterIdx + 1);
+      if (a.after === "") {
+        // "" = the added step is FIRST in the lane (no predecessor), e.g. d-breakdown before d-ux.
+        expect(idx, `${a.step} must sit FIRST in the lane`).toBe(0);
+      } else {
+        const afterIdx = steps.findIndex((s) => s.id === a.after);
+        expect(afterIdx, `${a.after} (predecessor of ${a.step}) must exist`).toBeGreaterThanOrEqual(0);
+        expect(idx, `${a.step} must sit directly after ${a.after}`).toBe(afterIdx + 1);
+      }
       const step = steps[idx];
       if (step.gate) {
         // A GATE step (null match) lights from gate state, not an event phase – so it has no phase to
