@@ -107,6 +107,40 @@ describe("topology — graph integrity", () => {
     }
   });
 
+  it("routes each gate to where its decision actually lives", () => {
+    const paths = (node: string) => (STEP_OUTPUTS[node] ?? []).map((s) => s.path);
+    // The feature gates.json holds { spec, plan, test_list, deploy, promote } — so those gates open it.
+    expect(paths("plangate")).toContain("features/<F>/gates.json");
+    expect(paths("specgate")).toContain("features/<F>/gates.json");
+    expect(paths("deploygate")).toContain("features/<F>/gates.json");
+    expect(paths("promgate")).toContain("features/<F>/gates.json");
+    // The intake gate's decision is NOT in that file (intake predates the feature): it opens the
+    // intake docs it reviews, not an intake-less gates.json.
+    expect(paths("intakegate")).toContain("product-overview.md");
+    expect(paths("intakegate")).not.toContain("features/<F>/gates.json");
+    // Acceptance is per-story in pipeline.json, NOT the feature gates.json.
+    expect(paths("acceptancegate")).toContain("features/<F>/pipeline.json");
+    expect(paths("acceptancegate")).not.toContain("features/<F>/gates.json");
+  });
+
+  it("surfaces the design lane's fuller output set (spec + test-list + project architecture canon)", () => {
+    const paths = STEP_OUTPUTS.design.map((s) => s.path);
+    // The test list is authored in design (test-strategist), and the project architecture canon is
+    // established here — both were previously missing from the design node.
+    expect(paths).toContain("features/<F>/test-list.md");
+    expect(paths).toContain("architecture/canon.json");
+    // The spec + test-list gate opens the spec and the test list, each in md + json form.
+    const spec = STEP_OUTPUTS.specgate.map((s) => s.path);
+    expect(spec).toEqual(
+      expect.arrayContaining([
+        "features/<F>/feature-spec.md",
+        "features/<F>/feature-spec.json",
+        "features/<F>/test-list.md",
+        "features/<F>/test-list.json",
+      ]),
+    );
+  });
+
   it("nodeById resolves declared nodes and rejects others", () => {
     expect(nodeById("build")?.label).toBe("Build lane");
     expect(nodeById("nope")).toBeNull();

@@ -169,12 +169,21 @@ export interface StepOutputSpec {
 /**
  * Which deliverables each lifecycle node produced, for the WorkflowGraph drill-down.
  *
- * Keyed by `WorkflowNode.id`. Paths mirror the Consort artifact layout (verified against the
- * stockflow-full corpus's `recorded-artifacts/`). A source lists only the entries that actually
- * exist on disk, so naming a file here that a given run didn't produce is harmless — it just
- * doesn't appear. Every lifecycle node has an entry so all of them are clickable: each GATE shows
- * its decision record (`features/<F>/gates.json`, the same file plan/spec/deploy gates already
- * open), and the terminal `shipped` shows the promoted sprint (as `promote` does).
+ * Keyed by `WorkflowNode.id`. Paths mirror the Consort artifact layout (verified against a full
+ * stockflow capture's `recorded-artifacts/`). A source lists only the entries that actually exist on
+ * disk, so naming a file here that a given run didn't produce is harmless — it just doesn't appear.
+ * Every lifecycle node has an entry so all of them are clickable.
+ *
+ * Gates open their DECISION record, but that lives in different files: the feature `gates.json` holds
+ * only { spec, plan, test_list, deploy, promote }, so the plan/spec/deploy/promote gates open it; the
+ * INTAKE gate (its decision predates the feature) opens the intake docs it reviews; and the
+ * ACCEPTANCE gate (per-story) opens `pipeline.json`, where each story's acceptance decision is
+ * recorded. The terminal `shipped` shows the promoted sprint (as `promote` does).
+ *
+ * KNOWN LIMITATION: per-story artifacts (story.json, test-list-per-story.json, reflect-verdict.json,
+ * per-story deploy-evidence.json, acs/*) can't be named here — a spec supports `<F>` but no `<S>`, and
+ * a bare `stories` dir-scan would flood + mix in build/deploy files. Surfacing them needs a per-story
+ * spec kind; the aggregate feature-level artifacts stand in for now.
  */
 export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
   intake: [
@@ -182,31 +191,58 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
     { path: "nfrs.md" },
     { path: "design/design-brief.md" },
   ],
-  // Gates open their decision record. gates.json is per-feature, so a gate clicked before any
-  // feature is committed (the intake gate) simply lists nothing until it exists.
-  intakegate: [{ path: "features/<F>/gates.json", perFeature: true }],
+  // The intake gate reviews the drafted intake — the feature gates.json has no `intake` key (intake
+  // precedes feature selection), so it opens the docs the human approves here.
+  intakegate: [
+    { path: "product-overview.md" },
+    { path: "nfrs.md" },
+    { path: "design/design-brief.md" },
+  ],
   plan: [
     { path: "planning/feature-proposals.md" },
     { path: "planning/estimates.json" },
     { path: "selection-log.md" },
+    // The Product Owner's authored request per committed feature (the author-requests plan step).
+    { path: "features/<F>/feature-request.md", perFeature: true },
   ],
   plangate: [{ path: "features/<F>/gates.json", perFeature: true }],
   design: [
     { path: "design/design-guide.md" },
+    { path: "design/design-guide.json" },
     { path: "design/ia.md" },
+    // Project architecture canon the first service-backed feature establishes in the design lane and
+    // later features conform to — authored here, surfaced nowhere else.
+    { path: "architecture/canon.json" },
+    { path: "architecture/conventions.json" },
     { path: "features/<F>/feature-spec.md", perFeature: true },
+    { path: "features/<F>/feature-spec.json", perFeature: true },
     { path: "features/<F>/architecture.md", perFeature: true },
+    { path: "features/<F>/architecture.json", perFeature: true },
     { path: "features/<F>/db-design.md", perFeature: true },
-  ],
-  specgate: [
+    { path: "features/<F>/db-design.json", perFeature: true },
+    // The Test Strategist authors the test list in the design lane (the spec gate then reviews it).
     { path: "features/<F>/test-list.md", perFeature: true },
+    { path: "features/<F>/test-list.json", perFeature: true },
+  ],
+  // The spec + test-list gate reviews the SPEC and the TEST LIST, so it opens both — each in its
+  // human (.md) and machine (.json) form — plus its decision record. feature-spec also appears under
+  // the design node (where it is authored); here it is what the gate is deciding on.
+  specgate: [
+    { path: "features/<F>/feature-spec.md", perFeature: true },
+    { path: "features/<F>/feature-spec.json", perFeature: true },
+    { path: "features/<F>/test-list.md", perFeature: true },
+    { path: "features/<F>/test-list.json", perFeature: true },
     { path: "features/<F>/gates.json", perFeature: true },
   ],
   build: [
     { path: "features/<F>/pipeline.json", perFeature: true },
     { path: "cycles/<F>", perFeature: true, dir: true },
+    // The bad-smell catalog the review/assess turns maintain (project-level).
+    { path: "smells.json" },
   ],
-  acceptancegate: [{ path: "features/<F>/gates.json", perFeature: true }],
+  // Acceptance is PER-STORY, recorded in pipeline.json (stories[].acceptance) — the feature
+  // gates.json has no `acceptance` key — so the acceptance gate opens pipeline.json.
+  acceptancegate: [{ path: "features/<F>/pipeline.json", perFeature: true }],
   deploy: [
     { path: "features/<F>/deploy-evidence.json", perFeature: true },
     { path: "deploy", dir: true },
