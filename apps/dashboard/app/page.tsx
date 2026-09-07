@@ -15,7 +15,9 @@ import type { DashboardState } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { latestTurnOrdinalForRole } from "@/lib/derive";
 
-type CostMode = "show" | "hide";
+// The usage UNIT shown for the run's compute: token counts (default) or dollar cost. Toggled by
+// the header "usage:" control; drives both the run-vitals metric and the per-agent contribution bar.
+type CostMode = "tokens" | "cost";
 
 export default function Home() {
   // `at` drives time travel: null follows the live edge, a number pins the fold there.
@@ -37,8 +39,7 @@ export default function Home() {
   const [pinned, setPinned] = useState<string | null>(null);
 
   const { state, connected, lastUpdatedAt } = usePolledState(1000, at, mode, pinned);
-  const [costMode, setCostMode] = useState<CostMode>("show");
-  const showCost = costMode === "show";
+  const [costMode, setCostMode] = useState<CostMode>("tokens");
   // The ONE open drill-down, if any. Null = closed. A tagged union over the three things a click
   // can open — a recorded turn (transcript + files), a live artifact (one file at HEAD), or a
   // lifecycle step's deliverables — so there is one open-state and one panel instead of three. All
@@ -190,26 +191,26 @@ export default function Home() {
           <DriftBanner correlation={state.source?.correlation ?? null} />
           {/* The scrum-master / orchestrator coordination status — its latest dispatch + recent gate
               activity — replacing the old fidelity ("not recording") banner. */}
-          <OrchestratorLane state={state} />
-
-          {/* Current test health (red vs green) + stories completed — the run's live state, kept at
-              the top (above the cost row). The redundant "· run complete / · in progress" run-state
-              label was dropped: that state is already on the orchestrator card + Current-sprint graph.
-              This bar's value is the current red/green tally + how many stories are done. */}
-          <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 16, marginBottom: 12 }}>
-            <BuildLane state={state} active={state.lane === "build"} complete={state.lane === "complete"} />
-            <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
-              <Metric label="Completed" value={`${state.progress.storiesDone}/${state.progress.storiesTotal}`} />
+          {/* Two-card row in a fixed 2-column space: the orchestrator (left) and the run vitals —
+              active tests + completed stories + turns (right). Grid stretch keeps both cards level. */}
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)", gap: 12, marginBottom: 12 }}>
+            <OrchestratorLane state={state} />
+            <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 16, justifyContent: "center" }}>
+              {/* Active tests (red vs green) — the run's live test health. */}
+              <BuildLane state={state} active={state.lane === "build"} complete={state.lane === "complete"} />
+              <div style={{ display: "flex", gap: 28, borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
+                <Metric label="Completed" value={`${state.progress.storiesDone}/${state.progress.storiesTotal}`} />
+                <Metric label="Turns" value={`${state.agents.reduce((sum, a) => sum + a.turns, 0)}`} />
+                {/* Compute usage next to turns: token count (default) or $ cost, per the usage toggle. */}
+                <Metric label={costMode === "cost" ? "Cost" : "Tokens"} value={costMode === "cost" ? `$${state.totalCost.toFixed(2)}` : fmtTokens(state.totalTokens)} />
+              </div>
             </div>
           </div>
 
-          {/* Cost breakdown, under the health bar — the per-agent contribution total (the orchestrator
-              card no longer repeats a cost figure). Gated by the cost toggle. */}
-          {showCost ? (
-            <div style={{ background: "var(--surface-card)", border: `1px solid var(--border-default)`, borderRadius: radius.card, padding: "12px 16px", marginBottom: 12 }}>
-              <CostBar state={state} />
-            </div>
-          ) : null}
+          {/* Per-agent contribution bar — tokens (default) or $ cost, matching the usage toggle. */}
+          <div style={{ background: "var(--surface-card)", border: `1px solid var(--border-default)`, borderRadius: radius.card, padding: "12px 16px", marginBottom: 12 }}>
+            <CostBar state={state} mode={costMode} />
+          </div>
 
           <SectionHeader>Current sprint</SectionHeader>
           {/* The lifecycle graph now carries the sprint's feature + current state in its own header
@@ -326,6 +327,7 @@ export default function Home() {
               atTimestamp={state.topology.atTimestamp}
               awaitingGate={state.focus.kind === "gate"}
               escalated={state.focus.kind === "escalation"}
+              replay={state.source?.mode === "replay"}
             />
           </div>
         </>
@@ -338,14 +340,28 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "var(--text-strong)" }}>Consort · Agent Radiator</h1>
+        <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "var(--text-strong)" }}>Consort · Delivery Radiator</h1>
         {/* No run loaded → no subtitle at all. The top-right feed dot already carries the
             connecting/running state, so a placeholder line here would just repeat it (and the old
             "waiting for a run…" wrongly read as a human-wait). It appears once a feature is known. */}
         {state?.feature ? (
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+            {/* Project name (basename of the watched dir) leads the subtitle, then the feature. */}
+            {(() => {
+              const proj = state.projectDir ? state.projectDir.replace(/\/+$/, "").split("/").pop() : null;
+              return proj ? <><strong>{proj}</strong>{" · "}</> : null;
+            })()}
             <strong>{state.feature}</strong> · phase: {state.phase ?? "—"}
-            {state.atLive ? null : ` · viewing event ${state.atEventIndex} of ${state.totalEventCount}`}
+            {/* Only a LIVE run at its newest event is "live"; a recorded run is never live (you're
+                reviewing it), so it always reads "viewing event N of M". */}
+            {state.atLive && state.source?.mode === "live" ? (
+              <>
+                {` · viewing event ${state.atEventIndex} · `}
+                <span style={{ color: "var(--status-good)", fontWeight: 700 }}>live</span>
+              </>
+            ) : (
+              ` · viewing event ${state.atEventIndex} of ${state.totalEventCount}`
+            )}
             {/* A divergent pin means the board is FILTERED to a feature the run has moved past.
                 Say so, in the run's own terms, so it can't be mistaken for a rewind — the
                 playhead is still where the transport shows it. */}
@@ -365,6 +381,8 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
             warning tint carries `note`, which is how a misconfigured CONSORT_CORPUS_DIR
             becomes visible instead of silently removing the replay option. */}
         {state?.source ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem" }}>
+          <span style={{ color: "var(--text-faint)" }}>event source:</span>
           <span
             title={`${state.source.describe}${state.source.note ? ` — ${state.source.note}` : ""}`}
             style={{
@@ -376,75 +394,41 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
               borderRadius: radius.chip,
             }}
           >
-            {(state.source.availableModes.length > 1 ? state.source.availableModes : [state.source.mode]).map((m) => {
-              const on = m === state.source!.mode;
-              // All three states read "LIVE: <state>" with a flashing dot in a state colour:
-              //   replay            = RECORDED  (amber)
-              //   live, actively recording = RECORDING (red) — an EXPLICIT record dir (env, not the
-              //     drive's auto `.consort/record` lane) AND the run still in progress (not complete).
-              //   live otherwise    = PLAYING   (green)
-              const recording = m === "live" && state!.source!.fidelity?.explicit === true && state!.lane !== "complete";
-              const label = m === "replay" ? "LIVE: RECORDED" : recording ? "LIVE: RECORDING" : "LIVE: PLAYING";
+            {/* The CURRENT event source only — a status, not a switcher. Showing the other mode (e.g.
+                "LIVE" on a recorded run) read as an offer to switch and was misleading. Flashing dot:
+                  LIVE (green) — a live run · RECORDING (red) — live + explicit record dir, in progress
+                  · RECORDED (amber) — replaying a recorded corpus. */}
+            {(() => {
+              const m = state.source.mode;
+              const recording = m === "live" && state.source.fidelity?.explicit === true && state.lane !== "complete";
+              const label = m === "replay" ? "RECORDED" : recording ? "RECORDING" : "LIVE";
               const dotColor = m === "replay" ? "var(--status-warning)" : recording ? "var(--status-critical)" : "var(--status-good)";
               return (
-                <button
-                  key={m}
-                  onClick={() => onMode(m)}
-                  disabled={state.source!.availableModes.length < 2}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: "0.66rem",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: on ? "var(--text-strong)" : "var(--text-faint)",
-                    background: on ? "var(--surface-card)" : "transparent",
-                    border: "none",
-                    borderRadius: radius.chip,
-                    padding: "2px 7px",
-                    cursor: state.source!.availableModes.length < 2 ? "default" : "pointer",
-                    font: "inherit",
-                  }}
-                >
-                  {/* Flashing state dot on the SELECTED mode only (the current state); the unselected
-                      toggle target carries none. */}
-                  {on ? (
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: dotColor,
-                        animation: "softpulse 1.6s ease-in-out infinite",
-                        flex: "none",
-                      }}
-                    />
-                  ) : null}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-strong)", background: "var(--surface-card)", borderRadius: radius.chip, padding: "2px 7px" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, animation: "softpulse 1.6s ease-in-out infinite", flex: "none" }} />
                   {label}
-                </button>
+                </span>
               );
-            })}
+            })()}
             {state.source.note ? <span style={{ fontSize: "0.66rem", padding: "2px 4px" }}>⚠</span> : null}
           </span>
+          </div>
         ) : null}
         {/* Feed health, meaningful only for a live run. In replay there is no feed to be stale, so
             the source toggle (REPLAY) is the honest signal and this dot is hidden. */}
         {state?.source?.mode === "replay" ? null : <ConnectionStatus connected={connected} lastUpdatedAt={lastUpdatedAt} />}
-        {/* "cost:" label + one toggle button whose label is the current STATE: "shown" while cost is
-            visible, "hidden" while not. Click flips it. "shown" is inverted (black fill = on); "hidden"
-            is a plain white chip — text-strong bg / surface-card text so the inversion holds in both
-            themes (light: black-on-white; dark: white-on-dark). minWidth stops it jiggling. */}
+        {/* "usage:" toggle — the unit for the run's compute: token counts (default) or $ cost. Click
+            flips it; "cost" is the inverted (filled) state — text-strong bg / surface-card text so it
+            holds in both themes. minWidth stops it jiggling as the word changes. */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
-          <span style={{ color: "var(--text-faint)" }}>cost:</span>
+          <span style={{ color: "var(--text-faint)" }}>usage:</span>
           <button
-            onClick={() => setCostMode(costMode === "show" ? "hide" : "show")}
-            title={costMode === "show" ? "Hide cost" : "Show cost"}
+            onClick={() => setCostMode(costMode === "cost" ? "tokens" : "cost")}
+            title={costMode === "cost" ? "Showing $ cost — click for token counts" : "Showing token counts — click for $ cost"}
             style={{
               border: `1px solid var(--border-default)`,
-              background: costMode === "show" ? "var(--text-strong)" : "var(--surface-card)",
-              color: costMode === "show" ? "var(--surface-card)" : "var(--text-muted)",
+              background: costMode === "cost" ? "var(--text-strong)" : "var(--surface-card)",
+              color: costMode === "cost" ? "var(--surface-card)" : "var(--text-muted)",
               borderRadius: 6,
               padding: "3px 8px",
               fontSize: "0.7rem",
@@ -452,7 +436,7 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
               minWidth: 52,
             }}
           >
-            {costMode === "show" ? "shown" : "hidden"}
+            {costMode === "cost" ? "cost" : "tokens"}
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem" }}>
@@ -547,16 +531,24 @@ function ConnectionStatus({ connected, lastUpdatedAt }: { connected: boolean; la
 // which lists the run's features and pins the board to one (a FILTER, not a seek). It lives there so
 // selection is reachable in every mode + right where the features are shown, instead of the header.
 
-function CostBar({ state }: { state: DashboardState }) {
-  const total = state.totalCost;
-  const contributors = state.agents.filter((a) => a.cost > 0).sort((a, b) => b.cost - a.cost);
+// Compact token count: 1_234_567 → "1.2M", 69_000 → "69k", 420 → "420".
+function fmtTokens(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}k`;
+  return String(n);
+}
+
+function CostBar({ state, mode }: { state: DashboardState; mode: CostMode }) {
+  // One value function drives the bar + legend in whichever unit is selected.
+  const val = (a: DashboardState["agents"][number]) => (mode === "cost" ? a.cost : a.tokens);
+  const fmt = (n: number) => (mode === "cost" ? `$${n.toFixed(2)}` : fmtTokens(n));
+  const total = mode === "cost" ? state.totalCost : state.totalTokens;
+  const contributors = state.agents.filter((a) => val(a) > 0).sort((a, b) => val(b) - val(a));
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: 6 }}>
-        <span style={{ color: "var(--text-strong)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-          Cost · <span style={{ fontVariantNumeric: "tabular-nums" }}>${total.toFixed(2)}</span>
-        </span>
-        <span style={{ color: "var(--text-faint)" }}>relative contribution by agent</span>
+      {/* Title on the LEFT (was a right-aligned caption); the total moved to the run-vitals card. */}
+      <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+        relative contribution by agent
       </div>
       <div style={{ display: "flex", height: 12, borderRadius: 6, background: "var(--surface-inset)", overflow: "hidden" }}>
         {total === 0
@@ -564,8 +556,8 @@ function CostBar({ state }: { state: DashboardState }) {
           : contributors.map((a) => (
               <div
                 key={a.role}
-                title={`${a.role}: $${a.cost.toFixed(2)} (${Math.round((a.cost / total) * 100)}%)`}
-                style={{ width: `${(a.cost / total) * 100}%`, height: "100%", background: colorForRole(a.role), transition: "width 0.5s ease" }}
+                title={`${a.role}: ${fmt(val(a))} (${Math.round((val(a) / total) * 100)}%)`}
+                style={{ width: `${(val(a) / total) * 100}%`, height: "100%", background: colorForRole(a.role), transition: "width 0.5s ease" }}
               />
             ))}
       </div>
@@ -574,7 +566,7 @@ function CostBar({ state }: { state: DashboardState }) {
         {contributors.map((a) => (
           <span key={a.role} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.64rem", color: "var(--text-muted)" }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: colorForRole(a.role) }} />
-            {a.role} ${a.cost.toFixed(2)}
+            {a.role} {fmt(val(a))}
           </span>
         ))}
       </div>
@@ -583,7 +575,7 @@ function CostBar({ state }: { state: DashboardState }) {
 }
 
 function BuildLane({ state, active, complete }: { state: DashboardState; active: boolean; complete?: boolean }) {
-  const { testTotal, testByStatus: t, testPct, testsHistorical } = state.progress;
+  const { testTotal, testByStatus: t, testPct, testsHistorical, testsUnavailable } = state.progress;
   const seg = (n: number, color: string, label: string) =>
     n > 0 ? <div title={`${label}: ${n}`} style={{ width: `${(n / testTotal) * 100}%`, height: "100%", background: color, transition: "width 0.5s ease" }} /> : null;
 
@@ -597,6 +589,14 @@ function BuildLane({ state, active, complete }: { state: DashboardState; active:
   // so an early playhead genuinely predates any test list.
   if (!testsHistorical) {
     const replay = state.source?.mode === "replay";
+    // Why the counts can't be shown here: a replay before its first snapshot; else (live) the view
+    // isn't at the live edge — either scrubbed back, or PINNED to a past feature (whose per-feature
+    // historical count the snapshot can't supply). Name the actual reason so it isn't mistaken.
+    const reason = replay
+      ? "no test list recorded yet at this point"
+      : state.pinnedFeature
+        ? "test counts unavailable while pinned to a past feature"
+        : "test counts unavailable when scrubbed back";
     return (
       <div style={{ opacity: 0.75 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: 6, gap: 12 }}>
@@ -608,10 +608,12 @@ function BuildLane({ state, active, complete }: { state: DashboardState; active:
             title={
               replay
                 ? "This corpus snapshots test-list.json inside individual turns, so counts rewind — but only from the first snapshot onward. The playhead is before any test list existed."
-                : "Test counts come from `lk lakebase-feature-status`, which reports only the current state. The event log doesn't record the full test list, so there is no historical count for this point in the run."
+                : state.pinnedFeature
+                  ? "The test counts come from a single snapshot of the run's active feature, not per-feature — so they can't be shown for a pinned past feature. Follow the run (clear the pin) to see them."
+                  : "Test counts come from `lk lakebase-feature-status`, which reports only the current state. The event log doesn't record the full test list, so there is no historical count for this point in the run."
             }
           >
-            {replay ? "no test list recorded yet at this point" : "test counts unavailable when scrubbed back"}
+            {reason}
           </span>
         </div>
         <div
@@ -620,6 +622,40 @@ function BuildLane({ state, active, complete }: { state: DashboardState; active:
             borderRadius: 6,
             background: `repeating-linear-gradient(45deg, var(--surface-inset), var(--surface-inset) 5px, var(--surface-card) 5px, var(--surface-card) 10px)`,
             border: `1px dashed var(--border-default)`,
+          }}
+        />
+      </div>
+    );
+  }
+
+  // The view CAN show counts (live edge / historical snapshot, no divergent pin) but the source gave
+  // none: live, the feature-status CLI (`./scripts/lk lakebase-feature-status`) hasn't answered or
+  // errored — say so, rather than an empty bar that looks like a zero-test feature.
+  if (testsUnavailable) {
+    const replay = state.source?.mode === "replay";
+    return (
+      <div style={{ opacity: 0.85 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", marginBottom: 6, gap: 12 }}>
+          <span style={{ color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+            Tests
+          </span>
+          <span
+            style={{ color: "var(--status-warning-text)" }}
+            title={
+              replay
+                ? "The recorded snapshot at this point carries no test-list."
+                : "No test list from the feature-status CLI. `./scripts/lk lakebase-feature-status <feature> --json` (run from the watched project dir) returned nothing — it may be missing, not authenticated to Lakebase, still starting up, or the feature has no test list yet. The event log alone can't supply the counts."
+            }
+          >
+            {replay ? "no test list in this snapshot" : "unavailable — feature-status not responding"}
+          </span>
+        </div>
+        <div
+          style={{
+            height: 12,
+            borderRadius: 6,
+            background: `repeating-linear-gradient(45deg, var(--status-warning-tint), var(--status-warning-tint) 5px, var(--surface-card) 5px, var(--surface-card) 10px)`,
+            border: `1px dashed var(--status-warning-soft)`,
           }}
         />
       </div>

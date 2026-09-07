@@ -30,6 +30,7 @@ export interface AgentState {
   story: string | null;
   model: string | null;
   cost: number; // cumulative USD across turns
+  tokens: number; // cumulative tokens across turns (input + output + cache read + cache creation)
   turns: number;
   lastTs: string | null;
   issues: AgentIssue[];
@@ -371,6 +372,11 @@ export interface DashboardState {
     // had a cycle.* event — 4 of 29 in the stockflow run). There is no honest historical
     // number, so the UI must omit the bar rather than show a current or zeroed one.
     testsHistorical: boolean;
+    // True when the view COULD show counts (live edge / historical snapshot, no divergent pin) but
+    // the source supplied no test_list — live, the feature-status CLI hasn't answered or errored.
+    // Distinct from a genuine zero-test feature (test_list present, total 0), so the bar can say
+    // "unavailable" rather than "0 / not started".
+    testsUnavailable: boolean;
   };
   designPhases: DesignPhase[]; // the propose→…→reflect lane
   stories: StoryProgress[]; // per-story lifecycle for the sub-progress row
@@ -401,6 +407,7 @@ export interface DashboardState {
   focus: Focus;
   lane: "plan" | "design" | "build" | "complete"; // which top bar to emphasize ("plan" = intake/planning, before design starts)
   totalCost: number;
+  totalTokens: number;
   eventCount: number;
   recentEvents: AgentLogEvent[]; // tail, newest last
   generatedAt: string;

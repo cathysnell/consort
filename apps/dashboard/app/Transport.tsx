@@ -28,6 +28,9 @@ export interface TransportProps {
   // gate-purple, which is a normal checkpoint, NOT an alarm.
   awaitingGate?: boolean;
   escalated?: boolean;
+  // A recorded run is always being REVIEWED (never live/running/waiting on you), so the state
+  // readout stays "REVIEWING" at every playhead — the RUNNING/RAISED/WAITING states are live-run only.
+  replay?: boolean;
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 5, 20] as const;
@@ -46,6 +49,7 @@ export function Transport({
   atTimestamp,
   awaitingGate = false,
   escalated = false,
+  replay = false,
 }: TransportProps) {
   const live = at === null;
   const pos = live ? total : Math.max(0, Math.min(at, total));
@@ -82,7 +86,10 @@ export function Transport({
   return (
     <div
       style={{
-        background: "var(--surface-card)",
+        // The inner panel takes the LANE BODY colour (surface-panel — where the nodes live), not the
+        // header/card surface, so the transport reads as part of the board's body. The outer play
+        // band (page.tsx) stays surface-card, giving the same body-in-card nesting as a lane panel.
+        background: "var(--surface-panel)",
         border: `1px solid var(--border-default)`,
         borderRadius: radius.card,
         padding: "10px 14px",
@@ -139,10 +146,10 @@ export function Transport({
         <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: font.mono, color: "var(--text-faint)" }}>
           {atTimestamp ? atTimestamp.slice(11, 19) : "--:--:--"}
         </span>
-        {!live ? (
-          // Scrubbed back / not following the newest event. NOT "PAUSED" — that read as the RUN
-          // being paused; the run keeps going, you're just reviewing an earlier point ("viewing event
-          // X of Y" in the header). Jump-to-end (⏭) returns to live.
+        {replay || !live ? (
+          // REVIEWING = you're reviewing history, not following a live edge. A recorded run is ALWAYS
+          // this (nothing is running / waiting on you now); a live run shows it when scrubbed back.
+          // NOT "PAUSED" — that read as the run being paused. Jump-to-end (⏭) returns to the edge.
           <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>REVIEWING</span>
         ) : escalated ? (
           // A problem was raised to a human (red) — corresponds with the raised-to-HIL state

@@ -445,6 +445,16 @@ describe("render — Transport", () => {
     expect(markup).toMatchSnapshot();
   });
 
+  it("a recorded run is always REVIEWING — even at the newest event (never RUNNING/RAISED/WAITING)", () => {
+    const markup = renderToStaticMarkup(
+      <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} escalated awaitingGate replay />,
+    );
+    expect(markup).toContain("REVIEWING");
+    expect(markup).not.toContain("RUNNING");
+    expect(markup).not.toContain("RAISED");
+    expect(markup).not.toContain("WAITING");
+  });
+
   it("shows RAISED (red) at the newest event when a problem is escalated to a human", () => {
     const markup = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} escalated />,

@@ -528,10 +528,10 @@ export function gatesFromLog(events: AgentLogEvent[], feature?: string): GateInf
   return [...state.entries()].map(([name, status]) => ({ name, status }));
 }
 
-export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; onDeck: string | null; totalCost: number; runEnded: boolean } {
+export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; onDeck: string | null; totalCost: number; totalTokens: number; runEnded: boolean } {
   const agents: Record<string, AgentState> = {};
   for (const r of ROLES) {
-    agents[r] = { role: r, status: "idle", work: null, phase: null, story: null, model: null, cost: 0, turns: 0, lastTs: null, issues: [], turnStartTs: null, sessionActive: null };
+    agents[r] = { role: r, status: "idle", work: null, phase: null, story: null, model: null, cost: 0, tokens: 0, turns: 0, lastTs: null, issues: [], turnStartTs: null, sessionActive: null };
   }
   const openTurns: Record<string, boolean> = {};
   let onDeck: string | null = null;
@@ -649,6 +649,14 @@ export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; o
       a.turnStartTs = null; // turn closed — no longer an open, in-progress turn
       if (e.event === "turn.usage") {
         a.cost += Number(md.cost_usd || 0);
+        // Total tokens processed this turn = prompt + completion + both cache classes. Summed per
+        // agent so the run-vitals card + contribution bar can report token counts (the default) as
+        // well as dollar cost.
+        a.tokens +=
+          Number(md.input_tokens || 0) +
+          Number(md.output_tokens || 0) +
+          Number(md.cache_read_tokens || 0) +
+          Number(md.cache_creation_tokens || 0);
         a.turns += 1;
       }
     }
@@ -674,8 +682,9 @@ export function reduceAgents(events: AgentLogEvent[]): { agents: AgentState[]; o
   }
 
   const totalCost = Object.values(agents).reduce((s, a) => s + a.cost, 0);
+  const totalTokens = Object.values(agents).reduce((s, a) => s + a.tokens, 0);
   // runEnded is exported because it is the log's own statement that the workflow finished —
   // more trustworthy than a `derived_phase` snapshot, which can sit at "build" indefinitely
   // after the run is over (it does in the stockflow run).
-  return { agents: Object.values(agents), onDeck, totalCost, runEnded };
+  return { agents: Object.values(agents), onDeck, totalCost, totalTokens, runEnded };
 }

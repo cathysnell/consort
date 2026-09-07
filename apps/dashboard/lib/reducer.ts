@@ -144,6 +144,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
       story: null,
       model: null,
       cost: 0,
+      tokens: 0,
       turns: 0,
       lastTs: null,
       issues: [],
@@ -161,6 +162,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
       storiesDone: 0,
       testByStatus: { pending: 0, red: 0, green: 0, refactored: 0, skipped: 0 },
       testsHistorical: true,
+      testsUnavailable: false,
     },
     designPhases: DESIGN_PHASE_NAMES.map((name) => ({
       name,
@@ -175,6 +177,7 @@ export function emptyState(projectDir: string, generatedAt: string): DashboardSt
     laneStepMeta: {},
     lane: "plan" as const, // empty/fresh run is at the start (plan), not design
     totalCost: 0,
+    totalTokens: 0,
     eventCount: 0,
     recentEvents: [],
     generatedAt,
@@ -348,7 +351,7 @@ export function fold(
   // it to a pinned past feature would make one number silently mean something different from the
   // same number unpinned. Gates, blockers, stories, topology and the test bar ARE scoped, because
   // those describe a feature's state; agents/cost describe the run around it.
-  const { agents, totalCost, runEnded } = reduceAgents(slice);
+  const { agents, totalCost, totalTokens, runEnded } = reduceAgents(slice);
 
   // Liveness for working agents. Only meaningful at the live edge: mid-run history is not
   // "active now", so a scrubbed-back board leaves sessionActive null rather than claiming
@@ -519,8 +522,15 @@ export function fold(
   const statusHistorical = snap.statusIsHistorical === true;
   const testsUsable = (atLive || statusHistorical) && pinnedDivergent === null;
   const testsHistorical = testsUsable;
-  const testTotal = testsUsable ? status?.test_list?.total ?? 0 : 0;
-  const byStatus = testsUsable ? status?.test_list?.by_status ?? {} : {};
+  const testList = testsUsable ? status?.test_list ?? null : null;
+  // The view CAN show counts (live edge / historical snapshot, no divergent pin) but the SOURCE
+  // supplied none: live, that means the feature-status CLI hasn't answered / errored (it is shelled
+  // fire-and-forget and returns null until it lands, or on a missing `scripts/lk` / auth failure) —
+  // NOT a genuine zero-test feature. Flagged so the bar can say "unavailable" instead of "0 / not
+  // started", which read identically before and hid a broken CLI as an empty result.
+  const testsUnavailable = testsUsable && testList == null;
+  const testTotal = testList?.total ?? 0;
+  const byStatus = testList?.by_status ?? {};
   const testByStatus = {
     pending: byStatus.pending ?? 0,
     red: byStatus.red ?? 0,
@@ -531,7 +541,7 @@ export function fold(
   const testDone = testByStatus.green + testByStatus.refactored;
   const testPct = !testsUsable
     ? 0
-    : status?.test_list?.completion_pct ?? (testTotal ? Math.round((testDone / testTotal) * 100) : 0);
+    : testList?.completion_pct ?? (testTotal ? Math.round((testDone / testTotal) * 100) : 0);
   const storiesDone = stories.filter((s) => s.status === "done").length;
 
   // --- lane / phase ---
@@ -612,6 +622,7 @@ export function fold(
       storiesTotal: stories.length,
       storiesDone,
       testsHistorical,
+      testsUnavailable,
       testByStatus,
     },
     // `lane` is what tells computeDesignPhases to mark every phase complete. At the live
@@ -630,6 +641,7 @@ export function fold(
     laneStepMeta: laneStepMeta(slice),
     lane,
     totalCost,
+    totalTokens,
     eventCount: slice.length,
     recentEvents: slice.slice(-RECENT_EVENT_TAIL),
     atEventIndex: at,
