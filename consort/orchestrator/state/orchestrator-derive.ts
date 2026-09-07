@@ -76,6 +76,12 @@ export interface StoryArtifactProbe {
    *  superseded-tests.json), the permissive re-green not yet consumed, or null
    *  (drives the labeled Driver green-superseded turn). */
   greenSupersededFailureAc(story: string): string | null;
+  /** The open AC the Navigator assessed as a SPEC-DEFECT (the test/NFR itself is wrong —
+   *  unrealistic/unsatisfiable/flaky, not a code regression), or null. Drives a raise-to-hil
+   *  recommending the design-lane re-author (reopen-story --from <role>), NOT a Driver repair. */
+  specDefectAc(story: string): string | null;
+  /** The design role a spec-defect recommends re-authoring (the test-list owner by default). */
+  specDefectFromRole(story: string): string;
   /** The story's deploy verified (reachable + verify.passed on its experiment
    *  branch): the teeth on acceptance (features/<F>/stories/<S>/deploy-evidence.json). */
   storyDeployVerified(story: string): boolean;
@@ -213,6 +219,8 @@ function storyView(
       assessGreenAc: probe.assessGreenFailureAc(id),
       repairRegressionAc: probe.repairRegressionFixAc(id),
       greenSupersededAc: probe.greenSupersededFailureAc(id),
+      specDefectAc: probe.specDefectAc(id),
+      specDefectFromRole: probe.specDefectFromRole(id),
       awaitingAcceptance: e.status === "awaiting-acceptance",
       deployVerified: probe.storyDeployVerified(id),
       deployVerifyAssessEligible: probe.deployVerifyAssessEligible(id),

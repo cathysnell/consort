@@ -67,6 +67,11 @@ interface Args {
   diagnosis?: string;
   /** assess-regression: the repair directive when the regression is driver-fixable. */
   fixDirective?: string;
+  /** assess-regression --spec-defect: the failing test/NFR is itself wrong (not the code) — routes a
+   *  design-lane reopen recommendation, not a Driver repair. */
+  specDefect?: boolean;
+  /** assess-regression --from <role>: the design role a spec-defect recommends re-authoring. */
+  fromRole?: string;
   /** green: this green is the Driver's bounded REPAIR re-verify (consume the attempt). */
   repair?: boolean;
 }
@@ -84,6 +89,8 @@ function parse(argv: string[]): Args {
       case "--reason": out.reason = argv[++i]; break;
       case "--diagnosis": out.diagnosis = argv[++i]; break;
       case "--fix": out.fixDirective = argv[++i]; break;
+      case "--spec-defect": out.specDefect = true; break;
+      case "--from": out.fromRole = argv[++i]; break;
       case "--repair": out.repair = true; break;
       case "--batch-cap": {
         const n = Number(argv[++i]);
@@ -215,6 +222,19 @@ async function main(): Promise<number> {
       // driver-fixable and assess-green will escalate carrying the diagnosis.
       if (!a.ac) return usage("assess-regression: --ac is required.");
       if (!a.diagnosis) return usage("assess-regression: --diagnosis is required.");
+      // --spec-defect: the failing TEST/NFR is itself wrong (unrealistic/unsatisfiable/flaky), not the
+      // code. Record it as a spec-defect (NOT a fixDirective) so the drive routes a raise-to-hil
+      // recommending the design-lane reopen (--from <role>, default test-strategist), never a repair.
+      if (a.specDefect) {
+        writeRegressionAssessment(consortDir, a.feature, a.story, a.ac, {
+          diagnosis: a.diagnosis,
+          specDefect: { ...(a.fromRole ? { fromRole: a.fromRole } : {}), reason: a.diagnosis },
+        });
+        process.stdout.write(
+          `cycle: SPEC-DEFECT assessed for ${a.story}/${a.ac} (test/NFR is wrong, not the code); design-lane reopen recommended (--from ${a.fromRole ?? "test-strategist"})\n`,
+        );
+        return 0;
+      }
       writeRegressionAssessment(consortDir, a.feature, a.story, a.ac, {
         diagnosis: a.diagnosis,
         ...(a.fixDirective ? { fixDirective: a.fixDirective } : {}),
@@ -266,6 +286,12 @@ async function main(): Promise<number> {
         // Driver-fixable regression: a bounded Driver repair turn is routed next
         // (the orchestration sees the fixDirective on the marker). No escalation.
         process.stdout.write(`cycle: assessed ${a.story}/${ac} -> driver-fixable regression; routing Driver repair: ${regression.diagnosis}\n`);
+      } else if (regression?.specDefect) {
+        // SPEC-DEFECT: the test/NFR is wrong (unrealistic/unsatisfiable/flaky), not the code. Do NOT
+        // write a driver-green regression escalation — the green-failure now carries `specDefect`, so
+        // the drive routes a raise-to-hil recommending the design-lane reopen (--from <role>) itself.
+        const scope = regression.specDefect.fromRole ?? "test-strategist";
+        process.stdout.write(`cycle: assessed ${a.story}/${ac} -> SPEC-DEFECT (test/NFR is wrong, not the code); design-lane reopen recommended (--from ${scope}): ${regression.diagnosis}\n`);
       } else {
         const why = regression?.diagnosis ?? gf?.summary ?? "";
         writeEscalation(consortDir, {

@@ -42,6 +42,8 @@ function fakeProbe(facts: Record<string, Partial<Record<keyof StoryArtifactProbe
     assessGreenFailureAc: () => null,
     repairRegressionFixAc: () => null,
     greenSupersededFailureAc: () => null,
+    specDefectAc: () => null,
+    specDefectFromRole: () => "test-strategist",
     // No blocking escalation by default (raise-to-hil routing tested separately).
     pendingEscalation: () => null,
     // Stale-experiment guardrail: these derive tests don't exercise a design change,
@@ -270,6 +272,32 @@ describe("deriveDriveState + nextTransition: realistic on-disk situations", () =
     const probe = { ...fakeProbe({ S1: { testsWritten: true } }), repairRegressionFixAc: (s: string) => (s === "S1" ? "AC1" : null) };
     const state = deriveDriveState(p, probe, FEATURE);
     expect(nextTransition(state)).toEqual({ kind: "invoke-role", role: "driver", story: "S1", buildMode: "repair", ac: "AC1" });
+  });
+
+  it("build lane: a Navigator-assessed SPEC-DEFECT routes a raise-to-hil recommending the design-lane reopen, NOT a Driver repair", () => {
+    const p = pipeline(
+      {
+        S1: {
+          status: "building",
+          gate: { status: "approved", history: [] },
+          experiment: { slug: "e", branch: "exp/s1", parent: "feat", n: 1, status: "active" },
+        },
+      },
+      { build_active: "S1" },
+    );
+    // The failing test is wrong (unrealistic/flaky), not the code: the probe surfaces the AC via
+    // specDefectAc + the recommended re-author role. The drive must NOT route a Driver repair; it
+    // surfaces a raise-to-hil recommending the proportionate build->design go-back.
+    const probe = {
+      ...fakeProbe({ S1: { testsWritten: true } }),
+      specDefectAc: (s: string) => (s === "S1" ? "AC1" : null),
+      specDefectFromRole: () => "test-strategist",
+    };
+    const state = deriveDriveState(p, probe, FEATURE);
+    const action = nextTransition(state);
+    expect(action.kind).toBe("raise-to-hil");
+    expect((action as { source: string }).source).toBe("spec-defect");
+    expect((action as { reason: string }).reason).toMatch(/reopen-story --from test-strategist/);
   });
 
   it("deploy-verify contamination (eligible marker) routes the Navigator ASSESS-DEPLOY turn before re-deploying", () => {

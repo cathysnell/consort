@@ -197,6 +197,14 @@ export interface GreenFailure {
    *  one turn, e.g. deletes an orphan module + dedups one block but leaves another),
    *  escalating to the HIL only when a verify still fails after the last round. */
   fixAttempts?: number;
+  /** Set when the Navigator assessed the failure as a SPEC-DEFECT: the failing TEST (or the NFR it
+   *  realizes) is itself wrong — unrealistic, unsatisfiable, or FLAKY (a methodology defect), not a
+   *  code regression the Driver can fix. There is no fixDirective and no supersession, so it would
+   *  otherwise fall through to a bare escalation; this carries the design-lane RECOMMENDATION instead:
+   *  which role should re-author (`fromRole`, default the test-strategist) + the reason. The drive
+   *  routes it to a raise-to-hil that offers `consort-reopen-story --from <fromRole>` (the proportionate
+   *  build->design go-back), NOT a Driver repair — the code can't fix a test that is wrong. */
+  specDefect?: { fromRole?: string; reason?: string };
 }
 
 /** Bound on assess->repair self-heal rounds for one GREEN-verify failure before
@@ -280,6 +288,36 @@ export function hasPendingRegressionFix(
   return gf !== undefined && gf.assessed === true && typeof gf.fixDirective === "string" && gf.fixDirective.length > 0 && gf.repairAttempted !== true;
 }
 
+/**
+ * The Navigator assessed the failure as a SPEC-DEFECT: the failing test (or its NFR) is itself
+ * wrong — unrealistic, unsatisfiable, or flaky — not a code regression. Routes a raise-to-hil that
+ * recommends the proportionate build->design go-back (`reopen-story --from <fromRole>`), NOT a Driver
+ * repair. Distinct from hasPendingRegressionFix (no fixDirective) and hasPendingSupersession (no
+ * superseded-tests): the code cannot fix a test that is wrong, so the design lane must re-author it.
+ */
+export function hasPendingSpecDefect(
+  tdd: string,
+  feature: string,
+  story: string,
+  ac: string,
+): boolean {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf !== undefined && gf.assessed === true && gf.specDefect !== undefined;
+}
+
+/** The recommended design-lane re-author scope for a spec-defect (the role whose artifact is wrong),
+ *  defaulting to the test-strategist (the test-list owner). Read by the drive to build the reopen
+ *  recommendation surfaced at the HIL. */
+export function specDefectFromRole(
+  tdd: string,
+  feature: string,
+  story: string,
+  ac: string,
+): string {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf?.specDefect?.fromRole ?? "test-strategist";
+}
+
 /** Mark the regression-fix as attempted for the current round + count the round
  *  toward the self-heal cap. */
 export function markRegressionFixAttempted(
@@ -311,7 +349,7 @@ export function regressionFixExhausted(gf: GreenFailure): boolean {
  *  unbounded. Pure + unit-tested so the preservation can't silently regress. */
 export function composeAssessedGreenFailure(
   prior: GreenFailure | undefined,
-  regression?: { diagnosis?: string; fixDirective?: string },
+  regression?: { diagnosis?: string; fixDirective?: string; specDefect?: { fromRole?: string; reason?: string } },
 ): GreenFailure {
   return {
     assessed: true,
@@ -319,6 +357,7 @@ export function composeAssessedGreenFailure(
     ...(prior?.fixAttempts !== undefined ? { fixAttempts: prior.fixAttempts } : {}),
     ...(regression?.diagnosis ? { diagnosis: regression.diagnosis } : {}),
     ...(regression?.fixDirective ? { fixDirective: regression.fixDirective } : {}),
+    ...(regression?.specDefect ? { specDefect: regression.specDefect } : {}),
   };
 }
 
@@ -382,6 +421,11 @@ export interface RegressionAssessment {
   diagnosis: string;
   /** When the Driver can fix it: what to change. Absent => not driver-fixable. */
   fixDirective?: string;
+  /** When the failure is a SPEC-DEFECT (the test/NFR is wrong — unrealistic/unsatisfiable/flaky —
+   *  not a code regression): the design-lane re-author scope. Presence routes a raise-to-hil
+   *  recommending `reopen-story --from <fromRole>` (default the test-strategist), NOT a Driver repair.
+   *  Mutually exclusive with fixDirective in practice (a test that is wrong is not driver-fixable). */
+  specDefect?: { fromRole?: string; reason?: string };
 }
 
 export function regressionAssessmentJson(
@@ -429,6 +473,25 @@ export function readRegressionAssessment(
           : typeof raw.fix === "string" && raw.fix.length > 0
             ? raw.fix
             : undefined;
+      // SPEC-DEFECT (the test/NFR is wrong, not the code). Accept a `specDefect` object OR the
+      // agent-natural `classification: "spec-defect"` (+ optional fromRole/from_role + reason). A
+      // spec-defect is NOT driver-fixable, so it takes precedence over any stray fixDirective.
+      const sd = raw.specDefect as { fromRole?: unknown; reason?: unknown } | undefined;
+      const isSpecDefect = (sd !== undefined && sd !== null) || raw.classification === "spec-defect";
+      let specDefect: { fromRole?: string; reason?: string } | undefined;
+      if (isSpecDefect) {
+        const fromRole =
+          (typeof sd?.fromRole === "string" && sd.fromRole) ||
+          (typeof raw.fromRole === "string" && raw.fromRole) ||
+          (typeof raw.from_role === "string" && raw.from_role) ||
+          undefined;
+        const reason =
+          (typeof sd?.reason === "string" && sd.reason) ||
+          (typeof raw.reason === "string" && raw.reason) ||
+          undefined;
+        specDefect = { ...(fromRole ? { fromRole } : {}), ...(reason ? { reason } : {}) };
+      }
+      if (specDefect) return { diagnosis, specDefect };
       return { diagnosis, ...(fixDirective ? { fixDirective } : {}) };
     } catch {
       /* try the next candidate */

@@ -20,7 +20,7 @@ import {
   reviewPending,
   refactorPending,
 } from "../../pipeline/cycle-record.js";
-import { needsGreenAssess, hasPendingRegressionFix, hasPendingSupersession } from "../../smells/supersession.js";
+import { needsGreenAssess, hasPendingRegressionFix, hasPendingSupersession, hasPendingSpecDefect, specDefectFromRole } from "../../smells/supersession.js";
 import { driverPhaseForTdd, type StoryArtifactProbe, type DriveContext } from "./orchestrator-derive.js";
 import { storyDesignFingerprint } from "../../pipeline/design-fingerprint.js";
 import type { DriveEscalation } from "../workflow/workflow-vocabulary.js";
@@ -411,6 +411,30 @@ export function diskArtifactProbe(
       }
       if (!acId) return null;
       return hasPendingSupersession(consortDir, featureId, story, acId) ? acId : null;
+    },
+
+    specDefectAc(story) {
+      // The open RED cycle's AC, when the Navigator assessed its green-failure as a SPEC-DEFECT
+      // (the test/NFR itself is wrong — unrealistic/unsatisfiable/flaky, not a code regression).
+      // Routes a raise-to-hil recommending the design-lane re-author, NOT a Driver repair.
+      let acId: string | undefined;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = undefined;
+      }
+      if (!acId) return null;
+      return hasPendingSpecDefect(consortDir, featureId, story, acId) ? acId : null;
+    },
+
+    specDefectFromRole(story) {
+      let acId: string | undefined;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = undefined;
+      }
+      return acId ? specDefectFromRole(consortDir, featureId, story, acId) : "test-strategist";
     },
 
     storyDeployVerified(story) {

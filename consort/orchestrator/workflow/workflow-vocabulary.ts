@@ -146,6 +146,13 @@ export interface StoryBuild {
    *  detour never re-dispatches (symmetric to repair). An un-labeled re-green records
    *  bare and reads as a spurious extra `green` in the kept replay shape. */
   greenSupersededAc?: string | null;
+  /** An AC whose green-failure the Navigator assessed as a SPEC-DEFECT: the failing TEST (or the
+   *  NFR it realizes) is itself wrong — unrealistic, unsatisfiable, or FLAKY — not a code regression.
+   *  Drives a raise-to-hil recommending the proportionate build->design go-back (`reopen-story --from
+   *  <specDefectFromRole>`), NOT a Driver repair. The code cannot fix a test that is wrong. */
+  specDefectAc?: string | null;
+  /** The design role a spec-defect recommends re-authoring (the test-list owner by default). */
+  specDefectFromRole?: string;
   /** The built story was deployed for the PO's acceptance review. */
   awaitingAcceptance: boolean;
   /** The story's deploy verified (reachable + verify.passed on its experiment

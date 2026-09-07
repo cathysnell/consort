@@ -20,6 +20,8 @@ import {
   hasPendingRegressionFix,
   markRegressionFixAttempted,
   composeAssessedGreenFailure,
+  hasPendingSpecDefect,
+  specDefectFromRole,
   MAX_REGRESSION_FIX_ATTEMPTS,
 } from "../../consort/smells/supersession.js";
 import { isBuildRefactorRoutableSmell, SMELL_CATALOG } from "../../consort/smells/smells.js";
@@ -207,6 +209,37 @@ describe("regression assessment + driver-fix handoff", () => {
     // assessed but NO fixDirective (not driver-fixable) -> not pending (escalates instead)
     writeGreenFailure(tdd, F, S, AC, { assessed: true, summary: "x", diagnosis: "why" });
     expect(hasPendingRegressionFix(tdd, F, S, AC)).toBe(false);
+  });
+
+  it("hasPendingSpecDefect is true only for an ASSESSED spec-defect; carries the re-author scope", () => {
+    // A spec-defect assessment: the test/NFR is wrong (not the code). No fixDirective, no supersession.
+    // not assessed yet -> not pending
+    writeGreenFailure(tdd, F, S, AC, { assessed: false, summary: "x", specDefect: { fromRole: "test-strategist", reason: "flaky p95" } });
+    expect(hasPendingSpecDefect(tdd, F, S, AC)).toBe(false);
+    // assessed + specDefect -> pending (routes the raise-to-hil design-lane reopen)
+    writeGreenFailure(tdd, F, S, AC, { assessed: true, summary: "x", specDefect: { fromRole: "test-strategist", reason: "p95 measures cold remote round-trips" } });
+    expect(hasPendingSpecDefect(tdd, F, S, AC)).toBe(true);
+    // it is NOT a driver-fixable regression (no fixDirective) — so repair is NOT routed
+    expect(hasPendingRegressionFix(tdd, F, S, AC)).toBe(false);
+    // the recommended re-author scope is surfaced (defaults to the test-strategist when unset)
+    expect(specDefectFromRole(tdd, F, S, AC)).toBe("test-strategist");
+    // composeAssessedGreenFailure carries specDefect through, preserving fixAttempts
+    const composed = composeAssessedGreenFailure({ assessed: false, summary: "x", fixAttempts: 2 }, { specDefect: { fromRole: "architect-reviewer" } });
+    expect(composed.assessed).toBe(true);
+    expect(composed.specDefect).toEqual({ fromRole: "architect-reviewer" });
+    expect(composed.fixAttempts).toBe(2);
+  });
+
+  it("readRegressionAssessment parses a spec-defect — the CLI object form AND the agent-natural classification hand-write", () => {
+    // Canonical object form (what `assess-regression --spec-defect --from` writes).
+    writeRegressionAssessment(tdd, F, S, AC, { diagnosis: "p95 bar measures cold remote round-trips", specDefect: { fromRole: "test-strategist", reason: "no headroom" } });
+    const a = readRegressionAssessment(tdd, F, S, AC);
+    expect(a?.specDefect?.fromRole).toBe("test-strategist");
+    expect(a?.fixDirective).toBeUndefined(); // a spec-defect is NOT driver-fixable
+    // Agent-natural hand-write (flaky at CLIs, reliable with the Write tool): classification + fromRole.
+    fs.writeFileSync(path.join(cycleDir(tdd, F, S, AC), "regression-assessment.json"), JSON.stringify({ diagnosis: "flaky latency test", classification: "spec-defect", fromRole: "architect-reviewer" }));
+    const b = readRegressionAssessment(tdd, F, S, AC);
+    expect(b?.specDefect?.fromRole).toBe("architect-reviewer");
   });
 
   it("markRegressionFixAttempted consumes the one repair (pending -> not pending)", () => {

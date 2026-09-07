@@ -167,6 +167,24 @@ function nextBuildAction(story: string, b: StoryBuild): WorkflowAction {
   // replay, so this assess->re-green detour never re-dispatches). Runs AFTER repair so
   // a mixed verdict (supersession + regression) takes the repair path, which does both.
   if (b.greenSupersededAc) return { kind: "invoke-role", role: "driver", story, buildMode: "green-superseded" };
+  // The Navigator assessed the failure as a SPEC-DEFECT: the failing TEST (or its NFR) is itself
+  // wrong — unrealistic/unsatisfiable/FLAKY — not a code regression. The Driver cannot fix a test
+  // that is wrong (it would just overwrite good code), and the test-list is frozen in-build, so this
+  // must go BACK to the design lane. Surface a raise-to-hil recommending the proportionate go-back
+  // (`consort-reopen-story --from <specDefectFromRole>`), NOT a Driver repair. Idempotent: the marker
+  // persists, so this re-derives until the human reopens (which clears the green-failure).
+  if (b.specDefectAc) {
+    const scope = b.specDefectFromRole ?? "test-strategist";
+    return {
+      kind: "raise-to-hil",
+      source: "spec-defect",
+      reason:
+        `The failing test/NFR for ${b.specDefectAc} is a SPEC-DEFECT (the test is wrong, not the code) — ` +
+        `revise it in the design lane, do NOT repair the code. Recommended: reopen this story from the ` +
+        `${scope} (consort-reopen-story --from ${scope}), re-author, and rebuild.`,
+      story,
+    };
+  }
   // Test-list-driven RED/GREEN handoff for the current (un-reviewed) AC's tests:
   // !testsWritten -> Navigator writes the next pending RED; !codeWritten ->
   // Driver greens the open RED. With the AC-grouped list, "next pending" is
