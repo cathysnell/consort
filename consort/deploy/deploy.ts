@@ -824,6 +824,12 @@ export interface CycleVerifyArgs {
   targetName?: string;
   /** Bind the run + verify to the cycle's experiment branch DB (LAKEBASE_BRANCH_ID). */
   lakebaseBranch?: string;
+  /** The current cycle's test LAYER (E2E / API / Infra), threaded to run-tests.sh as
+   *  CONSORT_CYCLE_LAYER so it runs the slow client Playwright E2E only when RELEVANT: on
+   *  an E2E-layer cycle, or (unset) the deploy-verify gate. A non-E2E cycle skips the E2E
+   *  suite. Omitted here (deploy feature-verify / whole-story refactor re-verify) => unset
+   *  => run the full E2E (the fail-safe: only an explicit non-E2E layer skips it). */
+  cycleLayer?: string;
   startProcess?: (cmd: string, cwd: string, env?: NodeJS.ProcessEnv) => number;
   reachable?: (url: string) => Promise<boolean>;
   runVerify?: (cmd: string, cwd: string, env?: NodeJS.ProcessEnv) => boolean | { passed: boolean; output?: string };
@@ -877,6 +883,7 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
     ...process.env,
     BASE_URL: cfg.baseUrl,
     ...(args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}),
+    ...(args.cycleLayer ? { CONSORT_CYCLE_LAYER: args.cycleLayer } : {}),
   };
   // Deploy-during-build serves a FRESH app on THIS turn's code. Every build turn
   // overlays new code, so we do NOT reuse a running app (it would serve stale

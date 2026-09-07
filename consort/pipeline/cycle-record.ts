@@ -461,10 +461,13 @@ export type GreenVerifier = (args: {
   featureId: string;
   story: string;
   branchId?: string;
+  /** The open cycle's test layer (E2E/API/Infra), threaded to the verify so run-tests.sh runs
+   *  the slow client Playwright E2E only on an E2E-layer cycle (else the deploy gate). */
+  cycleLayer?: string;
 }) => Promise<{ passed: boolean; summary: string; failureOutput?: string }>;
 
-const defaultGreenVerifier: GreenVerifier = async ({ projectDir, branchId }) => {
-  const r = await ensureDeployedAndVerify({ projectDir, lakebaseBranch: branchId });
+const defaultGreenVerifier: GreenVerifier = async ({ projectDir, branchId, cycleLayer }) => {
+  const r = await ensureDeployedAndVerify({ projectDir, lakebaseBranch: branchId, cycleLayer });
   // Surface the verify's captured failure output so greenOpenCycle can record it into
   // green-failure.json – the ASSESS turn then starts from the real failure, not a re-scan.
   return { passed: r.passed, summary: r.summary, ...(r.failureOutput ? { failureOutput: r.failureOutput } : {}) };
@@ -525,7 +528,7 @@ export async function greenOpenCycle(
   // here leaves the cycle RED and raises an escalation to the HIL; the
   // orchestration then routes to raise-to-hil rather than advancing.
   const verify = args.verify ?? defaultGreenVerifier;
-  let result = await verify({ projectDir: dirname(consortDir), consortDir, featureId, story, branchId: open.branch_id });
+  let result = await verify({ projectDir: dirname(consortDir), consortDir, featureId, story, branchId: open.branch_id, cycleLayer: open.layer });
   // Proactive migration-self-containment gate. Even when the honest verify PASSES
   // (local `alembic upgrade` runs env.py, so an app-importing migration imports
   // fine), a migration that imports app code at module scope breaks CI's

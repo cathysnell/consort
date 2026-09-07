@@ -96,6 +96,18 @@ describe("cycle-record: orchestration stamps RED/GREEN the probe can read", asyn
     expect(cycles[0].experiment_slug).toBe("exp1");
   });
 
+  it("greenOpenCycle threads the open cycle's LAYER into the verify (so run-tests.sh scopes the client E2E)", async () => {
+    // The honest-GREEN verify runs the slow client Playwright E2E only when the cycle is E2E-layer
+    // (else the deploy gate); greenOpenCycle must hand the verifier the open cycle's layer for that
+    // gate to fire. The AC here is layer=API, so a non-E2E cycle -> the verify (and run-tests.sh via
+    // CONSORT_CYCLE_LAYER) skips the E2E.
+    beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
+    let seenLayer: string | undefined = "UNSET";
+    const spy: GreenVerifier = async (a) => { seenLayer = a.cycleLayer; return { passed: true, summary: "ok" }; };
+    await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: spy });
+    expect(seenLayer).toBe("API");
+  });
+
   it("greenOpenCycle records the run + stamps green_at on the open RED cycle", async () => {
     beginNextPendingCycle({ consortDir: tdd, featureId: F, story: S });
     const g = await greenOpenCycle({ consortDir: tdd, featureId: F, story: S, verify: pass });
