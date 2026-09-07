@@ -29,7 +29,7 @@ export interface GateDef {
 // plan gate); it is lane-only (node null) — it has no diamond on the lifecycle spine.
 export const GATES: readonly GateDef[] = [
   { key: "intake", laneStep: "p-intake-gate", node: "intakegate" },
-  { key: "backlog", laneStep: "p-req", node: null },
+  { key: "backlog", laneStep: "p-backlog-gate", node: null },
   { key: "plan", laneStep: "p-gate", node: "plangate" },
   { key: "spec", laneStep: "d-gate", node: "specgate" },
   { key: "acceptance", laneStep: "b-accept", node: "acceptancegate" },

@@ -624,43 +624,9 @@ const STEP_DEVIATIONS: {
     ts: "release-engineer",
     why: "the dashboard attributes VERIFY (build-cycle and deploy) to the release-engineer for lane colouring; Kevin's Python left it ownerless. It keeps its verify-prefix match, so it still lights from events and is not a human gate.",
   },
-  // p-req is Kevin's Python 'product-owner: author requests' step, but author-requests is a HUMAN
-  // decision (the Human Proxy supplies it), not a PO agent turn. The dashboard draws it as a human
-  // gate — the "Backlog gate" — so it reads as a HITL diamond (purple) rather than a product-owner-
-  // coloured agent step that glows as if the PO chose the features. Role/label/gate all deviate; it
-  // keeps its author-requests/feature match so it still lights from the run's events.
-  {
-    lane: "plan",
-    step: "p-req",
-    field: "role",
-    py: "product-owner",
-    ts: null,
-    why: "the backlog commit is a human decision, not a PO agent turn; ownerless so it renders as a purple human gate, not a product-owner-coloured (glowing) agent step.",
-  },
-  {
-    lane: "plan",
-    step: "p-req",
-    field: "label",
-    py: "Product owner",
-    ts: "Backlog gate",
-    why: "it is the HITL 'Backlog gate' where the human commits which sized features enter the sprint, not a product-owner turn labelled by its role.",
-  },
-  {
-    lane: "plan",
-    step: "p-req",
-    field: "sub",
-    py: "author requests",
-    ts: "human selects features",
-    why: "author-requests is where the human picks the sized candidates that fit the sprint — a human selection, not the PO authoring prose; 'human selects features' describes what actually happens.",
-  },
-  {
-    lane: "plan",
-    step: "p-req",
-    field: "gate",
-    py: null,
-    ts: true,
-    why: "drawn as a HITL gate (diamond) so the human backlog-commit reads as a decision point, like the intake and plan gates around it.",
-  },
+  // NOTE: p-req is Kevin's ported PO 'author requests' step (product-owner, author-requests) and now
+  // matches the fixture verbatim — no deviation. The human SELECTION is a separate dashboard-native
+  // gate step, p-backlog-gate (see ADDED_STEPS), so the PO's authoring turn keeps its own depiction.
 ];
 
 // Whole STEPS the dashboard ADDS to a ported lane that Kevin's Python omits — a declared departure
@@ -680,6 +646,12 @@ const ADDED_STEPS: {
     step: "p-intake-gate",
     after: "p-intake",
     why: "the intake gate — the HITL checkpoint AFTER the PO drafts the intake and BEFORE the Spec Author proposes (human reviews/edits/approves). A dashboard-native gate step Kevin's Python lacked; it closes the INTAKE side of the split plan lane and lights from the run's intake gate state.",
+  },
+  {
+    lane: "plan",
+    step: "p-backlog-gate",
+    after: "p-size",
+    why: "the Backlog gate — the HITL checkpoint AFTER the architect sizes the proposals and BEFORE the PO authors the requests: the human picks which sized features enter the sprint. A dashboard-native gate step Kevin's Python lacked; it lights purple from the run's backlog gate state (gate.surfaced(backlog)).",
   },
   {
     lane: "plan",

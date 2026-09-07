@@ -278,16 +278,25 @@ const PLAN_LANE: Lane = {
       match: { role: "architect-reviewer", phaseAny: ["estimate", "estimate-committed"] },
     },
     {
-      // The backlog commit is a HUMAN decision, not a PO agent turn: after the architect sizes the
-      // proposals, the human picks which proposed features enter the sprint (the drive's
-      // "Commit the sprint backlog" step). Modeled as a human gate — role null so it reads as a
-      // purple HITL diamond, not a product-owner-coloured agent step that glows as if the PO chose.
-      // It still lights from the author-requests/feature events (a match), so it shows reached/done.
-      id: "p-req",
+      // The Backlog gate: after sizing, the human picks WHICH proposed features enter the sprint (the
+      // drive surfaces gate.surfaced(backlog); the human commits). A dashboard-native gate step
+      // (ADDED_STEPS) that lights purple from the run's backlog gate state — exactly like
+      // p-intake-gate. Distinct from the PO authoring turn below: this is the SELECTION.
+      id: "p-backlog-gate",
       role: null,
       label: "Backlog gate",
       sub: "human selects features",
       gate: true,
+      match: null,
+    },
+    {
+      // The Product Owner authors a feature-request.md per COMMITTED feature — a metered product-owner
+      // turn (phase author-requests), which is why it reads in the PO's colour and shows its elapsed.
+      // This is Kevin's ported PO plan step; it lights from the author-requests turn.
+      id: "p-req",
+      role: "product-owner",
+      label: "Product owner",
+      sub: "author requests",
       match: { role: "product-owner", phaseAny: ["author-requests", "feature"] },
     },
     {
@@ -315,7 +324,8 @@ const PLAN_LANE: Lane = {
     ["p-intake", "p-intake-gate"],
     ["p-intake-gate", "p-propose"],
     ["p-propose", "p-size"],
-    ["p-size", "p-req"],
+    ["p-size", "p-backlog-gate"],
+    ["p-backlog-gate", "p-req"],
     ["p-req", "p-breakdown"],
     ["p-breakdown", "p-gate"],
   ] as const,

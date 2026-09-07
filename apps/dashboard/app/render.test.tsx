@@ -270,10 +270,10 @@ describe("render — LaneGraph", () => {
     );
     expect(markup).toContain("6/6 steps"); // design: 6 lightable, all lit (d-gate + d-hil excluded) — reaches 100%
     expect(markup).toContain("7/8 steps"); // build: 8 lightable (b-verify, an automated role-owned gate, still counts); lit 7
-    // Plan reads 2/4: p-intake, p-propose, p-size, p-breakdown — the backlog gate (p-req) is now a
-    // HUMAN gate, excluded from the ratio like the intake/plan gates. This pre-p-intake render-state
-    // snapshot lit only p-propose + p-size.
-    expect(markup).toContain("2/4 steps");
+    // Plan reads 2/5: p-intake, p-propose, p-size, p-req (the PO authoring turn), p-breakdown — the
+    // Backlog gate (p-backlog-gate) is a HUMAN gate, excluded from the ratio like intake/plan. This
+    // pre-p-intake render-state snapshot lit only p-propose + p-size.
+    expect(markup).toContain("2/5 steps");
   });
 
   it("a gate's colour comes from the parked-gate focus, not its gate state", () => {
@@ -354,7 +354,7 @@ describe("render — LaneGraph", () => {
     const markup = renderToStaticMarkup(<LaneGraph state={empty} />);
     expect((markup.match(/<svg/g) ?? []).length).toBe(4); // all lanes render even when empty
     expect(markup).toContain("not started");
-    expect(markup).toContain("0/4 steps"); // plan: 4 lightable steps (p-intake/propose/size/breakdown; the backlog gate is a human gate, excluded), none reached
+    expect(markup).toContain("0/5 steps"); // plan: 5 lightable steps (p-intake/propose/size/req/breakdown; the Backlog gate is a human gate, excluded), none reached
   });
 });
 
