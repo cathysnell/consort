@@ -423,8 +423,10 @@ describe("fold — a role's turn closes on the next dispatch (replay/no-token ru
 
 describe("fold — blockers and resolver routing", () => {
   it("routes a blocker to the handback role and flips that agent to issue", () => {
+    // A real next.json blocker corresponds to a logged escalation.raised (still outstanding — the
+    // drive stopped on it), which is what surfaces it at the live edge; next.json supplies the detail.
     const s = fold(
-      RUN,
+      [...RUN, ev("escalation.raised", { source: "unknown-thing", story: "S1" }, { message: "boom" })],
       snap({
         next: { feature: "F1", state: { blockers: [{ source: "unknown-thing", reason: "boom", story: "S1" }] } },
         handbacks: [{ role: "dba", story: "S1" }],
@@ -436,7 +438,7 @@ describe("fold — blockers and resolver routing", () => {
 
   it("falls back to a keyword guess when no handback matches", () => {
     const s = fold(
-      RUN,
+      [...RUN, ev("escalation.raised", { source: "driver-green" }, { message: "boom" })],
       snap({ next: { feature: "F1", state: { blockers: [{ source: "driver-green", reason: "boom" }] } } }),
     );
     expect(s.blockers[0].resolverRole).toBe("driver");
@@ -587,8 +589,36 @@ describe.skipIf(!existsSync(REAL_LOG))("fold — the reported scrub-back bug, on
     });
     expect(fold(events, withBlocker, 0).blockers).toEqual([]);
     expect(fold(events, withBlocker, 12).blockers).toEqual([]);
-    // at the live edge next.json is still authoritative
-    expect(fold(events, withBlocker).blockers.length).toBe(1);
+    // At the live edge next.json carries the blocker's DETAIL, but the log is the authority on
+    // whether it is still outstanding. This corpus is a COMPLETED run — the log moved well past any
+    // escalation — so a stale injected blocker is NOT surfaced; otherwise it would pin the board red
+    // on a finished run (the live "stuck red after the run moved on" bug).
+    expect(fold(events, withBlocker).blockers).toEqual([]);
+  });
+
+  it("clears a stale next.json blocker at the live edge once the log advances past the escalation", () => {
+    // next.json is only rewritten on a drive STOP, so when the drive resolves an escalation and keeps
+    // running (experiment.cut → navigator red → …), next.json still lists the resolved blocker. The
+    // live edge must honor the log ("any later activity = resolved"), not pin the board red on it.
+    const withNextBlocker = snap({
+      next: { feature: "F1", state: { blockers: [{ source: "cli:consort-experiment", reason: "exited 2", story: "S1" }] } },
+    });
+    const raised = ev("escalation.raised", { source: "cli:consort-experiment", story: "S1" }, { message: "exited 2" });
+    // Log ENDS at the escalation (the drive stopped): genuinely outstanding → next.json blocker shown.
+    const stopped = [ev("phase.start", { phase: "build", feature_id: "F1" }), raised];
+    const atStop = fold(stopped, withNextBlocker);
+    expect(atStop.blockers.length).toBe(1);
+    expect(atStop.focus.kind).toBe("escalation");
+    // Log ADVANCES past it: experiment.cut succeeds, the build lane runs → resolved → dropped, no red.
+    const advanced = [
+      ...stopped,
+      ev("experiment.cut", { story: "S1" }),
+      ev("handoff", { to_role: "navigator", phase: "red" }),
+      ev("phase.start", { phase: "red", story: "S1" }, { role: "navigator" }),
+    ];
+    const afterAdvance = fold(advanced, withNextBlocker);
+    expect(afterAdvance.blockers).toEqual([]);
+    expect(afterAdvance.focus.kind).not.toBe("escalation");
   });
 
   it("surfaces a log escalation only while it is unresolved", () => {

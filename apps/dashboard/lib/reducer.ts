@@ -386,12 +386,20 @@ export function fold(
     pinnedDivergent !== null
       ? blockersFromLog(slice, feature ?? undefined).map((b) => ({ ...b, resolver_hint: null }))
       : atLive
-        ? (next?.state?.blockers ?? []).map((b) => ({
-            source: b.source,
-            reason: b.reason,
-            story: b.story ?? null,
-            resolver_hint: b.resolver_hint ?? null,
-          }))
+        ? // next.json's blockers carry the richer resolver detail, but next.json is only rewritten on a
+          // drive STOP — so when the drive resolves an escalation and keeps running (experiment.cut →
+          // navigator-red → …), next.json still lists the resolved blocker and pinned the live board red
+          // after the run moved on. The event log is the authority on whether an escalation is still
+          // outstanding (blockersFromLog's "any later activity = resolved" rule), so gate next.json's
+          // blockers on the log agreeing one is still open; once the run advances past it, drop them.
+          blockersFromLog(slice).length === 0
+          ? []
+          : (next?.state?.blockers ?? []).map((b) => ({
+              source: b.source,
+              reason: b.reason,
+              story: b.story ?? null,
+              resolver_hint: b.resolver_hint ?? null,
+            }))
         : blockersFromLog(slice).map((b) => ({ ...b, resolver_hint: null }));
 
   const blockers: Blocker[] = rawBlockers.map((b) => {
