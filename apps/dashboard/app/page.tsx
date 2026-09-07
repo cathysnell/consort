@@ -379,6 +379,14 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
           >
             {(state.source.availableModes.length > 1 ? state.source.availableModes : [state.source.mode]).map((m) => {
               const on = m === state.source!.mode;
+              // All three states read "LIVE: <state>" with a flashing dot in a state colour:
+              //   replay            = RECORDED  (amber)
+              //   live, actively recording = RECORDING (red) — an EXPLICIT record dir (env, not the
+              //     drive's auto `.consort/record` lane) AND the run still in progress (not complete).
+              //   live otherwise    = PLAYING   (green)
+              const recording = m === "live" && state!.source!.fidelity?.explicit === true && state!.lane !== "complete";
+              const label = m === "replay" ? "LIVE: RECORDED" : recording ? "LIVE: RECORDING" : "LIVE: PLAYING";
+              const dotColor = m === "replay" ? "var(--status-warning)" : recording ? "var(--status-critical)" : "var(--status-good)";
               return (
                 <button
                   key={m}
@@ -401,22 +409,21 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
                     font: "inherit",
                   }}
                 >
-                  {/* A pulsing green dot on the ACTIVE live run — the standard "this is live" cue,
-                      distinguishing a LIVE RUN from a REPLAY RUN at a glance. Only the selected live
-                      mode pulses; replay (or an unselected live toggle) shows no dot. */}
-                  {m === "live" && on ? (
+                  {/* Flashing state dot on the SELECTED mode only (the current state); the unselected
+                      toggle target carries none. */}
+                  {on ? (
                     <span
                       style={{
                         width: 6,
                         height: 6,
                         borderRadius: "50%",
-                        background: "var(--status-good)",
+                        background: dotColor,
                         animation: "softpulse 1.6s ease-in-out infinite",
                         flex: "none",
                       }}
                     />
                   ) : null}
-                  {m === "live" ? "live run" : "recorded"}
+                  {label}
                 </button>
               );
             })}

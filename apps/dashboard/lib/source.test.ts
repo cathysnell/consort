@@ -134,7 +134,7 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
 
   it("NOT recording, base capabilities only, for a plain live build (no record dir)", () => {
     const src = new LiveSource();
-    expect(src.fidelity()).toEqual({ recording: false });
+    expect(src.fidelity()).toMatchObject({ recording: false });
     for (const c of RICH) expect(src.capabilities.has(c)).toBe(false);
     // stepOutputs is a BASE live capability – served from `.consort/` at HEAD, present even with no
     // companion recording (so clicking a role/node surfaces what it produced on any live board).
@@ -147,7 +147,7 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     writeFileSync(join(proj, ".consort", "product-overview.md"), "# Overview\n");
     writeFileSync(join(proj, ".consort", "nfrs.md"), "# NFRs\n");
     const src = new LiveSource();
-    expect(src.fidelity()).toEqual({ recording: false }); // no companion
+    expect(src.fidelity()).toMatchObject({ recording: false }); // no companion
     const out = src.stepOutputs!("intake", null);
     const names = out.assets.map((a) => a.name).sort();
     // Both present docs are listed; design-brief.md was not written, so it is absent (not a dead link).
@@ -192,37 +192,48 @@ describe("LiveSource.fidelity + capabilities — companion record dir (Phase B)"
     // correspondence.jsonl under .consort/ must NOT read as recording without a configured dir.
     mkdirSync(join(proj, ".consort", "turns"));
     writeFileSync(join(proj, ".consort", "correspondence.jsonl"), "");
-    expect(new LiveSource().fidelity()).toEqual({ recording: false });
+    expect(new LiveSource().fidelity()).toMatchObject({ recording: false });
   });
 
   it("recording + replay-grade capabilities once a companion record dir is readable", () => {
     makeReadableCorpus(rec);
     process.env.CONSORT_RECORD_DIR = rec;
     const src = new LiveSource();
-    expect(src.fidelity()).toEqual({ recording: true });
+    expect(src.fidelity()).toMatchObject({ recording: true });
     for (const c of RICH) expect(src.capabilities.has(c)).toBe(true);
   });
 
   it("NOT recording while the configured record dir has no turns yet (early build)", () => {
     process.env.CONSORT_RECORD_DIR = rec; // exists but empty: no log, no turns/index.json
     const src = new LiveSource();
-    expect(src.fidelity()).toEqual({ recording: false });
+    expect(src.fidelity()).toMatchObject({ recording: false });
     expect(src.capabilities.has("transcripts")).toBe(false);
   });
 
   it("also reads the kit's own LAKEBASE_CONSORT_RECORD_DIR var", () => {
     makeReadableCorpus(rec);
     process.env.LAKEBASE_CONSORT_RECORD_DIR = rec;
-    expect(new LiveSource().fidelity()).toEqual({ recording: true });
+    expect(new LiveSource().fidelity()).toMatchObject({ recording: true });
   });
 
   it("notices the companion corpus becoming readable mid-run (not memoized)", () => {
     process.env.CONSORT_RECORD_DIR = rec;
     const src = new LiveSource();
-    expect(src.fidelity()).toEqual({ recording: false });
+    expect(src.fidelity()).toMatchObject({ recording: false });
     makeReadableCorpus(rec);
-    expect(src.fidelity()).toEqual({ recording: true });
+    expect(src.fidelity()).toMatchObject({ recording: true });
     expect(src.capabilities.has("transcripts")).toBe(true);
+  });
+
+  it("fidelity.explicit distinguishes an env record dir from the auto .consort/record lane", () => {
+    // The drive's auto-detected in-project lane: recording is true (it drives the drill-down) but
+    // NOT explicit — so the mode badge reads PLAYING, not RECORDING, for a normal live run.
+    makeReadableCorpus(join(proj, ".consort", "record"));
+    expect(new LiveSource().fidelity()).toMatchObject({ recording: true, explicit: false });
+    // An env-configured record dir IS explicit → the badge's RECORDING state becomes eligible.
+    process.env.CONSORT_RECORD_DIR = rec;
+    makeReadableCorpus(rec);
+    expect(new LiveSource().fidelity()).toMatchObject({ recording: true, explicit: true });
   });
 
   it("rewinds correspondence against the LIVE log's playhead, not the companion mirror", () => {
@@ -717,7 +728,7 @@ describe("LiveSource — reads its OWN .consort/turns corpus (one path: live bui
 
   it("gains the transcripts capability from its own .consort/turns (no external record dir)", () => {
     expect(new LiveSource().capabilities.has("transcripts")).toBe(true);
-    expect(new LiveSource().fidelity()).toEqual({ recording: true });
+    expect(new LiveSource().fidelity()).toMatchObject({ recording: true });
   });
 
   it("serves the turn's manifest + transcript, and reads a produced file at HEAD (index turn)", () => {

@@ -237,8 +237,13 @@ export interface SourceMeta {
    * no inputs, and no point-in-time per-step snapshots — the FidelityBanner says so out loud and
    * names the env var that turns capture on, so a silently-missing capability becomes an
    * actionable message instead of a "where did the drill-down go?".
+   *
+   * `explicit` = the record dir was configured via env (CONSORT_RECORD_DIR /
+   * LAKEBASE_CONSORT_RECORD_DIR), NOT the auto-detected in-project `.consort/record` lane the
+   * drive writes by default. The mode badge treats only an explicit recording as "RECORDING", so a
+   * normal live run (which has the auto lane) reads "PLAYING" rather than always "RECORDING".
    */
-  fidelity?: { recording: boolean } | null;
+  fidelity?: { recording: boolean; explicit?: boolean } | null;
 }
 
 export interface AgentLogEvent {

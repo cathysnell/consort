@@ -96,6 +96,15 @@ export function recordDir(): string | null {
   return existsSync(auto) ? auto : null;
 }
 
+/** Whether a record dir was configured EXPLICITLY via env, as opposed to the auto-detected
+ *  in-project `.consort/record` lane the drive writes by default. The mode badge treats only an
+ *  explicit recording as "RECORDING" (an intentional capture), so a normal live run — which has the
+ *  auto lane but no env — reads "PLAYING". */
+export function recordDirExplicit(): boolean {
+  const d = process.env.CONSORT_RECORD_DIR || process.env.LAKEBASE_CONSORT_RECORD_DIR;
+  return !!(d && d.trim());
+}
+
 // The artifact-root directory names Consort has used, in resolution priority. v0.3.7 renamed
 // the root `.sftdd/` → `.consort/` but still READS the legacy names (and auto-migrates old
 // projects on their next run), so the observer mirrors the kit's `resolveConsortDir()`: pick the

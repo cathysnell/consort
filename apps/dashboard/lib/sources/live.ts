@@ -32,6 +32,7 @@ import {
   readEvents,
   readSnapshot,
   recordDir,
+  recordDirExplicit,
   sftddDir,
 } from "../consort";
 import { resolveContained } from "../safepath";
@@ -252,7 +253,10 @@ export class LiveSource implements DashboardSource {
   // capabilities) hides exactly when a turns corpus exists. Before the first turn, available() is
   // false → recording:false → the banner shows "not captured yet".
   fidelity(): NonNullable<SourceMeta["fidelity"]> {
-    return { recording: this.companion() !== null };
+    // `recording` = a companion corpus is readable (drives the drill-down + FidelityBanner).
+    // `explicit` = that record dir came from env, not the auto-detected `.consort/record` lane — the
+    // mode badge treats only an explicit capture as "RECORDING".
+    return { recording: this.companion() !== null, explicit: recordDirExplicit() };
   }
 
   // Pair the LIVE event stream against the companion's recorded turns, so a ticker row that begins
