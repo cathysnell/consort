@@ -193,6 +193,15 @@ export default function Home() {
               activity — replacing the old fidelity ("not recording") banner. */}
           <OrchestratorLane state={state} />
 
+          {/* Cost breakdown, directly under the orchestrator card (which shows the running turn/cost
+              TOTAL) — the per-agent contribution that total decomposes into. Moved up from the foot
+              of the Status section; still gated by the cost toggle. */}
+          {showCost ? (
+            <div style={{ background: "var(--surface-card)", border: `1px solid var(--border-default)`, borderRadius: radius.card, padding: "12px 16px", marginBottom: 12 }}>
+              <CostBar state={state} />
+            </div>
+          ) : null}
+
           <SectionHeader>Current sprint</SectionHeader>
           {/* The lifecycle graph now carries the sprint's feature + current state in its own header
               band (see WorkflowGraph), mirroring the lane panels below. */}
@@ -216,7 +225,7 @@ export default function Home() {
           <LaneGraph state={state} onOpenRole={onOpenRole} />
 
           <SectionHeader>Status</SectionHeader>
-          <StatusBar state={state} showCost={showCost} />
+          <StatusBar state={state} />
 
           {/* Planning / backlog moved to the LEFT-side pull-out pane (see the flex row above). */}
           {/* The "Current State" role-card grid was removed: the lanes + lifecycle graph already show
@@ -569,7 +578,7 @@ function FeatureSwitcher({ features, pinned, onPin }: { features: DashboardState
   );
 }
 
-function StatusBar({ state, showCost }: { state: DashboardState; showCost: boolean }) {
+function StatusBar({ state }: { state: DashboardState }) {
   const gateColor = (s: string) => (s === "approved" ? "var(--status-good)" : s === "open" ? "var(--border-default)" : "var(--status-warning-amber)");
   const designActive = state.lane === "design";
   // A complete run has no active lane — neither bar should claim "in progress".
@@ -595,8 +604,6 @@ function StatusBar({ state, showCost }: { state: DashboardState; showCost: boole
           </div>
         </div>
       </div>
-
-      {showCost ? <CostBar state={state} /> : null}
     </div>
   );
 }
