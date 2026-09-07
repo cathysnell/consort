@@ -478,7 +478,9 @@ function ConnectionStatus({ connected, lastUpdatedAt }: { connected: boolean; la
   // if the last poll technically succeeded. 5s is comfortably past normal jitter.
   const stale = ageSec !== null && ageSec > 5;
   const color = !connected ? "var(--status-critical)" : stale ? "var(--status-warning)" : "var(--status-good)";
-  const label = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "running";
+  // Feed/connection health, NOT the run's state: is the board polling + getting fresh updates.
+  // "connected" (was "running", which collided with the transport's RUNNING run-state label).
+  const label = !connected ? "reconnecting" : stale ? `no update · ${ageSec}s` : "connected";
   return (
     <div
       title={lastUpdatedAt === null ? "waiting for first update" : `last update ${ageSec}s ago`}

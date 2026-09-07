@@ -377,11 +377,11 @@ describe("render — LaneGraph", () => {
 describe("render — Transport", () => {
   const noop = () => {};
 
-  it("renders WORKING at the newest event", () => {
+  it("renders RUNNING at the newest event", () => {
     const markup = renderToStaticMarkup(
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T15:09:36.000Z" />,
     );
-    expect(markup).toContain("WORKING");
+    expect(markup).toContain("RUNNING");
     expect(markup).not.toContain("REVIEWING");
     expect(markup).toMatchSnapshot();
   });

@@ -158,9 +158,9 @@ export function Transport({
             WAITING
           </span>
         ) : (
-          // At the newest event, an agent working the run forward. No glyph — the active step
-          // already flashes on the board, so this is just the label.
-          <span style={{ color: "var(--status-good)", fontWeight: 700 }}>WORKING</span>
+          // At the newest event, following the run forward. No glyph — the active step already
+          // flashes on the board, so this is just the label.
+          <span style={{ color: "var(--status-good)", fontWeight: 700 }}>RUNNING</span>
         )}
       </div>
 
