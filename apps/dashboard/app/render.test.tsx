@@ -162,6 +162,54 @@ describe("render — WorkflowGraph", () => {
   });
 });
 
+// The terminal Shipped node maps to no phase, so it is inert in the fold; WorkflowGraph lights it as
+// the merge's destination. `state` (render-state.json) has reached promote (passedNodes ⊇ promote).
+describe("render — WorkflowGraph shipped terminal", () => {
+  // Shipped is the last node, so its <g> runs from the "<g" before its title to the SVG end.
+  const shippedGroup = (m: string): string => m.slice(m.lastIndexOf("<g", m.indexOf("<title>Shipped")));
+
+  it("merging → Shipped lights in the merge agent's (release-engineer) colour; Promote reads reached", () => {
+    const merging: DashboardState = {
+      ...state,
+      blockers: [],
+      focus: { kind: "step", lane: "deploy", step: "dp-merge" },
+      topology: { ...state.topology, activeNode: "promote" },
+    };
+    const g = shippedGroup(renderToStaticMarkup(<WorkflowGraph state={merging} />));
+    expect(g).toContain("Shipped · active now");
+    expect(g).toContain("var(--role-release-engineer)"); // the merge agent's colour
+    expect(g).toContain("animation:softpulse"); // in-progress → pulses
+    // the merge advanced the active node off Promote onto Shipped, so Promote now reads reached
+    expect(renderToStaticMarkup(<WorkflowGraph state={merging} />)).toContain("<title>Promote · reached · release-engineer</title>");
+  });
+
+  it("shipped/done → Shipped stays lit STEADILY in the orchestrator slate (no pulse)", () => {
+    const done: DashboardState = {
+      ...state,
+      blockers: [],
+      focus: { kind: "idle" },
+      topology: { ...state.topology, activeNode: null },
+    };
+    const g = shippedGroup(renderToStaticMarkup(<WorkflowGraph state={done} />));
+    expect(g).toContain("Shipped · shipped"); // titled shipped, not "active now"
+    expect(g).toContain("var(--role-orchestrator)"); // orchestrator slate
+    expect(g).not.toContain("animation:softpulse"); // at rest — the run is done, no pulse
+  });
+
+  it("ship-stage escalation → Shipped turns red and pulses", () => {
+    const issue: DashboardState = {
+      ...state,
+      blockers: [{ source: "promote", reason: "merge conflict", story: null, resolverRole: null, resolverHint: null }],
+      focus: { kind: "escalation", step: "dp-promote-hil" },
+      topology: { ...state.topology, activeNode: "promote" },
+    };
+    const g = shippedGroup(renderToStaticMarkup(<WorkflowGraph state={issue} />));
+    expect(g).toContain("Shipped · active now");
+    expect(g).toContain("var(--status-critical)"); // red
+    expect(g).toContain("animation:softpulse");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // LaneGraph: the per-lane sub-workflows (Kevin's Figure 2). New, so these snapshots pin
 // behavior going forward rather than proving equivalence with anything.

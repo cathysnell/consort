@@ -86,6 +86,23 @@ export function WorkflowGraph({
     : null;
   const gateState = new Map(state.gates.map((g: GateInfo) => [g.name, g.status]));
 
+  // The terminal "shipped" node maps to no phase, so the topology fold never lights it — it is the
+  // merge's DESTINATION. The promote lane's MERGE sub-step IS the act of shipping, so:
+  //   merging      → the active spine node advances Promote → Shipped, in the merge agent's colour
+  //   shipped/done → Shipped stays lit STEADILY (no pulse) in the orchestrator's slate
+  //   ship issue   → a promote-stage escalation turns Shipped red
+  // All three colours already fall out of activeColorForFocus(focus) — merge step = release-engineer,
+  // idle = orchestrator slate, escalation = red — so `activeColor` needs no special-casing here.
+  const shipMerging = focus.kind === "step" && focus.step === "dp-merge";
+  const shipIssue = focus.kind === "escalation" && activeNode === "promote";
+  // Done = the run reached promote and nothing is running now (a clean, blocker-free idle). During
+  // the merge focus is a step (not idle), so this stays false until the merge completes.
+  const shipDone = focus.kind === "idle" && passed.has("promote");
+  const shipLit = shipMerging || shipIssue || shipDone;
+  // Merging / a ship-stage escalation move the active node off Promote onto Shipped (Promote then
+  // reads as reached); a done run keeps activeNode null and lights Shipped steadily instead.
+  const spineActiveNode = shipMerging || shipIssue ? "shipped" : activeNode;
+
   // The current sprint's FEATURE + its current state, shown in the panel's header band — mirroring a
   // lane panel's "lane · status" heading. The active story (if any) is the sharpest state; otherwise
   // the phase. Kept in the header so the section reads like the lanes below it.
@@ -136,22 +153,32 @@ export function WorkflowGraph({
           <Edge key={`${from}->${to}`} from={from} to={to} />
         ))}
 
-        {PLACED.map(({ node, x, w }) => (
-          <Node
-            key={node.id}
-            node={node}
-            x={x}
-            w={w}
-            active={node.id === activeNode || node.id === awaitedGateNode || node.id === awaitedGatePhaseNode}
-            passed={passed.has(node.id)}
-            activeColor={activeColor}
-            gateStatus={gateStatusFor(node, gateState)}
-            // Only nodes that actually map to deliverables are clickable — clicking a node with
-            // no STEP_OUTPUTS entry (shipped, promote gate) would open an empty panel.
-            onSelect={onSelectNode && (STEP_OUTPUTS[node.id]?.length ?? 0) > 0 ? onSelectNode : undefined}
-            selected={node.id === selectedNode}
-          />
-        ))}
+        {PLACED.map(({ node, x, w }) => {
+          const isShipped = node.id === "shipped";
+          const active = isShipped
+            ? shipLit
+            : node.id === spineActiveNode || node.id === awaitedGateNode || node.id === awaitedGatePhaseNode;
+          return (
+            <Node
+              key={node.id}
+              node={node}
+              x={x}
+              w={w}
+              active={active}
+              // A shipped-DONE node is lit but at rest (no pulse) — matching the orchestrator card
+              // going quiet on completion; merging + a ship issue still pulse, as does any other
+              // active node.
+              pulse={isShipped ? shipMerging || shipIssue : active}
+              passed={passed.has(node.id)}
+              activeColor={activeColor}
+              gateStatus={gateStatusFor(node, gateState)}
+              // Only nodes that actually map to deliverables are clickable — clicking a node with
+              // no STEP_OUTPUTS entry (shipped, promote gate) would open an empty panel.
+              onSelect={onSelectNode && (STEP_OUTPUTS[node.id]?.length ?? 0) > 0 ? onSelectNode : undefined}
+              selected={node.id === selectedNode}
+            />
+          );
+        })}
       </svg>
       </div>
       )}
@@ -211,6 +238,7 @@ function Node({
   x,
   w,
   active,
+  pulse,
   passed,
   activeColor,
   gateStatus,
@@ -221,12 +249,16 @@ function Node({
   x: number;
   w: number;
   active: boolean;
+  // Whether the active node pulses. Defaults to `active` (an active node pulses); passed false for a
+  // node that should read as lit-but-at-rest (a shipped/done terminal).
+  pulse?: boolean;
   passed: boolean;
   activeColor: string;
   gateStatus: string | null;
   onSelect?: (nodeId: string) => void;
   selected?: boolean;
 }) {
+  const doPulse = pulse ?? active;
   const isGate = node.type === "gate";
 
   // ONLY the active node is highlighted (accent fill + the active colour's border + pulse), matching
@@ -248,7 +280,7 @@ function Node({
       : "var(--text-faint)";
 
   const title = `${node.label}${isGate ? ` · gate${gateStatus ? `: ${gateStatus}` : ""}` : ""}${
-    active ? " · active now" : passed ? " · reached" : " · not reached"
+    active ? (node.id === "shipped" && !doPulse ? " · shipped" : " · active now") : passed ? " · reached" : " · not reached"
   }${node.roles.length ? ` · ${node.roles.join(", ")}` : ""}`;
 
   const clickable = !!onSelect;
@@ -257,7 +289,10 @@ function Node({
       onClick={clickable ? () => onSelect!(node.id) : undefined}
       style={{
         cursor: clickable ? "pointer" : undefined,
-        ...(active ? { animation: "softpulse 2s ease-in-out infinite", color: stroke } : {}),
+        // `color: stroke` sets currentColor for the pulse glow; keep it whenever the node is lit so a
+        // steady (non-pulsing) done terminal still carries its colour, and pulse only when doPulse.
+        ...(active ? { color: stroke } : {}),
+        ...(doPulse ? { animation: "softpulse 2s ease-in-out infinite" } : {}),
       }}
     >
       <title>{clickable ? `${title} · click for step outputs` : title}</title>
