@@ -11,6 +11,7 @@ import {
   passedNodes,
   nodeForPhase,
   nodeById,
+  STEP_OUTPUTS,
   primaryOutputNodeForRole,
   gateForNode,
   edgeDone,
@@ -90,6 +91,19 @@ describe("topology — graph integrity", () => {
     const ids = new Set(WORKFLOW.nodes.map((n) => n.id));
     for (const [phase, node] of Object.entries(PHASE_TO_NODE)) {
       expect(ids, `${phase} -> ${node}`).toContain(node);
+    }
+  });
+
+  it("every lifecycle node + gate has a STEP_OUTPUTS entry, so all are clickable to show outputs", () => {
+    // The WorkflowGraph only makes a node clickable when it maps to deliverables. Previously the
+    // intake/acceptance/promote gates and the shipped terminal had no entry, so those diamonds/box
+    // were dead. Every node must resolve to at least one output spec.
+    for (const n of WORKFLOW.nodes) {
+      expect(STEP_OUTPUTS[n.id]?.length ?? 0, `${n.id} has no STEP_OUTPUTS entry`).toBeGreaterThan(0);
+    }
+    // Each entry's paths are keyed to a real spec shape (path present).
+    for (const specs of Object.values(STEP_OUTPUTS)) {
+      for (const s of specs) expect(typeof s.path).toBe("string");
     }
   });
 

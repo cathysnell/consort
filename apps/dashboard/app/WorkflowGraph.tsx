@@ -172,8 +172,9 @@ export function WorkflowGraph({
               passed={passed.has(node.id)}
               activeColor={activeColor}
               gateStatus={gateStatusFor(node, gateState)}
-              // Only nodes that actually map to deliverables are clickable — clicking a node with
-              // no STEP_OUTPUTS entry (shipped, promote gate) would open an empty panel.
+              // Clickable when the node maps to deliverables. Every lifecycle node now has a
+              // STEP_OUTPUTS entry (gates open their gates.json decision record), so all nodes +
+              // gates are clickable; the guard stays defensive should a future node have none.
               onSelect={onSelectNode && (STEP_OUTPUTS[node.id]?.length ?? 0) > 0 ? onSelectNode : undefined}
               selected={node.id === selectedNode}
             />

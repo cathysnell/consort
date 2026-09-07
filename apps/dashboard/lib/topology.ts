@@ -172,7 +172,9 @@ export interface StepOutputSpec {
  * Keyed by `WorkflowNode.id`. Paths mirror the Consort artifact layout (verified against the
  * stockflow-full corpus's `recorded-artifacts/`). A source lists only the entries that actually
  * exist on disk, so naming a file here that a given run didn't produce is harmless — it just
- * doesn't appear. Nodes with no durable output (`shipped`, `promgate`) are absent.
+ * doesn't appear. Every lifecycle node has an entry so all of them are clickable: each GATE shows
+ * its decision record (`features/<F>/gates.json`, the same file plan/spec/deploy gates already
+ * open), and the terminal `shipped` shows the promoted sprint (as `promote` does).
  */
 export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
   intake: [
@@ -180,6 +182,9 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
     { path: "nfrs.md" },
     { path: "design/design-brief.md" },
   ],
+  // Gates open their decision record. gates.json is per-feature, so a gate clicked before any
+  // feature is committed (the intake gate) simply lists nothing until it exists.
+  intakegate: [{ path: "features/<F>/gates.json", perFeature: true }],
   plan: [
     { path: "planning/feature-proposals.md" },
     { path: "planning/estimates.json" },
@@ -201,12 +206,16 @@ export const STEP_OUTPUTS: Record<string, StepOutputSpec[]> = {
     { path: "features/<F>/pipeline.json", perFeature: true },
     { path: "cycles/<F>", perFeature: true, dir: true },
   ],
+  acceptancegate: [{ path: "features/<F>/gates.json", perFeature: true }],
   deploy: [
     { path: "features/<F>/deploy-evidence.json", perFeature: true },
     { path: "deploy", dir: true },
   ],
   deploygate: [{ path: "features/<F>/gates.json", perFeature: true }],
   promote: [{ path: "sprints", dir: true }],
+  promgate: [{ path: "features/<F>/gates.json", perFeature: true }],
+  // The terminal shows the promoted sprint — what actually shipped (mirrors promote).
+  shipped: [{ path: "sprints", dir: true }],
 };
 
 const NODES: WorkflowNode[] = [
