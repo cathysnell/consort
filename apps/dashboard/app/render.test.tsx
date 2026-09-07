@@ -24,7 +24,8 @@ import { Transport } from "./Transport";
 import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, TranscriptView, turnMetaFields, turnUrl, type TurnPayload } from "./DrilldownPanel";
 import { DriftBanner, EventTicker, FidelityBanner, modeFromUrl } from "./board-parts";
-import type { DashboardState } from "@/lib/types";
+import { FeatureStatusSection } from "./FeatureStatusSection";
+import type { DashboardState, StoryProgress } from "@/lib/types";
 import { focusOf } from "@/lib/reducer";
 
 // Fixtures predate the `focus` field; derive it the same way the fold does so components that read
@@ -774,5 +775,52 @@ describe("modeFromUrl", () => {
     expect(modeFromUrl("?mode=")).toBeNull();
     expect(modeFromUrl("")).toBeNull();
     expect(modeFromUrl("?at=40")).toBeNull();
+  });
+});
+
+describe("render — FeatureStatusSection (left-pane status rollup)", () => {
+  const story = (over: Partial<StoryProgress> & Pick<StoryProgress, "id" | "feature">): StoryProgress => ({
+    status: "done",
+    stage: "done",
+    designComplete: true,
+    designPhase: null,
+    gateApproved: true,
+    active: false,
+    ...over,
+  });
+  const custom: DashboardState = {
+    ...state,
+    features: [
+      { id: "F1", done: true, active: false }, // complete → shown
+      { id: "F6", done: false, active: true }, // active → shown
+      { id: "F9", done: false, active: false }, // neither → omitted
+    ],
+    stories: [
+      story({ id: "S1", feature: "F1", status: "done", stage: "done" }),
+      story({ id: "S2", feature: "F6", status: "building", stage: "build", active: true }),
+      story({ id: "S3", feature: "F9", status: "designing", stage: "design", designComplete: false, designPhase: "propose" }),
+    ],
+  };
+
+  it("shows only complete + active features, each with its stories", () => {
+    const m = renderToStaticMarkup(<FeatureStatusSection state={custom} />);
+    // done + active features render; the started-but-idle F9 (and its story S3) do not.
+    expect(m).toContain("F1");
+    expect(m).toContain("F6");
+    expect(m).not.toContain("F9");
+    expect(m).not.toContain("S3");
+    // per-feature chip labels, and each shown feature's own stories.
+    expect(m).toContain(">done<");
+    expect(m).toContain(">active<");
+    expect(m).toContain("S1");
+    expect(m).toContain("S2");
+    // the header rollup counts complete of shown (F1 done of {F1,F6}).
+    expect(m).toContain("1 of 2 complete");
+  });
+
+  it("renders an empty-state line when no feature is complete or underway", () => {
+    const empty: DashboardState = { ...state, features: [{ id: "F1", done: false, active: false }], stories: [] };
+    const m = renderToStaticMarkup(<FeatureStatusSection state={empty} />);
+    expect(m).toContain("No feature complete or underway yet.");
   });
 });

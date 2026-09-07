@@ -7,6 +7,7 @@ import { WorkflowGraph } from "./WorkflowGraph";
 import { LaneGraph } from "./LaneGraph";
 import { DrilldownPanel, type DrilldownTarget } from "./DrilldownPanel";
 import { BacklogPanel } from "./BacklogPanel";
+import { FeatureStatusSection } from "./FeatureStatusSection";
 import { OrchestratorLane } from "./OrchestratorLane";
 import { DriftBanner, LogPane, SidePane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
@@ -174,9 +175,14 @@ export default function Home() {
               each pane the full length of the board column. */}
           <div style={{ display: "flex", alignItems: "stretch" }}>
             {canShowBacklog ? (
-              <SidePane side="left" title="Backlog · planning" open={backlogOpen} onToggle={() => setBacklogOpen((o) => !o)}>
-                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 12px" }}>
+              <SidePane side="left" title="Backlog · planning · status" open={backlogOpen} onToggle={() => setBacklogOpen((o) => !o)}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 18 }}>
                   <BacklogPanel mode={state.source?.mode ?? null} />
+                  {/* Status rollup — folded board state (features + their stories), separated from the
+                      static planning sections above by a divider. */}
+                  <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 16 }}>
+                    <FeatureStatusSection state={state} />
+                  </div>
                 </div>
               </SidePane>
             ) : null}
