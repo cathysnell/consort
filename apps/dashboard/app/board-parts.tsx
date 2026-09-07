@@ -433,9 +433,9 @@ export function FidelityBanner({ source }: { source: DashboardState["source"] })
   );
 }
 
-/** How many merged rows the ticker keeps in view. `Infinity` = no cap: with the fold now shipping
- *  the full event stream up to the playhead (RECENT_EVENT_TAIL), the pane renders every merged
- *  event + correspondence row, not a trailing window. */
+/** How many merged rows the ticker keeps in view. `Infinity` = no extra cap here: the fold already
+ *  ships a rolling window of the last RECENT_EVENT_TAIL (20) events up to the playhead, so the pane
+ *  renders those (plus any interleaved correspondence rows) — the 20-event cap lives in the fold. */
 const MERGED_TAIL = Number.POSITIVE_INFINITY;
 
 type CorrItem = NonNullable<NonNullable<DashboardState["source"]>["correspondence"]>["recent"][number];
