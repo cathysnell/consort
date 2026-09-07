@@ -514,15 +514,21 @@ export function diskArtifactProbe(
         }
         const spec = specLevelSmell(name);
         if (spec && story) {
-          // Reflect defects use a PROGRESS-BASED per-STORY budget. The reflection
-          // critic surfaces defects one at a time, so a story with several latent
-          // findings needs several re-designs (each full design re-run co-heals
-          // the findings currently open, then the critic may reveal a NEW one). A
-          // re-design is allowed as long as (a) we are under REFLECT_REVISE_CAP and
-          // (b) the PRIOR revise actually changed the test-list – real progress.
-          // A revise that produced NO change (the strategist is stuck, re-emitting
-          // the same list) hard-halts instead of looping. Other spec smells keep
-          // their simple per-(smell,story) budget.
+          // Reflect defects use a PROGRESS-BASED per-STORY budget. The reflect critic
+          // now emits ALL of a story's findings in ONE exhaustive verdict (see
+          // navigator.md REFLECT + the reflect context packet), so the typical shape
+          // is a single co-heal revise that converges in 1-2 laps — NOT the old
+          // one-finding-per-lap enumeration that inflated the revise count and pushed
+          // legitimately-converging designs into HIL at the cap. REFLECT_REVISE_CAP
+          // is therefore safe HEADROOM (rarely reached now) for the two cases that
+          // legitimately need another lap: a genuinely-NEW defect the batch fix
+          // reveals, or residual piecemeal from a critic that under-batches. The
+          // PRIMARY convergence guard is the fingerprint progress check, NOT the cap:
+          // a re-design is allowed only while (a) under REFLECT_REVISE_CAP and (b) the
+          // PRIOR revise actually CHANGED the test-list — real progress. A revise that
+          // produced NO change (the strategist is stuck, re-emitting the same list)
+          // hard-halts instead of looping. Other spec smells keep their simple
+          // per-(smell,story) budget.
           let budgetSpent: boolean;
           if (isReflectSmell(name)) {
             const revises = priorReflectReviseCount(consortDir, story);

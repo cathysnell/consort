@@ -842,6 +842,12 @@ function roleTaskBody(
           `into a token-driven class, so it blocks that refactor (the ui-style-implementation-test smell).` +
           ` Do NOT critique implementation, style, or scope, only buildability + internal ` +
           `consistency of THIS story's artifacts.` +
+          ` BE EXHAUSTIVE in this ONE pass: findings[] is multi-valued — run EVERY check against ` +
+          `EVERY AC, test-list item, and NFR, and emit a SEPARATE finding for EACH distinct defect ` +
+          `(decompose a multi-part NFR fitness_function into its sub-guarantees and flag every ` +
+          `uncovered clause). Do NOT return one finding at a time: the reflect↔revise loop is bounded ` +
+          `and escalates after a few laps, so a piecemeal reflect burns that budget on repeated ` +
+          `revise→re-test→reflect laps and can hand the human a still-defective design.` +
           ` Write your verdict to ${root}/features/${featureId}/stories/${s}/reflect-verdict.json as ` +
           `{"version":1,"passed":<bool>,"findings":[{"owner":"spec-author"|"test-strategist","detail":"<the defect>"}]}. ` +
           `passed:true with findings:[] when the spec + test-list are consistent + buildable (the common ` +

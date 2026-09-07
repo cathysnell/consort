@@ -1294,6 +1294,11 @@ describe("commandsForAction: pre-build reflection gate (navigator reflect)", () 
     expect(claude.task).toContain("reflect-verdict.json");
     // It critiques design consistency, not implementation.
     expect(claude.task).toMatch(/contradict|no covering test|untestable|layer/i);
+    // EXHAUSTIVENESS: one pass must surface EVERY defect (findings[] is multi-valued), including each
+    // sub-guarantee of a multi-part NFR — a piecemeal one-finding-per-lap reflect burned the bounded
+    // revise budget and escalated with a still-defective design.
+    expect(claude.task).toMatch(/EXHAUSTIVE/);
+    expect(claude.task).toMatch(/multi-part NFR fitness_function|sub-guarantee/);
   });
 
   it("emits the DETERMINISTIC reflect-gate CLI step after the reflect turn (not a build begin/review)", () => {
