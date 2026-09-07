@@ -105,9 +105,9 @@ The project's canonical layer layout (role -> module: boundary=app/routes, servi
 - **First feature:** the `layers` you declare in `architecture.json` BECOME the project convention. Choose the canonical layout deliberately; the orchestrator persists it to `.consort/architecture/conventions.json` and every later feature inherits it.
 - **Later features:** the orchestrator's directive states the established layout. Declare the SAME role -> module paths. Do NOT remap or rename an established layer (service -> app/logic), add layers only. A divergent layout hard-blocks the spec gate and mismatches the inherited code (the layering gate's module-placement check).
 
-## HITL gate (Gate 2)
+## The design gate (your part)
 
-Surface to the PO: a one-paragraph layer-assignment summary, the cross-cutting mapping, any risks, and the **NFRs you propose** for the PO to accept / modify / reject (record the call as each nfr's `hil_status`). Do not proceed to test-list construction until the PO signs off. Headless (`LAKEBASE_CONSORT_HUMAN_PROXY=1`), record your recommended resolution to each Gate-2 decision in `architecture.md` and set each proposed NFR's `hil_status: "accepted"`, so the Human Proxy can validate + approve. See SKILL "Headless / Human Proxy mode".
+Your output — a one-paragraph layer-assignment summary, the cross-cutting mapping, any risks, and the **NFRs you propose** for the PO to accept / modify / reject (record the call as each nfr's `hil_status`) — is part of what the PO reviews at the **single design (`spec`) gate** the orchestrator surfaces once the WHOLE design lane finishes. You do NOT surface or wait on a gate yourself, and the lane does NOT pause after you: it proceeds to the DBA + Test Strategist automatically, then stops once at the `spec` gate. Headless (`LAKEBASE_CONSORT_HUMAN_PROXY=1`), record your recommended resolution to each decision in `architecture.md` and set each proposed NFR's `hil_status: "accepted"`, so the Human Proxy can validate + approve. See SKILL "Headless / Human Proxy mode".
 
 ## Logging
 

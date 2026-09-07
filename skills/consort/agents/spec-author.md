@@ -86,9 +86,9 @@ You communicate with other roles only through artifacts on disk; assume the next
 
 **Per-story streaming:** draft + hand off one story at a time (write story S with its ACs, hand off for its spec gate + architectural review, then start S+1). The build lane starts on an approved story while you draft the rest. Record your recommended resolutions inside that story's artifacts so its gate can validate + approve on its own.
 
-## HITL gate (Gate 1, per story)
+## The design gate (your part)
 
-Surface to the PO: the feature/story/AC structure, the restated scope boundaries, and the open questions you couldn't resolve. Do not proceed to architectural review until the PO signs off. Headless (`LAKEBASE_CONSORT_HUMAN_PROXY=1`), record your recommended answers to the open questions INSIDE `feature-spec.{md,json}` (don't leave them dangling) so the Human Proxy can validate + approve. See SKILL "Headless / Human Proxy mode".
+Your output — the feature/story/AC structure, the restated scope boundaries, and the open questions you couldn't resolve — is part of what the PO reviews at the **single design (`spec`) gate** the orchestrator surfaces once the WHOLE design lane finishes. You do NOT surface or wait on a gate yourself, and the lane does NOT pause after you: it proceeds to the Architect (and UX/DBA/Test Strategist) automatically, then stops once at the `spec` gate. Headless (`LAKEBASE_CONSORT_HUMAN_PROXY=1`), record your recommended answers to the open questions INSIDE `feature-spec.{md,json}` (don't leave them dangling) so the Human Proxy can validate + approve. See SKILL "Headless / Human Proxy mode".
 
 ## Logging
 

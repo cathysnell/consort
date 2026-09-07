@@ -61,18 +61,16 @@ This README is the human-facing overview. The agent's operating contract – har
 
 ## Phases and gates
 
-Phases 0–3 are the **SDD (Spec Driven Development)** lane: they produce and freeze the spec. Phase 4 is the **TDD (Test Driven Development)** lane: it builds against that frozen spec.
+The **SDD (Spec Driven Development)** lane produces and freezes the spec; the **TDD (Test Driven Development)** lane builds against it. The design lane runs its lenses **as a unit** — draft spec, then the UX, architectural, schema, and test-list lenses, then a reflect pass — and stops at a **single** HITL review, the `spec` gate. There is **no per-lens gate**: the human reviews the whole design once, per story, at the end of the lane. (The design does the work of all those lenses; it just doesn't pause between them.)
 
-| Phase | Lane | Output | HITL gate |
+| Lane | Steps, in order (deterministic within the lane) | Output | HITL gate(s) |
 |---|---|---|---|
-| 0 Discovery | SDD | Draft `feature-spec.{md,json}` + `story.{md,json}` + `ac.{md,json}` per AC | **Gate 1 – Draft spec** |
-| 1 Architectural review | SDD | Layer + architectural_notes populated; `architecture.md` summary | **Gate 2 – Architectural lens** |
-| 2 Test-list construction | SDD | Ordered `test-list.{md,json}` at feature level | **Gate 3 – Test list ordering** |
-| 3 Design-spec gate | SDD | Experiment plan in `selection-log.md` (N, strategies, budget) | **Gate 4 – Experiment plan** |
-| 4 Implementation | TDD | Per-experiment cycles producing tests + code | Continuous: smells; final: promote / synthesize choice |
-| 5 Deploy | TDD | Deployed increment (reachable + verify) on the paired branch | **`deploy` gate** |
+| Planning | PO drafts intake · Spec Author proposes a backlog · Architect sizes it · PO authors the picked feature-requests | `product-overview.md`, `nfrs.md`, `feature-proposals.md`, `requested.json` | **`intake`** (drafted intake), **`backlog`** (human commits the sprint's features), **`plan`** (locks the backlog) |
+| SDD — design | Spec Author (breakdown → stories/ACs) · UX Designer (design guide + IA, UI only) · Architect Reviewer (layer + `architectural_notes`; NFR coverage) · DBA (`db-design.json`) · Test Strategist (ordered `test-list`) · Navigator (reflect) | Frozen spec: `feature-spec` + stories + ACs + `architecture` + `db-design` + `test-list` (+ the experiment plan: N, strategies, budget) | **`spec`** — one review of the whole design, per story |
+| TDD — build | Per-experiment RED / GREEN / REVIEW / REFACTOR cycles | Tests + code on the paired branch | Continuous: smells; at the end **`acceptance`** (accept / discard / revise; promote / synthesize when N≥2) |
+| TDD — deploy | Deploy the increment (reachable + verify), then promote via PR + CI + merge | Deployed + merged increment | **`deploy`**, then **`promote`** |
 
-Each phase has a defined predecessor + artifact contract. The orchestrator refuses to transition if prior artifacts are missing or invalid. The SDD-to-TDD handoff is hard: the build lane cannot start until the `spec` and `test_list` gates are approved, so TDD always builds against a frozen, reviewed spec.
+Each step has a defined predecessor + artifact contract; the orchestrator refuses to transition if prior artifacts are missing or invalid. The SDD→TDD handoff is hard: the build lane cannot start until the `spec` gate is approved, so TDD always builds against a frozen, reviewed spec.
 
 ## Operations
 
@@ -80,9 +78,9 @@ What Consort does on your behalf, in user-journey order. You don't invoke these 
 
 ### 1. Design-spec gate
 
-Once the test list is approved (Gate 3), the agent runs the design-spec gate analyzer – phase 3. It scans the list for unresolved design choices (keywords like "either", "consider", "alternatively", "decide", "TBD") and proposes either N=1 (iterative refinement) or N≥2 (parallel race), with strategies and a resource budget (concurrent branches, wall-clock minutes, agent-pair count).
+As part of the design lane (after the test list is built), the orchestrator runs the design-spec analyzer. It scans the list for unresolved design choices (keywords like "either", "consider", "alternatively", "decide", "TBD") and proposes either N=1 (iterative refinement) or N≥2 (parallel race), with strategies and a resource budget (concurrent branches, wall-clock minutes, agent-pair count).
 
-The proposal is conservative by design: the analyzer's job is to surface the choice to the PO, not to decide. The PO signs off at Gate 4. The plan and the decision are persisted here:
+The proposal is conservative by design: the analyzer's job is to surface the choice to the PO, not to decide. The PO signs off on it as part of the single `spec` gate that closes the design lane. The plan and the decision are persisted here:
 
 ```
 .consort/
