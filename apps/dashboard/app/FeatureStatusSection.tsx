@@ -10,7 +10,21 @@ import { font, radius } from "@/lib/theme";
 //
 // Its own module (not a local in page.tsx): a Next route file may only export the page defaults, so
 // a named export there fails the page-type check — and it keeps the section unit-testable directly.
-export function FeatureStatusSection({ state }: { state: DashboardState }) {
+//
+// This is ALSO where the board's feature is selected (the old header "follow" switcher moved here, so
+// it is reachable in every mode — live playing/recording + replay). Clicking a feature card PINS the
+// board to that feature (a FILTER, not a seek — the transport stays put); the pinned card carries a
+// "follow" control to clear it. Selection is offered only with >1 feature (with one, "follow" and
+// "pin it" are identical); a single-feature run renders the same card, non-interactive.
+export function FeatureStatusSection({
+  state,
+  pinned,
+  onPin,
+}: {
+  state: DashboardState;
+  pinned: string | null;
+  onPin: (f: string | null) => void;
+}) {
   const byFeature = new Map<string, StoryProgress[]>();
   for (const s of state.stories) {
     if (!s.feature) continue;
@@ -21,10 +35,21 @@ export function FeatureStatusSection({ state }: { state: DashboardState }) {
   // done || active, in the state's first-seen feature order. done wins over active for the chip.
   const shown = state.features.filter((f) => f.done || f.active);
   const doneCount = shown.filter((f) => f.done).length;
+  const pinnedShown = pinned != null && shown.some((f) => f.id === pinned);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        Status{shown.length > 0 ? <span style={{ textTransform: "none", letterSpacing: 0 }}> · {doneCount} of {shown.length} complete</span> : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <span>Status{shown.length > 0 ? <span style={{ textTransform: "none", letterSpacing: 0 }}> · {doneCount} of {shown.length} complete</span> : null}</span>
+        {/* When a pin is active, a control to return to following the run's active feature. */}
+        {pinnedShown ? (
+          <button
+            onClick={() => onPin(null)}
+            title="Follow the run's active feature (clear the pin)"
+            style={{ marginLeft: "auto", border: `1px solid var(--border-default)`, background: "var(--surface-card)", color: "var(--text-muted)", borderRadius: radius.chip, padding: "1px 7px", fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", cursor: "pointer" }}
+          >
+            ↩ follow
+          </button>
+        ) : null}
       </div>
       {shown.length === 0 ? (
         <div style={{ fontSize: "0.78rem", color: "var(--text-faint)" }}>No feature complete or underway yet.</div>
@@ -32,16 +57,38 @@ export function FeatureStatusSection({ state }: { state: DashboardState }) {
         shown.map((f) => {
           const stories = byFeature.get(f.id) ?? [];
           const storiesDone = stories.filter((s) => s.stage === "done").length;
+          const isPinned = pinned === f.id;
           return (
-            <div key={f.id} style={{ border: `1px solid var(--border-default)`, borderRadius: radius.panel, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div
+              key={f.id}
+              style={{
+                border: `1px solid ${isPinned ? "var(--status-accent)" : "var(--border-default)"}`,
+                background: isPinned ? "color-mix(in srgb, var(--status-accent) 8%, transparent)" : undefined,
+                borderRadius: radius.panel,
+                padding: "10px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-strong)", fontFamily: font.mono }}>{f.id}</span>
                 <FeatureStateChip done={f.done} />
-                {stories.length > 0 ? (
-                  <span style={{ marginLeft: "auto", fontSize: "0.66rem", color: "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>
-                    {storiesDone}/{stories.length} stories
-                  </span>
-                ) : null}
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                  {stories.length > 0 ? (
+                    <span style={{ fontSize: "0.66rem", color: "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>
+                      {storiesDone}/{stories.length} stories
+                    </span>
+                  ) : null}
+                  {/* The visible pin control. Pins the board to this feature (a filter, not a seek);
+                      the pinned one is filled + accent, click again (or the header "↩ follow") clears
+                      it. Present on every feature so selection is discoverable in any scenario. */}
+                  <PinButton
+                    pinned={isPinned}
+                    onClick={() => onPin(isPinned ? null : f.id)}
+                    title={isPinned ? "Pinned — click to follow the run" : `Pin the board to ${f.id}`}
+                  />
+                </span>
               </div>
               {stories.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -57,6 +104,35 @@ export function FeatureStatusSection({ state }: { state: DashboardState }) {
         })
       )}
     </div>
+  );
+}
+
+// The per-feature pin toggle: an outline "📌 pin" chip, filled accent "📌 pinned" when active.
+function PinButton({ pinned, onClick, title }: { pinned: boolean; onClick: () => void; title: string }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-pressed={pinned}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+        fontSize: "0.6rem",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        color: pinned ? "var(--status-accent-text)" : "var(--text-muted)",
+        background: pinned ? "var(--status-accent-tint)" : "var(--surface-card)",
+        border: `1px solid ${pinned ? "var(--status-accent)" : "var(--border-default)"}`,
+        borderRadius: radius.chip,
+        padding: "1px 7px",
+        cursor: "pointer",
+      }}
+    >
+      <span aria-hidden style={{ fontSize: "0.66rem", lineHeight: 1 }}>📌</span>
+      {pinned ? "pinned" : "pin"}
+    </button>
   );
 }
 

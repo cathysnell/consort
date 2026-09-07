@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { usePolledState } from "./usePolledState";
 import { Transport } from "./Transport";
 import { WorkflowGraph } from "./WorkflowGraph";
@@ -144,8 +144,6 @@ export default function Home() {
         lastUpdatedAt={lastUpdatedAt}
         costMode={costMode}
         setCostMode={setCostMode}
-        pinned={pinned}
-        onPin={setPinned}
         onMode={(m) => {
           // Switching source resets the playhead: an event index means nothing across two
           // different runs, and carrying it over would silently show a corpus at a live run's
@@ -179,9 +177,10 @@ export default function Home() {
                 <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 18 }}>
                   <BacklogPanel mode={state.source?.mode ?? null} />
                   {/* Status rollup — folded board state (features + their stories), separated from the
-                      static planning sections above by a divider. */}
+                      static planning sections above by a divider. Also the feature SELECTOR: pin the
+                      board to a feature (or follow the run) from here — moved off the header. */}
                   <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 16 }}>
-                    <FeatureStatusSection state={state} />
+                    <FeatureStatusSection state={state} pinned={pinned} onPin={setPinned} />
                   </div>
                 </div>
               </SidePane>
@@ -335,7 +334,7 @@ export default function Home() {
   );
 }
 
-function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode, pinned, onPin }: { state: DashboardState | null; connected: boolean; lastUpdatedAt: number | null; costMode: CostMode; setCostMode: (m: CostMode) => void; onMode: (m: "live" | "replay") => void; pinned: string | null; onPin: (f: string | null) => void }) {
+function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode }: { state: DashboardState | null; connected: boolean; lastUpdatedAt: number | null; costMode: CostMode; setCostMode: (m: CostMode) => void; onMode: (m: "live" | "replay") => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
       <div>
@@ -360,7 +359,7 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
         ) : null}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <FeatureSwitcher features={state?.features ?? []} pinned={pinned} onPin={onPin} />
+        {/* Feature selection moved to the left-pane Status section (FeatureStatusSection). */}
         {/* Source mode. A switch when the environment offers both live and a readable corpus,
             otherwise a plain badge — a control that can only be pressed one way is noise. The
             warning tint carries `note`, which is how a misconfigured CONSORT_CORPUS_DIR
@@ -544,58 +543,9 @@ function ConnectionStatus({ connected, lastUpdatedAt }: { connected: boolean; la
   );
 }
 
-// The sprint/feature selector. A multi-feature run scopes the board to one feature at a time
-// (correctly — see the reducer), which leaves earlier features unreachable except by scrubbing
-// the transport back past the sprint boundary, which no viewer discovers. This names every
-// feature the run has touched and lets one be pinned.
-//
-// Two deliberate rules:
-//   - Shown only when the run has MORE than one feature. On a single-feature run it is a control
-//     that can only be pressed one way — noise — matching the mode switch's own rule.
-//   - Pinning is a FILTER, not a seek: it sets `pinned` and never touches the playhead. "Live"
-//     (null pin) follows the playhead's own feature, distinct from pinning that same feature,
-//     so a viewer who wants "just track whatever's active" isn't stuck on a stale pin.
-function FeatureSwitcher({ features, pinned, onPin }: { features: DashboardState["features"]; pinned: string | null; onPin: (f: string | null) => void }) {
-  if (features.length < 2) return null;
-  const dot = (f: DashboardState["features"][number]) =>
-    f.done ? "var(--status-good)" : f.active ? "var(--status-warning-amber)" : "var(--border-default)";
-  const chipStyle = (on: boolean): CSSProperties => ({
-    fontSize: "0.66rem",
-    fontWeight: 700,
-    letterSpacing: "0.04em",
-    color: on ? "var(--text-strong)" : "var(--text-faint)",
-    background: on ? "var(--surface-card)" : "transparent",
-    border: "none",
-    borderRadius: radius.chip,
-    padding: "2px 8px",
-    cursor: "pointer",
-    font: "inherit",
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-  });
-  return (
-    <span
-      title="Filter the board to one feature. A filter, not a seek — the transport stays where it is."
-      style={{ display: "flex", gap: 2, padding: 2, background: "var(--surface-inset)", border: `1px solid var(--border-default)`, borderRadius: radius.chip }}
-    >
-      {/* "Live" = follow the playhead's own feature (no pin). It is also highlighted when the
-          pin is STALE — the client still holds a feature id, but it names nothing in this
-          window (scrubbed back before it appears), so the fold dropped it and the board is in
-          fact following the playhead. Highlighting the held-but-inert chip would misrepresent
-          the filter's real state, so a pin that matches no chip reads as "follow". */}
-      <button onClick={() => onPin(null)} style={chipStyle(pinned === null || !features.some((f) => f.id === pinned))}>
-        follow
-      </button>
-      {features.map((f) => (
-        <button key={f.id} onClick={() => onPin(f.id)} style={chipStyle(pinned === f.id)} title={`${f.id}${f.done ? " · done" : f.active ? " · active" : ""}`}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot(f), display: "inline-block" }} />
-          {f.id}
-        </button>
-      ))}
-    </span>
-  );
-}
+// The sprint/feature selector moved to the left-pane Status section — see FeatureStatusSection,
+// which lists the run's features and pins the board to one (a FILTER, not a seek). It lives there so
+// selection is reachable in every mode + right where the features are shown, instead of the header.
 
 function CostBar({ state }: { state: DashboardState }) {
   const total = state.totalCost;

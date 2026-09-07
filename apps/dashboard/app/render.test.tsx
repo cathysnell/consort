@@ -851,7 +851,7 @@ describe("render — FeatureStatusSection (left-pane status rollup)", () => {
   };
 
   it("shows only complete + active features, each with its stories", () => {
-    const m = renderToStaticMarkup(<FeatureStatusSection state={custom} />);
+    const m = renderToStaticMarkup(<FeatureStatusSection state={custom} pinned={null} onPin={() => {}} />);
     // done + active features render; the started-but-idle F9 (and its story S3) do not.
     expect(m).toContain("F1");
     expect(m).toContain("F6");
@@ -866,9 +866,30 @@ describe("render — FeatureStatusSection (left-pane status rollup)", () => {
     expect(m).toContain("1 of 2 complete");
   });
 
+  it("is the feature selector: every feature has a visible pin control; pinning marks it + offers follow", () => {
+    const unpinned = renderToStaticMarkup(<FeatureStatusSection state={custom} pinned={null} onPin={() => {}} />);
+    expect(unpinned).toContain(">pin<"); // the visible pin button (unpinned)
+    expect(unpinned).toContain("cursor:pointer"); // it's a real clickable control
+    const pinnedF1 = renderToStaticMarkup(<FeatureStatusSection state={custom} pinned="F1" onPin={() => {}} />);
+    expect(pinnedF1).toContain(">pinned<"); // F1's pin button now reads "pinned"
+    expect(pinnedF1).toContain("follow"); // the clear-pin control in the header
+  });
+
+  it("shows the pin control even on a single-feature run (works in all scenarios)", () => {
+    const one: DashboardState = {
+      ...state,
+      features: [{ id: "F1", done: false, active: true }],
+      stories: [story({ id: "S1", feature: "F1", status: "building", stage: "build", active: true })],
+    };
+    const m = renderToStaticMarkup(<FeatureStatusSection state={one} pinned={null} onPin={() => {}} />);
+    expect(m).toContain("F1");
+    expect(m).toContain(">pin<"); // the pin control is present with one feature too
+    expect(m).toContain("cursor:pointer");
+  });
+
   it("renders an empty-state line when no feature is complete or underway", () => {
     const empty: DashboardState = { ...state, features: [{ id: "F1", done: false, active: false }], stories: [] };
-    const m = renderToStaticMarkup(<FeatureStatusSection state={empty} />);
+    const m = renderToStaticMarkup(<FeatureStatusSection state={empty} pinned={null} onPin={() => {}} />);
     expect(m).toContain("No feature complete or underway yet.");
   });
 });
