@@ -363,6 +363,9 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
                   onClick={() => onMode(m)}
                   disabled={state.source!.availableModes.length < 2}
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
                     fontSize: "0.66rem",
                     fontWeight: 700,
                     textTransform: "uppercase",
@@ -376,7 +379,22 @@ function Header({ state, connected, lastUpdatedAt, costMode, setCostMode, onMode
                     font: "inherit",
                   }}
                 >
-                  {m}
+                  {/* A pulsing green dot on the ACTIVE live run — the standard "this is live" cue,
+                      distinguishing a LIVE RUN from a REPLAY RUN at a glance. Only the selected live
+                      mode pulses; replay (or an unselected live toggle) shows no dot. */}
+                  {m === "live" && on ? (
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "var(--status-good)",
+                        animation: "softpulse 1.6s ease-in-out infinite",
+                        flex: "none",
+                      }}
+                    />
+                  ) : null}
+                  {m === "live" ? "live run" : "recorded"}
                 </button>
               );
             })}

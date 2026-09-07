@@ -382,15 +382,16 @@ describe("render — Transport", () => {
       <Transport at={null} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T15:09:36.000Z" />,
     );
     expect(markup).toContain("WORKING");
-    expect(markup).not.toContain("PAUSED");
+    expect(markup).not.toContain("REVIEWING");
     expect(markup).toMatchSnapshot();
   });
 
-  it("renders PAUSED when scrubbed back off the newest event, and says so", () => {
+  it("renders REVIEWING (not PAUSED — the run keeps going) when scrubbed back off the newest event", () => {
     const markup = renderToStaticMarkup(
       <Transport at={40} total={380} onChange={noop} playing={false} onPlayingChange={noop} speed={5} onSpeedChange={noop} atTimestamp="2026-08-04T19:39:11.000Z" />,
     );
-    expect(markup).toContain("PAUSED");
+    expect(markup).toContain("REVIEWING");
+    expect(markup).not.toContain("PAUSED");
     expect(markup).not.toContain("WORKING");
     expect(markup).toMatchSnapshot();
   });

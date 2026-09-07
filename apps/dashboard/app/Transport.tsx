@@ -140,8 +140,10 @@ export function Transport({
           {atTimestamp ? atTimestamp.slice(11, 19) : "--:--:--"}
         </span>
         {!live ? (
-          // Scrubbed back / not following the newest event.
-          <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>PAUSED</span>
+          // Scrubbed back / not following the newest event. NOT "PAUSED" — that read as the RUN
+          // being paused; the run keeps going, you're just reviewing an earlier point ("viewing event
+          // X of Y" in the header). Jump-to-end (⏭) returns to live.
+          <span style={{ color: "var(--status-accent-text)", fontWeight: 700 }}>REVIEWING</span>
         ) : escalated ? (
           // A problem was raised to a human (red) — corresponds with the raised-to-HIL state
           // everywhere else on the board.
