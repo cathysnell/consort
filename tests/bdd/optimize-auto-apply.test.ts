@@ -109,14 +109,14 @@ describe("applyWinnerToManifests: bake a per-turn config winner into the manifes
 });
 
 describe("resolveConsortSettings reads the manifest as the single per-turn source (spec-author breakdown)", () => {
-  it("modelFor(spec-author, breakdown) === haiku with no project override – from the manifest, not an overlay", async () => {
+  it("modelFor(spec-author, breakdown) === sonnet with no project override – from the manifest, not an overlay", async () => {
     // defaultConsortConfig no longer bakes per-turn model/effort; the resolver reads the shipped
     // manifest agentOptions. This asserts the single-source wiring end-to-end on the real kit config.
     const { resolveConsortSettings, defaultConsortConfig, writeConsortConfig } = await import("../../consort/orchestrator/settings/project-settings");
     const proj = mkdtempSync(join(tmpdir(), "single-source-"));
     writeConsortConfig(proj, defaultConsortConfig(), { force: true });
     const s = resolveConsortSettings({ projectDir: proj });
-    expect(s.modelFor("spec-author", "breakdown")).toBe("haiku");
+    expect(s.modelFor("spec-author", "breakdown")).toBe("sonnet");
     expect(s.effortFor("spec-author", "breakdown")).toBe("low");
     rmSync(proj, { recursive: true, force: true });
   });

@@ -138,8 +138,10 @@ describe("step-manifest manifestForAction (single-match, rejects ambiguity)", ()
 
 describe("agentOptionsForStep (per-step config-directory layer for the resolver)", () => {
   it("returns the declared model/effort for a (role, turnKey) from the shipped manifests", () => {
-    // spec-author breakdown = haiku+low (the applied winner, baked into the manifest).
-    expect(agentOptionsForStep("spec-author", "breakdown", turnKeyForAction)).toEqual({ model: "haiku", effort: "low" });
+    // spec-author breakdown = sonnet+low (haiku was the optimize sweep's speed winner, but it
+    // malformed the story schema — jamming the As-a/I-want/So-that narrative into a single asA and
+    // leaving the gate-required iWantTo/soThat empty — so the shipped model is sonnet).
+    expect(agentOptionsForStep("spec-author", "breakdown", turnKeyForAction)).toEqual({ model: "sonnet", effort: "low" });
     // navigator review = sonnet+low (the former defaultEffort entry, now declared).
     expect(agentOptionsForStep("navigator", "review", turnKeyForAction)).toEqual({ model: "sonnet", effort: "low" });
     // driver refactor = opus (the driver-refactor tuning winner: fastest 2/3 clean-holder), default effort.

@@ -201,15 +201,15 @@ describe("resolveConsortSettings: per-turn model tiering (driver GREEN/REFACTOR 
     expect(s.modelFor("architect-reviewer")).toBe("opus");
   });
 
-  it("defaultConsortConfig applies the spec-author winner PER STEP: breakdown haiku+low, AC-authoring untouched", () => {
-    // The optimize sweep measured the BREAKDOWN step (haiku+low, -44%). The winner is
-    // applied keyed to `breakdown` ONLY – the per-story AC-authoring step is a
-    // different task and keeps the recommended model + default effort until its own
-    // sweep. This is the "apply to the step, not the role" invariant.
+  it("defaultConsortConfig applies a PER-STEP lever: breakdown sonnet+low, AC-authoring untouched", () => {
+    // The breakdown step carries its own per-step model/effort (sonnet+low), keyed to `breakdown`
+    // ONLY – the per-story AC-authoring step is a different task and keeps the recommended model +
+    // default effort. This is the "apply to the step, not the role" invariant. (The optimize sweep's
+    // speed winner was haiku, but haiku malformed the story schema, so the shipped model is sonnet.)
     writeConsortConfig(proj, defaultConsortConfig());
     const s = resolveConsortSettings({ projectDir: proj });
-    // breakdown step: the applied winner.
-    expect(s.modelFor("spec-author", "breakdown")).toBe("haiku");
+    // breakdown step: its per-step model.
+    expect(s.modelFor("spec-author", "breakdown")).toBe("sonnet");
     expect(s.effortFor("spec-author", "breakdown")).toBe("low");
     // AC-authoring step: NOT the breakdown winner – recommended model, default effort.
     expect(s.modelFor("spec-author", "acs")).toBe("opus");
