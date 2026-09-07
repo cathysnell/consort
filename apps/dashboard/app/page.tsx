@@ -579,30 +579,23 @@ function FeatureSwitcher({ features, pinned, onPin }: { features: DashboardState
 }
 
 function StatusBar({ state }: { state: DashboardState }) {
-  const gateColor = (s: string) => (s === "approved" ? "var(--status-good)" : s === "open" ? "var(--border-default)" : "var(--status-warning-amber)");
   const designActive = state.lane === "design";
   // A complete run has no active lane — neither bar should claim "in progress".
   const buildActive = state.lane === "build";
   return (
     <div style={{ background: "var(--surface-card)", borderRadius: radius.card, padding: "16px 20px", border: `1px solid var(--border-default)`, display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* DESIGN lane → BUILD lane → per-story rows → Stories/gates → (optional) COST at bottom. */}
+      {/* DESIGN lane → BUILD lane → per-story rows → Stories count. The gate chips were removed:
+          they duplicated the orchestrator card's gate bubbles and, unlike those, never "stayed lit"
+          (they coloured only on a literal gate.approved, which the kit rarely logs, and omitted any
+          gate not yet surfaced). The orchestrator's per-story, inference-backed bubbles are the one
+          gate display. */}
       <DesignLane phases={state.designPhases} active={designActive} />
       <BuildLane state={state} active={buildActive} complete={state.lane === "complete"} />
 
       {state.stories.length > 0 ? <StoryTracks stories={state.stories} /> : null}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "center", borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
+      <div style={{ borderTop: `1px solid var(--border-default)`, paddingTop: 12 }}>
         <Metric label="Stories" value={`${state.progress.storiesDone}/${state.progress.storiesTotal}`} />
-        <div>
-          <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Sprint gates</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {state.gates.length === 0 ? <span style={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>—</span> : state.gates.map((g) => (
-              <span key={g.name} title={`${g.name}: ${g.status}`} style={{ fontSize: "0.65rem", padding: "3px 8px", borderRadius: 6, border: `1px solid ${gateColor(g.status)}`, color: g.status === "approved" ? "var(--status-good)" : "var(--text-muted)", background: g.status === "approved" ? "var(--status-good-tint-soft)" : "var(--surface-card)", textTransform: "uppercase" }}>
-                {g.name}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
