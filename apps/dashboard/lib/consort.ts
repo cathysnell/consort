@@ -6,7 +6,7 @@
 // board can be evaluated at any point in the log and tested without a project on disk.
 //
 // Pure read-only observer: it never writes to the watched project.
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
@@ -364,32 +364,47 @@ export function readEvents(): AgentLogEvent[] {
 }
 
 
-// Shell out to the project's feature-status CLI for the authoritative % snapshot.
-// feature-status shells out (~0.4s) and changes slowly (story/gate/test counts), so cache
-// it briefly. The fast-moving signals (agent activity, waiting banner) come from files, not
-// this — so a short TTL keeps the poll snappy without staling what matters.
+// The authoritative %/gate/test snapshot for a feature comes from the project's feature-status CLI,
+// which shells out through `./scripts/lk` — a SUBPROCESS that is slow (observed ~10-15s, CPU-bound,
+// not the ~0.4s once assumed). It changes SLOWLY (story/gate/test counts), while the fast-moving
+// signals (agent activity, waiting banner, gates) come from files. So this MUST NOT block the fetch:
+// `/api/state` at the live edge was waiting the full shell-out, making the whole board (and every
+// turn-step near the live edge) crawl. Stale-while-revalidate instead: return the last-good cached
+// value IMMEDIATELY and refresh in the BACKGROUND (fire-and-forget, one at a time), so the poll is
+// snappy and the % just trails by a refresh. `_fsRefreshing` guards against piling up refreshes.
 let _fsCache: { feature: string; at: number; value: FeatureStatus | null } | null = null;
+let _fsRefreshing = false;
 
-const FEATURE_STATUS_TTL_MS = 4000;
+// Longer TTL now that a refresh is off the request path: feature-status is slow-changing, and the
+// ~15s shell-out is CPU-heavy, so re-running it every few seconds is pure waste.
+const FEATURE_STATUS_TTL_MS = 30_000;
 
 function readFeatureStatus(feature: string): FeatureStatus | null {
-  if (_fsCache && _fsCache.feature === feature && Date.now() - _fsCache.at < FEATURE_STATUS_TTL_MS) {
-    return _fsCache.value;
+  const fresh = _fsCache?.feature === feature && Date.now() - _fsCache.at < FEATURE_STATUS_TTL_MS;
+  if (!fresh && !_fsRefreshing) {
+    // Fire-and-forget async refresh — the request returns without awaiting it.
+    _fsRefreshing = true;
+    execFile(
+      "./scripts/lk",
+      ["lakebase-feature-status", feature, "--json"],
+      { cwd: projectDir(), encoding: "utf8", timeout: 20_000 },
+      (err, stdout) => {
+        _fsRefreshing = false;
+        let value: FeatureStatus | null = _fsCache?.feature === feature ? _fsCache.value : null; // keep last-good
+        if (!err) {
+          try {
+            value = JSON.parse(stdout) as FeatureStatus;
+          } catch {
+            /* torn/partial output: keep last-good */
+          }
+        }
+        _fsCache = { feature, at: Date.now(), value };
+      },
+    );
   }
-  let value: FeatureStatus | null = null;
-  try {
-    const out = execFileSync("./scripts/lk", ["lakebase-feature-status", feature, "--json"], {
-      cwd: projectDir(),
-      encoding: "utf8",
-      timeout: 15000,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    value = JSON.parse(out) as FeatureStatus;
-  } catch {
-    value = _fsCache?.feature === feature ? _fsCache.value : null; // keep last-good on transient failure
-  }
-  _fsCache = { feature, at: Date.now(), value };
-  return value;
+  // Serve whatever we have RIGHT NOW (last-good for this feature, or null before the first refresh
+  // lands). Never blocks on the shell-out.
+  return _fsCache?.feature === feature ? _fsCache.value : null;
 }
 
 
