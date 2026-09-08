@@ -6655,9 +6655,11 @@ __export(claude_runner_exports, {
   ClaudeTurnError: () => ClaudeTurnError,
   CliEffectError: () => CliEffectError,
   ReplayCorpusMissError: () => ReplayCorpusMissError,
+  UX_BROWSER_MCP_CONFIG: () => UX_BROWSER_MCP_CONFIG,
   buildCfg: () => buildCfg,
   claudeBaseArgs: () => claudeBaseArgs,
   claudeToolArgs: () => claudeToolArgs,
+  defaultMcpConfigForRole: () => defaultMcpConfigForRole,
   defaultTurnMonitor: () => defaultTurnMonitor,
   execRunner: () => execRunner,
   peekLastAgentTranscript: () => peekLastAgentTranscript,
@@ -6857,7 +6859,7 @@ function resolveProjectSettings(projectDir) {
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: file?.project?.clientFramework ?? "none",
-    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" – the
     // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
     // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
     // default only affects config-less/legacy trees.
@@ -7263,7 +7265,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7271,12 +7273,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7290,7 +7293,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7303,7 +7306,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -7439,6 +7442,32 @@ var product_owner_intake_default = {
   }
 };
 
+// consort/orchestrator/steps/manifests/product-owner-author-requests.json
+var product_owner_author_requests_default = {
+  id: "product-owner-author-requests",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "author-requests" },
+  inputs: [
+    { id: "product-overview", source: "feature:product-overview.md", optional: true, description: "The PO's product overview , the framing each committed feature-request is drafted from. OPTIONAL so a hermetic dispatch does not fail on its absence." },
+    { id: "nfrs", source: "feature:nfrs.md", optional: true, description: "The PO's non-functional requirements each committed feature-request accounts for. OPTIONAL." },
+    { id: "feature-proposals", source: "feature:planning/feature-proposals.md", optional: true, description: "The Spec Author's candidate proposals; the committed feature-request draws its scope from the matching section. OPTIONAL." }
+  ],
+  outputs: [],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  },
+  postTurn: [
+    { bin: "@sync-backlog", args: [], when: "after" }
+  ]
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -7458,7 +7487,7 @@ var spec_author_breakdown_default = {
     produced: { next: "state-derived" }
   },
   agentOptions: {
-    model: "haiku",
+    model: "sonnet",
     effort: "low",
     session: "fresh",
     resumeKeyFrom: "role"
@@ -8068,6 +8097,7 @@ var driver_green_superseded_default = {
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
   product_owner_intake_default,
+  product_owner_author_requests_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,
@@ -8111,7 +8141,7 @@ function agentOptionsForStep(role, turnKey, keyForAction, manifests = SHIPPED_MA
     const cur = { model: m.agentOptions.model, effort: m.agentOptions.effort };
     if (hit && (hit.model !== cur.model || (hit.effort ?? "default") !== (cur.effort ?? "default"))) {
       throw new Error(
-        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) , two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
+        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) \u2013 two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
       );
     }
     hit = cur;
@@ -8169,6 +8199,7 @@ function resolveConsortSettings(inputs) {
   const models = {};
   const fallbackModels = {};
   const budgets = {};
+  const mcpConfigs = {};
   for (const role of ALL_AGENT_ROLES) {
     const rc = file?.roles?.[role];
     const legacyEntry = legacy?.roles?.[role];
@@ -8176,6 +8207,7 @@ function resolveConsortSettings(inputs) {
     models[role] = scalarModel ?? legacyEntry?.override ?? legacyEntry?.recommended ?? RECOMMENDED_MODELS[role] ?? "inherit";
     fallbackModels[role] = rc?.fallbackModel;
     budgets[role] = typeof rc?.maxBudgetUsd === "number" ? rc.maxBudgetUsd : void 0;
+    mcpConfigs[role] = rc?.mcpConfig;
   }
   const manifestStep = (role, turn) => turn ? agentOptionsForStep(role, turn, turnKeyForAction) : void 0;
   const modelFor = (role, turn) => {
@@ -8194,7 +8226,7 @@ function resolveConsortSettings(inputs) {
     return manifestStep(role, turn)?.effort ?? "default";
   };
   const { build, plan, project } = resolveProjectSettings(inputs.projectDir);
-  return { models, modelFor, fallbackModels, budgets, effortFor, build, plan, project };
+  return { models, modelFor, fallbackModels, budgets, mcpConfigs, effortFor, build, plan, project };
 }
 
 // consort/session/claude-usage.ts
@@ -8358,6 +8390,10 @@ function orchestratorLogEvents(action, ctx = {}) {
       ];
     case "approve-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "spec", ...withStory } }];
+    case "approve-intake-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "intake" } }];
+    case "approve-backlog-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "backlog" } }];
     case "approve-plan-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "plan" } }];
     case "approve-deploy-gate":
@@ -8439,6 +8475,9 @@ function resolveKitRoot2() {
   return kitRootCache;
 }
 var SUBSTRATE_PKG = "@databricks-solutions/lakebase-scm-utils";
+function kitRoot() {
+  return resolveKitRoot2();
+}
 var kitBinMap = null;
 var substrateRoot;
 var substrateBinMap = null;
@@ -8775,7 +8814,7 @@ function spawnClaudeStreaming(args, cwd, monitorOverride) {
     });
     const monitorCtl = createMonitorController(monitor, () => {
       stalled = true;
-      liveWrite(`  \u2716 ${(/* @__PURE__ */ new Date()).toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s silent) , tree-killing pid ${child.pid} for a fresh-session retry
+      liveWrite(`  \u2716 ${(/* @__PURE__ */ new Date()).toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s silent) \u2013 tree-killing pid ${child.pid} for a fresh-session retry
 `);
       process.stderr.write(`[drive] turn stalled: no agent output for ~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s; killing pid ${child.pid} and retrying on a fresh session
 `);
@@ -8880,6 +8919,10 @@ function claudeToolArgs(cmd) {
   if (cmd.disallowedTools && cmd.disallowedTools.length) out.push("--disallowed-tools", cmd.disallowedTools.join(","));
   return out;
 }
+var UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
+function defaultMcpConfigForRole(role) {
+  return role === "ux-designer" ? path7.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : void 0;
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -8922,11 +8965,11 @@ function execRunner(cfg) {
               const restored = restoreReflectVerdict({ replayDir: rd, consortDir: cfg.consortDir, featureId: cfg.featureId, story });
               if (!restored) {
                 throw new ReplayCorpusMissError(
-                  `[drive] REPLAY CORPUS MISS: reflect verdict for ${story} is not in the corpus (expected features/${cfg.featureId}/stories/${story}/reflect-verdict.json under ${rd}). Replay will NOT run the Navigator live , put the recorded verdict in the corpus (check .gitignore is not dropping it).`
+                  `[drive] REPLAY CORPUS MISS: reflect verdict for ${story} is not in the corpus (expected features/${cfg.featureId}/stories/${story}/reflect-verdict.json under ${rd}). Replay will NOT run the Navigator live \u2013 put the recorded verdict in the corpus (check .gitignore is not dropping it).`
                 );
               }
             }
-            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus , verdict only (no code, not counted)
+            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus \u2013 verdict only (no code, not counted)
 `);
             return;
           }
@@ -8948,7 +8991,7 @@ function execRunner(cfg) {
             return;
           }
           throw new ReplayCorpusMissError(
-            `[drive] REPLAY CORPUS MISS: build turn ${turnIndex} for ${story} (${cmd.role}) has no recorded turn dir under ${replayBuildDir} (features/${cfg.featureId}/stories/${story}/turns). The live orchestrator dispatched more build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live , re-record or fix the corpus so it covers every dispatched turn.`
+            `[drive] REPLAY CORPUS MISS: build turn ${turnIndex} for ${story} (${cmd.role}) has no recorded turn dir under ${replayBuildDir} (features/${cfg.featureId}/stories/${story}/turns). The live orchestrator dispatched more build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live \u2013 re-record or fix the corpus so it covers every dispatched turn.`
           );
         }
         const replayDir = consortEnv("REPLAY_DIR");
@@ -8968,13 +9011,14 @@ function execRunner(cfg) {
           }
           const where = `${cmd.role}${cmd.replay?.mode ? `/${cmd.replay.mode}` : ""}${cmd.replay?.story ? ` ${cmd.replay.story}` : ""}`;
           throw new ReplayCorpusMissError(
-            `[drive] REPLAY CORPUS MISS: no recorded artifact for design turn '${where}' under ${replayDir} (features/${cfg.featureId}/...). The deterministic pipeline dispatched this turn but the corpus lacks its output. Replay will NOT run the agent live , put the recorded artifact in the corpus (check .gitignore is not dropping it).`
+            `[drive] REPLAY CORPUS MISS: no recorded artifact for design turn '${where}' under ${replayDir} (features/${cfg.featureId}/...). The deterministic pipeline dispatched this turn but the corpus lacks its output. Replay will NOT run the agent live \u2013 put the recorded artifact in the corpus (check .gitignore is not dropping it).`
           );
         }
         const baseArgs = claudeBaseArgs(cmd);
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
+        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -9147,16 +9191,16 @@ function buildCfg(args, featureId) {
     // full plan lane): the Spec Author proposes from product-overview + nfrs,
     // the proxy still commits the recorded request at author-requests.
     livePropose: !!consortEnv("LIVE_PROPOSE")?.trim(),
-    // Agent turns dispatch THROUGH the StepExecutor (the unified path) , now the DEFAULT (J1). Every
+    // Agent turns dispatch THROUGH the StepExecutor (the unified path) – now the DEFAULT (J1). Every
     // executor-allowlisted action has a shipped manifest (guarded by executor-dispatch-coverage.test),
     // so the executor is the sole agent path. LAKEBASE_CONSORT_USE_MANIFEST_STEPS is a one-cycle escape
     // hatch: set it to 0/false/off/no to force the legacy commandsForAction dispatch (retired in J5).
     useManifestSteps: !/^(0|false|off|no)$/i.test(consortEnv("USE_MANIFEST_STEPS")?.trim() ?? ""),
-    // RECORD lane (Stage G): hand the executor's ReplayRecorderWrapper the just-completed live
-    // turn's transcript, so an executor-dispatched turn records prompt + reasoning + tools alongside
-    // its delta , the SAME source the effects-level withTurnRecording uses. Colocated with
-    // takeLastAgentTranscript (this module) so there's no runtime edge from the executor onto the
-    // runner. The recorder only reads it when RECORD_DIR is set; a normal drive never calls it.
+    // Hand the executor's ReplayRecorderWrapper the just-completed live turn's transcript, so an
+    // executor-dispatched turn records prompt + reasoning + tools alongside its delta – the SAME
+    // source the effects-level withTurnRecording uses. Colocated with takeLastAgentTranscript (this
+    // module) so there's no runtime edge from the executor onto the runner. Read whenever the turn is
+    // recorded: a CAPTURE (RECORD_DIR) OR the always-on LIVE index into `.consort` (every live build).
     takeTranscript: takeLastAgentTranscript,
     instance: args.instance ?? scm?.project_id,
     featureBranch: scm?.branch,
@@ -9186,6 +9230,13 @@ function buildCfg(args, featureId) {
     },
     fallbackModelForRole: (role) => settings.fallbackModels[role],
     maxBudgetUsdForRole: (role) => settings.budgets[role],
+    // Per-role MCP config: an explicit consort-config.json override wins; otherwise
+    // ux-designer defaults ON to the kit-shipped headless-browser MCP so "make it look
+    // like <these sites>" is honored out of the box (the agent navigates each named
+    // reference and reads its real fonts/colors/spacing) with zero operator setup. The
+    // path is absolute via kitRoot() so it resolves in dev-clone AND installed layouts,
+    // independent of workspace provisioning. Every other role resolves undefined.
+    mcpConfigForRole: (role) => settings.mcpConfigs[role] ?? defaultMcpConfigForRole(role),
     modelForRole: (role) => settings.models[role] ?? resolveModelForRole(role, projectDir),
     // Model tiering: per-turn model (driver GREEN/REFACTOR on a cheaper model than
     // its RED). Falls through to the role's base model when no per-turn map applies.
@@ -9196,7 +9247,7 @@ function buildCfg(args, featureId) {
       // Narrate each routing decision in plain language (DRY: the same message
       // the structured log uses). The machine-readable form is already written to
       // the structured agent-log by makeOnAction below, so the raw action JSON is
-      // console noise on every line , append it only under LAKEBASE_CONSORT_TRACE.
+      // console noise on every line – append it only under LAKEBASE_CONSORT_TRACE.
       (action, i) => {
         if (consortEnv("QUIET")) return;
         const trace = consortEnv("TRACE") ? `  ${JSON.stringify(action)}` : "";
@@ -9231,9 +9282,11 @@ function composeOnAction(...hooks) {
   ClaudeTurnError,
   CliEffectError,
   ReplayCorpusMissError,
+  UX_BROWSER_MCP_CONFIG,
   buildCfg,
   claudeBaseArgs,
   claudeToolArgs,
+  defaultMcpConfigForRole,
   defaultTurnMonitor,
   execRunner,
   peekLastAgentTranscript,

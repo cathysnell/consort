@@ -6712,6 +6712,7 @@ var cycleDir = (tdd, f, s, ac) => join(cyclesRootDir(tdd), f, s, ac);
 var sprintDir = (tdd, sprint) => join(sprintsDir(tdd), sprint);
 var sprintGatesJson = (tdd, sprint) => join(sprintDir(tdd, sprint), "gates.json");
 var backlogJson = (tdd, sprint) => join(sprintDir(tdd, sprint), "backlog.json");
+var sprintRequestedJson = (tdd, sprint) => join(sprintDir(tdd, sprint), "requested.json");
 function findFeatureDir(tdd, featureId) {
   const root = featuresDir(tdd);
   if (!fs.existsSync(root)) return void 0;
@@ -6827,6 +6828,16 @@ function readBacklog(tdd, sprint) {
     return { sprint, features: [] };
   }
 }
+function readRequested(tdd, sprint) {
+  const file = sprintRequestedJson(tdd, sprint);
+  if (!fs.existsSync(file)) return void 0;
+  try {
+    const p = JSON.parse(fs.readFileSync(file, "utf8"));
+    return Array.isArray(p) ? p.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 // consort/orchestrator/settings/project-settings.ts
 init_esm_shims();
@@ -6892,7 +6903,7 @@ function resolveProjectSettings(projectDir) {
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: file?.project?.clientFramework ?? "none",
-    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" – the
     // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
     // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
     // default only affects config-less/legacy trees.
@@ -6973,6 +6984,32 @@ var product_owner_intake_default = {
   }
 };
 
+// consort/orchestrator/steps/manifests/product-owner-author-requests.json
+var product_owner_author_requests_default = {
+  id: "product-owner-author-requests",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "author-requests" },
+  inputs: [
+    { id: "product-overview", source: "feature:product-overview.md", optional: true, description: "The PO's product overview , the framing each committed feature-request is drafted from. OPTIONAL so a hermetic dispatch does not fail on its absence." },
+    { id: "nfrs", source: "feature:nfrs.md", optional: true, description: "The PO's non-functional requirements each committed feature-request accounts for. OPTIONAL." },
+    { id: "feature-proposals", source: "feature:planning/feature-proposals.md", optional: true, description: "The Spec Author's candidate proposals; the committed feature-request draws its scope from the matching section. OPTIONAL." }
+  ],
+  outputs: [],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  },
+  postTurn: [
+    { bin: "@sync-backlog", args: [], when: "after" }
+  ]
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -6992,7 +7029,7 @@ var spec_author_breakdown_default = {
     produced: { next: "state-derived" }
   },
   agentOptions: {
-    model: "haiku",
+    model: "sonnet",
     effort: "low",
     session: "fresh",
     resumeKeyFrom: "role"
@@ -7602,6 +7639,7 @@ var driver_green_superseded_default = {
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
   product_owner_intake_default,
+  product_owner_author_requests_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,
@@ -7645,7 +7683,7 @@ function agentOptionsForStep(role, turnKey, keyForAction, manifests = SHIPPED_MA
     const cur = { model: m.agentOptions.model, effort: m.agentOptions.effort };
     if (hit && (hit.model !== cur.model || (hit.effort ?? "default") !== (cur.effort ?? "default"))) {
       throw new Error(
-        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) , two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
+        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) \u2013 two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
       );
     }
     hit = cur;
@@ -7703,6 +7741,7 @@ function resolveConsortSettings(inputs) {
   const models = {};
   const fallbackModels = {};
   const budgets = {};
+  const mcpConfigs = {};
   for (const role of ALL_AGENT_ROLES) {
     const rc = file?.roles?.[role];
     const legacyEntry = legacy?.roles?.[role];
@@ -7710,6 +7749,7 @@ function resolveConsortSettings(inputs) {
     models[role] = scalarModel ?? legacyEntry?.override ?? legacyEntry?.recommended ?? RECOMMENDED_MODELS[role] ?? "inherit";
     fallbackModels[role] = rc?.fallbackModel;
     budgets[role] = typeof rc?.maxBudgetUsd === "number" ? rc.maxBudgetUsd : void 0;
+    mcpConfigs[role] = rc?.mcpConfig;
   }
   const manifestStep = (role, turn) => turn ? agentOptionsForStep(role, turn, turnKeyForAction) : void 0;
   const modelFor = (role, turn) => {
@@ -7728,7 +7768,7 @@ function resolveConsortSettings(inputs) {
     return manifestStep(role, turn)?.effort ?? "default";
   };
   const { build, plan, project } = resolveProjectSettings(inputs.projectDir);
-  return { models, modelFor, fallbackModels, budgets, effortFor, build, plan, project };
+  return { models, modelFor, fallbackModels, budgets, mcpConfigs, effortFor, build, plan, project };
 }
 
 // consort/orchestrator/drive/orchestrator-effects.ts
@@ -7809,6 +7849,15 @@ function nextBuildAction(story, b) {
   if (b.assessGreenAc) return { kind: "invoke-role", role: "navigator", story, buildMode: "assess", ac: b.assessGreenAc };
   if (b.repairRegressionAc) return { kind: "invoke-role", role: "driver", story, buildMode: "repair", ac: b.repairRegressionAc };
   if (b.greenSupersededAc) return { kind: "invoke-role", role: "driver", story, buildMode: "green-superseded" };
+  if (b.specDefectAc) {
+    const scope = b.specDefectFromRole ?? "test-strategist";
+    return {
+      kind: "raise-to-hil",
+      source: "spec-defect",
+      reason: `The failing test/NFR for ${b.specDefectAc} is a SPEC-DEFECT (the test is wrong, not the code) \u2014 revise it in the design lane, do NOT repair the code. Recommended: reopen this story from the ${scope} (consort-reopen-story --from ${scope}), re-author, and rebuild.`,
+      story
+    };
+  }
   if (!b.testsWritten) return { kind: "invoke-role", role: "navigator", story };
   if (!b.codeWritten) return { kind: "invoke-role", role: "driver", story };
   if (!b.awaitingAcceptance) return { kind: "await-acceptance", story };
@@ -7827,6 +7876,7 @@ function nextTransition(state) {
     if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
+    if (p.backlogCommitted === false) return { kind: "approve-backlog-gate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
     if (!p.skipSizing && p.committedEstimated === false)
       return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" };
@@ -8119,7 +8169,7 @@ function checkDbDesign(dbDesignJson2, architectureJson2) {
   const uncovered = invariants.filter((id) => !realized.has(id));
   if (uncovered.length > 0) {
     violations.push(
-      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , and list its id here; see agents/dba.md)`
+      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared \u2013 a table/column/constraint/index \u2013 and list its id here; see agents/dba.md)`
     );
   }
   return violations.length > 0 ? { ok: false, violations } : { ok: true };
@@ -8270,7 +8320,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -8278,12 +8328,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -8297,7 +8348,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -8310,7 +8361,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -8387,6 +8438,10 @@ function orchestratorLogEvents(action, ctx = {}) {
       ];
     case "approve-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "spec", ...withStory } }];
+    case "approve-intake-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "intake" } }];
+    case "approve-backlog-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "backlog" } }];
     case "approve-plan-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "plan" } }];
     case "approve-deploy-gate":
@@ -8449,6 +8504,8 @@ function gateEnactCommand(gate, ctx = {}) {
   switch (gate.kind) {
     case "approve-intake-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "intake", "--approver", you] };
+    case "approve-backlog-gate":
+      return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--gate", "backlog", "--approver", you] };
     case "approve-plan-gate":
       return { bin: "consort-approve-gate", args: ["--sprint", ctx.sprint ?? "<sprint>", "--approver", you] };
     case "approve-gate":
@@ -8585,6 +8642,8 @@ function storyView(id, e, probe, loop) {
       assessGreenAc: probe.assessGreenFailureAc(id),
       repairRegressionAc: probe.repairRegressionFixAc(id),
       greenSupersededAc: probe.greenSupersededFailureAc(id),
+      specDefectAc: probe.specDefectAc(id),
+      specDefectFromRole: probe.specDefectFromRole(id),
       awaitingAcceptance: e.status === "awaiting-acceptance",
       deployVerified: probe.storyDeployVerified(id),
       deployVerifyAssessEligible: probe.deployVerifyAssessEligible(id),
@@ -8781,7 +8840,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "shared-state-aggregate-assertion",
-    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM , e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
+    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM \u2013 e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
     proposed_remediation: "Route back to the Test Strategist (Gate 3): scope BOTH the seed AND the assertion to the test's own rows (filter the probe/count by the test's SKUs or a marker column, or assert a before-vs-after DELTA), never an absolute whole-table total. Bounded to one automatic revise per story; a second escape escalates to the human.",
     // A contamination-fragile aggregate assertion is a test-strategist fix: route back to Gate 3.
     level: "spec",
@@ -8818,7 +8877,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "e2e-inline-regex-flag",
-    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS , re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
+    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS \u2013 re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
     proposed_remediation: 'Pass the flag as a kwarg, not inline: re.compile("summary", re.IGNORECASE) emits the valid JS regex /summary/i. Or, for a plain case-insensitive substring, use the bare string form Playwright already matches loosely. See the E2E rule in the Navigator role.'
   },
   {
@@ -8828,7 +8887,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "contract-incompleteness",
-    description: 'A migration DROPPED (or renamed) a column the running code still references , the ORM model field, a query/repository, a serializer/DTO, or a template/view , so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list , no model judgment needed to notice OR localize it.',
+    description: 'A migration DROPPED (or renamed) a column the running code still references \u2013 the ORM model field, a query/repository, a serializer/DTO, or a template/view \u2013 so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list \u2013 no model judgment needed to notice OR localize it.',
     proposed_remediation: "Driver REPAIR: remove or replace EVERY residual reference (model field, queries, serializers/DTOs, templates/views) in the same change so the code matches the migrated schema. Never edit the migration or a test to hide it. The green-failure fixDirective carries the precise file:line list, so this self-heals without a Navigator assess."
   },
   {
@@ -9116,6 +9175,14 @@ function needsGreenAssess(tdd, feature, story, ac) {
 function hasPendingRegressionFix(tdd, feature, story, ac) {
   const gf = readGreenFailure(tdd, feature, story, ac);
   return gf !== void 0 && gf.assessed === true && typeof gf.fixDirective === "string" && gf.fixDirective.length > 0 && gf.repairAttempted !== true;
+}
+function hasPendingSpecDefect(tdd, feature, story, ac) {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf !== void 0 && gf.assessed === true && gf.specDefect !== void 0;
+}
+function specDefectFromRole(tdd, feature, story, ac) {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf?.specDefect?.fromRole ?? "test-strategist";
 }
 function regressionAssessmentJson(tdd, feature, story, ac) {
   return join29(cycleDir(tdd, feature, story, ac), "regression-assessment.json");
@@ -9527,6 +9594,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
+  const backlogCommitted = requestsAuthored;
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
   const gateApproved = readGateApproved(featureId, consortDir, "deploy");
   const verifyAssessEligible = deployVerifyNeedsAssess(consortDir, featureId);
@@ -9555,7 +9623,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), backlogCommitted, requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -9695,6 +9763,25 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
       if (!acId) return null;
       return hasPendingSupersession(consortDir, featureId, story, acId) ? acId : null;
     },
+    specDefectAc(story) {
+      let acId;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = void 0;
+      }
+      if (!acId) return null;
+      return hasPendingSpecDefect(consortDir, featureId, story, acId) ? acId : null;
+    },
+    specDefectFromRole(story) {
+      let acId;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = void 0;
+      }
+      return acId ? specDefectFromRole(consortDir, featureId, story, acId) : "test-strategist";
+    },
     storyDeployVerified(story) {
       return storyDeployVerified(consortDir, featureId, story);
     },
@@ -9812,7 +9899,7 @@ init_esm_shims();
 
 // consort/test-list/test-analyst-catalogue.ts
 init_esm_shims();
-var SLICE_CONTRACT = 'Return an UNORDERED JSON array of test-list items as the LAST thing in your reply, fenced as ```json ... ```. Each item is { "id": "<kind-local id, e.g. bhv-1>", "description": "<one observable behavior, no \'and\'>", "ac_id": "<EXACT id of an existing story AC file>", "status": "pending", "kind": "<your kind>" }. Do NOT order the items and do NOT set ordered_for , the supervisor orders the merged master and assigns the final T-ids. Map every item to a real story AC id (copy it verbatim, never re-slug).';
+var SLICE_CONTRACT = 'Return an UNORDERED JSON array of test-list items as the LAST thing in your reply, fenced as ```json ... ```. Each item is { "id": "<kind-local id, e.g. bhv-1>", "description": "<one observable behavior, no \'and\'>", "ac_id": "<EXACT id of an existing story AC file>", "status": "pending", "kind": "<your kind>" }. Do NOT order the items and do NOT set ordered_for \u2013 the supervisor orders the merged master and assigns the final T-ids. Map every item to a real story AC id (copy it verbatim, never re-slug).';
 var TEST_ANALYST_CATALOGUE = {
   behavior: {
     kind: "behavior",
@@ -9822,7 +9909,7 @@ var TEST_ANALYST_CATALOGUE = {
     effort: "default",
     toolScope: ["Read"],
     inputs: ["story-acs", "architecture-invariants"],
-    focusPrompt: "You are the BEHAVIOR test analyst. Cover every BACKEND-layer AC (API / service / data / INFRA) whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item , one observable behavior verified through the API boundary (for Python, a pytest-bdd scenario; set `scenario_file` to `tests/features/<story>.feature`). An `Infra`-layer AC (e.g. 'distinct (sku,location) coexist', 'refile updates in place') still has an observable API behavior , it is YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME , the actual result the AC guarantees (a refile leaves the stored quantity == the NEW value AND exactly ONE row for the pair; filing the same SKU at two DIFFERENT locations yields TWO independently-retrievable coexisting rows), NOT merely a peripheral aspect (a preserved timestamp, atomicity). For a uniqueness / multi-key invariant, cover BOTH sides: the COLLISION (same key -> rejected / stays one row) AND the DISTINCT-keys-COEXIST positive (different keys -> independent rows). A test that checks only the peripheral aspect or only the collision lets a Driver go green without the real behavior , the recurring reflect-testlist-defect. **DO NOT author a behavior item for an E2E / UI-presentation AC** (e.g. a \"filing form\" / \"home screen\" AC whose `layer` is `E2E`): those are the CLIENT analyst's Playwright job, NOT a backend pytest-bdd test. Set each item's `ac_id` ONLY to an AC whose layer permits a backend test; anchoring a 2xx / response-shape check to a UI AC (instead of the API-layer AC) is the recurring mis-route the reflect gate rejects , if an AC's observable outcome is an HTTP response shape, it belongs on the API-layer AC, never the form/screen AC. Test at the OUTERMOST public boundary matching the AC's layer. One test per scenario, never an \"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state , use a per-run-unique key suffixed with the platform's BUILT-IN UUID (Python `uuid.uuid4()` from the stdlib; JS/TS `crypto.randomUUID()`; Java `java.util.UUID`) OR delete/upsert the fixed key before writing, never assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` , the `uuid` npm package is not a scaffolded dependency and fails CI with \"Cannot find package 'uuid'\". Do NOT emit fitness or client items, and do NOT set `invariant_id` (the fitness analyst owns persistence invariants). COVER THE NEGATIVE/BOUNDARY-VALIDATION PATH a constraint implies on your ACs: you are given architecture.json (NFRs + persistence_invariants), so when an AC's field is required / NOT NULL (a `not_null` invariant or a field-named-validation NFR names it), emit a behavior item that OMITS (or sends invalid) that field through the API boundary and asserts a field-named rejection , this is the boundary guard, DISTINCT from the DB constraint the fitness analyst tests. A required-field/CHECK/overcommit rejection with only a happy-path test is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
+    focusPrompt: "You are the BEHAVIOR test analyst. Cover every BACKEND-layer AC (API / service / data / INFRA) whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item \u2013 one observable behavior verified through the API boundary (for Python, a pytest-bdd scenario; set `scenario_file` to `tests/features/<story>.feature`). An `Infra`-layer AC (e.g. 'distinct (sku,location) coexist', 'refile updates in place') still has an observable API behavior \u2013 it is YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME \u2013 the actual result the AC guarantees (a refile leaves the stored quantity == the NEW value AND exactly ONE row for the pair; filing the same SKU at two DIFFERENT locations yields TWO independently-retrievable coexisting rows), NOT merely a peripheral aspect (a preserved timestamp, atomicity). For a uniqueness / multi-key invariant, cover BOTH sides: the COLLISION (same key -> rejected / stays one row) AND the DISTINCT-keys-COEXIST positive (different keys -> independent rows). A test that checks only the peripheral aspect or only the collision lets a Driver go green without the real behavior \u2013 the recurring reflect-testlist-defect. **DO NOT author a behavior item for an E2E / UI-presentation AC** (e.g. a \"filing form\" / \"home screen\" AC whose `layer` is `E2E`): those are the CLIENT analyst's Playwright job, NOT a backend pytest-bdd test. Set each item's `ac_id` ONLY to an AC whose layer permits a backend test; anchoring a 2xx / response-shape check to a UI AC (instead of the API-layer AC) is the recurring mis-route the reflect gate rejects \u2013 if an AC's observable outcome is an HTTP response shape, it belongs on the API-layer AC, never the form/screen AC. Test at the OUTERMOST public boundary matching the AC's layer. One test per scenario, never an \"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state \u2013 use a per-run-unique key suffixed with the platform's BUILT-IN UUID (Python `uuid.uuid4()` from the stdlib; JS/TS `crypto.randomUUID()`; Java `java.util.UUID`) OR delete/upsert the fixed key before writing, never assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` \u2013 the `uuid` npm package is not a scaffolded dependency and fails CI with \"Cannot find package 'uuid'\". Do NOT emit fitness or client items, and do NOT set `invariant_id` (the fitness analyst owns persistence invariants). COVER THE NEGATIVE/BOUNDARY-VALIDATION PATH a constraint implies on your ACs: you are given architecture.json (NFRs + persistence_invariants), so when an AC's field is required / NOT NULL (a `not_null` invariant or a field-named-validation NFR names it), emit a behavior item that OMITS (or sends invalid) that field through the API boundary and asserts a field-named rejection \u2013 this is the boundary guard, DISTINCT from the DB constraint the fitness analyst tests. A required-field/CHECK/overcommit rejection with only a happy-path test is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
   },
   fitness: {
     kind: "fitness",
@@ -9832,7 +9919,7 @@ var TEST_ANALYST_CATALOGUE = {
     effort: "high",
     toolScope: ["Read"],
     inputs: ["architecture-invariants", "db-design"],
-    focusPrompt: "You are the FITNESS test analyst , the SOLE owner of `invariant_id`. Two duties: (1) Walk the architecture (layers, service_backed, ORM-only, config-in-env, each accepted NFR budget) and emit >=1 `kind:\"fitness\"` item per architectural constraint the story touches: the layering contract (boundary must not import the DB session; persistence only in the repository), the ORM-only contract (ONLY the repository touches the ORM/session , the service AND boundary contain no ORM imports; this is DISTINCT from the routes-vs-session check), config-from-env, and any service-layer guard an NFR demands (e.g. a write-time rejection of an overcommitting / negative-quantity write at the SERVICE layer , distinct from a DB CHECK constraint). A CLIENT-render NFR fitness function (SPA rendering of null/optional/empty/loading/error states) is NOT yours , the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND defense (an `and`/`+`/comma joining two checkable claims) needs ONE item PER conjunct, never one for the pair. (2) Walk architecture.json `persistence_invariants[]` and emit AT LEAST ONE `kind:\"fitness\"` item per invariant with `invariant_id` set to that invariant's id, verified DIRECTLY against the real branch database (never a mock, never a generic ORM round-trip). COVER EVERY LEG the invariant NAMES: when one invariant names MULTIPLE columns/constraints (e.g. two NOT NULL audit columns `filed_by`+`filed_at`, a multi-column CHECK, or an FK set), cover EACH named leg , a parametrised sub-case per column/constraint (or a sibling item), all sharing that `invariant_id`. A single item exercising only ONE of the named columns leaves the others uncovered (the reflect gate rejects the un-covered leg). E.g. a NOT-NULL invariant over {filed_by, filed_at} needs a direct INSERT with EACH column NULL asserting its own constraint violation, not just one. ANCHOR BY REALIZING STORY, NOT KEYWORD PROXIMITY: emit an invariant's item ONLY when THIS story realizes that invariant's table , i.e. db-design.json `schema_changes[]` has an entry for THIS story_id (create_table, else the earliest add_column/alter/constraint) on the invariant's `table` (architecture.json `persistence_invariants[].table`). If the invariant's table is created by a LATER story, DO NOT emit its fitness item on this story , it belongs to that write story, and its test is un-buildable here (the table does not exist yet). A display/read-only story whose migrations create NO table an invariant names emits NO invariant fitness items, even if its ACs mention a related record (e.g. an AC 'shows the record' does NOT own the record's not-null/FK/reversibility invariants , the story that MIGRATES the table does). A migration reversibility is ALWAYS one item: reversibility (single-step downgrade/upgrade, @pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated , the table + its columns/constraints are present again after downgrade-then-upgrade (NOT that data survives). Data-preservation (seed rows, migrate, assert they survive with expected values) is a SEPARATE item that applies ONLY to an ADDITIVE migration on a PRE-EXISTING table (a later story adding a column/constraint, where single-step downgrade removes only that addition and prior rows persist). NEVER author a data-preservation item for an INITIAL create-table migration: single-step downgrade drops the whole table, so 'rows survive' is UNSATISFIABLE and no code can make it pass (it dead-locks the assess/repair loop). If the story's migration is the table's FIRST (create-table), emit ONLY the schema-recreation reversibility item, not data-preservation. The created_at/audit immutability on an in-place upsert is its OWN item. Whole-table aggregate assertions must scope to the test's own rows (a delta), never an absolute total. Fitness items MUST NOT carry a `.feature` `scenario_file`. Seed idempotently with a per-run-unique key. " + SLICE_CONTRACT + " Set `invariant_id` on each item that covers a declared persistence invariant."
+    focusPrompt: "You are the FITNESS test analyst \u2013 the SOLE owner of `invariant_id`. Two duties: (1) Walk the architecture (layers, service_backed, ORM-only, config-in-env, each accepted NFR budget) and emit >=1 `kind:\"fitness\"` item per architectural constraint the story touches: the layering contract (boundary must not import the DB session; persistence only in the repository), the ORM-only contract (ONLY the repository touches the ORM/session \u2013 the service AND boundary contain no ORM imports; this is DISTINCT from the routes-vs-session check), config-from-env, and any service-layer guard an NFR demands (e.g. a write-time rejection of an overcommitting / negative-quantity write at the SERVICE layer \u2013 distinct from a DB CHECK constraint). A CLIENT-render NFR fitness function (SPA rendering of null/optional/empty/loading/error states) is NOT yours \u2013 the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND defense (an `and`/`+`/comma joining two checkable claims) needs ONE item PER conjunct, never one for the pair. (2) Walk architecture.json `persistence_invariants[]` and emit AT LEAST ONE `kind:\"fitness\"` item per invariant with `invariant_id` set to that invariant's id, verified DIRECTLY against the real branch database (never a mock, never a generic ORM round-trip). COVER EVERY LEG the invariant NAMES: when one invariant names MULTIPLE columns/constraints (e.g. two NOT NULL audit columns `filed_by`+`filed_at`, a multi-column CHECK, or an FK set), cover EACH named leg \u2013 a parametrised sub-case per column/constraint (or a sibling item), all sharing that `invariant_id`. A single item exercising only ONE of the named columns leaves the others uncovered (the reflect gate rejects the un-covered leg). E.g. a NOT-NULL invariant over {filed_by, filed_at} needs a direct INSERT with EACH column NULL asserting its own constraint violation, not just one. ANCHOR BY REALIZING STORY, NOT KEYWORD PROXIMITY: emit an invariant's item ONLY when THIS story realizes that invariant's table \u2013 i.e. db-design.json `schema_changes[]` has an entry for THIS story_id (create_table, else the earliest add_column/alter/constraint) on the invariant's `table` (architecture.json `persistence_invariants[].table`). If the invariant's table is created by a LATER story, DO NOT emit its fitness item on this story \u2013 it belongs to that write story, and its test is un-buildable here (the table does not exist yet). A display/read-only story whose migrations create NO table an invariant names emits NO invariant fitness items, even if its ACs mention a related record (e.g. an AC 'shows the record' does NOT own the record's not-null/FK/reversibility invariants \u2013 the story that MIGRATES the table does). A migration reversibility is ALWAYS one item: reversibility (single-step downgrade/upgrade, @pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated \u2013 the table + its columns/constraints are present again after downgrade-then-upgrade (NOT that data survives). Data-preservation (seed rows, migrate, assert they survive with expected values) is a SEPARATE item that applies ONLY to an ADDITIVE migration on a PRE-EXISTING table (a later story adding a column/constraint, where single-step downgrade removes only that addition and prior rows persist). NEVER author a data-preservation item for an INITIAL create-table migration: single-step downgrade drops the whole table, so 'rows survive' is UNSATISFIABLE and no code can make it pass (it dead-locks the assess/repair loop). If the story's migration is the table's FIRST (create-table), emit ONLY the schema-recreation reversibility item, not data-preservation. The created_at/audit immutability on an in-place upsert is its OWN item. Whole-table aggregate assertions must scope to the test's own rows (a delta), never an absolute total. Fitness items MUST NOT carry a `.feature` `scenario_file`. Seed idempotently with a per-run-unique key. " + SLICE_CONTRACT + " Set `invariant_id` on each item that covers a declared persistence invariant."
   },
   client: {
     kind: "client",
@@ -9843,7 +9930,7 @@ var TEST_ANALYST_CATALOGUE = {
     toolScope: ["Read"],
     inputs: ["story-acs", "architecture-invariants", "design-guide"],
     enabledWhen: (ctx) => ctx.uiTrack === true,
-    focusPrompt: "You are the CLIENT test analyst (this project HAS a frontend). For every UI-presentation AC the architecture routes to the SPA's own client harness, emit a `kind:\"client\"` item with `scenario_file` under `client/tests/` (e.g. `client/tests/pages/<Screen>.test.tsx`). Do NOT fold a presentation AC into the backend pytest-bdd suite , that mechanism mismatch is a defect. For an AC that OWNS a page/route, at least one client item MUST exercise the page THROUGH THE REAL `<App>` at the AC's route (a Playwright e2e that navigates the route, OR a component test rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) , a bare `render(<ThePage/>)` does NOT prove the page is routed; name the route in the description. Test the design-guide SEAM (assert the element carries its design-guide class / `data-testid`), NEVER an inline `style=` or raw CSS in the source. Do NOT set `invariant_id`. MATCH THE TEST TO THE AC's `layer`: an AC whose `layer` is **`E2E`** is verified END-TO-END against the REAL paired-branch DB , it REQUIRES a real Playwright e2e (scenario_file under `client/tests/e2e/\u2026`) that drives the DEPLOYED app in a browser against the live DB, with NO mocked/stubbed fetch and NO in-memory data. A mocked/stubbed COMPONENT test (rendering `<App>`/`<Page>` with fake data) is ONLY for a pure presentation/rendering AC, NEVER for an `E2E`-layer AC , drafting an E2E-layer AC as a mocked component test is the recurring reflect-testlist-defect (it cannot hit the DB the layer demands). One real e2e per E2E-layer AC. ALSO cover NFR CLIENT-RENDER fitness functions: for every `architecture.json` NFR whose `fitness_function` describes a CLIENT render (e.g. rendering a row with null/optional fields and asserting a 'not tracked' indicator, or an empty/loading/error state), emit a `kind:\"client\"` item that performs that render and asserts the stated outcome. These NFR-render fitness functions are YOURS, never the fitness analyst's (it owns service/DB guards, not the SPA); a stated client-render NFR with no client item is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
+    focusPrompt: "You are the CLIENT test analyst (this project HAS a frontend). For every UI-presentation AC the architecture routes to the SPA's own client harness, emit a `kind:\"client\"` item with `scenario_file` under `client/tests/` (e.g. `client/tests/pages/<Screen>.test.tsx`). Do NOT fold a presentation AC into the backend pytest-bdd suite \u2013 that mechanism mismatch is a defect. For an AC that OWNS a page/route, at least one client item MUST exercise the page THROUGH THE REAL `<App>` at the AC's route (a Playwright e2e that navigates the route, OR a component test rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) \u2013 a bare `render(<ThePage/>)` does NOT prove the page is routed; name the route in the description. Test the design-guide SEAM (assert the element carries its design-guide class / `data-testid`), NEVER an inline `style=` or raw CSS in the source. Do NOT set `invariant_id`. MATCH THE TEST TO THE AC's `layer`: an AC whose `layer` is **`E2E`** is verified END-TO-END against the REAL paired-branch DB \u2013 it REQUIRES a real Playwright e2e (scenario_file under `client/tests/e2e/\u2026`) that drives the DEPLOYED app in a browser against the live DB, with NO mocked/stubbed fetch and NO in-memory data. A mocked/stubbed COMPONENT test (rendering `<App>`/`<Page>` with fake data) is ONLY for a pure presentation/rendering AC, NEVER for an `E2E`-layer AC \u2013 drafting an E2E-layer AC as a mocked component test is the recurring reflect-testlist-defect (it cannot hit the DB the layer demands). One real e2e per E2E-layer AC. ALSO cover NFR CLIENT-RENDER fitness functions: for every `architecture.json` NFR whose `fitness_function` describes a CLIENT render (e.g. rendering a row with null/optional fields and asserting a 'not tracked' indicator, or an empty/loading/error state), emit a `kind:\"client\"` item that performs that render and asserts the stated outcome. These NFR-render fitness functions are YOURS, never the fitness analyst's (it owns service/DB guards, not the SPA); a stated client-render NFR with no client item is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
   }
 };
 
@@ -9909,6 +9996,8 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   const proposed = fs18.existsSync(featureProposalsMd(consortDir));
   const estimated = hasEstimates(consortDir);
   const backlog = readBacklog(consortDir, sprint).features;
+  const requested = readRequested(consortDir, sprint);
+  const backlogCommitted = requested !== void 0 && requested.length > 0 || backlog.length > 0;
   const requestsAuthored = backlog.length > 0 && backlog.every((f) => hasFeatureRequest(consortDir, f.id));
   const estimatedIds = new Set(readEstimates(consortDir).map((e) => e.feature_id));
   const committedEstimated = backlog.length > 0 && backlog.every((f) => estimatedIds.has(f.id));
@@ -9920,7 +10009,7 @@ function deriveSprintPlanningState(consortDir, sprint, opts = {}) {
   }
   return {
     phase: "planning",
-    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
+    planning: { intakeReady: intakeReadyOnDisk(consortDir), intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated, backlogCommitted, requestsAuthored, committedEstimated, gateApproved, skipSizing: opts.skipSizing ?? false },
     breakdownDone: false,
     storyOrder: [],
     stories: {},
@@ -9988,19 +10077,6 @@ function buildNextOptions(action, ctx) {
     approver: ctx.approver,
     featureBranch: ctx.featureBranch
   });
-  if (action.kind === "invoke-role" && "mode" in action && action.mode === "author-requests") {
-    return [
-      {
-        id: "backlog.commit",
-        title: "Commit the sprint backlog",
-        hil_prompt: "Which proposed features are in this sprint? Commit them (by folder id) to lock the backlog; the drive then advances to the plan gate.",
-        kind: "action",
-        enact: { bin: "consort-sync-backlog", args: ["--sprint", ctx.sprint ?? "<sprint>", "--features", "<id[,id...]>"] },
-        note: "Pick the features from .consort/planning/feature-proposals.md and pass their FOLDER ids (e.g. F1-stock-visibility,F2-stock-adjustment) , NOT the proposal's `## F1` heading labels. A pure UI/shell story is not a feature; commit only the features this sprint delivers."
-      },
-      holdOption()
-    ];
-  }
   switch (action.kind) {
     case "accept": {
       const story = storyOf2(action) ?? "<story>";
@@ -10008,11 +10084,11 @@ function buildNextOptions(action, ctx) {
         {
           id: "acceptance.accept",
           title: `Accept story ${story}`,
-          hil_prompt: `Accept story ${story}? I will merge its experiment into the feature branch, run its migrations, and tear the experiment down. First OFFER the human to SEE it working: the story's experiment branch is checked out + deployed, so \`./scripts/run-dev.sh\` serves the real app on its paired Lakebase branch , for a UI product point them at the client URL to click through this story; for a backend/service, give them the endpoint(s) + a curl/Postman example that exercises this story's ACs. Only then take the accept/discard/revise decision.`,
+          hil_prompt: `Accept story ${story}? I will merge its experiment into the feature branch, run its migrations, and tear the experiment down. First OFFER the human to SEE it working: the story's experiment branch is checked out + deployed, so \`./scripts/run-dev.sh\` serves the real app on its paired Lakebase branch \u2013 for a UI product point them at the client URL to click through this story; for a backend/service, give them the endpoint(s) + a curl/Postman example that exercises this story's ACs. Only then take the accept/discard/revise decision.`,
           kind: "gate",
           enact: gateEnact,
           // consort-pipeline accept ... (owns the merge)
-          note: "Before deciding, offer a working-software review , run `./scripts/run-dev.sh` (serves the checked-out experiment branch against its Lakebase branch) and hand the human the client URL (UI) or the API endpoint + a curl/Postman example for this story's ACs; stop the server when they're done. Also offer to GENERATE SEED DATA so it isn't an empty app: run-dev.sh auto-runs `scripts/seed_dev.py` on start (SEED=0 skips; idempotent); if none exists, generate one that inserts representative rows for this story's tables."
+          note: "Before deciding, offer a working-software review \u2013 run `./scripts/run-dev.sh` (serves the checked-out experiment branch against its Lakebase branch) and hand the human the client URL (UI) or the API endpoint + a curl/Postman example for this story's ACs; stop the server when they're done. Also offer to GENERATE SEED DATA so it isn't an empty app: run-dev.sh auto-runs `scripts/seed_dev.py` on start (SEED=0 skips; idempotent); if none exists, generate one that inserts representative rows for this story's tables."
         },
         {
           id: "acceptance.discard",
@@ -10040,6 +10116,18 @@ function buildNextOptions(action, ctx) {
           kind: "gate",
           enact: gateEnact,
           note: "To request changes instead of approving: edit the drafted docs directly, or edit .consort/intake/answers.md and resume so the PO redrafts. Approve only once they reflect your intent."
+        },
+        holdOption()
+      ];
+    case "approve-backlog-gate":
+      return [
+        {
+          id: "backlog.commit",
+          title: "Commit the sprint backlog",
+          hil_prompt: "Which proposed features are in this sprint? Commit them (by folder id) to lock the backlog; the drive then dispatches the Product Owner to author each request and advances to the plan gate.",
+          kind: "gate",
+          enact: { bin: "consort-sync-backlog", args: ["--sprint", ctx.sprint ?? "<sprint>", "--features", "<id[,id...]>"] },
+          note: "Pick the features from .consort/planning/feature-proposals.md and pass their FOLDER ids (e.g. F1-stock-visibility,F2-stock-adjustment) \u2013 NOT the proposal's `## F1` heading labels. A pure UI/shell story is not a feature; commit only the features this sprint delivers."
         },
         holdOption()
       ];
@@ -10150,6 +10238,8 @@ function buildNextOptions(action, ctx) {
 }
 function openGatesOf(action) {
   switch (action.kind) {
+    case "approve-backlog-gate":
+      return ["backlog"];
     case "approve-plan-gate":
       return ["plan"];
     case "approve-gate":
@@ -10172,12 +10262,12 @@ function blockersOf(state) {
       source: e.source,
       reason: e.reason,
       ...e.story_id ? { story: e.story_id } : {},
-      // The deterministic clear is the resolve verb , NOT hand-editing state. `consort-resolve-escalation`
+      // The deterministic clear is the resolve verb – NOT hand-editing state. `consort-resolve-escalation`
       // clears BOTH the escalation file AND any blocking smell in one shot and KEEPS the audit trail. Emitting
       // the exact command here (and NOT telling the operator to rm/edit the files) is what stops a session
       // improvising a hand-edit of .consort/escalations/ or smells.json to move the run forward.
       resolver: { bin: "consort-resolve-escalation", args: ["--id", e.id, "--resolution", "<what you fixed>"] },
-      resolver_hint: `Fix the root cause, then run: consort-resolve-escalation --id ${e.id} --resolution "<what you fixed>" (clears this escalation AND any blocking smell, keeps the audit trail), then resume the drive. Do NOT hand-edit or delete the escalation file or smells.json to move forward , that desyncs on-disk state.`
+      resolver_hint: `Fix the root cause, then run: consort-resolve-escalation --id ${e.id} --resolution "<what you fixed>" (clears this escalation AND any blocking smell, keeps the audit trail), then resume the drive. Do NOT hand-edit or delete the escalation file or smells.json to move forward \u2013 that desyncs on-disk state.`
     }
   ];
 }

@@ -7198,7 +7198,7 @@ function resolveProjectSettings(projectDir) {
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: file?.project?.clientFramework ?? "none",
-    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" – the
     // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
     // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
     // default only affects config-less/legacy trees.
@@ -7617,7 +7617,7 @@ function assertReplayBuildVerdictMatch(args) {
   const live = liveBuildVerdict(args.consortDir, args.featureId, args.story);
   if (!live || live === recorded) return;
   throw new ReplayDivergenceError(
-    `[drive] REPLAY DIVERGENCE: build turn ${args.turnIndex} (${args.role} ${args.story}) , recorded verdict was ${recorded.toUpperCase()} but the live verify returned ${live.toUpperCase()}. The synced tree reproduces record-time, so a differing verdict means the corpus + code have drifted (a regression). Halting , debug the turn's snapshot vs the live verify; do not silently continue.`
+    `[drive] REPLAY DIVERGENCE: build turn ${args.turnIndex} (${args.role} ${args.story}) \u2013 recorded verdict was ${recorded.toUpperCase()} but the live verify returned ${live.toUpperCase()}. The synced tree reproduces record-time, so a differing verdict means the corpus + code have drifted (a regression). Halting \u2013 debug the turn's snapshot vs the live verify; do not silently continue.`
   );
 }
 
@@ -7676,7 +7676,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7684,12 +7684,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7703,7 +7704,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7716,7 +7717,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -7874,6 +7875,32 @@ var product_owner_intake_default = {
   }
 };
 
+// consort/orchestrator/steps/manifests/product-owner-author-requests.json
+var product_owner_author_requests_default = {
+  id: "product-owner-author-requests",
+  role: "product-owner",
+  agent: { kind: "claude", config: { role: "product-owner" } },
+  match: { kind: "invoke-role", role: "product-owner", mode: "author-requests" },
+  inputs: [
+    { id: "product-overview", source: "feature:product-overview.md", optional: true, description: "The PO's product overview , the framing each committed feature-request is drafted from. OPTIONAL so a hermetic dispatch does not fail on its absence." },
+    { id: "nfrs", source: "feature:nfrs.md", optional: true, description: "The PO's non-functional requirements each committed feature-request accounts for. OPTIONAL." },
+    { id: "feature-proposals", source: "feature:planning/feature-proposals.md", optional: true, description: "The Spec Author's candidate proposals; the committed feature-request draws its scope from the matching section. OPTIONAL." }
+  ],
+  outputs: [],
+  routing: {
+    produced: { next: "state-derived" }
+  },
+  agentOptions: {
+    model: "opus",
+    effort: "default",
+    session: "fresh",
+    resumeKeyFrom: "role"
+  },
+  postTurn: [
+    { bin: "@sync-backlog", args: [], when: "after" }
+  ]
+};
+
 // consort/orchestrator/steps/manifests/spec-author-breakdown.json
 var spec_author_breakdown_default = {
   id: "spec-author-breakdown",
@@ -7893,7 +7920,7 @@ var spec_author_breakdown_default = {
     produced: { next: "state-derived" }
   },
   agentOptions: {
-    model: "haiku",
+    model: "sonnet",
     effort: "low",
     session: "fresh",
     resumeKeyFrom: "role"
@@ -8503,6 +8530,7 @@ var driver_green_superseded_default = {
 // consort/orchestrator/steps/manifest.ts
 var SHIPPED_MANIFESTS = [
   product_owner_intake_default,
+  product_owner_author_requests_default,
   spec_author_breakdown_default,
   spec_author_propose_default,
   spec_author_story_default,
@@ -8546,7 +8574,7 @@ function agentOptionsForStep(role, turnKey, keyForAction, manifests = SHIPPED_MA
     const cur = { model: m.agentOptions.model, effort: m.agentOptions.effort };
     if (hit && (hit.model !== cur.model || (hit.effort ?? "default") !== (cur.effort ?? "default"))) {
       throw new Error(
-        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) , two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
+        `step-manifest: conflicting agentOptions for (${role}, ${turnKey}) \u2013 two manifests declare different model/effort for the same resolved step. Make them agree (collapsed buildModes share one lever set).`
       );
     }
     hit = cur;
@@ -8584,7 +8612,7 @@ function manifestForAction(action, manifests = SHIPPED_MANIFESTS) {
   if (hits.length > 1) {
     const ids = hits.map((m) => m.id).join(", ");
     throw new Error(
-      `step-manifest: ambiguous match , ${hits.length} manifests match action ${JSON.stringify(action)}: ${ids}. Each action must map to exactly one manifest; tighten a match.`
+      `step-manifest: ambiguous match \u2013 ${hits.length} manifests match action ${JSON.stringify(action)}: ${ids}. Each action must map to exactly one manifest; tighten a match.`
     );
   }
   return hits[0];
@@ -8640,6 +8668,7 @@ function resolveConsortSettings(inputs) {
   const models = {};
   const fallbackModels = {};
   const budgets = {};
+  const mcpConfigs = {};
   for (const role of ALL_AGENT_ROLES) {
     const rc = file?.roles?.[role];
     const legacyEntry = legacy?.roles?.[role];
@@ -8647,6 +8676,7 @@ function resolveConsortSettings(inputs) {
     models[role] = scalarModel ?? legacyEntry?.override ?? legacyEntry?.recommended ?? RECOMMENDED_MODELS[role] ?? "inherit";
     fallbackModels[role] = rc?.fallbackModel;
     budgets[role] = typeof rc?.maxBudgetUsd === "number" ? rc.maxBudgetUsd : void 0;
+    mcpConfigs[role] = rc?.mcpConfig;
   }
   const manifestStep = (role, turn) => turn ? agentOptionsForStep(role, turn, turnKeyForAction) : void 0;
   const modelFor = (role, turn) => {
@@ -8665,7 +8695,7 @@ function resolveConsortSettings(inputs) {
     return manifestStep(role, turn)?.effort ?? "default";
   };
   const { build, plan, project } = resolveProjectSettings(inputs.projectDir);
-  return { models, modelFor, fallbackModels, budgets, effortFor, build, plan, project };
+  return { models, modelFor, fallbackModels, budgets, mcpConfigs, effortFor, build, plan, project };
 }
 
 // consort/session/claude-usage.ts
@@ -8829,6 +8859,10 @@ function orchestratorLogEvents(action, ctx = {}) {
       ];
     case "approve-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "spec", ...withStory } }];
+    case "approve-intake-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "intake" } }];
+    case "approve-backlog-gate":
+      return [{ ...base, event: "gate.approved", slots: { gate: "backlog" } }];
     case "approve-plan-gate":
       return [{ ...base, event: "gate.approved", slots: { gate: "plan" } }];
     case "approve-deploy-gate":
@@ -9233,7 +9267,7 @@ function spawnClaudeStreaming(args, cwd, monitorOverride) {
     });
     const monitorCtl = createMonitorController(monitor, () => {
       stalled = true;
-      liveWrite(`  \u2716 ${(/* @__PURE__ */ new Date()).toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s silent) , tree-killing pid ${child.pid} for a fresh-session retry
+      liveWrite(`  \u2716 ${(/* @__PURE__ */ new Date()).toISOString()} INACTIVITY TIMEOUT (~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s silent) \u2013 tree-killing pid ${child.pid} for a fresh-session retry
 `);
       process.stderr.write(`[drive] turn stalled: no agent output for ~${Math.round((TURN_INACTIVITY_TIMEOUT_MS || 0) / 1e3)}s; killing pid ${child.pid} and retrying on a fresh session
 `);
@@ -9338,6 +9372,10 @@ function claudeToolArgs(cmd) {
   if (cmd.disallowedTools && cmd.disallowedTools.length) out.push("--disallowed-tools", cmd.disallowedTools.join(","));
   return out;
 }
+var UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
+function defaultMcpConfigForRole(role) {
+  return role === "ux-designer" ? path8.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : void 0;
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -9380,11 +9418,11 @@ function execRunner(cfg) {
               const restored = restoreReflectVerdict({ replayDir: rd, consortDir: cfg.consortDir, featureId: cfg.featureId, story });
               if (!restored) {
                 throw new ReplayCorpusMissError(
-                  `[drive] REPLAY CORPUS MISS: reflect verdict for ${story} is not in the corpus (expected features/${cfg.featureId}/stories/${story}/reflect-verdict.json under ${rd}). Replay will NOT run the Navigator live , put the recorded verdict in the corpus (check .gitignore is not dropping it).`
+                  `[drive] REPLAY CORPUS MISS: reflect verdict for ${story} is not in the corpus (expected features/${cfg.featureId}/stories/${story}/reflect-verdict.json under ${rd}). Replay will NOT run the Navigator live \u2013 put the recorded verdict in the corpus (check .gitignore is not dropping it).`
                 );
               }
             }
-            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus , verdict only (no code, not counted)
+            process.stderr.write(`[drive] replayed reflect (navigator ${story}) from corpus \u2013 verdict only (no code, not counted)
 `);
             return;
           }
@@ -9406,7 +9444,7 @@ function execRunner(cfg) {
             return;
           }
           throw new ReplayCorpusMissError(
-            `[drive] REPLAY CORPUS MISS: build turn ${turnIndex} for ${story} (${cmd.role}) has no recorded turn dir under ${replayBuildDir} (features/${cfg.featureId}/stories/${story}/turns). The live orchestrator dispatched more build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live , re-record or fix the corpus so it covers every dispatched turn.`
+            `[drive] REPLAY CORPUS MISS: build turn ${turnIndex} for ${story} (${cmd.role}) has no recorded turn dir under ${replayBuildDir} (features/${cfg.featureId}/stories/${story}/turns). The live orchestrator dispatched more build turns than the corpus recorded, or the corpus is incomplete. Replay will NOT run the agent live \u2013 re-record or fix the corpus so it covers every dispatched turn.`
           );
         }
         const replayDir = consortEnv("REPLAY_DIR");
@@ -9426,13 +9464,14 @@ function execRunner(cfg) {
           }
           const where = `${cmd.role}${cmd.replay?.mode ? `/${cmd.replay.mode}` : ""}${cmd.replay?.story ? ` ${cmd.replay.story}` : ""}`;
           throw new ReplayCorpusMissError(
-            `[drive] REPLAY CORPUS MISS: no recorded artifact for design turn '${where}' under ${replayDir} (features/${cfg.featureId}/...). The deterministic pipeline dispatched this turn but the corpus lacks its output. Replay will NOT run the agent live , put the recorded artifact in the corpus (check .gitignore is not dropping it).`
+            `[drive] REPLAY CORPUS MISS: no recorded artifact for design turn '${where}' under ${replayDir} (features/${cfg.featureId}/...). The deterministic pipeline dispatched this turn but the corpus lacks its output. Replay will NOT run the agent live \u2013 put the recorded artifact in the corpus (check .gitignore is not dropping it).`
           );
         }
         const baseArgs = claudeBaseArgs(cmd);
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
+        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -9605,16 +9644,16 @@ function buildCfg(args, featureId) {
     // full plan lane): the Spec Author proposes from product-overview + nfrs,
     // the proxy still commits the recorded request at author-requests.
     livePropose: !!consortEnv("LIVE_PROPOSE")?.trim(),
-    // Agent turns dispatch THROUGH the StepExecutor (the unified path) , now the DEFAULT (J1). Every
+    // Agent turns dispatch THROUGH the StepExecutor (the unified path) – now the DEFAULT (J1). Every
     // executor-allowlisted action has a shipped manifest (guarded by executor-dispatch-coverage.test),
     // so the executor is the sole agent path. LAKEBASE_CONSORT_USE_MANIFEST_STEPS is a one-cycle escape
     // hatch: set it to 0/false/off/no to force the legacy commandsForAction dispatch (retired in J5).
     useManifestSteps: !/^(0|false|off|no)$/i.test(consortEnv("USE_MANIFEST_STEPS")?.trim() ?? ""),
-    // RECORD lane (Stage G): hand the executor's ReplayRecorderWrapper the just-completed live
-    // turn's transcript, so an executor-dispatched turn records prompt + reasoning + tools alongside
-    // its delta , the SAME source the effects-level withTurnRecording uses. Colocated with
-    // takeLastAgentTranscript (this module) so there's no runtime edge from the executor onto the
-    // runner. The recorder only reads it when RECORD_DIR is set; a normal drive never calls it.
+    // Hand the executor's ReplayRecorderWrapper the just-completed live turn's transcript, so an
+    // executor-dispatched turn records prompt + reasoning + tools alongside its delta – the SAME
+    // source the effects-level withTurnRecording uses. Colocated with takeLastAgentTranscript (this
+    // module) so there's no runtime edge from the executor onto the runner. Read whenever the turn is
+    // recorded: a CAPTURE (RECORD_DIR) OR the always-on LIVE index into `.consort` (every live build).
     takeTranscript: takeLastAgentTranscript,
     instance: args.instance ?? scm?.project_id,
     featureBranch: scm?.branch,
@@ -9644,6 +9683,13 @@ function buildCfg(args, featureId) {
     },
     fallbackModelForRole: (role) => settings.fallbackModels[role],
     maxBudgetUsdForRole: (role) => settings.budgets[role],
+    // Per-role MCP config: an explicit consort-config.json override wins; otherwise
+    // ux-designer defaults ON to the kit-shipped headless-browser MCP so "make it look
+    // like <these sites>" is honored out of the box (the agent navigates each named
+    // reference and reads its real fonts/colors/spacing) with zero operator setup. The
+    // path is absolute via kitRoot() so it resolves in dev-clone AND installed layouts,
+    // independent of workspace provisioning. Every other role resolves undefined.
+    mcpConfigForRole: (role) => settings.mcpConfigs[role] ?? defaultMcpConfigForRole(role),
     modelForRole: (role) => settings.models[role] ?? resolveModelForRole(role, projectDir),
     // Model tiering: per-turn model (driver GREEN/REFACTOR on a cheaper model than
     // its RED). Falls through to the role's base model when no per-turn map applies.
@@ -9654,7 +9700,7 @@ function buildCfg(args, featureId) {
       // Narrate each routing decision in plain language (DRY: the same message
       // the structured log uses). The machine-readable form is already written to
       // the structured agent-log by makeOnAction below, so the raw action JSON is
-      // console noise on every line , append it only under LAKEBASE_CONSORT_TRACE.
+      // console noise on every line – append it only under LAKEBASE_CONSORT_TRACE.
       (action, i) => {
         if (consortEnv("QUIET")) return;
         const trace = consortEnv("TRACE") ? `  ${JSON.stringify(action)}` : "";
@@ -9718,6 +9764,7 @@ function actionLane(action) {
       return action.role === "navigator" || action.role === "driver" ? "build" : "design";
     }
     case "approve-intake-gate":
+    case "approve-backlog-gate":
     case "approve-plan-gate":
     case "planning-complete":
       return "planning";
@@ -9805,6 +9852,15 @@ function nextBuildAction(story, b) {
   if (b.assessGreenAc) return { kind: "invoke-role", role: "navigator", story, buildMode: "assess", ac: b.assessGreenAc };
   if (b.repairRegressionAc) return { kind: "invoke-role", role: "driver", story, buildMode: "repair", ac: b.repairRegressionAc };
   if (b.greenSupersededAc) return { kind: "invoke-role", role: "driver", story, buildMode: "green-superseded" };
+  if (b.specDefectAc) {
+    const scope = b.specDefectFromRole ?? "test-strategist";
+    return {
+      kind: "raise-to-hil",
+      source: "spec-defect",
+      reason: `The failing test/NFR for ${b.specDefectAc} is a SPEC-DEFECT (the test is wrong, not the code) \u2014 revise it in the design lane, do NOT repair the code. Recommended: reopen this story from the ${scope} (consort-reopen-story --from ${scope}), re-author, and rebuild.`,
+      story
+    };
+  }
   if (!b.testsWritten) return { kind: "invoke-role", role: "navigator", story };
   if (!b.codeWritten) return { kind: "invoke-role", role: "driver", story };
   if (!b.awaitingAcceptance) return { kind: "await-acceptance", story };
@@ -9823,6 +9879,7 @@ function nextTransition(state) {
     if (p.intakeReady === true && p.intakeApproved === false) return { kind: "approve-intake-gate" };
     if (!p.proposed) return { kind: "invoke-role", role: "spec-author", mode: "propose" };
     if (!p.skipSizing && !p.estimated) return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate" };
+    if (p.backlogCommitted === false) return { kind: "approve-backlog-gate" };
     if (!p.requestsAuthored) return { kind: "invoke-role", role: "product-owner", mode: "author-requests" };
     if (!p.skipSizing && p.committedEstimated === false)
       return { kind: "invoke-role", role: "architect-reviewer", mode: "estimate-committed" };
@@ -9954,7 +10011,7 @@ function resolveChannelRoot(channel, roots) {
 // consort/orchestrator/turns/step-executor.ts
 var MissingInputError = class extends Error {
   constructor(inputId, action) {
-    super(`missing input "${inputId}" for step ${JSON.stringify(action)} , the orchestrator did not provide it (fail loud before spawning the agent)`);
+    super(`missing input "${inputId}" for step ${JSON.stringify(action)} \u2013 the orchestrator did not provide it (fail loud before spawning the agent)`);
     this.inputId = inputId;
     this.name = "MissingInputError";
   }
@@ -9979,7 +10036,7 @@ async function execute(step, ctx, deps) {
         if (pre.position === "prepend") prependBlocks += block;
         else appendBlocks += block;
       } else {
-        deps.onWarn?.(`declared precondition "${pre.id}" (${pre.kind}) prepared EMPTY , its source artifact may be absent (${pre.description})`);
+        deps.onWarn?.(`declared precondition "${pre.id}" (${pre.kind}) prepared EMPTY \u2013 its source artifact may be absent (${pre.description})`);
       }
     }
     if (prependBlocks) instructions.prompt = prependBlocks + instructions.prompt;
@@ -10337,7 +10394,7 @@ function checkE2eLayerPresent(architectureJson2, evidence) {
   return {
     ok: false,
     violations: [
-      `the feature ${why} but NO acceptance criterion is tagged layer:"E2E"; a feature that renders a UI has at least one client<->server contract (a form submit, an inline validation rejection, a success/empty state) whose ONLY real verification is a Playwright e2e against the live API , tag that AC layer:"E2E" (a mocked component test stubs the response envelope, so a fabricated shape passes green while the real wire contract drifts). NOTE: an outcome phrased as "record WHO performed the action" or "the pick is saved", when the operator enters their name on a form with no auth, IS a client form submission (layer:"E2E") , do not flatten it into a backend "API" AC. If the endpoint is genuinely not consumed by any client, reconsider , that is unusual for a UI-track feature.`
+      `the feature ${why} but NO acceptance criterion is tagged layer:"E2E"; a feature that renders a UI has at least one client<->server contract (a form submit, an inline validation rejection, a success/empty state) whose ONLY real verification is a Playwright e2e against the live API \u2013 tag that AC layer:"E2E" (a mocked component test stubs the response envelope, so a fabricated shape passes green while the real wire contract drifts). NOTE: an outcome phrased as "record WHO performed the action" or "the pick is saved", when the operator enters their name on a form with no auth, IS a client form submission (layer:"E2E") \u2013 do not flatten it into a backend "API" AC. If the endpoint is genuinely not consumed by any client, reconsider \u2013 that is unusual for a UI-track feature.`
     ]
   };
 }
@@ -10405,7 +10462,7 @@ function checkE2ECoverage(testListJson, e2eAcIds) {
     if (forAc.some((i) => isE2e(i.scenario_file))) continue;
     const how = forAc.length ? `covered only by ${forAc.map((i) => i.scenario_file ?? `kind:${i.kind ?? "?"}`).join(", ")}` : "has no covering test";
     violations.push(
-      `E2E-layer AC ${acId} ${how} , a mocked component test cannot verify the real client<->server contract (a fabricated response envelope passes green while the real wire shape drifts). Add a real Playwright e2e (scenario_file under client/tests/e2e/) that drives the deployed app against the live API`
+      `E2E-layer AC ${acId} ${how} \u2013 a mocked component test cannot verify the real client<->server contract (a fabricated response envelope passes green while the real wire shape drifts). Add a real Playwright e2e (scenario_file under client/tests/e2e/) that drives the deployed app against the live API`
     );
   }
   return violations.length === 0 ? { ok: true } : { ok: false, violations };
@@ -10432,7 +10489,7 @@ function checkPersistenceCoverage(testListJson, architectureJson2) {
     return {
       ok: false,
       violations: [
-        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch , NOT a test of the ORM's generic round-trip; see test-strategy.md)`
+        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch \u2013 NOT a test of the ORM's generic round-trip; see test-strategy.md)`
       ]
     };
   }
@@ -10472,7 +10529,7 @@ function checkDbDesign(dbDesignJson2, architectureJson2) {
   const uncovered = invariants.filter((id) => !realized.has(id));
   if (uncovered.length > 0) {
     violations.push(
-      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , and list its id here; see agents/dba.md)`
+      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared \u2013 a table/column/constraint/index \u2013 and list its id here; see agents/dba.md)`
     );
   }
   return violations.length > 0 ? { ok: false, violations } : { ok: true };
@@ -10566,7 +10623,7 @@ function checkInvariantCoverageDistinct(perStory, ownerByInvariant) {
       for (const c of stories) {
         if (c.story === realizer) continue;
         violations.push(
-          `${c.story} carries persistence invariant ${inv} but does NOT realize it , its table/migration is introduced by ${realizer} (db-design schema_changes). Move the ${inv} fitness item to ${realizer}${owns ? "" : " (which must add it)"}; a display/read-only story cannot test an invariant whose table it never creates. Anchor by the realizing story, not AC keyword proximity.`
+          `${c.story} carries persistence invariant ${inv} but does NOT realize it \u2013 its table/migration is introduced by ${realizer} (db-design schema_changes). Move the ${inv} fitness item to ${realizer}${owns ? "" : " (which must add it)"}; a display/read-only story cannot test an invariant whose table it never creates. Anchor by the realizing story, not AC keyword proximity.`
         );
       }
       continue;
@@ -10626,7 +10683,7 @@ function checkSchemaChangeStoryRealizes(schemaChanges, storyLayers) {
     seen.add(key);
     if (!canRealize(c.story_id)) {
       violations.push(
-        `db-design attributes create_table ${c.table} to ${c.story_id}, whose ACs are all non-persisting (UI/E2E shell , no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC for. Attribute the create_table (and the invariants it realizes) to the story that first reads/writes ${c.table}; a shell story gets no schema_changes. (This is the mis-anchoring the navigator reflect gate otherwise bounces back through the whole design lane.)`
+        `db-design attributes create_table ${c.table} to ${c.story_id}, whose ACs are all non-persisting (UI/E2E shell \u2013 no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC for. Attribute the create_table (and the invariants it realizes) to the story that first reads/writes ${c.table}; a shell story gets no schema_changes. (This is the mis-anchoring the navigator reflect gate otherwise bounces back through the whole design lane.)`
       );
     }
   }
@@ -10922,7 +10979,7 @@ var TURN_EVENTS = {
   "review-verdict": {
     kind: "review-verdict",
     // Dual-scoped: per-CYCLE when the loop runs per-AC (the action carries an `ac`), per-STORY
-    // otherwise , matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
+    // otherwise – matching acReviewVerdictJson vs storyReviewVerdictJson (consort-paths.ts:83-94).
     scopeFor: (action) => hasAc(action) ? "cycle" : "story",
     filename: "review-verdict.json",
     description: "The Navigator's REVIEW verdict (refactor yes/no + notes) the Driver refactor consumes."
@@ -11015,12 +11072,12 @@ var Step = class {
   conformanceValidators(_action) {
     return this.manifest.outputs.map((o) => ({
       outputId: o.id,
-      docstring: `check ${o.filename} (validator "${o.validator}"): ${o.description ?? o.id}. Returns {ok, violations[]}. Run it on your written ${o.filename} and fix every violation before returning , no orchestrator round-trip.`,
+      docstring: `check ${o.filename} (validator "${o.validator}"): ${o.description ?? o.id}. Returns {ok, violations[]}. Run it on your written ${o.filename} and fix every violation before returning \u2013 no orchestrator round-trip.`,
       fn: resolveValidator(o.validator)
     }));
   }
   /**
-   * Run the step within the PROVIDED workspace , identical contract to SpecAuthorBreakdownStep:
+   * Run the step within the PROVIDED workspace – identical contract to SpecAuthorBreakdownStep:
    * verify every declared input was provided (fail loud, name the missing one, no agent call),
    * invoke the injected agent contained to the workspace, report the produced artifact path(s)
    * found at the orchestrator-declared output locations (fall back to the bare filename).
@@ -11057,7 +11114,7 @@ var Step = class {
   }
   /**
    * The injected agent's result for its most recent turn (usage tokens/cost/num_turns + final
-   * text), read duck-typed , a live ClaudeStepAgent sets `lastResult` after each invoke; a
+   * text), read duck-typed – a live ClaudeStepAgent sets `lastResult` after each invoke; a
    * mock/replay agent has none (returns undefined). The executor calls this in phase 6 so the
    * turn's telemetry travels on the StepRecord + survives the (thrown-away) workspace. Read-only,
    * never affects routing or validation.
@@ -11079,7 +11136,7 @@ var Step = class {
    *   - produced: no escalation -> the manifest's mapped `next` (a concrete WorkflowAction),
    *     or "state-derived" to defer entirely to the pure transition.
    *
-   * The escalate/revise split is NOT re-derived here , it reuses the real machine's
+   * The escalate/revise split is NOT re-derived here – it reuses the real machine's
    * escalationPreempt(state) (the same authority nextTransition uses), so the manifest path
    * and the legacy transition agree by construction. A manifest MAY still declare explicit
    * `routing.revise` / `routing.escalate` targets to override where those outcomes point; when
@@ -11213,7 +11270,7 @@ function makeMockReplayAgent(opts) {
         const src = join22(opts.corpusRoot, seed.from);
         if (!existsSync22(src)) {
           throw new Error(
-            `ReplayPoMockAgent: recorded seed for "${seed.outputId}" not found at ${src} , a replay cannot fabricate it. Check the corpus root + recorded path.`
+            `ReplayPoMockAgent: recorded seed for "${seed.outputId}" not found at ${src} \u2013 a replay cannot fabricate it. Check the corpus root + recorded path.`
           );
         }
         const dst = join22(invocation.workspaceDir, seed.to);
@@ -11257,7 +11314,7 @@ function loadCursor(corpusRoot) {
   const turnsDir = resolveTurnsDir(corpusRoot);
   if (!turnsDir) {
     throw new Error(
-      `makeStepReplayAgent: no turns/ timeline under corpus root ${corpusRoot} (nor its parent) , a step-aware replay needs the recorded turns/ dir (each turns/NNNN-<label>/turn.json + files/).`
+      `makeStepReplayAgent: no turns/ timeline under corpus root ${corpusRoot} (nor its parent) \u2013 a step-aware replay needs the recorded turns/ dir (each turns/NNNN-<label>/turn.json + files/).`
     );
   }
   const turns = [];
@@ -11326,7 +11383,7 @@ function makeStepReplayAgent(opts) {
         });
         if (!synced) {
           throw new Error(
-            `makeStepReplayAgent: no recorded-build turn ${turnIndex} for ${opts.featureId}/${story} under ${opts.buildCorpusRoot} , a replay cannot fabricate it (the drive dispatched more build turns than the corpus recorded).`
+            `makeStepReplayAgent: no recorded-build turn ${turnIndex} for ${opts.featureId}/${story} under ${opts.buildCorpusRoot} \u2013 a replay cannot fabricate it (the drive dispatched more build turns than the corpus recorded).`
           );
         }
         return;
@@ -11338,7 +11395,7 @@ function makeStepReplayAgent(opts) {
       const turn = matches[already];
       if (!turn) {
         throw new Error(
-          `makeStepReplayAgent: no recorded turn for action ${sig} (occurrence #${already + 1}) under ${opts.corpusRoot}/turns , a replay cannot fabricate it. Recorded ${matches.length} occurrence(s) of this action.`
+          `makeStepReplayAgent: no recorded turn for action ${sig} (occurrence #${already + 1}) under ${opts.corpusRoot}/turns \u2013 a replay cannot fabricate it. Recorded ${matches.length} occurrence(s) of this action.`
         );
       }
       cursor.consumed.set(sig, already + 1);
@@ -11402,7 +11459,7 @@ var AGENT_CATALOGUE = {
     build: buildClaude
   },
   replay: {
-    description: "Emits RECORDED artifacts by copying configured seed files from the corpus (context.corpusRoot). Offline/headless , no model, no cloud.",
+    description: "Emits RECORDED artifacts by copying configured seed files from the corpus (context.corpusRoot). Offline/headless \u2013 no model, no cloud.",
     configSummary: "{ role?, seeds: [{ outputId, from (corpus-relative), to (workspace-relative) }] }",
     build: buildReplay
   },
@@ -11449,7 +11506,11 @@ function relativizeProjectPaths(text, projectDir) {
   if (!root) return text;
   return text.split(root + "/").join(PROJECT_ROOT_TOKEN + "/").split(root).join(PROJECT_ROOT_TOKEN);
 }
-var NON_ARTIFACT_TDD = /* @__PURE__ */ new Set(["agent-log.jsonl"]);
+var NON_ARTIFACT_CONSORT = /* @__PURE__ */ new Set(["agent-log.jsonl", "drive-live.log", "next.json"]);
+function isRecorderOwned(relUnderConsort) {
+  const p = relUnderConsort.split("\\").join("/");
+  return p === ".recorder-state.json" || p === "correspondence.jsonl" || p === "routing-decisions.jsonl" || p === "turns" || p.startsWith("turns/");
+}
 function recordCorrespondence(recordDir, entry) {
   mkdirSync16(recordDir, { recursive: true });
   appendFileSync2(join24(recordDir, "correspondence.jsonl"), JSON.stringify(entry) + "\n");
@@ -11483,6 +11544,9 @@ function recordReplaySet(args) {
   writeFileSync12(join24(setDir, "levers.json"), JSON.stringify(levers ?? {}, null, 2) + "\n");
 }
 function expectedTurnFiles(action, opts = {}) {
+  if (opts.liveIndex) {
+    return action.kind === "invoke-role" ? ["turn.json", "transcript.md"] : ["turn.json"];
+  }
   const base = ["turn.json", "files"];
   if (action.kind !== "invoke-role" || !opts.liveCapture) return base;
   return [
@@ -11499,7 +11563,7 @@ function assertTurnComplete(turnDir, action, opts = {}) {
   const missing = expectedTurnFiles(action, opts).filter((rel) => !existsSync24(join24(turnDir, rel)));
   if (missing.length > 0) {
     throw new Error(
-      `RECORD AUDIT FAILED , turn ${turnDir} (${labelForAction(action)}) is missing required recorded file(s): ${missing.join(", ")}. The capture is aborting so the corpus is not silently incomplete. Every ${action.kind === "invoke-role" ? "agent" : ""} turn must record its full set (see expectedTurnFiles). Fix the recorder path that dropped it, then re-capture.`
+      `RECORD AUDIT FAILED \u2013 turn ${turnDir} (${labelForAction(action)}) is missing required recorded file(s): ${missing.join(", ")}. The capture is aborting so the corpus is not silently incomplete. Every ${action.kind === "invoke-role" ? "agent" : ""} turn must record its full set (see expectedTurnFiles). Fix the recorder path that dropped it, then re-capture.`
     );
   }
 }
@@ -11526,7 +11590,7 @@ function sha1(abs) {
 }
 function renderTranscriptMd(t, label) {
   const lines = [];
-  lines.push(`# ${label}${t.role ? ` (${t.role})` : ""}${t.model ? ` , ${t.model}` : ""}`, "");
+  lines.push(`# ${label}${t.role ? ` (${t.role})` : ""}${t.model ? ` \u2013 ${t.model}` : ""}`, "");
   lines.push("## Prompt", "", "```", t.prompt.trim() || "(empty)", "```", "");
   lines.push("## Tools used", "");
   if (t.tools.length === 0) {
@@ -11565,14 +11629,16 @@ function scan(projectDir, consortDir) {
   const map = /* @__PURE__ */ new Map();
   for (const abs of walk(consortDir)) {
     const rel = relative3(projectDir, abs);
-    if (NON_ARTIFACT_TDD.has(relative3(consortDir, abs))) continue;
-    map.set(rel, { abs, rel, underTdd: true, sha: sha1(abs) });
+    const relConsort = relative3(consortDir, abs);
+    if (NON_ARTIFACT_CONSORT.has(relConsort)) continue;
+    if (isRecorderOwned(relConsort)) continue;
+    map.set(rel, { abs, rel, underConsort: true, sha: sha1(abs) });
   }
   const keep = codeTreeFilter(projectDir);
   for (const abs of walk(projectDir, keep)) {
     const rel = relative3(projectDir, abs);
     if (map.has(rel)) continue;
-    map.set(rel, { abs, rel, underTdd: false, sha: sha1(abs) });
+    map.set(rel, { abs, rel, underConsort: false, sha: sha1(abs) });
   }
   return map;
 }
@@ -11614,6 +11680,7 @@ function turnDirFor(recordDir, action) {
 }
 function recordTurn(args) {
   const { recordDir, projectDir, consortDir, action, step, transcript } = args;
+  const snapshotContent = args.snapshotContent !== false;
   const a = action;
   const prior = readState(recordDir);
   const cur = scan(projectDir, consortDir);
@@ -11631,24 +11698,27 @@ function recordTurn(args) {
   const label = labelForAction(action);
   const dirName = `${pad(ordinal)}-${label}`;
   const turnDir = join24(recordDir, "turns", dirName);
-  mkdirSync16(join24(turnDir, "files"), { recursive: true });
-  const artifactsDir = join24(recordDir, "recorded-artifacts");
-  for (const rel of produced) {
-    const f = cur.get(rel);
-    const dst = join24(turnDir, "files", rel);
-    mkdirSync16(dirname15(dst), { recursive: true });
-    cpSync6(f.abs, dst);
-    if (f.underTdd) {
-      const mirror = join24(artifactsDir, relative3(consortDir, f.abs));
-      mkdirSync16(dirname15(mirror), { recursive: true });
-      cpSync6(f.abs, mirror);
+  mkdirSync16(turnDir, { recursive: true });
+  if (snapshotContent) {
+    mkdirSync16(join24(turnDir, "files"), { recursive: true });
+    const artifactsDir = join24(recordDir, "recorded-artifacts");
+    for (const rel of produced) {
+      const f = cur.get(rel);
+      const dst = join24(turnDir, "files", rel);
+      mkdirSync16(dirname15(dst), { recursive: true });
+      cpSync6(f.abs, dst);
+      if (f.underConsort) {
+        const mirror = join24(artifactsDir, relative3(consortDir, f.abs));
+        mkdirSync16(dirname15(mirror), { recursive: true });
+        cpSync6(f.abs, mirror);
+      }
     }
-  }
-  for (const rel of deleted) {
-    const abs = join24(projectDir, rel);
-    if (abs.startsWith(consortDir)) {
-      const mirror = join24(artifactsDir, relative3(consortDir, abs));
-      if (existsSync24(mirror)) rmSync4(mirror, { force: true });
+    for (const rel of deleted) {
+      const abs = join24(projectDir, rel);
+      if (abs.startsWith(consortDir)) {
+        const mirror = join24(artifactsDir, relative3(consortDir, abs));
+        if (existsSync24(mirror)) rmSync4(mirror, { force: true });
+      }
     }
   }
   let transcriptSummary;
@@ -11680,6 +11750,10 @@ function recordTurn(args) {
     action,
     produced,
     deleted,
+    // false = a LIVE record: produced/deleted are an INDEX only; read the files at HEAD, not from a
+    // frozen turns/<NNNN>/files/ copy (which was not written). Omitted-as-true keeps recorded corpora
+    // byte-identical to before this flag existed.
+    ...snapshotContent ? {} : { snapshotted: false },
     ...transcriptSummary ? { transcript: transcriptSummary } : {}
   };
   writeFileSync12(join24(turnDir, "turn.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -11786,15 +11860,17 @@ function wrapWithRecorder(inner, ctx) {
       seeded = true;
     }
     const turnDir = turnDirFor(ctx.recordDir, invocation.action);
-    recordReplaySet({
-      turnDir,
-      projectDir: ctx.projectDir,
-      consortDir: ctx.consortDir,
-      inputs: invocation.inputs,
-      prompt: invocation.instructions.prompt,
-      ...invocation.instructions.guidelines ? { guidelines: invocation.instructions.guidelines } : {},
-      ...ctx.resolveLevers ? { levers: ctx.resolveLevers(invocation) } : {}
-    });
+    if (!ctx.liveIndex) {
+      recordReplaySet({
+        turnDir,
+        projectDir: ctx.projectDir,
+        consortDir: ctx.consortDir,
+        inputs: invocation.inputs,
+        prompt: invocation.instructions.prompt,
+        ...invocation.instructions.guidelines ? { guidelines: invocation.instructions.guidelines } : {},
+        ...ctx.resolveLevers ? { levers: ctx.resolveLevers(invocation) } : {}
+      });
+    }
     await inner.invoke(invocation);
     const action = invocation.action;
     const transcript = ctx.takeTranscript?.();
@@ -11804,9 +11880,10 @@ function wrapWithRecorder(inner, ctx) {
       consortDir: ctx.consortDir,
       action,
       step: 0,
-      ...transcript ? { transcript } : {}
+      ...transcript ? { transcript } : {},
+      ...ctx.liveIndex ? { snapshotContent: false } : {}
     });
-    if (ctx.recordBuildDir && action.kind === "invoke-role" && (action.role === "navigator" || action.role === "driver") && "story" in action && typeof action.story === "string") {
+    if (!ctx.liveIndex && ctx.recordBuildDir && action.kind === "invoke-role" && (action.role === "navigator" || action.role === "driver") && "story" in action && typeof action.story === "string") {
       const turn = nextBuildTurnNumber(ctx.recordBuildDir, ctx.featureId, action.story);
       recordBuildTurn({
         recordBuildDir: ctx.recordBuildDir,
@@ -11820,7 +11897,7 @@ function wrapWithRecorder(inner, ctx) {
         ..."buildMode" in action && typeof action.buildMode === "string" ? { mode: action.buildMode } : {}
       });
     }
-    assertTurnComplete(turnDir, action, { liveCapture: ctx.takeTranscript !== void 0 });
+    assertTurnComplete(turnDir, action, ctx.liveIndex ? { liveIndex: true } : { liveCapture: ctx.takeTranscript !== void 0 });
   };
   return new Proxy(inner, {
     get(target, prop, receiver) {
@@ -11838,6 +11915,7 @@ function executorDispatched(action) {
     if (action.role === "spec-author" && (action.mode === "breakdown" || action.mode === "propose")) return true;
     if (action.role === "architect-reviewer" && action.mode === "estimate") return true;
     if (action.role === "product-owner" && action.mode === "intake") return true;
+    if (action.role === "product-owner" && action.mode === "author-requests") return true;
     return false;
   }
   if (!("buildMode" in action)) {
@@ -11864,18 +11942,17 @@ function executorDispatched(action) {
 }
 function deterministicAgentless(action) {
   if (action.kind !== "invoke-role" || !("mode" in action)) return false;
-  if (action.role === "product-owner" && action.mode === "author-requests") return true;
   if (action.role === "architect-reviewer" && action.mode === "estimate-committed") return true;
   return false;
 }
 function isPlanningMode(action) {
-  return action.kind === "invoke-role" && "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed" || action.mode === "intake");
+  return action.kind === "invoke-role" && "mode" in action && (action.mode === "propose" || action.mode === "estimate" || action.mode === "estimate-committed" || action.mode === "intake" || action.mode === "author-requests");
 }
 function assertNotStrandedAgentTurn(action) {
   if (action.kind !== "invoke-role") return;
   if (executorDispatched(action) || deterministicAgentless(action)) return;
   throw new Error(
-    `LEGACY AGENT-PATH GUARD: invoke-role action ${JSON.stringify(action)} is neither executor-dispatched nor a sanctioned deterministic-agentless action (author-requests / estimate-committed). A real agent turn must NEVER run on the legacy commandsForAction path , it would skip the executor's recording, output validation, and routing contract (silent corruption). Fix: add it to the executor allowlist (executorDispatched) with a shipped manifest, or , if it is genuinely agent-less , to deterministicAgentless. Do NOT run it on legacy. (Likely cause: a coverage gap, or LAKEBASE_CONSORT_USE_MANIFEST_STEPS forcing the legacy path.)`
+    `LEGACY AGENT-PATH GUARD: invoke-role action ${JSON.stringify(action)} is neither executor-dispatched nor a sanctioned deterministic-agentless action (estimate-committed). A real agent turn must NEVER run on the legacy commandsForAction path \u2013 it would skip the executor's recording, output validation, and routing contract (silent corruption). Fix: add it to the executor allowlist (executorDispatched) with a shipped manifest, or \u2013 if it is genuinely agent-less \u2013 to deterministicAgentless. Do NOT run it on legacy. (Likely cause: a coverage gap, or LAKEBASE_CONSORT_USE_MANIFEST_STEPS forcing the legacy path.)`
   );
 }
 function manifestPostTurnCommands(manifest, when, action, cfg, deps) {
@@ -11893,6 +11970,10 @@ function manifestPostTurnCommands(manifest, when, action, cfg, deps) {
         const cycle = deps.buildCycleCommand(action, cfg);
         if (cycle) out.push(cycle);
       }
+      continue;
+    }
+    if (p.bin === "@sync-backlog") {
+      if (cfg.sprintName) out.push({ kind: "sync-backlog", sprint: cfg.sprintName });
       continue;
     }
     out.push({ kind: "cli", bin: resolveBin(p.bin), args: expand(p.args) });
@@ -11986,9 +12067,11 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // (replayBuildTurn) instead of a delta, so the tree matches record-time + the live verify is honest.
     ...replayDir && replayBuildDir ? { buildCorpusRoot: replayBuildDir, buildFeatureId: cfg.featureId, buildConsortDir: cfg.consortDir } : {}
   });
-  if (recordDir) {
+  const liveIndex = !recordDir && !replayDir && cfg.takeTranscript !== void 0;
+  const turnRecordDir = recordDir || (liveIndex ? cfg.consortDir : void 0);
+  if (turnRecordDir) {
     agent = wrapWithRecorder(agent, {
-      recordDir,
+      recordDir: turnRecordDir,
       ...consortEnv("RECORD_BUILD_DIR")?.trim() ? { recordBuildDir: consortEnv("RECORD_BUILD_DIR").trim() } : {},
       projectDir: cfg.projectDir,
       consortDir: cfg.consortDir,
@@ -11999,7 +12082,8 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
       // Partial<AgentLevers>), so this is the authoritative lever set (role/model/effort/toolScope),
       // captured with no duplication of the resolution. Merged with the manifest's agentOptions
       // (model/effort/session), the documented per-step lever home the optimize sweep varies.
-      resolveLevers: () => ({ ...manifest.agentOptions ?? {}, ...manifest.agent?.config ?? {} })
+      resolveLevers: () => ({ ...manifest.agentOptions ?? {}, ...manifest.agent?.config ?? {} }),
+      ...liveIndex ? { liveIndex: true } : {}
     });
   }
   const step = new Step(manifest, agent);
@@ -12044,11 +12128,11 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     // The workspace IS the real project (the live seam's runner spawns in cfg.projectDir).
     // product-channel outputs (tests/, app/) land at the project root; artifact + meta channels
     // resolve under the real .consort (artifactDir = metaDir = cfg.consortDir), so the orchestrator
-    // places the design docs + the reconciled agent-log there , the manifest filename stays bare.
+    // places the design docs + the reconciled agent-log there – the manifest filename stays bare.
     provisionWorkspace: () => ({ workspaceDir: cfg.projectDir, artifactDir: cfg.consortDir, metaDir: cfg.consortDir, outputPaths: outputPathsForAction(action, cfg.consortDir, f, cfg.projectDir) }),
     // The BASE instruction prompt = the role's task body with the manifest's DECLARED precondition
     // kinds OMITTED (phase 2.5 re-injects those in position via deps.prepare). A turn that declares
-    // NO preconditions gets the full inline body (omit=∅) , byte-identical to the pre-A-full spawn.
+    // NO preconditions gets the full inline body (omit=∅) – byte-identical to the pre-A-full spawn.
     // A migrated turn (e.g. assess declaring green-failure-advisory) gets the body MINUS that inline
     // block; phase 2.5 prepends it back, so the assembled prompt matches the legacy inline order.
     instructionsFor: () => action.kind === "invoke-role" ? { prompt: deps.buildTaskBody(action, cfg, declaredPreconditionKinds(manifest)) } : { prompt: "" },
@@ -12062,7 +12146,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     },
     // Phase 4.5: reconcile MATERIALIZES the agent-log (the legacy path's LOG_BIN --reconcile), so
     // validate-outputs sees the conformant agent-log.jsonl the agent never wrote itself. SKIPPED for
-    // the sprint-scoped PLANNING modes (propose / estimate / estimate-committed) , they write no
+    // the sprint-scoped PLANNING modes (propose / estimate / estimate-committed) – they write no
     // feature agent-log to reconcile + declare no agent-log output, and the legacy path guards
     // reconcile with the SAME `!isPlanningMode` condition (commandsForAction / commandsFromManifest),
     // so skipping here keeps the executor byte-parallel to the legacy stream ([claude] only).
@@ -12070,7 +12154,7 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
       if (isPlanningMode(action)) return;
       await cfg.runner.run({ kind: "cli", bin: deps.logBin, args: ["--reconcile", "--feature", f, "--tdd-dir", cfg.consortDir] });
     },
-    // Phase 6.5: the manifest's `after` CLIs , gated on clean validation by the executor. For
+    // Phase 6.5: the manifest's `after` CLIs – gated on clean validation by the executor. For
     // breakdown that is sync-breakdown; for navigator RED it is the `@build-cycle` RED stamp (the
     // cycle `begin`), which flips testsWritten so the loop advances to the Driver.
     postTurnEffects: async () => {
@@ -12083,7 +12167,13 @@ async function performTurnViaExecutor(action, state, routerDeps, cfg, deps) {
     allowed: () => routerDeps.allowed(readFresh())
   };
   const ctx = { action, cfg, state, validateBoundDeps: freshRouterDeps };
+  const turnStart = Date.now();
   const result = await execute(step, ctx, executorDeps);
+  if (action.kind === "invoke-role") {
+    const doneModel = manifest.agentOptions?.model ?? "live";
+    process.stderr.write(`[drive] ${action.role} turn ${((Date.now() - turnStart) / 1e3).toFixed(1)}s (${doneModel})
+`);
+  }
   if (replayDir && replayBuildDir && isBuildTurn(action)) {
     assertReplayBuildVerdictMatch({
       replayBuildDir,
@@ -12104,7 +12194,7 @@ import { join as join27 } from "path";
 var RouteContractError = class extends Error {
   constructor(action, event, expectedPath) {
     super(
-      `route selected turn ${JSON.stringify(action)} but its required process event "${event}" was not produced (expected at ${expectedPath}). A prior turn must RAISE "${event}" before this route may fire , the router chose this turn on stale/derived state. Fix the route or the producer, not this turn's inputs.`
+      `route selected turn ${JSON.stringify(action)} but its required process event "${event}" was not produced (expected at ${expectedPath}). A prior turn must RAISE "${event}" before this route may fire \u2013 the router chose this turn on stale/derived state. Fix the route or the producer, not this turn's inputs.`
     );
     this.action = action;
     this.event = event;
@@ -12188,6 +12278,8 @@ function storyView(id, e, probe, loop) {
       assessGreenAc: probe.assessGreenFailureAc(id),
       repairRegressionAc: probe.repairRegressionFixAc(id),
       greenSupersededAc: probe.greenSupersededFailureAc(id),
+      specDefectAc: probe.specDefectAc(id),
+      specDefectFromRole: probe.specDefectFromRole(id),
       awaitingAcceptance: e.status === "awaiting-acceptance",
       deployVerified: probe.storyDeployVerified(id),
       deployVerifyAssessEligible: probe.deployVerifyAssessEligible(id),
@@ -12537,7 +12629,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "shared-state-aggregate-assertion",
-    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM , e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
+    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM \u2013 e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
     proposed_remediation: "Route back to the Test Strategist (Gate 3): scope BOTH the seed AND the assertion to the test's own rows (filter the probe/count by the test's SKUs or a marker column, or assert a before-vs-after DELTA), never an absolute whole-table total. Bounded to one automatic revise per story; a second escape escalates to the human.",
     // A contamination-fragile aggregate assertion is a test-strategist fix: route back to Gate 3.
     level: "spec",
@@ -12574,7 +12666,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "e2e-inline-regex-flag",
-    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS , re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
+    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS \u2013 re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
     proposed_remediation: 'Pass the flag as a kwarg, not inline: re.compile("summary", re.IGNORECASE) emits the valid JS regex /summary/i. Or, for a plain case-insensitive substring, use the bare string form Playwright already matches loosely. See the E2E rule in the Navigator role.'
   },
   {
@@ -12584,7 +12676,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "contract-incompleteness",
-    description: 'A migration DROPPED (or renamed) a column the running code still references , the ORM model field, a query/repository, a serializer/DTO, or a template/view , so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list , no model judgment needed to notice OR localize it.',
+    description: 'A migration DROPPED (or renamed) a column the running code still references \u2013 the ORM model field, a query/repository, a serializer/DTO, or a template/view \u2013 so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list \u2013 no model judgment needed to notice OR localize it.',
     proposed_remediation: "Driver REPAIR: remove or replace EVERY residual reference (model field, queries, serializers/DTOs, templates/views) in the same change so the code matches the migrated schema. Never edit the migration or a test to hide it. The green-failure fixDirective carries the precise file:line list, so this self-heals without a Navigator assess."
   },
   {
@@ -12886,6 +12978,14 @@ function needsGreenAssess(tdd, feature, story, ac) {
 function hasPendingRegressionFix(tdd, feature, story, ac) {
   const gf = readGreenFailure(tdd, feature, story, ac);
   return gf !== void 0 && gf.assessed === true && typeof gf.fixDirective === "string" && gf.fixDirective.length > 0 && gf.repairAttempted !== true;
+}
+function hasPendingSpecDefect(tdd, feature, story, ac) {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf !== void 0 && gf.assessed === true && gf.specDefect !== void 0;
+}
+function specDefectFromRole(tdd, feature, story, ac) {
+  const gf = readGreenFailure(tdd, feature, story, ac);
+  return gf?.specDefect?.fromRole ?? "test-strategist";
 }
 function regressionAssessmentJson(tdd, feature, story, ac) {
   return join35(cycleDir(tdd, feature, story, ac), "regression-assessment.json");
@@ -13306,6 +13406,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
   const intakeReady = intakeReadyOnDisk(consortDir);
   const breakdownDone = Array.isArray(spec?.stories) && spec.stories.length > 0;
   const requestsAuthored = fs15.existsSync(featureRequestMd(consortDir, featureId));
+  const backlogCommitted = requestsAuthored;
   const deployed = fs15.existsSync(featureDeployEvidenceJson(consortDir, featureId));
   const gateApproved = readGateApproved(featureId, consortDir, "deploy");
   const verifyAssessEligible = deployVerifyNeedsAssess(consortDir, featureId);
@@ -13334,7 +13435,7 @@ function readDriveContext(consortDir, featureId, projectDir) {
     phase: driverPhaseForTdd(tddPhase),
     breakdownDone,
     loop,
-    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), requestsAuthored },
+    planning: { intakeReady, intakeApproved: intakeApprovedOnDisk(consortDir), proposed, estimated: hasEstimates(consortDir), backlogCommitted, requestsAuthored },
     deploy: { deployed, gateApproved, verifyAssessEligible, verifyRefactorPending },
     promote
   };
@@ -13473,6 +13574,25 @@ function diskArtifactProbe(consortDir, featureId, buildActive) {
       }
       if (!acId) return null;
       return hasPendingSupersession(consortDir, featureId, story, acId) ? acId : null;
+    },
+    specDefectAc(story) {
+      let acId;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = void 0;
+      }
+      if (!acId) return null;
+      return hasPendingSpecDefect(consortDir, featureId, story, acId) ? acId : null;
+    },
+    specDefectFromRole(story) {
+      let acId;
+      try {
+        acId = storyTestProgress(consortDir, featureId, story).openRed[0]?.ac_id;
+      } catch {
+        acId = void 0;
+      }
+      return acId ? specDefectFromRole(consortDir, featureId, story, acId) : "test-strategist";
     },
     storyDeployVerified(story) {
       return storyDeployVerified(consortDir, featureId, story);
@@ -13667,7 +13787,7 @@ function storyRequiresE2eReason(fdir, story) {
       }
     }
   }
-  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" , the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
+  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" \u2013 the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
 }
 function requiresE2eReason(consortDir, featureId) {
   const fdir = featureDir2(consortDir, featureId);
@@ -13739,7 +13859,7 @@ function nfrCoverageReason(consortDir, featureId) {
   const r = checkNfrCoverage(nfrsContent, arch, projectBriefRefs(consortDir));
   if (r.ok) return null;
   const src = nfrsFile === featureNfrs ? `per-feature nfrs.md (features/${featureId}/nfrs.md)` : "project nfrs.md";
-  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} , ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
+  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} \u2013 ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
 }
 function fitnessCoverageReason(consortDir, featureId, testListJson) {
   const arch = readArchitecture(consortDir, featureId);
@@ -14235,7 +14355,7 @@ function designGuideHasComponents(consortDir) {
     if (!comps || typeof comps !== "object" || Object.keys(comps).length === 0) {
       return {
         ok: false,
-        problem: "design-guide.json is missing a non-empty `components` object , name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML"
+        problem: "design-guide.json is missing a non-empty `components` object \u2013 name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML"
       };
     }
   } catch {
@@ -14265,7 +14385,7 @@ function brandAssetDeclared(consortDir) {
   const first = staged[0];
   return {
     ok: false,
-    problem: `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` , declare it so the brand mark actually ships: "app_icon": { "source": ".consort/design/assets/${first}", "install_to": "client/public/${first}" }. Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference , the icon ships only by luck.`
+    problem: `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` \u2013 declare it so the brand mark actually ships: "app_icon": { "source": ".consort/design/assets/${first}", "install_to": "client/public/${first}" }. Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference \u2013 the icon ships only by luck.`
   };
 }
 function checkUxDesigner(args, v) {
@@ -14371,7 +14491,7 @@ ${body}
 \`\`\`` : "";
 }
 function scopeNoteBlock() {
-  return ` SCOPE :: Make ONLY the single failing test green with the SIMPLEST honest code at ITS OWN layer. Iterate on that one test (\`uv run --env-file .env pytest <its path> -x -q\`). Do NOT investigate, build, or run OTHER layers' surfaces this turn (e.g. if the failing test is backend, do not touch, grep, or run the client/SPA , StockView*, vite, npx vitest; a later refactor turn owns that). The post-turn honest-GREEN verify is authoritative; stop once the single test passes.`;
+  return ` SCOPE :: Make ONLY the single failing test green with the SIMPLEST honest code at ITS OWN layer. Iterate on that one test (\`uv run --env-file .env pytest <its path> -x -q\`). Do NOT investigate, build, or run OTHER layers' surfaces this turn (e.g. if the failing test is backend, do not touch, grep, or run the client/SPA \u2013 StockView*, vite, npx vitest; a later refactor turn owns that). The post-turn honest-GREEN verify is authoritative; stop once the single test passes.`;
 }
 function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   const root = artifactRoot(consortDir);
@@ -14385,7 +14505,7 @@ function buildContextPack(consortDir, featureId, story, ac, opts = {}) {
   }
   {
     const language = projectLanguage(dirname23(consortDir));
-    const runHint = language === "nodejs" ? ` RUN/REACHABILITY :: node project , source under src/ (there is NO app/). To confirm the app boots or is reachable, run the project's OWN start (the package.json start/dev script, e.g. \`node src/index.js\`) and GET the health path over HTTP , do NOT assume Python or run \`python -c "import app.main"\` (it will false-fail here).` : language === "java" || language === "kotlin" ? ` RUN/REACHABILITY :: ${language} project. To confirm the app boots or is reachable, run \`./mvnw spring-boot:run\` and GET the health path over HTTP , do NOT assume Python (\`python -c "import app.main"\` false-fails here).` : ` RUN/REACHABILITY :: python project , source under app/. To confirm the app boots or is reachable, run \`uv run uvicorn app.main:app\` and GET the health path over HTTP. Reachability is an HTTP response, never just an import succeeding.`;
+    const runHint = language === "nodejs" ? ` RUN/REACHABILITY :: node project \u2013 source under src/ (there is NO app/). To confirm the app boots or is reachable, run the project's OWN start (the package.json start/dev script, e.g. \`node src/index.js\`) and GET the health path over HTTP \u2013 do NOT assume Python or run \`python -c "import app.main"\` (it will false-fail here).` : language === "java" || language === "kotlin" ? ` RUN/REACHABILITY :: ${language} project. To confirm the app boots or is reachable, run \`./mvnw spring-boot:run\` and GET the health path over HTTP \u2013 do NOT assume Python (\`python -c "import app.main"\` false-fails here).` : ` RUN/REACHABILITY :: python project \u2013 source under app/. To confirm the app boots or is reachable, run \`uv run uvicorn app.main:app\` and GET the health path over HTTP. Reachability is an HTTP response, never just an import succeeding.`;
     parts.push(runHint);
   }
   if (!opts.skipTestLoop) {
@@ -14427,7 +14547,7 @@ init_esm_shims();
 
 // consort/test-list/test-analyst-catalogue.ts
 init_esm_shims();
-var SLICE_CONTRACT = 'Return an UNORDERED JSON array of test-list items as the LAST thing in your reply, fenced as ```json ... ```. Each item is { "id": "<kind-local id, e.g. bhv-1>", "description": "<one observable behavior, no \'and\'>", "ac_id": "<EXACT id of an existing story AC file>", "status": "pending", "kind": "<your kind>" }. Do NOT order the items and do NOT set ordered_for , the supervisor orders the merged master and assigns the final T-ids. Map every item to a real story AC id (copy it verbatim, never re-slug).';
+var SLICE_CONTRACT = 'Return an UNORDERED JSON array of test-list items as the LAST thing in your reply, fenced as ```json ... ```. Each item is { "id": "<kind-local id, e.g. bhv-1>", "description": "<one observable behavior, no \'and\'>", "ac_id": "<EXACT id of an existing story AC file>", "status": "pending", "kind": "<your kind>" }. Do NOT order the items and do NOT set ordered_for \u2013 the supervisor orders the merged master and assigns the final T-ids. Map every item to a real story AC id (copy it verbatim, never re-slug).';
 var TEST_ANALYST_CATALOGUE = {
   behavior: {
     kind: "behavior",
@@ -14437,7 +14557,7 @@ var TEST_ANALYST_CATALOGUE = {
     effort: "default",
     toolScope: ["Read"],
     inputs: ["story-acs", "architecture-invariants"],
-    focusPrompt: "You are the BEHAVIOR test analyst. Cover every BACKEND-layer AC (API / service / data / INFRA) whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item , one observable behavior verified through the API boundary (for Python, a pytest-bdd scenario; set `scenario_file` to `tests/features/<story>.feature`). An `Infra`-layer AC (e.g. 'distinct (sku,location) coexist', 'refile updates in place') still has an observable API behavior , it is YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME , the actual result the AC guarantees (a refile leaves the stored quantity == the NEW value AND exactly ONE row for the pair; filing the same SKU at two DIFFERENT locations yields TWO independently-retrievable coexisting rows), NOT merely a peripheral aspect (a preserved timestamp, atomicity). For a uniqueness / multi-key invariant, cover BOTH sides: the COLLISION (same key -> rejected / stays one row) AND the DISTINCT-keys-COEXIST positive (different keys -> independent rows). A test that checks only the peripheral aspect or only the collision lets a Driver go green without the real behavior , the recurring reflect-testlist-defect. **DO NOT author a behavior item for an E2E / UI-presentation AC** (e.g. a \"filing form\" / \"home screen\" AC whose `layer` is `E2E`): those are the CLIENT analyst's Playwright job, NOT a backend pytest-bdd test. Set each item's `ac_id` ONLY to an AC whose layer permits a backend test; anchoring a 2xx / response-shape check to a UI AC (instead of the API-layer AC) is the recurring mis-route the reflect gate rejects , if an AC's observable outcome is an HTTP response shape, it belongs on the API-layer AC, never the form/screen AC. Test at the OUTERMOST public boundary matching the AC's layer. One test per scenario, never an \"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state , use a per-run-unique key suffixed with the platform's BUILT-IN UUID (Python `uuid.uuid4()` from the stdlib; JS/TS `crypto.randomUUID()`; Java `java.util.UUID`) OR delete/upsert the fixed key before writing, never assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` , the `uuid` npm package is not a scaffolded dependency and fails CI with \"Cannot find package 'uuid'\". Do NOT emit fitness or client items, and do NOT set `invariant_id` (the fitness analyst owns persistence invariants). COVER THE NEGATIVE/BOUNDARY-VALIDATION PATH a constraint implies on your ACs: you are given architecture.json (NFRs + persistence_invariants), so when an AC's field is required / NOT NULL (a `not_null` invariant or a field-named-validation NFR names it), emit a behavior item that OMITS (or sends invalid) that field through the API boundary and asserts a field-named rejection , this is the boundary guard, DISTINCT from the DB constraint the fitness analyst tests. A required-field/CHECK/overcommit rejection with only a happy-path test is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
+    focusPrompt: "You are the BEHAVIOR test analyst. Cover every BACKEND-layer AC (API / service / data / INFRA) whose outcome is observable through the API boundary with at least one `kind:\"behavior\"` item \u2013 one observable behavior verified through the API boundary (for Python, a pytest-bdd scenario; set `scenario_file` to `tests/features/<story>.feature`). An `Infra`-layer AC (e.g. 'distinct (sku,location) coexist', 'refile updates in place') still has an observable API behavior \u2013 it is YOURS, do not skip it as 'DB-only'. ASSERT THE AC'S CORE PROMISED OUTCOME \u2013 the actual result the AC guarantees (a refile leaves the stored quantity == the NEW value AND exactly ONE row for the pair; filing the same SKU at two DIFFERENT locations yields TWO independently-retrievable coexisting rows), NOT merely a peripheral aspect (a preserved timestamp, atomicity). For a uniqueness / multi-key invariant, cover BOTH sides: the COLLISION (same key -> rejected / stays one row) AND the DISTINCT-keys-COEXIST positive (different keys -> independent rows). A test that checks only the peripheral aspect or only the collision lets a Driver go green without the real behavior \u2013 the recurring reflect-testlist-defect. **DO NOT author a behavior item for an E2E / UI-presentation AC** (e.g. a \"filing form\" / \"home screen\" AC whose `layer` is `E2E`): those are the CLIENT analyst's Playwright job, NOT a backend pytest-bdd test. Set each item's `ac_id` ONLY to an AC whose layer permits a backend test; anchoring a 2xx / response-shape check to a UI AC (instead of the API-layer AC) is the recurring mis-route the reflect gate rejects \u2013 if an AC's observable outcome is an HTTP response shape, it belongs on the API-layer AC, never the form/screen AC. Test at the OUTERMOST public boundary matching the AC's layer. One test per scenario, never an \"and\". EVERY write-bearing test (POST/insert/seed) MUST own its state \u2013 use a per-run-unique key suffixed with the platform's BUILT-IN UUID (Python `uuid.uuid4()` from the stdlib; JS/TS `crypto.randomUUID()`; Java `java.util.UUID`) OR delete/upsert the fixed key before writing, never assume an empty table. NEVER add a UUID dependency: in JS/TS do NOT `import ... from \"uuid\"` \u2013 the `uuid` npm package is not a scaffolded dependency and fails CI with \"Cannot find package 'uuid'\". Do NOT emit fitness or client items, and do NOT set `invariant_id` (the fitness analyst owns persistence invariants). COVER THE NEGATIVE/BOUNDARY-VALIDATION PATH a constraint implies on your ACs: you are given architecture.json (NFRs + persistence_invariants), so when an AC's field is required / NOT NULL (a `not_null` invariant or a field-named-validation NFR names it), emit a behavior item that OMITS (or sends invalid) that field through the API boundary and asserts a field-named rejection \u2013 this is the boundary guard, DISTINCT from the DB constraint the fitness analyst tests. A required-field/CHECK/overcommit rejection with only a happy-path test is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
   },
   fitness: {
     kind: "fitness",
@@ -14447,7 +14567,7 @@ var TEST_ANALYST_CATALOGUE = {
     effort: "high",
     toolScope: ["Read"],
     inputs: ["architecture-invariants", "db-design"],
-    focusPrompt: "You are the FITNESS test analyst , the SOLE owner of `invariant_id`. Two duties: (1) Walk the architecture (layers, service_backed, ORM-only, config-in-env, each accepted NFR budget) and emit >=1 `kind:\"fitness\"` item per architectural constraint the story touches: the layering contract (boundary must not import the DB session; persistence only in the repository), the ORM-only contract (ONLY the repository touches the ORM/session , the service AND boundary contain no ORM imports; this is DISTINCT from the routes-vs-session check), config-from-env, and any service-layer guard an NFR demands (e.g. a write-time rejection of an overcommitting / negative-quantity write at the SERVICE layer , distinct from a DB CHECK constraint). A CLIENT-render NFR fitness function (SPA rendering of null/optional/empty/loading/error states) is NOT yours , the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND defense (an `and`/`+`/comma joining two checkable claims) needs ONE item PER conjunct, never one for the pair. (2) Walk architecture.json `persistence_invariants[]` and emit AT LEAST ONE `kind:\"fitness\"` item per invariant with `invariant_id` set to that invariant's id, verified DIRECTLY against the real branch database (never a mock, never a generic ORM round-trip). COVER EVERY LEG the invariant NAMES: when one invariant names MULTIPLE columns/constraints (e.g. two NOT NULL audit columns `filed_by`+`filed_at`, a multi-column CHECK, or an FK set), cover EACH named leg , a parametrised sub-case per column/constraint (or a sibling item), all sharing that `invariant_id`. A single item exercising only ONE of the named columns leaves the others uncovered (the reflect gate rejects the un-covered leg). E.g. a NOT-NULL invariant over {filed_by, filed_at} needs a direct INSERT with EACH column NULL asserting its own constraint violation, not just one. ANCHOR BY REALIZING STORY, NOT KEYWORD PROXIMITY: emit an invariant's item ONLY when THIS story realizes that invariant's table , i.e. db-design.json `schema_changes[]` has an entry for THIS story_id (create_table, else the earliest add_column/alter/constraint) on the invariant's `table` (architecture.json `persistence_invariants[].table`). If the invariant's table is created by a LATER story, DO NOT emit its fitness item on this story , it belongs to that write story, and its test is un-buildable here (the table does not exist yet). A display/read-only story whose migrations create NO table an invariant names emits NO invariant fitness items, even if its ACs mention a related record (e.g. an AC 'shows the record' does NOT own the record's not-null/FK/reversibility invariants , the story that MIGRATES the table does). A migration reversibility is ALWAYS one item: reversibility (single-step downgrade/upgrade, @pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated , the table + its columns/constraints are present again after downgrade-then-upgrade (NOT that data survives). Data-preservation (seed rows, migrate, assert they survive with expected values) is a SEPARATE item that applies ONLY to an ADDITIVE migration on a PRE-EXISTING table (a later story adding a column/constraint, where single-step downgrade removes only that addition and prior rows persist). NEVER author a data-preservation item for an INITIAL create-table migration: single-step downgrade drops the whole table, so 'rows survive' is UNSATISFIABLE and no code can make it pass (it dead-locks the assess/repair loop). If the story's migration is the table's FIRST (create-table), emit ONLY the schema-recreation reversibility item, not data-preservation. The created_at/audit immutability on an in-place upsert is its OWN item. Whole-table aggregate assertions must scope to the test's own rows (a delta), never an absolute total. Fitness items MUST NOT carry a `.feature` `scenario_file`. Seed idempotently with a per-run-unique key. " + SLICE_CONTRACT + " Set `invariant_id` on each item that covers a declared persistence invariant."
+    focusPrompt: "You are the FITNESS test analyst \u2013 the SOLE owner of `invariant_id`. Two duties: (1) Walk the architecture (layers, service_backed, ORM-only, config-in-env, each accepted NFR budget) and emit >=1 `kind:\"fitness\"` item per architectural constraint the story touches: the layering contract (boundary must not import the DB session; persistence only in the repository), the ORM-only contract (ONLY the repository touches the ORM/session \u2013 the service AND boundary contain no ORM imports; this is DISTINCT from the routes-vs-session check), config-from-env, and any service-layer guard an NFR demands (e.g. a write-time rejection of an overcommitting / negative-quantity write at the SERVICE layer \u2013 distinct from a DB CHECK constraint). A CLIENT-render NFR fitness function (SPA rendering of null/optional/empty/loading/error states) is NOT yours \u2013 the CLIENT analyst owns those; emit NO fitness item for a client-render NFR. A COMPOUND defense (an `and`/`+`/comma joining two checkable claims) needs ONE item PER conjunct, never one for the pair. (2) Walk architecture.json `persistence_invariants[]` and emit AT LEAST ONE `kind:\"fitness\"` item per invariant with `invariant_id` set to that invariant's id, verified DIRECTLY against the real branch database (never a mock, never a generic ORM round-trip). COVER EVERY LEG the invariant NAMES: when one invariant names MULTIPLE columns/constraints (e.g. two NOT NULL audit columns `filed_by`+`filed_at`, a multi-column CHECK, or an FK set), cover EACH named leg \u2013 a parametrised sub-case per column/constraint (or a sibling item), all sharing that `invariant_id`. A single item exercising only ONE of the named columns leaves the others uncovered (the reflect gate rejects the un-covered leg). E.g. a NOT-NULL invariant over {filed_by, filed_at} needs a direct INSERT with EACH column NULL asserting its own constraint violation, not just one. ANCHOR BY REALIZING STORY, NOT KEYWORD PROXIMITY: emit an invariant's item ONLY when THIS story realizes that invariant's table \u2013 i.e. db-design.json `schema_changes[]` has an entry for THIS story_id (create_table, else the earliest add_column/alter/constraint) on the invariant's `table` (architecture.json `persistence_invariants[].table`). If the invariant's table is created by a LATER story, DO NOT emit its fitness item on this story \u2013 it belongs to that write story, and its test is un-buildable here (the table does not exist yet). A display/read-only story whose migrations create NO table an invariant names emits NO invariant fitness items, even if its ACs mention a related record (e.g. an AC 'shows the record' does NOT own the record's not-null/FK/reversibility invariants \u2013 the story that MIGRATES the table does). A migration reversibility is ALWAYS one item: reversibility (single-step downgrade/upgrade, @pytest.mark.migration, NEVER downgrade base) asserting the SCHEMA is recreated \u2013 the table + its columns/constraints are present again after downgrade-then-upgrade (NOT that data survives). Data-preservation (seed rows, migrate, assert they survive with expected values) is a SEPARATE item that applies ONLY to an ADDITIVE migration on a PRE-EXISTING table (a later story adding a column/constraint, where single-step downgrade removes only that addition and prior rows persist). NEVER author a data-preservation item for an INITIAL create-table migration: single-step downgrade drops the whole table, so 'rows survive' is UNSATISFIABLE and no code can make it pass (it dead-locks the assess/repair loop). If the story's migration is the table's FIRST (create-table), emit ONLY the schema-recreation reversibility item, not data-preservation. The created_at/audit immutability on an in-place upsert is its OWN item. Whole-table aggregate assertions must scope to the test's own rows (a delta), never an absolute total. Fitness items MUST NOT carry a `.feature` `scenario_file`. Seed idempotently with a per-run-unique key. " + SLICE_CONTRACT + " Set `invariant_id` on each item that covers a declared persistence invariant."
   },
   client: {
     kind: "client",
@@ -14458,7 +14578,7 @@ var TEST_ANALYST_CATALOGUE = {
     toolScope: ["Read"],
     inputs: ["story-acs", "architecture-invariants", "design-guide"],
     enabledWhen: (ctx) => ctx.uiTrack === true,
-    focusPrompt: "You are the CLIENT test analyst (this project HAS a frontend). For every UI-presentation AC the architecture routes to the SPA's own client harness, emit a `kind:\"client\"` item with `scenario_file` under `client/tests/` (e.g. `client/tests/pages/<Screen>.test.tsx`). Do NOT fold a presentation AC into the backend pytest-bdd suite , that mechanism mismatch is a defect. For an AC that OWNS a page/route, at least one client item MUST exercise the page THROUGH THE REAL `<App>` at the AC's route (a Playwright e2e that navigates the route, OR a component test rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) , a bare `render(<ThePage/>)` does NOT prove the page is routed; name the route in the description. Test the design-guide SEAM (assert the element carries its design-guide class / `data-testid`), NEVER an inline `style=` or raw CSS in the source. Do NOT set `invariant_id`. MATCH THE TEST TO THE AC's `layer`: an AC whose `layer` is **`E2E`** is verified END-TO-END against the REAL paired-branch DB , it REQUIRES a real Playwright e2e (scenario_file under `client/tests/e2e/\u2026`) that drives the DEPLOYED app in a browser against the live DB, with NO mocked/stubbed fetch and NO in-memory data. A mocked/stubbed COMPONENT test (rendering `<App>`/`<Page>` with fake data) is ONLY for a pure presentation/rendering AC, NEVER for an `E2E`-layer AC , drafting an E2E-layer AC as a mocked component test is the recurring reflect-testlist-defect (it cannot hit the DB the layer demands). One real e2e per E2E-layer AC. ALSO cover NFR CLIENT-RENDER fitness functions: for every `architecture.json` NFR whose `fitness_function` describes a CLIENT render (e.g. rendering a row with null/optional fields and asserting a 'not tracked' indicator, or an empty/loading/error state), emit a `kind:\"client\"` item that performs that render and asserts the stated outcome. These NFR-render fitness functions are YOURS, never the fitness analyst's (it owns service/DB guards, not the SPA); a stated client-render NFR with no client item is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
+    focusPrompt: "You are the CLIENT test analyst (this project HAS a frontend). For every UI-presentation AC the architecture routes to the SPA's own client harness, emit a `kind:\"client\"` item with `scenario_file` under `client/tests/` (e.g. `client/tests/pages/<Screen>.test.tsx`). Do NOT fold a presentation AC into the backend pytest-bdd suite \u2013 that mechanism mismatch is a defect. For an AC that OWNS a page/route, at least one client item MUST exercise the page THROUGH THE REAL `<App>` at the AC's route (a Playwright e2e that navigates the route, OR a component test rendering `<App>` in `<MemoryRouter initialEntries={[\"<the path>\"]}>`) \u2013 a bare `render(<ThePage/>)` does NOT prove the page is routed; name the route in the description. Test the design-guide SEAM (assert the element carries its design-guide class / `data-testid`), NEVER an inline `style=` or raw CSS in the source. Do NOT set `invariant_id`. MATCH THE TEST TO THE AC's `layer`: an AC whose `layer` is **`E2E`** is verified END-TO-END against the REAL paired-branch DB \u2013 it REQUIRES a real Playwright e2e (scenario_file under `client/tests/e2e/\u2026`) that drives the DEPLOYED app in a browser against the live DB, with NO mocked/stubbed fetch and NO in-memory data. A mocked/stubbed COMPONENT test (rendering `<App>`/`<Page>` with fake data) is ONLY for a pure presentation/rendering AC, NEVER for an `E2E`-layer AC \u2013 drafting an E2E-layer AC as a mocked component test is the recurring reflect-testlist-defect (it cannot hit the DB the layer demands). One real e2e per E2E-layer AC. ALSO cover NFR CLIENT-RENDER fitness functions: for every `architecture.json` NFR whose `fitness_function` describes a CLIENT render (e.g. rendering a row with null/optional fields and asserting a 'not tracked' indicator, or an empty/loading/error state), emit a `kind:\"client\"` item that performs that render and asserts the stated outcome. These NFR-render fitness functions are YOURS, never the fitness analyst's (it owns service/DB guards, not the SPA); a stated client-render NFR with no client item is the recurring reflect-testlist-defect. " + SLICE_CONTRACT
   }
 };
 function enabledAnalysts(ctx) {
@@ -14487,7 +14607,7 @@ function renderTestAnalystRoster(ctx, opts = {}) {
   });
   if (analysts.length === 0) return "";
   const payload = JSON.stringify({ analysts }, null, 2);
-  return `<<TEST-ANALYST ROSTER , spawn ONE Task subagent (subagent_type general-purpose) per entry below, passing its focus_prompt VERBATIM + the story inputs it declares. You MUST set the Task's model to the entry's "model" EXACTLY , never substitute your own model choice. When an entry gives "effort" or "tool_scope", you MUST RESTATE them VERBATIM at the top of that spawn's prompt , "Think at <effort> effort." and "Confine your work to these tools: <tool_scope>." , since the Task tool takes no effort/tool parameters (the analyst self-paces/self-limits on your instruction); do not paraphrase or omit them. For EACH analyst you spawn, first log a one-line reasoning event naming the analyst + the model/effort/tool_scope you applied (so the levers in effect are auditable). These are the ENABLED analysts for THIS project (a no-frontend project omits "client"). Collect each analyst's returned UNORDERED slice, then RECONCILE (discrepancies / overlaps / omissions), ASSEMBLE + ORDER the feature master, and assign the final feature-flat T-ids , see your role prompt for the reconciliation contract.>>
+  return `<<TEST-ANALYST ROSTER \u2013 spawn ONE Task subagent (subagent_type general-purpose) per entry below, passing its focus_prompt VERBATIM + the story inputs it declares. You MUST set the Task's model to the entry's "model" EXACTLY \u2013 never substitute your own model choice. When an entry gives "effort" or "tool_scope", you MUST RESTATE them VERBATIM at the top of that spawn's prompt \u2013 "Think at <effort> effort." and "Confine your work to these tools: <tool_scope>." \u2013 since the Task tool takes no effort/tool parameters (the analyst self-paces/self-limits on your instruction); do not paraphrase or omit them. For EACH analyst you spawn, first log a one-line reasoning event naming the analyst + the model/effort/tool_scope you applied (so the levers in effect are auditable). These are the ENABLED analysts for THIS project (a no-frontend project omits "client"). Collect each analyst's returned UNORDERED slice, then RECONCILE (discrepancies / overlaps / omissions), ASSEMBLE + ORDER the feature master, and assign the final feature-flat T-ids \u2013 see your role prompt for the reconciliation contract.>>
 \`\`\`json
 ` + payload + `
 \`\`\`
@@ -14498,13 +14618,13 @@ function renderTestAnalystRoster(ctx, opts = {}) {
 // consort/orchestrator/build/preconditions.ts
 function buildGreenFailureAdvisory(consortDir, featureId, story, ac) {
   const gfAssess = ac ? readGreenFailure(consortDir, featureId, story, ac) : void 0;
-  const failureAdvisory = gfAssess?.failureOutput ? `THE VERIFY'S OWN FAILURE OUTPUT (start HERE , it names the failing test(s) + the root error; do NOT re-run or re-scan the tree to rediscover this). Read the referenced file(s) directly to confirm the cause:
+  const failureAdvisory = gfAssess?.failureOutput ? `THE VERIFY'S OWN FAILURE OUTPUT (start HERE \u2013 it names the failing test(s) + the root error; do NOT re-run or re-scan the tree to rediscover this). Read the referenced file(s) directly to confirm the cause:
 \`\`\`
 ${gfAssess.failureOutput}
 \`\`\`
 
 ` : "";
-  const contractAdvisory = gfAssess?.contractRefs ? `DETERMINISTIC contract-clean has ALREADY localized the production-code references to the migration-dropped column(s) below , you do NOT need to re-find them. Record EXACTLY these as a driver-fixable regression via assess-regression --fix (path (b)), AND SEPARATELY flag any prior tests that assert the dropped column as superseded (path (a)) , a column drop needs BOTH the code fix and the test refactor in the same repair turn:
+  const contractAdvisory = gfAssess?.contractRefs ? `DETERMINISTIC contract-clean has ALREADY localized the production-code references to the migration-dropped column(s) below \u2013 you do NOT need to re-find them. Record EXACTLY these as a driver-fixable regression via assess-regression --fix (path (b)), AND SEPARATELY flag any prior tests that assert the dropped column as superseded (path (a)) \u2013 a column drop needs BOTH the code fix and the test refactor in the same repair turn:
 ${gfAssess.contractRefs}
 
 ` : "";
@@ -14532,7 +14652,7 @@ function resolvePreparer(kind) {
   const p = PRECONDITION_PREPARERS[kind];
   if (!p) {
     const known = Object.keys(PRECONDITION_PREPARERS).join(", ");
-    throw new Error(`preconditions: unknown preparer kind "${kind}" , register it in PRECONDITION_PREPARERS (known: ${known}).`);
+    throw new Error(`preconditions: unknown preparer kind "${kind}" \u2013 register it in PRECONDITION_PREPARERS (known: ${known}).`);
   }
   return p;
 }
@@ -14564,7 +14684,7 @@ function storyStubScope(consortDir, featureId, storyId) {
     return "";
   }
 }
-var STATE_OWNERSHIP_CANON = ` TEST STATE OWNERSHIP (mandatory): each test OWNS the state it asserts on , the acceptance DB is a shared branch reused across the story's cycles and already holds rows other stories committed. For any COLLECTION or AGGREGATE assertion (an empty list/table, "returns all", a count), NEVER assume ambient state and NEVER assert absolute whole-table state (e.g. len(all) == 0): SCOPE to per-run-unique keys , assert only your own seeded rows, or query a per-run-unique slice that is genuinely empty , or explicitly clear the aggregate you claim empty. Also revert/roll back rows a test writes so it never leaks state into another test.`;
+var STATE_OWNERSHIP_CANON = ` TEST STATE OWNERSHIP (mandatory): each test OWNS the state it asserts on \u2013 the acceptance DB is a shared branch reused across the story's cycles and already holds rows other stories committed. For any COLLECTION or AGGREGATE assertion (an empty list/table, "returns all", a count), NEVER assume ambient state and NEVER assert absolute whole-table state (e.g. len(all) == 0): SCOPE to per-run-unique keys \u2013 assert only your own seeded rows, or query a per-run-unique slice that is genuinely empty \u2013 or explicitly clear the aggregate you claim empty. Also revert/roll back rows a test writes so it never leaks state into another test.`;
 function nextPendingTestDirective(consortDir, featureId, story, loop, cap) {
   return nextPendingTestDirectiveBody(consortDir, featureId, story, loop, cap) + STATE_OWNERSHIP_CANON;
 }
@@ -14637,7 +14757,7 @@ function regressionRepairDirective(consortDir, featureId, story) {
   return `REPAIR a driver-fixable regression in AC ${acId} (story ${story}). The honest-GREEN verify against the running app FAILED and it was diagnosed (by the Navigator, or deterministically by a gate such as contract-clean) as a genuine regression in the code, NOT a superseded test:
   DIAGNOSIS: ${gf.diagnosis ?? gf.summary}
   FIX: ${gf.fixDirective}
-Apply that fix to the PRODUCTION code. Do NOT edit prior tests to force this regression green, fix the code. (EXCEPTION: if a SUPERSEDED TESTS directive follows below, the Navigator flagged those specific prior tests as encoding obsolete behavior, refactor ONLY those alongside this fix , often the regression is collateral from a superseded test erroring on a shared session, so both must land in this one turn.) Keep the AC's own tests green. This is your ONE repair attempt: if the verify still fails after it, the orchestration escalates to a human with the diagnosis.`;
+Apply that fix to the PRODUCTION code. Do NOT edit prior tests to force this regression green, fix the code. (EXCEPTION: if a SUPERSEDED TESTS directive follows below, the Navigator flagged those specific prior tests as encoding obsolete behavior, refactor ONLY those alongside this fix \u2013 often the regression is collateral from a superseded test erroring on a shared session, so both must land in this one turn.) Keep the AC's own tests green. This is your ONE repair attempt: if the verify still fails after it, the orchestration escalates to a human with the diagnosis.`;
 }
 function consumeHandback(action, featureId, consortDir) {
   const story = "story" in action ? action.story : void 0;
@@ -14670,25 +14790,25 @@ function roleTaskBody(action, featureId, uiTrack, consortDir, build, omit) {
   if ("mode" in action) {
     switch (action.mode) {
       case "propose":
-        return `Propose the sprint's candidate features for planning. WRITE the proposal to ${root}/planning/feature-proposals.md , author it FRESH from ${root}/product-overview.md + ${root}/nfrs.md (do NOT assume one already exists), one candidate feature per section, so the Architect can size them and the Product Owner can commit the backlog.${uiTrack ? UI_TRACK_PROPOSE : ""}`;
+        return `Propose the sprint's candidate features for planning. WRITE the proposal to ${root}/planning/feature-proposals.md \u2013 author it FRESH from ${root}/product-overview.md + ${root}/nfrs.md (do NOT assume one already exists), one candidate feature per section, so the Architect can size them and the Product Owner can commit the backlog.${uiTrack ? UI_TRACK_PROPOSE : ""}`;
       case "estimate":
         return `Estimate each proposed candidate feature with a t-shirt size (XS/S/M/L/XL) and write planning/estimates.json, so the Product Owner can commit a backlog that fits sprint capacity.`;
       case "estimate-committed":
         return `Estimate the sprint's COMMITTED feature(s) with a t-shirt size (XS/S/M/L/XL). Read each committed feature's request at ${root}/features/<F>/feature-request.md, then ADD one entry per committed feature to ${root}/planning/estimates.json keyed by its REAL feature id (e.g. "F1-stock-visibility", not a "FP" candidate id), each {"feature_id":"<F>","size":"<XS|S|M|L|XL>","rationale":"<why>"}. KEEP every existing estimate already in the file (merge, do not overwrite the candidate sizes). This is the size sync-backlog stamps into the per-sprint backlog, so the committed backlog shows real sizing.`;
       case "intake":
-        return `Author the project intake for the Product Owner, DRAFTING each artifact FRESH from the human's answers at ${root}/intake/answers.md (the interview responses; if absent or thin, draft only what the stated intent supports , never invent). WRITE:
-  - ${root}/product-overview.md , who it's for, its purpose, how it grows, what to see after each sprint (H1 + body, no implementation detail).
-  - ${root}/nfrs.md , apply @software-design-principles: walk performance / scalability / security / observability / operability / resilience; record each as a '## Required' item with a stable R<n> id, plus '## Preferences' and '## Out of bounds'.
-  - ${root}/design/design-brief.md (UI track only) , apply @ui-ux-design-principles: 1-3 reference sites + what to take from each, brand / interaction / accessibility constraints, and a required '## References' section.
+        return `Author the project intake for the Product Owner, DRAFTING each artifact FRESH from the human's answers at ${root}/intake/answers.md (the interview responses; if absent or thin, draft only what the stated intent supports \u2013 never invent). WRITE:
+  - ${root}/product-overview.md \u2013 who it's for, its purpose, how it grows, what to see after each sprint (H1 + body, no implementation detail).
+  - ${root}/nfrs.md \u2013 apply @software-design-principles + @architectural-design-principles: walk architecture layering / performance / scalability / security / observability / operability / resilience; record each as a '## Required' item with a stable R<n> id, plus '## Preferences' and '## Out of bounds'.
+  - ${root}/design/design-brief.md (UI track only) \u2013 apply @ui-ux-design-principles: 1-3 reference sites + what to take from each, brand / interaction / accessibility constraints, and a required '## References' section.
 Ground the shape in the canon above and the StockFlow worked example under the kit's examples/first-project/stockflow-seed/intake/ (learn the format + level of detail; never copy it verbatim). The human reviews + approves these before the Spec Author proposes the sprint from them.`;
       case "author-requests":
-        return `Provide the sprint's feature-requests.`;
+        return `Author the sprint's feature requests as the Product Owner. For EACH committed feature (the folder ids in ${root}/sprints/*/requested.json \u2014 the features the human selected at the backlog gate), WRITE ${root}/features/<F>/feature-request.md: a one-line ask (a '# ' heading) + the rationale + the user-facing outcome, drafted FROM ${root}/product-overview.md + ${root}/nfrs.md and the matching section of ${root}/planning/feature-proposals.md. Draft in the PO's voice; do NOT invent scope beyond what the proposals + intake support. SKIP any feature-request.md that already exists AND conforms (a recorded seed already placed at the gate) \u2014 do not re-author it. Author ONLY the absent ones.`;
       case "breakdown":
-        return `Break feature ${featureId} down into its stories. WRITE the breakdown to ${root}: first ${root}/features/${featureId}/feature-spec.json (id, name, status "draft", tdd_mode, and a NON-EMPTY stories[] array of the story ids), then a stub dir per story under ${root}/features/${featureId}/stories/<S>/ (story.md + story.json, id + one-line scope; NO acceptance criteria here). ON EVERY STORY AFTER THE FIRST, its story.json MUST include "independence": { "distinct_from_prior": true, "rationale": "<the distinct behavior this story adds beyond the prior stories>" } , apply the story-independence test (could you build the earlier story fully and have this one still genuinely unbuilt?); if not, fold or re-scope it. A later story that omits independence hard-blocks its spec gate, so set it now. Then run the breakdown self-check (./scripts/lk consort-response-formatter --role spec-author --feature ${featureId}, NO --story) and fix anything it flags before returning. feature-spec.json is REQUIRED , a prose list of stories in your reply is NOT the breakdown, and do NOT claim it "already exists".${uiTrack ? UI_TRACK_BREAKDOWN : ""}`;
+        return `Break feature ${featureId} down into its stories. WRITE the breakdown to ${root}: first ${root}/features/${featureId}/feature-spec.json (id, name, status "draft", tdd_mode, and a NON-EMPTY stories[] array of the story ids), then a stub dir per story under ${root}/features/${featureId}/stories/<S>/ (story.md + story.json, id + one-line scope; NO acceptance criteria here). ON EVERY STORY AFTER THE FIRST, its story.json MUST include "independence": { "distinct_from_prior": true, "rationale": "<the distinct behavior this story adds beyond the prior stories>" } \u2013 apply the story-independence test (could you build the earlier story fully and have this one still genuinely unbuilt?); if not, fold or re-scope it. A later story that omits independence hard-blocks its spec gate, so set it now. Then run the breakdown self-check (./scripts/lk consort-response-formatter --role spec-author --feature ${featureId}, NO --story) and fix anything it flags before returning. feature-spec.json is REQUIRED \u2013 a prose list of stories in your reply is NOT the breakdown, and do NOT claim it "already exists".${uiTrack ? UI_TRACK_BREAKDOWN : ""}`;
     }
   }
   if (action.role === "ux-designer") {
-    return `Translate the HIL design brief (${root}/design/design-brief.md) into the project design system: write design-guide.md (visual + interaction standards), design-guide.json (the machine-checkable tokens + components), and ia.md (the information architecture: screens, navigation, flows). This is the project-level style guide the Navigator and Driver build the UI against; author it once from the brief + product-overview.md. COVER THE BRIEF EXHAUSTIVELY , read design-brief.md + product-overview.md and enumerate, then realize, EVERY named element. In particular: (a) EVERY status/state variant the brief lists (e.g. each badge/pill state) , include ALL of them, not a representative subset; (b) EVERY asset the brief names (app icon, favicon/browser-tab icon, logos) as an explicit entry; (c) EVERY level of each scalar token the brief enumerates (if it says shadows sm/md/lg, define all three; likewise every spacing/radius/type step); and (d) a design-guide.json "components" block with an entry for EACH reusable UI component the brief describes (navbar, page, card, button, form field, table, status badge, empty state, toast, app icon, and any others the brief names), each with its class + notes. Before finishing, re-read the brief and confirm nothing it names is missing from the design-guide , a missing status state, asset, token level, or component is a defect.`;
+    return `Translate the HIL design brief (${root}/design/design-brief.md) into the project design system: write design-guide.md (visual + interaction standards), design-guide.json (the machine-checkable tokens + components), and ia.md (the information architecture: screens, navigation, flows). This is the project-level style guide the Navigator and Driver build the UI against; author it once from the brief + product-overview.md. COVER THE BRIEF EXHAUSTIVELY \u2013 read design-brief.md + product-overview.md and enumerate, then realize, EVERY named element. In particular: (a) EVERY status/state variant the brief lists (e.g. each badge/pill state) \u2013 include ALL of them, not a representative subset; (b) EVERY asset the brief names (app icon, favicon/browser-tab icon, logos) as an explicit entry; (c) EVERY level of each scalar token the brief enumerates (if it says shadows sm/md/lg, define all three; likewise every spacing/radius/type step); and (d) a design-guide.json "components" block with an entry for EACH reusable UI component the brief describes (navbar, page, card, button, form field, table, status badge, empty state, toast, app icon, and any others the brief names), each with its class + notes. Before finishing, re-read the brief and confirm nothing it names is missing from the design-guide \u2013 a missing status state, asset, token level, or component is a defect.`;
   }
   const s = action.story;
   switch (action.role) {
@@ -14710,14 +14830,14 @@ Ground the shape in the canon above and the StockFlow worked example under the k
           const invList = inv.length ? ` Realize EVERY declared persistence_invariant and list its id in realizes_invariants[]: ${inv.map((i) => `${i.id}${i.type ? ` [${i.type}${i.table ? ` on ${i.table}` : ""}]` : ""}${i.brief ? ` (${i.brief})` : ""}`).join("; ")}.` : "";
           const models = (arch.layers ?? []).find((l) => l.role === "models");
           const modelsNote = models?.module ? ` Mirror the architect's models package (${models.module}), one table per domain object.` : "";
-          const nonPersistingNote = inv.length ? "" : ` This service declares NO persistence_invariants (a non-persisting service , compute/proxy/aggregator); an empty or absent db-design.json is acceptable, do not invent tables.`;
+          const nonPersistingNote = inv.length ? "" : ` This service declares NO persistence_invariants (a non-persisting service \u2013 compute/proxy/aggregator); an empty or absent db-design.json is acceptable, do not invent tables.`;
           contract = ` This feature is service_backed.${modelsNote}${invList}${nonPersistingNote}`;
         } else if (arch.service_backed === false) {
           contract = ` This feature is not service_backed (a trivial static/read-through endpoint); an empty or absent db-design.json is acceptable.`;
         }
       } catch {
       }
-      return `Realize the physical database schema for story ${s} into ${root}/features/${featureId}/db-design.json (+ a short db-design.md narrative).${dbaAcScope} Read architecture.json (service_backed, layers, persistence_invariants) , the architect owns that logical contract; you produce the PHYSICAL realization and do NOT re-author the invariants. Declare tables[] (columns with explicit type/nullable/default, primary_key, unique_constraints, foreign_keys, checks, indexes) and this story's schema_changes[] (the per-story migration plan the build lane authors the Alembic migration from; keep an expand/contract column split or drop reversible). Populate realizes_invariants[] as a flat array of the architecture.json persistence_invariant id STRINGS (bare ids, not objects) , an uncovered invariant hard-blocks the spec gate.${contract}` + designRootNote(root, featureId, s);
+      return `Realize the physical database schema for story ${s} into ${root}/features/${featureId}/db-design.json (+ a short db-design.md narrative).${dbaAcScope} Read architecture.json (service_backed, layers, persistence_invariants) \u2013 the architect owns that logical contract; you produce the PHYSICAL realization and do NOT re-author the invariants. Declare tables[] (columns with explicit type/nullable/default, primary_key, unique_constraints, foreign_keys, checks, indexes) and this story's schema_changes[] (the per-story migration plan the build lane authors the Alembic migration from; keep an expand/contract column split or drop reversible). Populate realizes_invariants[] as a flat array of the architecture.json persistence_invariant id STRINGS (bare ids, not objects) \u2013 an uncovered invariant hard-blocks the spec gate.${contract}` + designRootNote(root, featureId, s);
     }
     case "test-strategist": {
       const acIds = storyAcIds(consortDir, featureId, s);
@@ -14728,7 +14848,7 @@ Ground the shape in the canon above and the StockFlow worked example under the k
         if (arch.service_backed === true) {
           const inv = (arch.persistence_invariants ?? []).filter((i) => i && typeof i.id === "string");
           const list = inv.length ? ` The declared persistence invariants are: ${inv.map((i) => `${i.id}${i.brief ? ` (${i.brief})` : ""}`).join("; ")}.` : "";
-          dbScope = ` This feature is service-backed. Cover EVERY architecture.json persistence_invariant with >=1 test that sets "invariant_id" to that invariant's id and exercises it DIRECTLY against the branch database (a real DB session, never a mock): verify the MIGRATION actually realized the guarantee (e.g. inserting a duplicate raises an IntegrityError, a NOT NULL/CHECK rejects a bad row, a down-then-up migration round-trips) and that the repository honors it. Do NOT write a test of the ORM's generic add/commit/query round-trip , that tests the library, not your schema.${list} The DBA's db-design.json (features/${featureId}/db-design.json) has the concrete table/column/constraint definitions realizing these invariants , read it for precise schema assertions. EVERY test that WRITES to the DB (a create/POST test, a content-type or validation test that sends a real body, a retrieve test that seeds a fixture) MUST own its state: use a per-run-UNIQUE key (a uuid-suffixed sku/location, e.g. f"SKU-{uuid.uuid4().hex[:8]}"), OR delete/upsert the fixed key before the write AND clean up after. A test that writes a FIXED key with no cleanup passes alone + on its own isolated build branch but COLLIDES in the full-suite deploy-verify against the shared feature-branch DB (a duplicate-key error surfacing as a non-JSON/500), halting the feature ship , the shared-state-write defect. Do NOT assume an empty table or an untouched fixed key.`;
+          dbScope = ` This feature is service-backed. Cover EVERY architecture.json persistence_invariant with >=1 test that sets "invariant_id" to that invariant's id and exercises it DIRECTLY against the branch database (a real DB session, never a mock): verify the MIGRATION actually realized the guarantee (e.g. inserting a duplicate raises an IntegrityError, a NOT NULL/CHECK rejects a bad row, a down-then-up migration round-trips) and that the repository honors it. Do NOT write a test of the ORM's generic add/commit/query round-trip \u2013 that tests the library, not your schema.${list} The DBA's db-design.json (features/${featureId}/db-design.json) has the concrete table/column/constraint definitions realizing these invariants \u2013 read it for precise schema assertions. EVERY test that WRITES to the DB (a create/POST test, a content-type or validation test that sends a real body, a retrieve test that seeds a fixture) MUST own its state: use a per-run-UNIQUE key (a uuid-suffixed sku/location, e.g. f"SKU-{uuid.uuid4().hex[:8]}"), OR delete/upsert the fixed key before the write AND clean up after. A test that writes a FIXED key with no cleanup passes alone + on its own isolated build branch but COLLIDES in the full-suite deploy-verify against the shared feature-branch DB (a duplicate-key error surfacing as a non-JSON/500), halting the feature ship \u2013 the shared-state-write defect. Do NOT assume an empty table or an untouched fixed key.`;
         }
       } catch {
       }
@@ -14736,34 +14856,34 @@ Ground the shape in the canon above and the StockFlow worked example under the k
     }
     case "navigator":
       if (action.buildMode === "reflect") {
-        return `REFLECT on story ${s} BEFORE the build lane: independently critique its spec slice (${root}/features/${featureId}/stories/${s}/story.json + acs/*.json) and its test-list (${root}/features/${featureId}/stories/${s}/test-list-per-story.json) against the architecture (${root}/features/${featureId}/architecture.md/.json) + NFRs.` + contextRubric(consortDir, featureId, s, "") + ` Look ONLY for design-time defects that would waste a build cycle: (1) ACs that contradict each other; (2) an AC with no covering test, or a test that contradicts its AC; (3) an NFR with no fitness test; (4) a test asserting at a layer the architecture forbids; (5) an AC whose declared layer conflicts with the architecture; (6) an untestable/vacuous AC (no observable outcome); (7) a UI-styling test that asserts inline HTML style or raw CSS in the page SOURCE (e.g. a text-align/color/font check inside a style= attr) for a property the design-guide + design-adherence gate govern, instead of the rendered SEAM (the element carries the design-guide class / data-testid): such a test hard-codes the very inline style the design lane then refactors into a token-driven class, so it blocks that refactor (the ui-style-implementation-test smell). Do NOT critique implementation, style, or scope, only buildability + internal consistency of THIS story's artifacts. Write your verdict to ${root}/features/${featureId}/stories/${s}/reflect-verdict.json as {"version":1,"passed":<bool>,"findings":[{"owner":"spec-author"|"test-strategist","detail":"<the defect>"}]}. passed:true with findings:[] when the spec + test-list are consistent + buildable (the common case, do NOT invent defects). Attribute each finding to spec-author (an AC/spec defect) or test-strategist (a test-list/coverage defect). Write ONLY that file; the orchestrator routes any fix deterministically.`;
+        return `REFLECT on story ${s} BEFORE the build lane: independently critique its spec slice (${root}/features/${featureId}/stories/${s}/story.json + acs/*.json) and its test-list (${root}/features/${featureId}/stories/${s}/test-list-per-story.json) against the architecture (${root}/features/${featureId}/architecture.md/.json) + NFRs.` + contextRubric(consortDir, featureId, s, "") + ` Look ONLY for design-time defects that would waste a build cycle: (1) ACs that contradict each other; (2) an AC with no covering test, or a test that contradicts its AC; (3) an NFR with no fitness test; (4) a test asserting at a layer the architecture forbids; (5) an AC whose declared layer conflicts with the architecture; (6) an untestable/vacuous AC (no observable outcome); (7) a UI-styling test that asserts inline HTML style or raw CSS in the page SOURCE (e.g. a text-align/color/font check inside a style= attr) for a property the design-guide + design-adherence gate govern, instead of the rendered SEAM (the element carries the design-guide class / data-testid): such a test hard-codes the very inline style the design lane then refactors into a token-driven class, so it blocks that refactor (the ui-style-implementation-test smell). Do NOT critique implementation, style, or scope, only buildability + internal consistency of THIS story's artifacts. BE EXHAUSTIVE in this ONE pass: findings[] is multi-valued \u2014 run EVERY check against EVERY AC, test-list item, and NFR, and emit a SEPARATE finding for EACH distinct defect (decompose a multi-part NFR fitness_function into its sub-guarantees and flag every uncovered clause). Do NOT return one finding at a time: the reflect\u2194revise loop is bounded and escalates after a few laps, so a piecemeal reflect burns that budget on repeated revise\u2192re-test\u2192reflect laps and can hand the human a still-defective design. Write your verdict to ${root}/features/${featureId}/stories/${s}/reflect-verdict.json as {"version":1,"passed":<bool>,"findings":[{"owner":"spec-author"|"test-strategist","detail":"<the defect>"}]}. passed:true with findings:[] when the spec + test-list are consistent + buildable (the common case, do NOT invent defects). Attribute each finding to spec-author (an AC/spec defect) or test-strategist (a test-list/coverage defect). Write ONLY that file; the orchestrator routes any fix deterministically.`;
       }
       if (action.buildMode === "assess") {
         const gfAssess = action.ac ? readGreenFailure(consortDir, featureId, s, action.ac) : void 0;
         const advisory = omit?.has("green-failure-advisory") ? "" : buildGreenFailureAdvisory(consortDir, featureId, s, action.ac ?? "");
         const hasSupersededAdvisory = !!gfAssess?.supersededTestRefs;
-        const scanDirective = hasSupersededAdvisory ? `(a) If the current AC INTENTIONALLY supersedes behavior those failing tests encode, FLAG them so the Driver may permissively refactor ONLY those. The DETERMINISTIC gate has ALREADY pre-localized the COMPLETE superseded set (the SUPERSEDED-TEST CANDIDATES above , a grep of the migration's dropped symbol across every test, including FITNESS / architecture / migration reversibility tests). TRUST it: flag EXACTLY those file(s) in ONE flag-superseded call and do NOT re-read each candidate to re-verify (that re-verification never converges on a large drop set , it is the assess-spin failure). Only search beyond the list if you have concrete reason to believe it MISSED a failing test; otherwise flag the list as-is:
+        const scanDirective = hasSupersededAdvisory ? `(a) If the current AC INTENTIONALLY supersedes behavior those failing tests encode, FLAG them so the Driver may permissively refactor ONLY those. The DETERMINISTIC gate has ALREADY pre-localized the COMPLETE superseded set (the SUPERSEDED-TEST CANDIDATES above \u2013 a grep of the migration's dropped symbol across every test, including FITNESS / architecture / migration reversibility tests). TRUST it: flag EXACTLY those file(s) in ONE flag-superseded call and do NOT re-read each candidate to re-verify (that re-verification never converges on a large drop set \u2013 it is the assess-spin failure). Only search beyond the list if you have concrete reason to believe it MISSED a failing test; otherwise flag the list as-is:
 ` : `Inspect EVERY failing test (the COMPLETE set, not a sample) and decide per test:
-(a) If the current AC INTENTIONALLY supersedes behavior those failing tests encode (the latest AC wins; e.g. a prior feature's test asserts an outcome this AC deliberately changes), FLAG them so the Driver may permissively refactor ONLY those. Scan COMPREHENSIVELY: when this AC drops, removes, or renames a column / field / table / endpoint, the superseded set is NOT only the tests that NAME it in a query/INSERT/assertion , it ALSO includes FITNESS / architecture / migration tests that assert a PROPERTY of the now-gone shape (migration reversibility like "after up() then down(), <col> is reconstructed", schema-shape checks like "<col> exists", invariants over the old column). Those are superseded too , a reversibility/fitness test for an obsoleted column encodes abandoned behavior. Miss one and the verify stays red and escalates, so list ALL of them in ONE flag-superseded call:
+(a) If the current AC INTENTIONALLY supersedes behavior those failing tests encode (the latest AC wins; e.g. a prior feature's test asserts an outcome this AC deliberately changes), FLAG them so the Driver may permissively refactor ONLY those. Scan COMPREHENSIVELY: when this AC drops, removes, or renames a column / field / table / endpoint, the superseded set is NOT only the tests that NAME it in a query/INSERT/assertion \u2013 it ALSO includes FITNESS / architecture / migration tests that assert a PROPERTY of the now-gone shape (migration reversibility like "after up() then down(), <col> is reconstructed", schema-shape checks like "<col> exists", invariants over the old column). Those are superseded too \u2013 a reversibility/fitness test for an obsoleted column encodes abandoned behavior. Miss one and the verify stays red and escalates, so list ALL of them in ONE flag-superseded call:
 `;
         return advisory + `ASSESS a failed honest-GREEN verify for AC ${action.ac} in story ${s}. The Driver made the current test pass, but the full-suite verify against the running app FAILED, some OTHER test(s) now fail.
 ` + scanDirective + `   ./scripts/lk consort-cycle flag-superseded --feature ${featureId} --story ${s} --ac ${action.ac} --reason "<new AC + what changed>" --test <path_or_nodeid> [--test ...] --tdd-dir ${consortDir}
-   The flag-superseded command writes ${join44(cycleDir(consortDir, featureId, s, action.ac ?? ""), "superseded-tests.json")}. If for any reason the command will not run, FALL BACK to writing THAT EXACT file directly with the Write tool: {"tests":["<path_or_nodeid>", ...],"reason":"<why superseded>"} , do NOT search the cache / scripts / logs for the mechanism or invent a different filename. The orchestration honors that file too.
+   The flag-superseded command writes ${join44(cycleDir(consortDir, featureId, s, action.ac ?? ""), "superseded-tests.json")}. If for any reason the command will not run, FALL BACK to writing THAT EXACT file directly with the Write tool: {"tests":["<path_or_nodeid>", ...],"reason":"<why superseded>"} \u2013 do NOT search the cache / scripts / logs for the mechanism or invent a different filename. The orchestration honors that file too.
 (b) If instead the failure is a GENUINE REGRESSION (the AC does NOT intend to change that behavior; the Driver's code is wrong), record your ROOT-CAUSE diagnosis so it travels to the Driver / the human instead of being lost. When the Driver can fix it, ALSO give a concrete repair directive (this routes a bounded Driver repair turn):
    ./scripts/lk consort-cycle assess-regression --feature ${featureId} --story ${s} --ac ${action.ac} --diagnosis "<the WHY: which behavior broke + the root cause>" [--fix "<what the Driver should change>"] --tdd-dir ${consortDir}
    Include --fix ONLY when the fix is clear + within the Driver's reach (e.g. a wrong default, a missing filter, an off-by-one); OMIT --fix when it needs a human / a design or spec change (the orchestration then escalates carrying your diagnosis).
-CRITICAL , recording the verdict is the ONLY output of this turn. The orchestration reads your verdict from ${join44(cycleDir(consortDir, featureId, s, action.ac ?? ""), "regression-assessment.json")} (the assess-regression command writes it). Writing green-failure.json or just explaining the fix in prose is NOT the verdict , without that file a DRIVER-FIXABLE regression wrongly escalates to a human and the sprint halts. Run the ONE command above as a SINGLE line (do not split across lines, do not wrap in bash -c). If for any reason the command will not run, FALL BACK to writing the file directly with the Write tool: {"diagnosis":"<why>","fix":"<what to change>"} at that exact path , the orchestration honors that too.
-Flag ONLY tests the new AC truly supersedes; never flag a test just to make a red go away. For a regression, always record a diagnosis (+ fix when driver-fixable) , never nothing.`;
+CRITICAL \u2013 recording the verdict is the ONLY output of this turn. The orchestration reads your verdict from ${join44(cycleDir(consortDir, featureId, s, action.ac ?? ""), "regression-assessment.json")} (the assess-regression command writes it). Writing green-failure.json or just explaining the fix in prose is NOT the verdict \u2013 without that file a DRIVER-FIXABLE regression wrongly escalates to a human and the sprint halts. Run the ONE command above as a SINGLE line (do not split across lines, do not wrap in bash -c). If for any reason the command will not run, FALL BACK to writing the file directly with the Write tool: {"diagnosis":"<why>","fix":"<what to change>"} at that exact path \u2013 the orchestration honors that too.
+Flag ONLY tests the new AC truly supersedes; never flag a test just to make a red go away. For a regression, always record a diagnosis (+ fix when driver-fixable) \u2013 never nothing.`;
       }
       if (action.buildMode === "assess-deploy") {
         const marker = readDeployVerifyAssessMarker(consortDir, featureId, s);
         const failing = marker?.failing_node_ids ?? [];
-        return `ASSESS a failed full-feature DEPLOY-VERIFY for story ${s}. The story's own tests are green, but the full-feature verify against the running app FAILED on the tests below. A deterministic classifier RE-RAN each in ISOLATION (a fresh clean DB) and they ALL PASSED alone , so this is shared-state CONTAMINATION, not broken software: a test that does not OWN its DB state (typically a WHOLE-TABLE AGGREGATE , a COUNT/SUM integrity probe , asserting an ABSOLUTE total that holds on the isolated per-cycle branch but breaks once other stories' rows share the table).
+        return `ASSESS a failed full-feature DEPLOY-VERIFY for story ${s}. The story's own tests are green, but the full-feature verify against the running app FAILED on the tests below. A deterministic classifier RE-RAN each in ISOLATION (a fresh clean DB) and they ALL PASSED alone \u2013 so this is shared-state CONTAMINATION, not broken software: a test that does not OWN its DB state (typically a WHOLE-TABLE AGGREGATE \u2013 a COUNT/SUM integrity probe \u2013 asserting an ABSOLUTE total that holds on the isolated per-cycle branch but breaks once other stories' rows share the table).
 Failing tests:
 ${failing.map((n) => `  ${n}`).join("\n")}
 
-For EACH test, prescribe HOW to make it own its state: scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA, NEVER an absolute whole-table total. Do NOT weaken the assertion's intent , keep the invariant, just scope it.
-Write your scope directives to ${root}/features/${featureId}/stories/${s}/deploy-verify-scope.json as {"version":1,"story_id":"${s}","directives":[{"node_id":"<path::test>","directive":"<how to scope it>"}]} , one entry per test you confirm is contamination-fragile. If (rarely) you judge the classifier wrong and a failure is a GENUINE regression, OMIT it from directives (write no file, or an empty directives array); the orchestration then raises it to a human instead of scoping. Write ONLY that file.`;
+For EACH test, prescribe HOW to make it own its state: scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA, NEVER an absolute whole-table total. Do NOT weaken the assertion's intent \u2013 keep the invariant, just scope it.
+Write your scope directives to ${root}/features/${featureId}/stories/${s}/deploy-verify-scope.json as {"version":1,"story_id":"${s}","directives":[{"node_id":"<path::test>","directive":"<how to scope it>"}]} \u2013 one entry per test you confirm is contamination-fragile. If (rarely) you judge the classifier wrong and a failure is a GENUINE regression, OMIT it from directives (write no file, or an empty directives array); the orchestration then raises it to a human instead of scoping. Write ONLY that file.`;
       }
       if (action.buildMode === "assess-refactor") {
         const marker = readRefactorVerifyAssessMarker(consortDir, featureId, s);
@@ -14774,7 +14894,7 @@ Deterministic supersession advisory (prior tests referencing a symbol the refact
 ${marker.superseded_advisory}
 ` : "") + `
 Decide, per failing test: is it a PRIOR test this story legitimately SUPERSEDES (it asserts old behavior/fields this story deliberately retired), or a GENUINE regression the refactor introduced?
-Flag ONLY the genuinely superseded prior tests via \`./scripts/lk consort-cycle flag-superseded --feature ${featureId} --story ${s} --ac <ac> --test <path::test> [--test ...] --reason "<why superseded>"\` , the Driver will then permissively refactor ONLY those. That command writes superseded-tests.json in the <ac>'s cycle dir; if it will not run, FALL BACK to writing THAT file directly with the Write tool ({"tests":[...],"reason":"<why>"}) , do NOT search the cache / scripts / logs for the mechanism or invent a different filename. If instead the refactor broke CURRENT behavior (a real regression), flag NOTHING; the orchestration raises it to a human. Never flag a test just to make a red go away. Do NOT edit product code or tests in this turn.`;
+Flag ONLY the genuinely superseded prior tests via \`./scripts/lk consort-cycle flag-superseded --feature ${featureId} --story ${s} --ac <ac> --test <path::test> [--test ...] --reason "<why superseded>"\` \u2013 the Driver will then permissively refactor ONLY those. That command writes superseded-tests.json in the <ac>'s cycle dir; if it will not run, FALL BACK to writing THAT file directly with the Write tool ({"tests":[...],"reason":"<why>"}) \u2013 do NOT search the cache / scripts / logs for the mechanism or invent a different filename. If instead the refactor broke CURRENT behavior (a real regression), flag NOTHING; the orchestration raises it to a human. Never flag a test just to make a red go away. Do NOT edit product code or tests in this turn.`;
       }
       if (action.buildMode === "review") {
         if ((build?.loop ?? "story") === "story") {
@@ -14789,7 +14909,7 @@ Flag ONLY the genuinely superseded prior tests via \`./scripts/lk consort-cycle 
       if (action.buildMode === "refactor-deploy") {
         const scope = readDeployVerifyScope(consortDir, featureId, s);
         const directives = scope?.directives ?? [];
-        return `SCOPE the contamination-fragile tests the Navigator flagged for story ${s}. Each FAILED the full-feature deploy-verify but PASSES in isolation , it asserts an ABSOLUTE whole-table aggregate (or otherwise does not own its DB state), which breaks once other stories' rows share the table. Refactor EACH per its directive so it OWNS its state: scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA , NEVER an absolute whole-table total. Keep the invariant; do NOT weaken it, and do NOT change product code.
+        return `SCOPE the contamination-fragile tests the Navigator flagged for story ${s}. Each FAILED the full-feature deploy-verify but PASSES in isolation \u2013 it asserts an ABSOLUTE whole-table aggregate (or otherwise does not own its DB state), which breaks once other stories' rows share the table. Refactor EACH per its directive so it OWNS its state: scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA \u2013 NEVER an absolute whole-table total. Keep the invariant; do NOT weaken it, and do NOT change product code.
 ` + directives.map((d) => `  ${d.node_id}
     -> ${d.directive}`).join("\n") + `
 Edit ONLY those test files. The orchestrator re-deploys + re-verifies after your turn.`;
@@ -14805,9 +14925,9 @@ Edit ONLY the flagged test files. The orchestrator re-verifies the full suite af
       if (action.buildMode === "refactor") {
         const pack = (ac) => omit?.has("context-pack") ? "" : buildContextPack(consortDir, featureId, s, ac);
         if ((build?.loop ?? "story") === "story") {
-          return `REFACTOR story ${s} per the Navigator's review (${root}/cycles/${featureId}/${s}/review.json -> refactor_notes), guided by the architecture (${root}/features/${featureId}/architecture.md), the NFRs (${root}/nfrs.md), + design guide (${root}/design/design-guide.md). If review.json has no refactor_notes, this refactor was queued by a BLOCKING build-quality gate (a layering / design-adherence / import-coupling smell in ${root}/smells.json): run that gate to see the violation (e.g. \`consort-layering-clean --project-dir .\`) and fix exactly what it flags , typically extract the duplicated/misplaced code into one shared helper in its correct layer. Keep ALL the story's tests green and do not change what the outer-boundary tests check, refactor only.` + pack("");
+          return `REFACTOR story ${s} per the Navigator's review (${root}/cycles/${featureId}/${s}/review.json -> refactor_notes), guided by the architecture (${root}/features/${featureId}/architecture.md), the NFRs (${root}/nfrs.md), + design guide (${root}/design/design-guide.md). If review.json has no refactor_notes, this refactor was queued by a BLOCKING build-quality gate (a layering / design-adherence / import-coupling smell in ${root}/smells.json): run that gate to see the violation (e.g. \`consort-layering-clean --project-dir .\`) and fix exactly what it flags \u2013 typically extract the duplicated/misplaced code into one shared helper in its correct layer. Keep ALL the story's tests green and do not change what the outer-boundary tests check, refactor only.` + pack("");
         }
-        return `REFACTOR AC ${action.ac} in story ${s} per the Navigator's review (${root}/cycles/${featureId}/${s}/${action.ac}/review.json -> refactor_notes), guided by the architecture (${root}/features/${featureId}/architecture.md), the NFRs (${root}/nfrs.md), + design guide (${root}/design/design-guide.md). If review.json has no refactor_notes, this refactor was queued by a BLOCKING build-quality gate (a layering / design-adherence / import-coupling smell in ${root}/smells.json): run that gate to see the violation (e.g. \`consort-layering-clean --project-dir .\`) and fix exactly what it flags , typically extract the duplicated/misplaced code into one shared helper in its correct layer. Keep ALL tests green and do not change what the outer-boundary tests check, refactor only.` + pack(action.ac ?? "");
+        return `REFACTOR AC ${action.ac} in story ${s} per the Navigator's review (${root}/cycles/${featureId}/${s}/${action.ac}/review.json -> refactor_notes), guided by the architecture (${root}/features/${featureId}/architecture.md), the NFRs (${root}/nfrs.md), + design guide (${root}/design/design-guide.md). If review.json has no refactor_notes, this refactor was queued by a BLOCKING build-quality gate (a layering / design-adherence / import-coupling smell in ${root}/smells.json): run that gate to see the violation (e.g. \`consort-layering-clean --project-dir .\`) and fix exactly what it flags \u2013 typically extract the duplicated/misplaced code into one shared helper in its correct layer. Keep ALL tests green and do not change what the outer-boundary tests check, refactor only.` + pack(action.ac ?? "");
       }
       {
         return ((build?.loop ?? "story") === "story" ? `Make ALL of story ${s}'s failing tests GREEN in one pass (simplest honest code); implement until every one of the story's tests passes, then run the story's tests once.` : build?.loop === "hybrid-a" ? `Make the failing tests for story ${s}'s current layer-batch ALL GREEN in one pass (simplest honest code); implement until every test in the open batch passes, then run that layer's runner once.` : `Make the failing test for story ${s} GREEN (simplest honest code).`) + (uiTrack ? uiTrackBuild(root) : "") + // ctx-test ON by default for GREEN: inject the failing RED test body so the Driver does not
@@ -14873,6 +14993,7 @@ function buildClaudeCommandWithBody(action, cfg, body) {
   const effort = cfg.effortForTurn ? cfg.effortForTurn(action.role, turnKey) : isReviewTurn ? cfg.reviewEffort ?? "low" : "";
   const fallbackModel = cfg.fallbackModelForRole?.(action.role);
   const maxBudgetUsd = cfg.maxBudgetUsdForRole?.(action.role);
+  const mcpConfig = cfg.mcpConfigForRole?.(action.role);
   return {
     kind: "claude",
     role: action.role,
@@ -14881,6 +15002,7 @@ function buildClaudeCommandWithBody(action, cfg, body) {
     ...effort && effort !== "default" ? { effort } : {},
     ...fallbackModel ? { fallbackModel } : {},
     ...typeof maxBudgetUsd === "number" ? { maxBudgetUsd } : {},
+    ...mcpConfig ? { mcpConfig } : {},
     // Optimize harness content/scope levers (all default-off): extra context
     // is injected BEFORE the terse suffix (reads as context), the task suffix
     // AFTER it (reads as a trailing directive), and the tool scope is carried
@@ -14895,7 +15017,7 @@ function buildClaudeCommandWithBody(action, cfg, body) {
       };
     })(),
     // The ENVELOPE: the handback prefix (informed-retry feedback, consumed here so a
-    // prepend precondition the executor re-adds to `body` still lands AFTER it , the legacy
+    // prepend precondition the executor re-adds to `body` still lands AFTER it – the legacy
     // order) + the given task body + the context/terse/task suffixes. On the legacy path
     // `body` is the full inline task (buildTaskBody with omit=∅); on the A-full executor path
     // `body` is the executor-assembled prompt (declared preconditions re-injected in position).
@@ -14992,12 +15114,6 @@ function commandsForAction(action, cfg) {
   const deployTarget = cfg.deployTarget ?? "local";
   switch (action.kind) {
     case "invoke-role": {
-      if ("mode" in action && action.role === "product-owner" && action.mode === "author-requests") {
-        return [
-          { kind: "cli", bin: HUMAN_PROXY_BIN, args: ["supply-requests", "--tdd-dir", cfg.consortDir, "--approver", approver, "--sprint", cfg.sprintName ?? "sprint"] },
-          { kind: "sync-backlog", sprint: cfg.sprintName ?? "sprint" }
-        ];
-      }
       if (cfg.recordedRequests && !cfg.livePropose && "mode" in action && action.role === "spec-author" && action.mode === "propose") {
         return [
           {
@@ -15025,6 +15141,9 @@ function commandsForAction(action, cfg) {
       if ("mode" in action && action.mode === "estimate-committed" && cfg.sprintName) {
         cmds.push({ kind: "sync-backlog", sprint: cfg.sprintName });
       }
+      if ("mode" in action && action.mode === "author-requests" && cfg.sprintName) {
+        cmds.push({ kind: "sync-backlog", sprint: cfg.sprintName });
+      }
       if (f && !isPlanningMode(action)) cmds.push({ kind: "cli", bin: LOG_BIN, args: ["--reconcile", ...tdd] });
       return cmds;
     }
@@ -15038,12 +15157,12 @@ function commandsForAction(action, cfg) {
         role: action.role,
         model: cfg.modelForRole(action.role),
         ...cfg.fallbackModelForRole?.(action.role) ? { fallbackModel: cfg.fallbackModelForRole(action.role) } : {},
-        task: (action.mode === "assess-deploy" ? `ASSESS a failed full-feature DEPLOY-VERIFY for the FEATURE SHIP of ${featureId} (all stories are accepted; this is the merged-increment verify against the running app, no single story). A deterministic classifier RE-RAN each failing test in ISOLATION (a fresh clean DB) and they ALL PASSED alone , shared-state CONTAMINATION, not broken software: a test that does not OWN its DB state (it writes a fixed-key row with no cleanup, or asserts an absolute whole-table total) and so collides with sibling tests' rows on the shared feature-branch DB.
+        task: (action.mode === "assess-deploy" ? `ASSESS a failed full-feature DEPLOY-VERIFY for the FEATURE SHIP of ${featureId} (all stories are accepted; this is the merged-increment verify against the running app, no single story). A deterministic classifier RE-RAN each failing test in ISOLATION (a fresh clean DB) and they ALL PASSED alone \u2013 shared-state CONTAMINATION, not broken software: a test that does not OWN its DB state (it writes a fixed-key row with no cleanup, or asserts an absolute whole-table total) and so collides with sibling tests' rows on the shared feature-branch DB.
 Failing tests:
 ${(marker?.failing_node_ids ?? []).map((n) => `  ${n}`).join("\n")}
 
-For EACH test, prescribe HOW to make it own its state: use a per-run-unique key (a uuid-suffixed sku/location), or delete/upsert the fixed key before the write AND clean up after, or scope a whole-table aggregate to the test's own rows / a delta , NEVER an absolute total. Keep the assertion's intent; just make it self-owning.
-Write your scope directives to ${root}/features/${featureId}/deploy-verify-scope.json as {"version":1,"directives":[{"node_id":"<path::test>","directive":"<how to scope it>"}]} , one entry per test you confirm is contamination-fragile. If (rarely) you judge a failure a GENUINE regression, OMIT it (write no file, or an empty directives array); the orchestration then raises it to a human. Write ONLY that file.` : `SCOPE the contamination-fragile tests the Navigator flagged for the FEATURE SHIP of ${featureId}. Refactor EXACTLY these test files to own their DB state, per the directives , do NOT touch product code, do NOT weaken the assertions' intent:
+For EACH test, prescribe HOW to make it own its state: use a per-run-unique key (a uuid-suffixed sku/location), or delete/upsert the fixed key before the write AND clean up after, or scope a whole-table aggregate to the test's own rows / a delta \u2013 NEVER an absolute total. Keep the assertion's intent; just make it self-owning.
+Write your scope directives to ${root}/features/${featureId}/deploy-verify-scope.json as {"version":1,"directives":[{"node_id":"<path::test>","directive":"<how to scope it>"}]} \u2013 one entry per test you confirm is contamination-fragile. If (rarely) you judge a failure a GENUINE regression, OMIT it (write no file, or an empty directives array); the orchestration then raises it to a human. Write ONLY that file.` : `SCOPE the contamination-fragile tests the Navigator flagged for the FEATURE SHIP of ${featureId}. Refactor EXACTLY these test files to own their DB state, per the directives \u2013 do NOT touch product code, do NOT weaken the assertions' intent:
 ` + (readDeployVerifyScope(consortDir, featureId)?.directives ?? []).map((d) => `  ${d.node_id}
     -> ${d.directive}`).join("\n") + `
 Edit ONLY those test files. The orchestrator re-deploys + re-verifies the whole feature after your turn.`) + AGENT_TERSE_SUFFIX,
@@ -15151,6 +15270,15 @@ Edit ONLY those test files. The orchestrator re-deploys + re-verifies the whole 
           bin: HUMAN_PROXY_BIN,
           args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "intake", "--approver", approver, "--tdd-dir", cfg.consortDir]
         }
+      ];
+    case "approve-backlog-gate":
+      return [
+        {
+          kind: "cli",
+          bin: HUMAN_PROXY_BIN,
+          args: ["--sprint", cfg.sprintName ?? "sprint", "--gate", "backlog", "--approver", approver, "--tdd-dir", cfg.consortDir]
+        },
+        { kind: "sync-backlog", sprint: cfg.sprintName ?? "sprint" }
       ];
     case "approve-plan-gate":
       return [
@@ -15495,7 +15623,7 @@ function buildJudgePrompt(step, reference, candidate) {
   ].join("\n");
 }
 function buildFunctionalJudgePrompt(kind, reference, candidate) {
-  const what = kind === "tests" ? `These are TEST files. Judge whether the CANDIDATE tests assert the SAME behaviors / acceptance criteria as the REFERENCE tests , the same things are verified (endpoints, validations, persistence invariants, edge/empty cases, migration reversibility).` : `These are CODE files. Judge whether the CANDIDATE code implements the SAME functionality as the REFERENCE , the same operations/endpoints, the same layer responsibilities (boundary/route, service, repository, model), the same persistence behavior.`;
+  const what = kind === "tests" ? `These are TEST files. Judge whether the CANDIDATE tests assert the SAME behaviors / acceptance criteria as the REFERENCE tests \u2013 the same things are verified (endpoints, validations, persistence invariants, edge/empty cases, migration reversibility).` : `These are CODE files. Judge whether the CANDIDATE code implements the SAME functionality as the REFERENCE \u2013 the same operations/endpoints, the same layer responsibilities (boundary/route, service, repository, model), the same persistence behavior.`;
   return [
     `You are a strict senior engineer scoring FUNCTIONAL similarity of ${kind} produced for one build turn.`,
     `The REFERENCE is the known-good ${kind} recorded for this story in a prior build. The CANDIDATE is newly produced ${kind} for the same story.`,
@@ -15814,7 +15942,7 @@ function makeLiveSpawnTurn(featureId, seams) {
   return async ({ handoff, candidate, record }) => {
     if (!handoff.action) {
       throw new Error(
-        `optimize spawnTurn: handoff '${handoff.id}' carries no pinned action , cannot run its turn (actionToHandoffPlan must attach the resolved WorkflowAction).`
+        `optimize spawnTurn: handoff '${handoff.id}' carries no pinned action \u2013 cannot run its turn (actionToHandoffPlan must attach the resolved WorkflowAction).`
       );
     }
     const prior = process.env[RECORD_DIR_ENV];
@@ -15872,7 +16000,7 @@ async function positionToNextHandoff(args) {
     await args.perform(commands);
   }
   throw new Error(
-    `optimize: could not position on a ${args.lane} role turn within ${maxSteps} steps , the lane is not advancing (a stuck non-role action). Check the drive state.`
+    `optimize: could not position on a ${args.lane} role turn within ${maxSteps} steps \u2013 the lane is not advancing (a stuck non-role action). Check the drive state.`
   );
 }
 async function runLaneSweep(deps, opts = {}) {
@@ -15888,7 +16016,7 @@ async function runLaneSweep(deps, opts = {}) {
     if (!handoff) break;
     if (handoff.id === prevId) {
       throw new Error(
-        `optimize lane sweep: handoff "${handoff.id}" did not advance after its winner was recorded , the drive is stuck (a gate the sweep cannot pass, or a winner that does not change readState). Check the drive state.`
+        `optimize lane sweep: handoff "${handoff.id}" did not advance after its winner was recorded \u2013 the drive is stuck (a gate the sweep cannot pass, or a winner that does not change readState). Check the drive state.`
       );
     }
     if (!reachedTarget && (handoff.id === opts.startFrom || handoff.role === opts.startFrom)) reachedTarget = true;
@@ -16218,7 +16346,7 @@ async function main() {
         return walk2.walk[0];
       },
       // advanceOne: a settled upstream handoff (before --from) whose winner is already
-      // applied to the kit , run its baseline turn to move the drive forward, do NOT
+      // applied to the kit – run its baseline turn to move the drive forward, do NOT
       // re-sweep. Dispatched THROUGH the executor (the SAME performViaExecutor the sweep +
       // live drive use), which runs the agent turn AND its post-turn substrate (e.g.
       // breakdown's sync-breakdown populates pipeline.json), advancing the drive exactly as

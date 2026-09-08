@@ -35,8 +35,8 @@ var RUN_SPAN_FIELDS_L1 = [
   "outcome",
   "exit_code",
   "gates_total",
-  // Repair & loop dynamics , PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
-  // signal (L1's job), and these are aggregate run-level COUNTS , no per-turn detail, no
+  // Repair & loop dynamics – PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
+  // signal (L1's job), and these are aggregate run-level COUNTS – no per-turn detail, no
   // content. Tallied on every run now, not just at level 2.
   "red_green_cycles",
   "refactor_iterations",
@@ -113,6 +113,7 @@ var GATE_KINDS = [
   "approve-gate",
   "design-complete",
   "approve-intake-gate",
+  "approve-backlog-gate",
   "approve-plan-gate",
   "planning-complete",
   "dispatch",
@@ -334,7 +335,7 @@ async function sendInstallBeacon(opts) {
 }
 
 // bin/consort/telemetry.cli.ts
-var HELP = `consort-telemetry , inspect + toggle Consort usage telemetry
+var HELP = `consort-telemetry \u2013 inspect + toggle Consort usage telemetry
 
 Usage:
   consort-telemetry status [--json]     Show consent state, level, install id, endpoint
@@ -351,7 +352,7 @@ only allowlisted enums / counts / durations (no paths, code, or names). Opt out
 any time with 'disable', CONSORT_TELEMETRY=0, or running non-interactively / in
 CI; un-arm the endpoint entirely with CONSORT_TELEMETRY_SIGNOFF=0.
 
-Level 2 is a SEPARATE, EXPLICIT opt-in (off by default) that captures more , per-
+Level 2 is a SEPARATE, EXPLICIT opt-in (off by default) that captures more \u2013 per-
 role turn timings + coarse repair/loop counts (still allowlisted, no free text).
 Turn it on with 'enable --level 2' (or CONSORT_TELEMETRY_LEVEL=2); go back with
 'enable --level 1'. See TELEMETRY.md.
@@ -436,7 +437,7 @@ function runTelemetryCli(argv, deps = {}) {
       const level = resolveTelemetryLevel(deps);
       const enabled = isTelemetryEnabled(deps);
       out(
-        json ? JSON.stringify({ acknowledged: true, telemetry_enabled: enabled, level }, null, 2) + "\n" : `telemetry acknowledged (enabled ${enabled}, level ${level}) , kept as-is
+        json ? JSON.stringify({ acknowledged: true, telemetry_enabled: enabled, level }, null, 2) + "\n" : `telemetry acknowledged (enabled ${enabled}, level ${level}) \u2013 kept as-is
 `
       );
       return 0;

@@ -26,7 +26,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // bin/consort/dashboard.cli.ts
 var import_node_child_process2 = require("child_process");
 var import_node_net = require("net");
+var crypto = __toESM(require("crypto"), 1);
 var fs2 = __toESM(require("fs"), 1);
+var os = __toESM(require("os"), 1);
 var path2 = __toESM(require("path"), 1);
 
 // consort/config/kit-bin.ts
@@ -46,7 +48,7 @@ function kitRoot() {
 
 // bin/consort/dashboard.cli.ts
 function parseArgs(argv) {
-  const out = { projectDir: process.cwd(), host: "localhost", open: true };
+  const out = { projectDir: process.cwd(), host: "localhost", open: true, status: false };
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
       case "--project-dir":
@@ -64,10 +66,13 @@ function parseArgs(argv) {
       case "--no-open":
         out.open = false;
         break;
+      case "--status":
+        out.status = true;
+        break;
       case "-h":
       case "--help":
         console.log(
-          "consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open]\nLaunch the dashboard on a local project's .consort/ (prebuilt bundle, or next dev in a dev clone)."
+          "consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open] [--status]\nLaunch the dashboard on a local project's .consort/ (prebuilt bundle, or next dev in a dev clone).\n--status reports whether one is already running (running <url> / stopped) without launching."
         );
         process.exit(0);
         break;
@@ -76,6 +81,44 @@ function parseArgs(argv) {
     }
   }
   return out;
+}
+function recordPath(projectDir) {
+  const h = crypto.createHash("sha1").update(path2.resolve(projectDir)).digest("hex").slice(0, 16);
+  return path2.join(os.tmpdir(), "consort-dashboard", `${h}.json`);
+}
+function readRecord(projectDir) {
+  try {
+    return JSON.parse(fs2.readFileSync(recordPath(projectDir), "utf8"));
+  } catch {
+    return null;
+  }
+}
+function writeRecord(projectDir, rec) {
+  try {
+    fs2.mkdirSync(path2.dirname(recordPath(projectDir)), { recursive: true });
+    fs2.writeFileSync(recordPath(projectDir), JSON.stringify(rec));
+  } catch {
+  }
+}
+function clearRecord(projectDir) {
+  try {
+    fs2.rmSync(recordPath(projectDir), { force: true });
+  } catch {
+  }
+}
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function runningRecord(projectDir) {
+  const rec = readRecord(projectDir);
+  if (!rec || !pidAlive(rec.pid)) return null;
+  const up = await waitListening(rec.host, rec.port, 3);
+  return up ? rec : null;
 }
 function freePort(host) {
   return new Promise((resolve3, reject) => {
@@ -96,6 +139,22 @@ function prebuiltServer(kit) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const projectDir = path2.resolve(args.projectDir);
+  if (args.status) {
+    const rec = await runningRecord(projectDir);
+    if (rec) {
+      console.log(`running ${rec.url}`);
+      process.exit(0);
+    }
+    console.log("stopped");
+    process.exit(3);
+  }
+  const existing = await runningRecord(projectDir);
+  if (existing) {
+    console.log(`Consort dashboard already running \u2192 ${existing.url}
+  project: ${projectDir}`);
+    if (args.open) openBrowser(existing.url);
+    process.exit(0);
+  }
   const kit = kitRoot();
   const port = args.port && Number.isFinite(args.port) ? args.port : await freePort(args.host);
   const env = {
@@ -129,10 +188,22 @@ async function main() {
     process.exit(1);
     return;
   }
-  if (args.open) void waitListening(args.host, port).then((ready) => {
-    if (ready) openBrowser(url);
+  const childPid = child.pid;
+  void waitListening(args.host, port).then((ready) => {
+    if (ready) {
+      if (childPid) writeRecord(projectDir, { pid: childPid, port, host: args.host, url, startedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      if (args.open) openBrowser(url);
+    } else {
+      console.error(
+        `consort-dashboard: the server did not come up on ${url} \u2014 it likely crashed on startup.
+  Check this window's output (or the log the launcher redirected to) for the error.`
+      );
+    }
   });
-  child.on("exit", (code) => process.exit(code ?? 0));
+  child.on("exit", (code) => {
+    clearRecord(projectDir);
+    process.exit(code ?? 0);
+  });
 }
 function waitListening(host, port, tries = 60) {
   return new Promise((resolve3) => {

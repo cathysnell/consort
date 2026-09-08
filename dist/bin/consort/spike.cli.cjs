@@ -6787,8 +6787,8 @@ var RUN_SPAN_FIELDS_L1 = [
   "outcome",
   "exit_code",
   "gates_total",
-  // Repair & loop dynamics , PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
-  // signal (L1's job), and these are aggregate run-level COUNTS , no per-turn detail, no
+  // Repair & loop dynamics – PROMOTED to L1: "is the ensemble thrashing" is a HEALTH
+  // signal (L1's job), and these are aggregate run-level COUNTS – no per-turn detail, no
   // content. Tallied on every run now, not just at level 2.
   "red_green_cycles",
   "refactor_iterations",
@@ -6837,7 +6837,7 @@ var TURN_SPAN_FIELDS = [
   "name",
   "role",
   // Phase (same closed PHASE_VALUES enum as the gate span): lets the L2 turn view be a clean
-  // GROUP BY phase, role, model , build roles multiplex phases that model/effort alone can't tell.
+  // GROUP BY phase, role, model – build roles multiplex phases that model/effort alone can't tell.
   "phase",
   "model",
   "effort",
@@ -6845,7 +6845,7 @@ var TURN_SPAN_FIELDS = [
   "retry_count",
   "token_bucket",
   // Cost split (each a coarse TOKEN_BUCKET_VALUES band): input = context read, output =
-  // generation, cache_read = reuse , WHY a turn is expensive (read-heavy vs write-heavy).
+  // generation, cache_read = reuse – WHY a turn is expensive (read-heavy vs write-heavy).
   "token_bucket_input",
   "token_bucket_output",
   "token_bucket_cache_read"
@@ -6891,6 +6891,7 @@ var GATE_KINDS = [
   "approve-gate",
   "design-complete",
   "approve-intake-gate",
+  "approve-backlog-gate",
   "approve-plan-gate",
   "planning-complete",
   "dispatch",
@@ -7149,7 +7150,7 @@ var TelemetryEmitter = class {
   }
   /** Drain the queue AND bound-await the in-flight deliveries, up to `timeoutMs`.
    *  Call this ONCE at process shutdown (after finish()) so the final POST is not
-   *  abandoned when the CLI calls process.exit() , the drive-exit race that silently
+   *  abandoned when the CLI calls process.exit() – the drive-exit race that silently
    *  dropped every run's telemetry. Never throws, never waits longer than the bound;
    *  a slow/cold endpoint is capped, not blocking. A no-op sink resolves at once. */
   async flushAndWait(timeoutMs) {
@@ -7456,7 +7457,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7464,12 +7465,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7483,7 +7485,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7496,7 +7498,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 
@@ -7661,8 +7663,8 @@ function classifyReviseClass(action) {
   if (/reversib|downgrade|migration/.test(t)) return "migration-reversibility";
   return "other";
 }
-var FIRST_RUN_NOTICE = "[consort] Anonymous* usage telemetry is on (*pseudonymous: a random per-install id, no PII).\n          Each run of Consort reports to the maintainers' endpoint; only allowlisted,\n          non-sensitive fields are sent (no paths, code, error text, or names).\n          Help the maintainers more , opt in to Level 2: `consort-telemetry enable --level 2`\n          adds per-role timings + coarse failure classes (still no code/paths/names), so they\n          can find and fix what makes runs slow or fail. It's off by default; this is the ask.\n          Turn telemetry off any time: `consort-telemetry disable` (or CONSORT_TELEMETRY=0).\n          Details: TELEMETRY.md.\n";
-var L2_OPT_IN_NOTICE = "[consort] Level-2 usage telemetry is ON (you opted in).\n          On top of Level 1, it reports per-role turn timings and coarse\n          repair/loop counts , still only allowlisted enums, counts, and\n          durations (no prompts, code, paths, error text, or names).\n          Back to Level 1 any time: `consort-telemetry enable --level 1`.\n          Details: TELEMETRY.md.\n";
+var FIRST_RUN_NOTICE = "[consort] Anonymous* usage telemetry is on (*pseudonymous: a random per-install id, no PII).\n          Each run of Consort reports to the maintainers' endpoint; only allowlisted,\n          non-sensitive fields are sent (no paths, code, error text, or names).\n          Help the maintainers more \u2013 opt in to Level 2: `consort-telemetry enable --level 2`\n          adds per-role timings + coarse failure classes (still no code/paths/names), so they\n          can find and fix what makes runs slow or fail. It's off by default; this is the ask.\n          Turn telemetry off any time: `consort-telemetry disable` (or CONSORT_TELEMETRY=0).\n          Details: TELEMETRY.md.\n";
+var L2_OPT_IN_NOTICE = "[consort] Level-2 usage telemetry is ON (you opted in).\n          On top of Level 1, it reports per-role turn timings and coarse\n          repair/loop counts \u2013 still only allowlisted enums, counts, and\n          durations (no prompts, code, paths, error text, or names).\n          Back to Level 1 any time: `consort-telemetry enable --level 1`.\n          Details: TELEMETRY.md.\n";
 var NOOP_RUN = {
   enabled: false,
   traceId: void 0,
@@ -7796,7 +7798,7 @@ function beginTelemetryRunUnsafe(deps) {
       onHandback: inner.onHandback ? (h, d) => inner.onHandback(h, d) : void 0,
       assertRouteSatisfiable: inner.assertRouteSatisfiable ? (a, s) => inner.assertRouteSatisfiable(a, s) : void 0,
       // Executor-dispatched agent turns run THROUGH performViaExecutor (the driver
-      // does NOT then call perform), so a child span is timed here , but ONLY when
+      // does NOT then call perform), so a child span is timed here – but ONLY when
       // the inner returns a DEFINED bounded route, i.e. the action was actually
       // handled by the executor. When it returns `undefined` the action was NOT
       // executor-dispatched: the driver falls through to `perform`, whose wrapper

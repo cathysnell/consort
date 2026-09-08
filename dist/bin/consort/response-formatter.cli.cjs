@@ -7017,7 +7017,7 @@ function checkDbDesign(dbDesignJson2, architectureJson2) {
   const uncovered = invariants.filter((id) => !realized.has(id));
   if (uncovered.length > 0) {
     violations.push(
-      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , and list its id here; see agents/dba.md)`
+      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared \u2013 a table/column/constraint/index \u2013 and list its id here; see agents/dba.md)`
     );
   }
   return violations.length > 0 ? { ok: false, violations } : { ok: true };
@@ -7282,7 +7282,7 @@ function designGuideHasComponents(consortDir) {
     if (!comps || typeof comps !== "object" || Object.keys(comps).length === 0) {
       return {
         ok: false,
-        problem: "design-guide.json is missing a non-empty `components` object , name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML"
+        problem: "design-guide.json is missing a non-empty `components` object \u2013 name the standard components (page, card, button, form_input, table, status_badge, empty_state, toast) each with its CSS `class`, so feature pages apply the design vocabulary instead of bare HTML"
       };
     }
   } catch {
@@ -7312,7 +7312,7 @@ function brandAssetDeclared(consortDir) {
   const first = staged[0];
   return {
     ok: false,
-    problem: `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` , declare it so the brand mark actually ships: "app_icon": { "source": ".consort/design/assets/${first}", "install_to": "client/public/${first}" }. Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference , the icon ships only by luck.`
+    problem: `a brand asset is staged (.consort/design/assets/${first}) but design-guide.json omits \`app_icon\` \u2013 declare it so the brand mark actually ships: "app_icon": { "source": ".consort/design/assets/${first}", "install_to": "client/public/${first}" }. Without it the kit never installs the real bytes and the ux-adherence gate never enforces the favicon/navbar reference \u2013 the icon ships only by luck.`
   };
 }
 function checkUxDesigner(args, v) {
@@ -7365,7 +7365,7 @@ function usage(msg) {
   process.stderr.write(
     `${msg}
 Usage: consort-response-formatter --role <role> --feature <F> [--story <S>] [--tdd-dir <D>]
-Type-checked roles: ${[...FORMATTED_ROLES].join(", ")} (others pass , no deterministic contract yet).
+Type-checked roles: ${[...FORMATTED_ROLES].join(", ")} (others pass \u2013 no deterministic contract yet).
 `
   );
   return 2;
@@ -7382,7 +7382,7 @@ function main() {
     return 0;
   }
   process.stderr.write(
-    `response-formatter: ${a.role}${a.story ? ` (${a.story})` : ""} output does NOT conform , fix it before returning:
+    `response-formatter: ${a.role}${a.story ? ` (${a.story})` : ""} output does NOT conform \u2013 fix it before returning:
 ` + result.violations.map((v) => `  - ${v.artifact}: ${v.problem}`).join("\n") + "\n"
   );
   return 1;

@@ -7053,7 +7053,7 @@ function checkPersistenceCoverage(testListJson, architectureJson) {
     return {
       ok: false,
       violations: [
-        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch , NOT a test of the ORM's generic round-trip; see test-strategy.md)`
+        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch \u2013 NOT a test of the ORM's generic round-trip; see test-strategy.md)`
       ]
     };
   }
@@ -7093,7 +7093,7 @@ function checkDbDesign(dbDesignJson, architectureJson) {
   const uncovered = invariants.filter((id) => !realized.has(id));
   if (uncovered.length > 0) {
     violations.push(
-      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , and list its id here; see agents/dba.md)`
+      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared \u2013 a table/column/constraint/index \u2013 and list its id here; see agents/dba.md)`
     );
   }
   return violations.length > 0 ? { ok: false, violations } : { ok: true };

@@ -20,13 +20,11 @@ function resolveConsortDir(projectDir = process.cwd()) {
   return next;
 }
 var featuresDir = (tdd) => join(tdd, "features");
-var planningDir = (tdd) => join(tdd, "planning");
 var productOverviewMd = (tdd) => join(tdd, "product-overview.md");
 var nfrsMd = (tdd) => join(tdd, "nfrs.md");
 var designDir = (tdd) => join(tdd, "design");
 var designBriefMd = (tdd) => join(designDir(tdd), "design-brief.md");
 var designGuideJson = (tdd) => join(designDir(tdd), "design-guide.json");
-var featureProposalsMd = (tdd) => join(planningDir(tdd), "feature-proposals.md");
 var featureDir = (tdd, featureId) => join(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
 var featureSpecJson = (tdd, f) => join(featureResolved(tdd, f), "feature-spec.json");
@@ -141,7 +139,7 @@ function roleArtifacts(consortDir, role, opts = {}) {
     case "product-owner":
       add(productOverviewMd(consortDir));
       add(nfrsMd(consortDir));
-      add(featureProposalsMd(consortDir));
+      add(designBriefMd(consortDir));
       break;
     case "spec-author":
       if (f) {
@@ -287,11 +285,11 @@ function reportRoleOpen(consortDir, role, env, spawn) {
   if (!DESIGN_ROLES.has(role)) return null;
   switch (res.reason) {
     case "not-in-editor":
-      return `[consort-watch] ${role} turn done , ${res.files.length} artifact(s) to review, NOT opened , run the relay inside your Cursor/VS Code integrated terminal, OR set LAKEBASE_CONSORT_OPEN=1 to auto-open from a background monitor (else review via consort-open)`;
+      return `[consort-watch] ${role} turn done \u2013 ${res.files.length} artifact(s) to review, NOT opened \u2013 run the relay inside your Cursor/VS Code integrated terminal, OR set LAKEBASE_CONSORT_OPEN=1 to auto-open from a background monitor (else review via consort-open)`;
     case "no-editor":
-      return `[consort-watch] ${role} turn done , no cursor/code CLI found to open its ${res.files.length} artifact(s) , install the editor's shell command (else review via consort-open)`;
+      return `[consort-watch] ${role} turn done \u2013 no cursor/code CLI found to open its ${res.files.length} artifact(s) \u2013 install the editor's shell command (else review via consort-open)`;
     case "no-artifacts":
-      return `[consort-watch] ${role} turn done , no reviewable artifact found yet for this scope`;
+      return `[consort-watch] ${role} turn done \u2013 no reviewable artifact found yet for this scope`;
     default:
       return null;
   }
@@ -333,7 +331,7 @@ function parseArgs(argv) {
       case "-h":
       case "--help":
         process.stdout.write(
-          "consort-watch , follow a backgrounded drive's live log and relay transitions.\n\n  consort-watch [--log <path>] [--pid <n>] [--from-start] [--project-dir <p>]\n  consort-watch --since <cursor> [--pid <n>]   POLL-ONCE: new lines + status, exit at once (for a Bash-call relay loop)\n  consort-watch --monitor                      PERSISTENT: follow the log across silences + drive re-runs, stop only at a marker (for the Monitor TOOL)\n\nDefaults --log to <consort>/drive-live.log (the scaffolded `> \u2026 2>&1 &` sink).\nStops at a gate / pause / escalation / run-end. Exit 0 clean, 3 escalation, 2 no log.\n"
+          "consort-watch \u2013 follow a backgrounded drive's live log and relay transitions.\n\n  consort-watch [--log <path>] [--pid <n>] [--from-start] [--project-dir <p>]\n  consort-watch --since <cursor> [--pid <n>]   POLL-ONCE: new lines + status, exit at once (for a Bash-call relay loop)\n  consort-watch --monitor                      PERSISTENT: follow the log across silences + drive re-runs, stop only at a marker (for the Monitor TOOL)\n\nDefaults --log to <consort>/drive-live.log (the scaffolded `> \u2026 2>&1 &` sink).\nStops at a gate / pause / escalation / run-end. Exit 0 clean, 3 escalation, 2 no log.\n"
         );
         process.exit(0);
     }
@@ -375,9 +373,9 @@ function scanLastStop(logPath) {
 }
 function emitStop(c) {
   if (c.outcome === "gate" || c.outcome === "pause") {
-    process.stderr.write("consort-watch: control is back with you , run `consort-next` for the exact command, then re-run the drive.\n");
+    process.stderr.write("consort-watch: control is back with you \u2013 run `consort-next` for the exact command, then re-run the drive.\n");
   } else if (c.outcome === "escalation") {
-    process.stderr.write(`consort-watch: the run escalated , \`consort-diagnose\` bundles the forensics; after fixing the cause, \`consort-resolve-escalation\` clears it (do NOT rm the record), then re-run.
+    process.stderr.write(`consort-watch: the run escalated \u2013 \`consort-diagnose\` bundles the forensics; after fixing the cause, \`consort-resolve-escalation\` clears it (do NOT rm the record), then re-run.
 `);
   } else {
     process.stderr.write("consort-watch: run complete.\n");
@@ -414,20 +412,27 @@ function classifyPidGone(ns, actionBaseline, lastStop) {
   if (action && action !== actionBaseline) return "turn-boundary";
   return "crash";
 }
+function logIsFromDrive(logPath) {
+  try {
+    return fs4.readFileSync(logPath, "utf8").includes("[drive]");
+  } catch {
+    return false;
+  }
+}
 function emitNextStop(ns) {
-  process.stdout.write(`[consort-watch] DRIVE STOPPED , ${ns.summary || (ns.done ? "run complete" : ns.escalated ? "escalation" : "awaiting a decision")}
+  process.stdout.write(`[consort-watch] DRIVE STOPPED \u2013 ${ns.summary || (ns.done ? "run complete" : ns.escalated ? "escalation" : "awaiting a decision")}
 `);
   if (ns.escalated) {
-    process.stderr.write("consort-watch: the run escalated , `consort-diagnose` bundles the forensics; after fixing the cause, `consort-resolve-escalation` clears it (do NOT rm the record), then re-run.\n");
+    process.stderr.write("consort-watch: the run escalated \u2013 `consort-diagnose` bundles the forensics; after fixing the cause, `consort-resolve-escalation` clears it (do NOT rm the record), then re-run.\n");
     return 3;
   }
   if (ns.done) {
     process.stderr.write("consort-watch: run complete.\n");
     return 0;
   }
-  if (ns.hil) process.stdout.write(`[consort-watch] HUMAN NEEDED: ${ns.hil}${ns.enact ? ` , run: ${ns.enact}` : ""}
+  if (ns.hil) process.stdout.write(`[consort-watch] HUMAN NEEDED: ${ns.hil}${ns.enact ? ` \u2013 run: ${ns.enact}` : ""}
 `);
-  process.stderr.write("consort-watch: control is back with you , run `consort-next` for the exact command, then re-run the drive.\n");
+  process.stderr.write("consort-watch: control is back with you \u2013 run `consort-next` for the exact command, then re-run the drive.\n");
   return 0;
 }
 function pollOnce(logPath, since, pid, isAlive = alive, nowMs = Date.now()) {
@@ -539,11 +544,16 @@ async function main() {
         return emitStop(last);
       }
       if (kind === "turn-boundary") {
-        process.stdout.write(`[consort-watch] turn boundary , the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.
+        process.stdout.write(`[consort-watch] turn boundary \u2013 the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.
 `);
         return 0;
       }
-      process.stderr.write(`consort-watch: drive pid ${args.pid} is no longer running with no progress + no stop recorded , run consort-next to check for a crash.
+      if (!logIsFromDrive(logPath)) {
+        process.stdout.write(`[consort-watch] process (pid ${args.pid}) finished \u2014 see the log for its result.
+`);
+        return 0;
+      }
+      process.stderr.write(`consort-watch: drive pid ${args.pid} is no longer running with no progress + no stop recorded \u2013 run consort-next to check for a crash.
 `);
       return 3;
     }
@@ -608,7 +618,7 @@ async function main() {
     }
     if (args.timeout > 0 && (Date.now() - watchStart) / 1e3 >= args.timeout) {
       process.stderr.write(
-        `consort-watch: still running after ${args.timeout}s and no gate yet , the drive continues in the background. Re-run \`consort-watch\` to keep relaying (or pass --timeout 0 when running consort-watch itself detached).
+        `consort-watch: still running after ${args.timeout}s and no gate yet \u2013 the drive continues in the background. Re-run \`consort-watch\` to keep relaying (or pass --timeout 0 when running consort-watch itself detached).
 `
       );
       return 0;
@@ -625,6 +635,7 @@ if (isCliEntry(import.meta.url)) {
 }
 export {
   classifyPidGone,
+  logIsFromDrive,
   pollOnce,
   readNextStop,
   reportRoleOpen,

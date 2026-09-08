@@ -108,7 +108,7 @@ function formatDriveLogReport(report, topN = 10) {
   if (report.turns.length === 0) return "drive-log: no turn-close lines found (need a stream-json drive log).\n";
   const out = [];
   out.push(
-    `drive-log tool-calls , ${report.turns.length} turns, ${report.totalToolCalls} tool calls over ${fmtSecs(report.totalSeconds)}`
+    `drive-log tool-calls \u2013 ${report.turns.length} turns, ${report.totalToolCalls} tool calls over ${fmtSecs(report.totalSeconds)}`
   );
   out.push("");
   out.push(rollupBlock("by role", report.byRole));

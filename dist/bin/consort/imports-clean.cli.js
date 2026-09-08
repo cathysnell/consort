@@ -115,7 +115,7 @@ function parse(argv) {
 }
 function help() {
   process.stdout.write(
-    `consort-imports-clean , import the app entry without a build artifact present
+    `consort-imports-clean \u2013 import the app entry without a build artifact present
 
 Usage:
   consort-imports-clean [--project-dir <path>] [--lang python|nodejs] \\
@@ -137,11 +137,11 @@ if (p.json) {
 } else if (result.clean) {
   const what = result.entry ? `imported \`${result.entry}\`` : "no conventional entry to check";
   const hid = result.hiddenArtifacts.length ? ` (artifacts hidden: ${result.hiddenArtifacts.join(", ")})` : "";
-  process.stdout.write(`imports-clean: OK , ${what}${hid}
+  process.stdout.write(`imports-clean: OK \u2013 ${what}${hid}
 `);
 } else {
   process.stderr.write(
-    `imports-clean: FAILED , \`${result.entry}\` could not import with build artifact(s) hidden.
+    `imports-clean: FAILED \u2013 \`${result.entry}\` could not import with build artifact(s) hidden.
 
 ${result.error}
 

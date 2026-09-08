@@ -46,7 +46,7 @@ function findFeatureDir(tdd, featureId) {
 
 // bin/consort/annotate-ac.cli.ts
 var LAYERS = ["API", "E2E", "Infra"];
-var HELP = `consort-annotate-ac , safely add the Architect's layer + architectural_notes to an AC
+var HELP = `consort-annotate-ac \u2013 safely add the Architect's layer + architectural_notes to an AC
 
 Usage:
   consort-annotate-ac --feature <F> --story <S> --ac <AC> --layer <API|E2E|Infra> --notes "<text>" [--consort-dir <dir>]
@@ -132,7 +132,7 @@ ${HELP}`);
     return 2;
   }
   fs2.writeFileSync(file, merged, "utf8");
-  process.stderr.write(`annotated ${args.ac}${args.layer ? ` (layer ${args.layer})` : ""} , preserved all prior fields
+  process.stderr.write(`annotated ${args.ac}${args.layer ? ` (layer ${args.layer})` : ""} \u2013 preserved all prior fields
 `);
   return 0;
 }

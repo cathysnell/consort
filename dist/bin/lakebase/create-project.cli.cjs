@@ -298,6 +298,26 @@ function kitRefPin(env, version) {
   const v = (version ?? "").trim();
   return v ? `v${v}` : void 0;
 }
+function recordDevKitLocalDirs(projectDir, env) {
+  const lakebaseDir = (0, import_node_path3.join)(projectDir, ".lakebase");
+  const written = [];
+  for (const [envVar, file] of [
+    ["LAKEBASE_KIT_DIR", "kit-local-dir"],
+    ["LAKEBASE_SCM_UTILS_DIR", "scm-utils-local-dir"]
+  ]) {
+    const dir = env[envVar]?.trim();
+    if (!dir) continue;
+    const abs = (0, import_node_path3.resolve)(dir);
+    if (!(0, import_node_fs2.existsSync)((0, import_node_path3.join)(abs, "dist"))) continue;
+    try {
+      (0, import_node_fs2.mkdirSync)(lakebaseDir, { recursive: true });
+      (0, import_node_fs2.writeFileSync)((0, import_node_path3.join)(lakebaseDir, file), abs + "\n");
+      written.push(file);
+    } catch {
+    }
+  }
+  return written;
+}
 function findConsortPkg(fromDir) {
   let d = fromDir;
   for (let i = 0; i < 8; i++) {
@@ -373,7 +393,7 @@ function substrateMismatchMessage(input) {
   if (!declared || !installed) return null;
   if (declared === installed) return null;
   return `Substrate mismatch: this kit declares @databricks-solutions/lakebase-scm-utils v${declared}, but the resolved install is v${installed}.
-Your npx/npm cache served a STALE substrate , npx can update the top-level kit while reusing a cached nested dependency, which would scaffold a broken project (wrong launcher, mismatched .lakebase refs). Refusing to create from it.
+Your npx/npm cache served a STALE substrate \u2013 npx can update the top-level kit while reusing a cached nested dependency, which would scaffold a broken project (wrong launcher, mismatched .lakebase refs). Refusing to create from it.
 
 Fix: clear the npx cache and retry the version-pinned create from /consort:start:
   rm -rf "$(npm config get cache)/_npx"   # or: npx clear-npx-cache
@@ -598,7 +618,7 @@ async function main() {
       );
       return 0;
     }
-    process.stderr.write("lakebase-create-project: detach re-spawn failed , running in-process instead.\n");
+    process.stderr.write("lakebase-create-project: detach re-spawn failed \u2013 running in-process instead.\n");
   }
   let input;
   if (args.jsonInput) {
@@ -665,7 +685,7 @@ async function main() {
   if (pin) {
     process.env.LAKEBASE_KIT_REF = pin;
     process.stderr.write(
-      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version , avoids mutable-main cache drift)
+      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version \u2013 avoids mutable-main cache drift)
 `
     );
   }
@@ -686,6 +706,13 @@ async function main() {
       }
     }
   });
+  const recorded = recordDevKitLocalDirs(result.projectDir, process.env);
+  if (recorded.length) {
+    process.stderr.write(
+      `[kit-ref] dev kit in use \u2014 recorded .lakebase/${recorded.join(", ")} so lk resolves your local kit for the pinned ref
+`
+    );
+  }
   process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   return 0;
 }

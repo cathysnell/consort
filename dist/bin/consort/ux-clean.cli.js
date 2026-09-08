@@ -20,7 +20,7 @@ function checkRouteReachability(input) {
 }
 var CLASSNAME_RE = /className\s*=\s*["'`]([^"'`]+)["'`]/g;
 var JSX_ELEMENT_RE = /<[A-Za-z][A-Za-z0-9]*[\s/>]/;
-var CONSUMPTION_REMEDIATION = "A feature page renders visible structure but consumes NONE of the design guide: no var(--token) and no class from the design vocabulary. It renders as bare browser-default HTML. Apply the guide , wrap in the layout/card/button/table classes (or var(--token) styles) the design guide defines , so the screen matches the design system. See the `ux-adherence` smell.";
+var CONSUMPTION_REMEDIATION = "A feature page renders visible structure but consumes NONE of the design guide: no var(--token) and no class from the design vocabulary. It renders as bare browser-default HTML. Apply the guide \u2013 wrap in the layout/card/button/table classes (or var(--token) styles) the design guide defines \u2013 so the screen matches the design system. See the `ux-adherence` smell.";
 function checkTokenConsumption(input) {
   const vocab = new Set(input.designClasses ?? []);
   const bare = [];
@@ -127,7 +127,7 @@ function parse(argv) {
 }
 function help() {
   process.stdout.write(
-    `consort-ux-clean , prove feature pages are reachable + consume the design guide
+    `consort-ux-clean \u2013 prove feature pages are reachable + consume the design guide
 
 Usage:
   consort-ux-clean [--project-dir <path>] [--client-src <path>] \\
@@ -148,7 +148,7 @@ if (p.json) {
   process.stdout.write(`${JSON.stringify(result)}
 `);
 } else if (result.clean) {
-  process.stdout.write(`ux-clean: OK , every feature page is reachable + consumes the design guide (or no client workspace)
+  process.stdout.write(`ux-clean: OK \u2013 every feature page is reachable + consumes the design guide (or no client workspace)
 `);
 } else {
   const blocks = [];
@@ -162,7 +162,7 @@ if (p.json) {
     bare (unstyled) feature pages: ${result.tokens.bare.join(", ")}` + (result.tokens.remediation ? `
     -> ${result.tokens.remediation}` : ""));
   }
-  process.stderr.write(`ux-clean: FAILED , ${summarizeUxViolations(result)}.
+  process.stderr.write(`ux-clean: FAILED \u2013 ${summarizeUxViolations(result)}.
 
 ${blocks.join("\n\n")}
 

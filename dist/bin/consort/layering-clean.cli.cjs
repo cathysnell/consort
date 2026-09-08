@@ -299,7 +299,7 @@ function parse(argv) {
 }
 function help() {
   process.stdout.write(
-    `consort-layering-clean , prove the boundary/routes layer does not touch persistence
+    `consort-layering-clean \u2013 prove the boundary/routes layer does not touch persistence
 
 Usage:
   consort-layering-clean [--project-dir <path>] [--architecture <path>] \\
@@ -356,13 +356,13 @@ if (p.json) {
 `);
 } else if (ok) {
   const what = serviceBacked ? layering.scanned.length ? `layered + rendered + within budget (boundary scanned: ${layering.scanned.join(", ")})` : "no boundary modules to scan" : "feature is not service-backed (layering not required)";
-  process.stdout.write(`layering-clean: OK , ${what}
+  process.stdout.write(`layering-clean: OK \u2013 ${what}
 `);
 } else {
   const blocks = groups.filter((g) => !g.ok).map((g) => `  [${g.label}]
 ${g.violations.map((v) => `    ${v}`).join("\n")}${g.remediation ? `
     -> ${g.remediation}` : ""}`).join("\n\n");
-  process.stderr.write(`layering-clean: FAILED , architecture-quality checks did not pass.
+  process.stderr.write(`layering-clean: FAILED \u2013 architecture-quality checks did not pass.
 
 ${blocks}
 `);

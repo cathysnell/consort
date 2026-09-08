@@ -7143,7 +7143,7 @@ function storyRequiresE2eReason(fdir, story) {
       }
     }
   }
-  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" , the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
+  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" \u2013 the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
 }
 
 // consort/logging/gate-decision-log.ts
@@ -7194,7 +7194,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7202,12 +7202,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7221,7 +7222,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7234,7 +7235,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -7814,7 +7815,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "shared-state-aggregate-assertion",
-    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM , e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
+    description: "A test asserts an ABSOLUTE aggregate over the WHOLE store (an integrity/consistency probe, a global COUNT/SUM \u2013 e.g. 'the probe reports exactly 0/2/1 nonconforming rows') without owning the table state it asserts. It passes in the per-cycle build verify (an ISOLATED ephemeral branch holding only its seeded rows) but the honest-GREEN full-feature deploy-verify FAILS it, because that runs the whole suite against the SHARED feature-branch DB where other stories' rows (same nullable columns) inflate the count. A real probe over a real deployed DB can never assert an exact global total anyway.",
     proposed_remediation: "Route back to the Test Strategist (Gate 3): scope BOTH the seed AND the assertion to the test's own rows (filter the probe/count by the test's SKUs or a marker column, or assert a before-vs-after DELTA), never an absolute whole-table total. Bounded to one automatic revise per story; a second escape escalates to the human.",
     // A contamination-fragile aggregate assertion is a test-strategist fix: route back to Gate 3.
     level: "spec",
@@ -7851,7 +7852,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "e2e-inline-regex-flag",
-    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS , re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
+    description: "An E2E Playwright matcher (to_contain_text/to_have_text/to_have_url/get_by_text) is built from a Python regex carrying INLINE FLAGS \u2013 re.compile(r\"(?i)summary\") and the like. Playwright forwards the pattern's `.pattern` string verbatim to the browser's JavaScript regex engine, which does NOT support inline-flag syntax `(?i)`/`(?s)`/`(?m)`, so the regex is invalid and the assertion can never match the running app. The test is structurally un-greenable: the honest-GREEN verify rejects it and the build raises to HIL. Caught deterministically + cheaply (no browser run) by the e2e-regex-clean static lint, which enriches the GREEN-verify failure with the exact file:line + fix.",
     proposed_remediation: 'Pass the flag as a kwarg, not inline: re.compile("summary", re.IGNORECASE) emits the valid JS regex /summary/i. Or, for a plain case-insensitive substring, use the bare string form Playwright already matches loosely. See the E2E rule in the Navigator role.'
   },
   {
@@ -7861,7 +7862,7 @@ var SMELL_CATALOG = [
   },
   {
     name: "contract-incompleteness",
-    description: 'A migration DROPPED (or renamed) a column the running code still references , the ORM model field, a query/repository, a serializer/DTO, or a template/view , so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list , no model judgment needed to notice OR localize it.',
+    description: 'A migration DROPPED (or renamed) a column the running code still references \u2013 the ORM model field, a query/repository, a serializer/DTO, or a template/view \u2013 so the app emits SQL for a column the migrated database no longer has and crashes at runtime ("column X does not exist") even though the migration itself succeeded. The contract half of expand/contract (software-design-principles hard rule 9) was left incomplete: the schema shrank but the code did not follow in the SAME change. Caught DETERMINISTICALLY by the `consort-contract-clean` gate (it parses the migration\'s net column drops and greps the code tree for residual references), which enriches the GREEN-verify failure with the exact file:line list \u2013 no model judgment needed to notice OR localize it.',
     proposed_remediation: "Driver REPAIR: remove or replace EVERY residual reference (model field, queries, serializers/DTOs, templates/views) in the same change so the code matches the migrated schema. Never edit the migration or a test to hide it. The green-failure fixDirective carries the precise file:line list, so this self-heals without a Navigator assess."
   },
   {
@@ -7881,7 +7882,7 @@ function composeReviseBrief(input) {
   if (isCoverageDefect) {
     return `REVISE (reflection gate): ${input.reason}
 
-PRESERVE every ${artifact} item this story ALREADY has , they passed prior gates and MUST remain. This is an ADDITIVE revise: keep all existing files/entries intact (do not delete, rename, renumber, merge, or overwrite them) and ADD the specific coverage named above alongside them. The named coverage is REQUIRED: add the missing test(s)/criterion that assert the exact behavior described , do NOT omit it, weaken it, or defer it to an open question. If the stated behavior genuinely cannot be tested as written, name the concrete blocker; do not punt. After writing, the story's ${artifact} set = every prior item PLUS the added one(s).`;
+PRESERVE every ${artifact} item this story ALREADY has \u2013 they passed prior gates and MUST remain. This is an ADDITIVE revise: keep all existing files/entries intact (do not delete, rename, renumber, merge, or overwrite them) and ADD the specific coverage named above alongside them. The named coverage is REQUIRED: add the missing test(s)/criterion that assert the exact behavior described \u2013 do NOT omit it, weaken it, or defer it to an open question. If the stated behavior genuinely cannot be tested as written, name the concrete blocker; do not punt. After writing, the story's ${artifact} set = every prior item PLUS the added one(s).`;
   }
   return `REVISE (Product Owner): ${input.reason}
 
@@ -8502,7 +8503,7 @@ async function main() {
       );
       if (missing.length > 0) {
         process.stderr.write(
-          `sync-breakdown: FAIL , ${missing.length} story stub(s) still missing required narrative after story.md backfill: ` + missing.map((m) => `${m.story} [${m.fields.join("/")}]`).join(", ") + `. The spec-author must write the "As a / I want / So that" narrative into each story.md (story.schema requires asA/iWantTo/soThat on story.json). Halting at design, not the feature-complete gate.
+          `sync-breakdown: FAIL \u2013 ${missing.length} story stub(s) still missing required narrative after story.md backfill: ` + missing.map((m) => `${m.story} [${m.fields.join("/")}]`).join(", ") + `. The spec-author must write the "As a / I want / So that" narrative into each story.md (story.schema requires asA/iWantTo/soThat on story.json). Halting at design, not the feature-complete gate.
 `
         );
         return 1;

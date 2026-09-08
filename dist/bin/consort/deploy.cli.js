@@ -6795,7 +6795,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -6803,12 +6803,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -6822,7 +6823,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -6835,7 +6836,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -6977,7 +6978,7 @@ function writeEscalation(consortDir, esc) {
     ...esc.story_id ? { story_id: esc.story_id } : {},
     ...esc.ac_id ? { ac_id: esc.ac_id } : {},
     raised_at: esc.raised_at ?? (/* @__PURE__ */ new Date()).toISOString(),
-    how_to_resolve: `After fixing the ROOT CAUSE, clear this with: consort-resolve-escalation --id ${id} --resolution "<what you fixed>". That clears this escalation (and any blocking smell) and KEEPS the audit trail. Do NOT hand-edit or delete this file, and do NOT edit smells.json, to move the run forward , that desyncs on-disk state from the drive.`
+    how_to_resolve: `After fixing the ROOT CAUSE, clear this with: consort-resolve-escalation --id ${id} --resolution "<what you fixed>". That clears this escalation (and any blocking smell) and KEEPS the audit trail. Do NOT hand-edit or delete this file, and do NOT edit smells.json, to move the run forward \u2013 that desyncs on-disk state from the drive.`
   };
   fs4.mkdirSync(escalationsDir(consortDir), { recursive: true });
   fs4.writeFileSync(file, JSON.stringify(full, null, 2) + "\n", "utf8");
@@ -7254,7 +7255,7 @@ function defaultRunVerify(cmd, cwd, env) {
     const e = err;
     const timedOut = e.killed === true || e.signal === "SIGTERM" || e.code === "ETIMEDOUT";
     const output = `${e.stdout?.toString() ?? ""}${e.stderr?.toString() ?? ""}`.trimEnd() + (timedOut ? `
-[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) , failing this pass rather than hanging.` : "");
+[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) \u2013 failing this pass rather than hanging.` : "");
     const tail = output.split("\n").slice(-30).join("\n");
     process.stderr.write(`
 [deploy] feature-verify ${timedOut ? "TIMED OUT" : "failed"}; last output:
@@ -7277,6 +7278,15 @@ function defaultStart(cmd, cwd, env) {
   child.unref();
   return child.pid ?? -1;
 }
+async function resolveServeBaseUrl(baseUrl, probe) {
+  const u = new URL(baseUrl);
+  const startPort = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+  for (let p = startPort, tries = 0; tries < 20; p++, tries++) {
+    u.port = String(p);
+    if (!await probe(`${u.origin}/`)) return { baseUrl: u.origin, port: p };
+  }
+  return { baseUrl: new URL(baseUrl).origin, port: startPort };
+}
 function logDeployEvent(consortDir, event, slots) {
   try {
     emitAgentLogEvent({ role: "release-engineer", level: "info", event, slots }, { consortDir });
@@ -7293,7 +7303,13 @@ async function deployToTarget(args) {
   if (!cfg.run) return { ok: false, reason: `target '${args.targetName}' has no run command` };
   const start = args.startProcess ?? defaultStart;
   const reachable = args.reachable ?? probeReachable;
-  const url = cfg.baseUrl + cfg.healthPath;
+  const portOf = (b) => {
+    const u = new URL(b);
+    return Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+  };
+  let serveBaseUrl = cfg.baseUrl;
+  let servePort = portOf(cfg.baseUrl);
+  let url = serveBaseUrl + cfg.healthPath;
   const stop = args.stop ?? ((pd, tn) => void stopLocal(pd, tn));
   if (args.rejectForeignPort && await reachable(url)) {
     stop(args.projectDir, args.targetName);
@@ -7306,34 +7322,52 @@ async function deployToTarget(args) {
     });
     if (released.outcome === "done") {
     } else {
-      const reason = `target port still serving a foreign process at ${url} after stopping our own instance; refusing to verify against it. Stop it first (consort-deploy --target ${args.targetName} --stop, or free the port).`;
-      const verify2 = { passed: false, summary: reason };
-      let evidencePath2;
-      if (args.featureId) {
-        const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
-        const at = (args.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-        evidencePath2 = writeDeployEvidence(consortDir, {
-          schema_version: DEPLOY_EVIDENCE_SCHEMA_VERSION,
-          feature_id: args.featureId,
-          ...args.storyId ? { story_id: args.storyId } : {},
-          target: args.targetName,
-          url,
-          reachable: false,
-          verify: verify2,
-          ...args.lakebaseBranch ? { lakebase_branch: args.lakebaseBranch } : {},
-          deployed_at: at
-        });
-        writeEscalation(consortDir, {
-          source: "deploy-verify",
-          reason: `deploy of ${args.featureId}${args.storyId ? `/${args.storyId}` : ""} blocked: ${reason}`,
-          feature_id: args.featureId,
-          ...args.storyId ? { story_id: args.storyId } : {}
-        });
+      const bumped = await resolveServeBaseUrl(cfg.baseUrl, reachable);
+      if (bumped.baseUrl === serveBaseUrl) {
+        const reason = `target port ${url} is held by a foreign process and no free port was found nearby; stop it (consort-deploy --target ${args.targetName} --stop) or free a port.`;
+        const verify2 = { passed: false, summary: reason };
+        let evidencePath2;
+        if (args.featureId) {
+          const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
+          const at = (args.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
+          evidencePath2 = writeDeployEvidence(consortDir, {
+            schema_version: DEPLOY_EVIDENCE_SCHEMA_VERSION,
+            feature_id: args.featureId,
+            ...args.storyId ? { story_id: args.storyId } : {},
+            target: args.targetName,
+            url,
+            reachable: false,
+            verify: verify2,
+            ...args.lakebaseBranch ? { lakebase_branch: args.lakebaseBranch } : {},
+            deployed_at: at
+          });
+          writeEscalation(consortDir, {
+            source: "deploy-verify",
+            reason: `deploy of ${args.featureId}${args.storyId ? `/${args.storyId}` : ""} blocked: ${reason}`,
+            feature_id: args.featureId,
+            ...args.storyId ? { story_id: args.storyId } : {}
+          });
+        }
+        return { ok: false, reason, verify: verify2, evidencePath: evidencePath2 };
       }
-      return { ok: false, reason, verify: verify2, evidencePath: evidencePath2 };
+      serveBaseUrl = bumped.baseUrl;
+      servePort = bumped.port;
+      url = serveBaseUrl + cfg.healthPath;
     }
   }
-  const env = args.lakebaseBranch ? { ...process.env, LAKEBASE_BRANCH_ID: args.lakebaseBranch } : void 0;
+  const env = {
+    ...process.env,
+    // Serve + verify on ONE port (bumped off a foreign :8000 above). The run command binds
+    // PORT / E2E_BACKEND_PORT (whichever it honors); the verify's Playwright — the E2E AND
+    // the UX-adherence check — reads BASE_URL. This keeps the health poll, the served app,
+    // and the verify all agreeing on the same (possibly relocated) port.
+    BASE_URL: serveBaseUrl,
+    PORT: String(servePort),
+    E2E_BACKEND_PORT: String(servePort),
+    // Per-story deploy: bind the run command to the experiment branch's Lakebase DB so the PO
+    // reviews the story on its own branch. Unset = the ambient env (the per-sprint deploy).
+    ...args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}
+  };
   if (args.rejectForeignPort && args.lakebaseBranch && cfg.migrate) {
     const runVerify = args.runVerify ?? defaultRunVerify;
     const mig = normalizeVerifyRun(runVerify(cfg.migrate, args.projectDir, env));

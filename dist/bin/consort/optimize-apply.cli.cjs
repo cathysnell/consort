@@ -6753,7 +6753,7 @@ function modelDefaultEdit(role, turn, model) {
   const where = turn ? `(${role}, ${turn})` : `(${role}, every turn)`;
   return {
     file: `${MANIFESTS_REL}/*.json (agentOptions.model)`,
-    rationale: `set agentOptions.model -> "${model}" in the step-manifest(s) whose (role, turnKey) is ${where} (mirror the role's frontmatter model: in skills/consort/agents/${role}.md + RECOMMENDED_MODELS in agent-models.ts if the BASE model changed). This is the ONE per-turn config home , applyWinnerToManifests writes it as data.`,
+    rationale: `set agentOptions.model -> "${model}" in the step-manifest(s) whose (role, turnKey) is ${where} (mirror the role's frontmatter model: in skills/consort/agents/${role}.md + RECOMMENDED_MODELS in agent-models.ts if the BASE model changed). This is the ONE per-turn config home \u2013 applyWinnerToManifests writes it as data.`,
     regressionTest: `assert resolveConsortSettings().modelFor("${role}"${turn ? `, "${turn}"` : ""}) === "${model}" with no project override (resolver reads the manifest).`
   };
 }
@@ -6820,7 +6820,7 @@ function formatApplyPlan(plan) {
     lines.push("");
   }
   if (plan.sourceEdits.length) {
-    lines.push("## REVIEW , typed-source edits (I make these as normal reviewed edits, not auto-regex)");
+    lines.push("## REVIEW \u2013 typed-source edits (I make these as normal reviewed edits, not auto-regex)");
     for (const s of plan.sourceEdits) {
       lines.push(`- ${s.file}: ${s.rationale}`);
       lines.push(`    regression test: ${s.regressionTest}`);
@@ -6833,7 +6833,7 @@ function formatApplyPlan(plan) {
     lines.push("");
   }
   if (!plan.agentMdEdits.length && !plan.sourceEdits.length && !plan.notes.length) {
-    lines.push("(baseline won , nothing to persist)");
+    lines.push("(baseline won \u2013 nothing to persist)");
   }
   return lines.join("\n") + "\n";
 }
@@ -6909,7 +6909,7 @@ async function main() {
   }
   if (plan.sourceEdits.length) {
     process.stderr.write(
-      `[optimize-apply] ${plan.sourceEdits.length} typed-source default(s) to change (model/effort/scope/loop) , these are printed above for a REVIEWED edit, not auto-written. Make them + their regression test, then commit.
+      `[optimize-apply] ${plan.sourceEdits.length} typed-source default(s) to change (model/effort/scope/loop) \u2013 these are printed above for a REVIEWED edit, not auto-written. Make them + their regression test, then commit.
 `
     );
   }

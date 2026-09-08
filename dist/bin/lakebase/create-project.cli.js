@@ -274,13 +274,33 @@ function formatGateBlockers(blockers) {
 
 // consort/lakebase/kit-ref-pin.ts
 import { fileURLToPath as fileURLToPath4 } from "url";
-import { dirname as dirname9, join as join10 } from "path";
-import { readFileSync as readFileSync9 } from "fs";
+import { dirname as dirname9, join as join10, resolve as resolve2 } from "path";
+import { readFileSync as readFileSync9, existsSync as existsSync9, mkdirSync as mkdirSync9, writeFileSync as writeFileSync8 } from "fs";
 var CONSORT_PKG = "@databricks-solutions/consort";
 function kitRefPin(env, version) {
   if (env.LAKEBASE_KIT_REF && env.LAKEBASE_KIT_REF.trim()) return void 0;
   const v = (version ?? "").trim();
   return v ? `v${v}` : void 0;
+}
+function recordDevKitLocalDirs(projectDir, env) {
+  const lakebaseDir = join10(projectDir, ".lakebase");
+  const written = [];
+  for (const [envVar, file] of [
+    ["LAKEBASE_KIT_DIR", "kit-local-dir"],
+    ["LAKEBASE_SCM_UTILS_DIR", "scm-utils-local-dir"]
+  ]) {
+    const dir = env[envVar]?.trim();
+    if (!dir) continue;
+    const abs = resolve2(dir);
+    if (!existsSync9(join10(abs, "dist"))) continue;
+    try {
+      mkdirSync9(lakebaseDir, { recursive: true });
+      writeFileSync8(join10(lakebaseDir, file), abs + "\n");
+      written.push(file);
+    } catch {
+    }
+  }
+  return written;
 }
 function findConsortPkg(fromDir) {
   let d = fromDir;
@@ -357,7 +377,7 @@ function substrateMismatchMessage(input) {
   if (!declared || !installed) return null;
   if (declared === installed) return null;
   return `Substrate mismatch: this kit declares @databricks-solutions/lakebase-scm-utils v${declared}, but the resolved install is v${installed}.
-Your npx/npm cache served a STALE substrate , npx can update the top-level kit while reusing a cached nested dependency, which would scaffold a broken project (wrong launcher, mismatched .lakebase refs). Refusing to create from it.
+Your npx/npm cache served a STALE substrate \u2013 npx can update the top-level kit while reusing a cached nested dependency, which would scaffold a broken project (wrong launcher, mismatched .lakebase refs). Refusing to create from it.
 
 Fix: clear the npx cache and retry the version-pinned create from /consort:start:
   rm -rf "$(npm config get cache)/_npx"   # or: npx clear-npx-cache
@@ -366,7 +386,7 @@ Fix: clear the npx cache and retry the version-pinned create from /consort:start
 
 // bin/lakebase/create-project.cli.ts
 import { createRequire } from "module";
-import { readFileSync as readFileSync11, appendFileSync, writeFileSync as writeFileSync8, openSync, closeSync } from "fs";
+import { readFileSync as readFileSync11, appendFileSync, writeFileSync as writeFileSync9, openSync, closeSync } from "fs";
 import * as os from "os";
 import * as path8 from "path";
 
@@ -582,7 +602,7 @@ async function main() {
       );
       return 0;
     }
-    process.stderr.write("lakebase-create-project: detach re-spawn failed , running in-process instead.\n");
+    process.stderr.write("lakebase-create-project: detach re-spawn failed \u2013 running in-process instead.\n");
   }
   let input;
   if (args.jsonInput) {
@@ -649,13 +669,13 @@ async function main() {
   if (pin) {
     process.env.LAKEBASE_KIT_REF = pin;
     process.stderr.write(
-      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version , avoids mutable-main cache drift)
+      `[kit-ref] pinning the scaffolded kit to ${pin} (immutable version \u2013 avoids mutable-main cache drift)
 `
     );
   }
   if (args.progressLog) {
     try {
-      writeFileSync8(args.progressLog, "");
+      writeFileSync9(args.progressLog, "");
     } catch {
     }
   }
@@ -670,6 +690,13 @@ async function main() {
       }
     }
   });
+  const recorded = recordDevKitLocalDirs(result.projectDir, process.env);
+  if (recorded.length) {
+    process.stderr.write(
+      `[kit-ref] dev kit in use \u2014 recorded .lakebase/${recorded.join(", ")} so lk resolves your local kit for the pinned ref
+`
+    );
+  }
   process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   return 0;
 }

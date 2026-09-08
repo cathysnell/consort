@@ -160,7 +160,7 @@ function parseArgs(argv) {
       case "-h":
       case "--help":
         process.stdout.write(
-          "consort-cross-story-context , the feature's OTHER stories' ACs + the architecture's open_decisions.\n\n  consort-cross-story-context --feature <F> --story <S> [--json]\n\nRun it in the architect-reviewer + navigator reflect turns to review a story AGAINST its\nsiblings: flag any AC that contradicts a gated sibling AC, or silently resolves an open decision.\n"
+          "consort-cross-story-context \u2013 the feature's OTHER stories' ACs + the architecture's open_decisions.\n\n  consort-cross-story-context --feature <F> --story <S> [--json]\n\nRun it in the architect-reviewer + navigator reflect turns to review a story AGAINST its\nsiblings: flag any AC that contradicts a gated sibling AC, or silently resolves an open decision.\n"
         );
         process.exit(0);
     }
@@ -171,7 +171,7 @@ function renderContext(ctx) {
   const lines = [];
   lines.push(`Cross-story review context for ${ctx.current_story}:`);
   if (!ctx.sibling_stories.length) {
-    lines.push("  (no sibling stories with ACs yet , this is the feature's first designed story)");
+    lines.push("  (no sibling stories with ACs yet \u2013 this is the feature's first designed story)");
   }
   for (const s of ctx.sibling_stories) {
     lines.push(`  ${s.story}:`);

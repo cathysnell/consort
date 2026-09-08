@@ -209,7 +209,7 @@ function parseArgs(argv) {
       case "-h":
       case "--help":
         process.stdout.write(
-          "consort-open , open the reviewable Consort artifacts in Cursor/Code.\n\n  consort-open [--feature <id>] [--story <id>] [--force] [--project-dir <p>]\n\nOpens only when inside the editor's terminal (else prints paths). --force opens regardless.\n"
+          "consort-open \u2013 open the reviewable Consort artifacts in Cursor/Code.\n\n  consort-open [--feature <id>] [--story <id>] [--force] [--project-dir <p>]\n\nOpens only when inside the editor's terminal (else prints paths). --force opens regardless.\n"
         );
         process.exit(0);
     }

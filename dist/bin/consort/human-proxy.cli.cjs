@@ -7463,7 +7463,7 @@ function checkE2eLayerPresent(architectureJson2, evidence) {
   return {
     ok: false,
     violations: [
-      `the feature ${why} but NO acceptance criterion is tagged layer:"E2E"; a feature that renders a UI has at least one client<->server contract (a form submit, an inline validation rejection, a success/empty state) whose ONLY real verification is a Playwright e2e against the live API , tag that AC layer:"E2E" (a mocked component test stubs the response envelope, so a fabricated shape passes green while the real wire contract drifts). NOTE: an outcome phrased as "record WHO performed the action" or "the pick is saved", when the operator enters their name on a form with no auth, IS a client form submission (layer:"E2E") , do not flatten it into a backend "API" AC. If the endpoint is genuinely not consumed by any client, reconsider , that is unusual for a UI-track feature.`
+      `the feature ${why} but NO acceptance criterion is tagged layer:"E2E"; a feature that renders a UI has at least one client<->server contract (a form submit, an inline validation rejection, a success/empty state) whose ONLY real verification is a Playwright e2e against the live API \u2013 tag that AC layer:"E2E" (a mocked component test stubs the response envelope, so a fabricated shape passes green while the real wire contract drifts). NOTE: an outcome phrased as "record WHO performed the action" or "the pick is saved", when the operator enters their name on a form with no auth, IS a client form submission (layer:"E2E") \u2013 do not flatten it into a backend "API" AC. If the endpoint is genuinely not consumed by any client, reconsider \u2013 that is unusual for a UI-track feature.`
     ]
   };
 }
@@ -7531,7 +7531,7 @@ function checkE2ECoverage(testListJson, e2eAcIds) {
     if (forAc.some((i) => isE2e(i.scenario_file))) continue;
     const how = forAc.length ? `covered only by ${forAc.map((i) => i.scenario_file ?? `kind:${i.kind ?? "?"}`).join(", ")}` : "has no covering test";
     violations.push(
-      `E2E-layer AC ${acId} ${how} , a mocked component test cannot verify the real client<->server contract (a fabricated response envelope passes green while the real wire shape drifts). Add a real Playwright e2e (scenario_file under client/tests/e2e/) that drives the deployed app against the live API`
+      `E2E-layer AC ${acId} ${how} \u2013 a mocked component test cannot verify the real client<->server contract (a fabricated response envelope passes green while the real wire shape drifts). Add a real Playwright e2e (scenario_file under client/tests/e2e/) that drives the deployed app against the live API`
     );
   }
   return violations.length === 0 ? { ok: true } : { ok: false, violations };
@@ -7558,7 +7558,7 @@ function checkPersistenceCoverage(testListJson, architectureJson2) {
     return {
       ok: false,
       violations: [
-        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch , NOT a test of the ORM's generic round-trip; see test-strategy.md)`
+        `persistence_invariant(s) with no covering test-list item (invariant_id): ${uncovered.join(", ")} (each declared invariant needs >=1 test that verifies the migration realized it against the real branch \u2013 NOT a test of the ORM's generic round-trip; see test-strategy.md)`
       ]
     };
   }
@@ -7598,7 +7598,7 @@ function checkDbDesign(dbDesignJson2, architectureJson2) {
   const uncovered = invariants.filter((id) => !realized.has(id));
   if (uncovered.length > 0) {
     violations.push(
-      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared , a table/column/constraint/index , and list its id here; see agents/dba.md)`
+      `persistence_invariant(s) not realized by db-design.json realizes_invariants[]: ${uncovered.join(", ")} (the DBA must physically realize every invariant the architect declared \u2013 a table/column/constraint/index \u2013 and list its id here; see agents/dba.md)`
     );
   }
   return violations.length > 0 ? { ok: false, violations } : { ok: true };
@@ -7692,7 +7692,7 @@ function checkInvariantCoverageDistinct(perStory, ownerByInvariant) {
       for (const c of stories) {
         if (c.story === realizer) continue;
         violations.push(
-          `${c.story} carries persistence invariant ${inv} but does NOT realize it , its table/migration is introduced by ${realizer} (db-design schema_changes). Move the ${inv} fitness item to ${realizer}${owns ? "" : " (which must add it)"}; a display/read-only story cannot test an invariant whose table it never creates. Anchor by the realizing story, not AC keyword proximity.`
+          `${c.story} carries persistence invariant ${inv} but does NOT realize it \u2013 its table/migration is introduced by ${realizer} (db-design schema_changes). Move the ${inv} fitness item to ${realizer}${owns ? "" : " (which must add it)"}; a display/read-only story cannot test an invariant whose table it never creates. Anchor by the realizing story, not AC keyword proximity.`
         );
       }
       continue;
@@ -7752,7 +7752,7 @@ function checkSchemaChangeStoryRealizes(schemaChanges, storyLayers) {
     seen.add(key);
     if (!canRealize(c.story_id)) {
       violations.push(
-        `db-design attributes create_table ${c.table} to ${c.story_id}, whose ACs are all non-persisting (UI/E2E shell , no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC for. Attribute the create_table (and the invariants it realizes) to the story that first reads/writes ${c.table}; a shell story gets no schema_changes. (This is the mis-anchoring the navigator reflect gate otherwise bounces back through the whole design lane.)`
+        `db-design attributes create_table ${c.table} to ${c.story_id}, whose ACs are all non-persisting (UI/E2E shell \u2013 no API/Infra layer). A scaffold/shell story cannot realize a table it has no data AC for. Attribute the create_table (and the invariants it realizes) to the story that first reads/writes ${c.table}; a shell story gets no schema_changes. (This is the mis-anchoring the navigator reflect gate otherwise bounces back through the whole design lane.)`
       );
     }
   }
@@ -7778,7 +7778,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7786,12 +7786,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7805,7 +7806,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7818,7 +7819,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -8006,7 +8007,7 @@ function resolveProjectSettings(projectDir) {
     gates: file?.project?.gates ?? "interactive",
     deployTarget: file?.project?.deployTarget ?? "local",
     clientFramework: file?.project?.clientFramework ?? "none",
-    // Legacy projects (scaffolded before language was persisted) resolve to "python" , the
+    // Legacy projects (scaffolded before language was persisted) resolve to "python" – the
     // build lane's historical convention (app/ + .py + alembic), which is what the reference corpus
     // and pre-persistence projects actually are. A NEW scaffold persists its real language, so this
     // default only affects config-less/legacy trees.
@@ -8167,7 +8168,7 @@ function storyRequiresE2eReason(fdir, story) {
       }
     }
   }
-  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" , the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
+  return `story ${story} sets requires_e2e:true but no acceptance criterion is tagged layer:"E2E" \u2013 the client<->server interaction this story exists for (a form submit + its confirmation, an inline validation the client renders) must be an E2E AC verified by a real Playwright test, NOT flattened into a backend "the record is saved" API AC. Add a client-submit AC tagged layer:"E2E" (a mocked component test cannot verify the real wire contract)`;
 }
 function requiresE2eReason(consortDir, featureId) {
   const fdir = featureDir2(consortDir, featureId);
@@ -8239,7 +8240,7 @@ function nfrCoverageReason(consortDir, featureId) {
   const r = checkNfrCoverage(nfrsContent, arch, projectBriefRefs(consortDir));
   if (r.ok) return null;
   const src = nfrsFile === featureNfrs ? `per-feature nfrs.md (features/${featureId}/nfrs.md)` : "project nfrs.md";
-  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} , ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
+  return `NFR coverage HARD-BLOCK (spec gate): architecture.json does not cover every ## Required NFR in the ${src} \u2013 ${r.violations.join("; ")}. Add a matching brief_ref on architecture.json (or declare nfr_out_of_scope).`;
 }
 function fitnessCoverageReason(consortDir, featureId, testListJson) {
   const arch = readArchitecture(consortDir, featureId);
@@ -8614,7 +8615,13 @@ function supplyRequests(args = {}) {
   const pairs = args.pairs ?? recordedRequestPairs();
   const supplied = [];
   const skipped = [];
+  const selected = [];
   for (const { featureId, from } of pairs) {
+    selected.push(featureId);
+    if (!(0, import_node_fs2.existsSync)(from)) {
+      skipped.push({ featureId, reason: "no recorded source (authored live by the metered PO turn)" });
+      continue;
+    }
     const res = supplyArtifact({
       from,
       to: featureRequestMd(consortDir, featureId),
@@ -8626,8 +8633,8 @@ function supplyRequests(args = {}) {
     if (res.ok) supplied.push(featureId);
     else skipped.push({ featureId, reason: res.reason ?? "unknown" });
   }
-  if (args.sprint && supplied.length > 0) {
-    writeRequested(consortDir, args.sprint, supplied);
+  if (args.sprint && selected.length > 0) {
+    writeRequested(consortDir, args.sprint, selected);
   }
   return { supplied, skipped };
 }
@@ -8757,7 +8764,7 @@ function composeReviseBrief(input) {
   if (isCoverageDefect) {
     return `REVISE (reflection gate): ${input.reason}
 
-PRESERVE every ${artifact} item this story ALREADY has , they passed prior gates and MUST remain. This is an ADDITIVE revise: keep all existing files/entries intact (do not delete, rename, renumber, merge, or overwrite them) and ADD the specific coverage named above alongside them. The named coverage is REQUIRED: add the missing test(s)/criterion that assert the exact behavior described , do NOT omit it, weaken it, or defer it to an open question. If the stated behavior genuinely cannot be tested as written, name the concrete blocker; do not punt. After writing, the story's ${artifact} set = every prior item PLUS the added one(s).`;
+PRESERVE every ${artifact} item this story ALREADY has \u2013 they passed prior gates and MUST remain. This is an ADDITIVE revise: keep all existing files/entries intact (do not delete, rename, renumber, merge, or overwrite them) and ADD the specific coverage named above alongside them. The named coverage is REQUIRED: add the missing test(s)/criterion that assert the exact behavior described \u2013 do NOT omit it, weaken it, or defer it to an open question. If the stated behavior genuinely cannot be tested as written, name the concrete blocker; do not punt. After writing, the story's ${artifact} set = every prior item PLUS the added one(s).`;
   }
   return `REVISE (Product Owner): ${input.reason}
 
@@ -9122,11 +9129,19 @@ init_cjs_shims();
 var import_node_fs10 = require("fs");
 var import_node_path11 = require("path");
 function approveIntakeGate(consortDir, approver) {
-  const marker = intakeApprovedMarker(consortDir);
+  const dir = consortDir ?? resolveConsortDir();
+  const marker = intakeApprovedMarker(dir);
   (0, import_node_fs10.mkdirSync)((0, import_node_path11.dirname)(marker), { recursive: true });
   (0, import_node_fs10.writeFileSync)(marker, `${(/* @__PURE__ */ new Date()).toISOString()} approved-by:${approver}
 `);
-  logGateApproved({ consortDir, gate: "intake", approver });
+  logGateApproved({ consortDir: dir, gate: "intake", approver });
+}
+
+// consort/gates/backlog-gate.ts
+init_cjs_shims();
+function approveBacklogGate(consortDir, approver) {
+  const dir = consortDir ?? resolveConsortDir();
+  logGateApproved({ consortDir: dir, gate: "backlog", approver });
 }
 
 // bin/consort/human-proxy.cli.ts
@@ -9374,6 +9389,20 @@ function runHumanProxyCli(argv) {
     approveIntakeGate(args.consortDir, args.approver ?? "human-proxy");
     process.stdout.write(`human-proxy: intake gate for ${args.sprint} approved
 `);
+    return 0;
+  }
+  if (args.sprint && args.gate === "backlog") {
+    const res = supplyRequests({ consortDir: args.consortDir, approver: args.approver, sprint: args.sprint });
+    approveBacklogGate(args.consortDir, args.approver ?? "human-proxy");
+    process.stdout.write(
+      `human-proxy: backlog gate for ${args.sprint} committed` + (res.supplied.length > 0 ? ` (supplied ${res.supplied.length}: ${res.supplied.join(", ")})` : "") + "\n"
+    );
+    if (res.skipped.length > 0) {
+      process.stderr.write(
+        `human-proxy: ${res.skipped.length} request(s) left for the live author-requests turn: ${res.skipped.map((s) => s.featureId).join(", ")}
+`
+      );
+    }
     return 0;
   }
   if (args.sprint) {

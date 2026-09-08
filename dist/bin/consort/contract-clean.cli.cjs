@@ -159,7 +159,7 @@ function checkContractClean(args) {
   if (violations.length === 0) return { clean: true, droppedSymbols: dropped, violations: [] };
   const list = violations.map((v) => `  ${v.file}:${v.line}  [${v.symbol}]  ${v.text}`).join("\n");
   const syms = [...new Set(violations.map((v) => v.symbol))].join(", ");
-  const remediation = `CONTRACT-INCOMPLETENESS (software-design-principles hard rule 9): a migration DROPPED ${syms}, but the running code still references it, so the app emits SQL for a column the database no longer has and crashes ("${syms} does not exist") even though the migration succeeded. Remove or replace EVERY reference below in the SAME change , the ORM model field, every query/repository, every serializer/DTO, and every template/view , so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the production code:
+  const remediation = `CONTRACT-INCOMPLETENESS (software-design-principles hard rule 9): a migration DROPPED ${syms}, but the running code still references it, so the app emits SQL for a column the database no longer has and crashes ("${syms} does not exist") even though the migration succeeded. Remove or replace EVERY reference below in the SAME change \u2013 the ORM model field, every query/repository, every serializer/DTO, and every template/view \u2013 so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the production code:
 ${list}`;
   return { clean: false, droppedSymbols: dropped, violations, remediation };
 }
@@ -179,7 +179,7 @@ function parse(argv) {
 }
 function help() {
   process.stdout.write(
-    `consort-contract-clean , prove no code references a column a migration dropped
+    `consort-contract-clean \u2013 prove no code references a column a migration dropped
 
 Usage:
   consort-contract-clean [--project-dir <path>] [--migrations <rel> ...] [--code <rel> ...] [--json]
@@ -199,10 +199,10 @@ if (p.json) {
 `);
 } else if (r.clean) {
   const what = r.droppedSymbols.length ? `dropped [${r.droppedSymbols.join(", ")}] no longer referenced in code` : "no migration column drops to check";
-  process.stdout.write(`contract-clean: OK , ${what}
+  process.stdout.write(`contract-clean: OK \u2013 ${what}
 `);
 } else {
-  process.stderr.write(`contract-clean: FAILED , ${r.violations.length} residual reference(s).
+  process.stderr.write(`contract-clean: FAILED \u2013 ${r.violations.length} residual reference(s).
 
 ${r.remediation}
 `);

@@ -6841,7 +6841,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -6849,12 +6849,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -6868,7 +6869,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -6881,7 +6882,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -7525,6 +7526,13 @@ function recordBlockingSmellFlag(consortDir, smell, detail, scope) {
 }
 
 // bin/consort/agent-log.cli.ts
+var GATE_LIFECYCLE_EVENTS = /* @__PURE__ */ new Set([
+  "gate.surfaced",
+  "gate.approved",
+  "gate.rejected",
+  "gate.modified"
+]);
+var GATE_LIFECYCLE_REJECTION = "the gate lifecycle (gate.surfaced/gate.approved/gate.rejected/gate.modified) is owned by the deterministic drive \u2014 the orchestrator surfaces it and the Human Proxy records the decision, code-emitted with the correct role + lane-scoped gate name. A role agent must NOT emit a gate event via consort-log; emit only your judgment events (reasoning, smell.flagged, concern.flagged, open.question).";
 function parseArgs(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
@@ -7559,6 +7567,14 @@ function parseArgs(argv) {
         if (eq > 0) (out.slots ??= {})[kv.slice(0, eq)] = kv.slice(eq + 1);
         break;
       }
+      // `note` is the reasoning event's slot and the one agents reach for most. Accept --note and
+      // --message as aliases for `--slot note=` so a role's FIRST logging attempt lands, instead of
+      // silently emitting an off-template event that throws for a missing `note` slot — the observed
+      // "three tries to log" flakiness (a driver tried --message, then --note, then --slot note=).
+      case "--note":
+      case "--message":
+        (out.slots ??= {}).note = argv[++i];
+        break;
       case "--feature":
         out.feature = argv[++i];
         break;
@@ -7602,8 +7618,12 @@ Emit:
                from the event's template; you fill its slots.
     --slot k=v fill one template slot (repeatable). A missing required slot is
                rejected (exit 3). The event NAME carries the phase; slots carry
-               the specifics. NOTE: cycle.* events are CODE-emitted by the
-               orchestration, agents do not emit them.
+               the specifics. NOTE: cycle.* AND the gate lifecycle (gate.surfaced/
+               gate.approved/gate.rejected/gate.modified) are CODE-emitted by the
+               deterministic drive (orchestrator surfaces, Human Proxy decides);
+               a role agent emitting one here is REJECTED (exit 3).
+    --note <t> alias for --slot note=<t> (also --message). note is the slot the
+               reasoning event renders, so this is the reliable one-flag way to log a note.
     --feature <id>   --phase <p>   --cycle <id>   --data '<json of extra slots>'
 
 Batch emit (ONE process + ONE append for a turn's several events, not N spawns):
@@ -7717,6 +7737,11 @@ function runAgentLogCli(argv) {
 `);
         return 2;
       }
+      if (GATE_LIFECYCLE_EVENTS.has(el.event)) {
+        process.stderr.write(`consort-log --events: ${GATE_LIFECYCLE_REJECTION}
+`);
+        return 3;
+      }
       const slots2 = { ...el.slots ?? {} };
       if (typeof el.data === "string") {
         try {
@@ -7753,6 +7778,11 @@ function runAgentLogCli(argv) {
 ${HELP}
 `);
     return 2;
+  }
+  if (GATE_LIFECYCLE_EVENTS.has(a.event)) {
+    process.stderr.write(`consort-log: ${GATE_LIFECYCLE_REJECTION}
+`);
+    return 3;
   }
   const slots = { ...a.slots ?? {} };
   if (a.data !== void 0) {

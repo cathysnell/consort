@@ -7111,7 +7111,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -7119,12 +7119,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -7138,7 +7139,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -7151,7 +7152,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 function isKnownEvent(name) {
@@ -7443,7 +7444,7 @@ function writeEscalation(consortDir, esc) {
     ...esc.story_id ? { story_id: esc.story_id } : {},
     ...esc.ac_id ? { ac_id: esc.ac_id } : {},
     raised_at: esc.raised_at ?? (/* @__PURE__ */ new Date()).toISOString(),
-    how_to_resolve: `After fixing the ROOT CAUSE, clear this with: consort-resolve-escalation --id ${id} --resolution "<what you fixed>". That clears this escalation (and any blocking smell) and KEEPS the audit trail. Do NOT hand-edit or delete this file, and do NOT edit smells.json, to move the run forward , that desyncs on-disk state from the drive.`
+    how_to_resolve: `After fixing the ROOT CAUSE, clear this with: consort-resolve-escalation --id ${id} --resolution "<what you fixed>". That clears this escalation (and any blocking smell) and KEEPS the audit trail. Do NOT hand-edit or delete this file, and do NOT edit smells.json, to move the run forward \u2013 that desyncs on-disk state from the drive.`
   };
   fs2.mkdirSync(escalationsDir(consortDir), { recursive: true });
   fs2.writeFileSync(file, JSON.stringify(full, null, 2) + "\n", "utf8");
@@ -7513,7 +7514,7 @@ var import_node_fs = require("fs");
 var import_node_path2 = require("path");
 var INLINE_FLAG_RE = /\(\?[aiLmsux]*[-]?[aiLmsux]+\)/;
 var RE_COMPILE_RE = /re\.compile\(\s*[rRbuf]*(["'])((?:\\.|(?!\1).)*)\1/g;
-var E2E_REGEX_REMEDIATION = `A Playwright matcher uses a Python regex with inline flags (e.g. re.compile(r"(?i)summary")). Playwright forwards the pattern verbatim to the browser's JavaScript engine, which does not support inline-flag syntax , the assertion can never match. Pass the flag as a kwarg instead: re.compile("summary", re.IGNORECASE). See the E2E rule in the Navigator role + the e2e-inline-regex-flag bad smell.`;
+var E2E_REGEX_REMEDIATION = `A Playwright matcher uses a Python regex with inline flags (e.g. re.compile(r"(?i)summary")). Playwright forwards the pattern verbatim to the browser's JavaScript engine, which does not support inline-flag syntax \u2013 the assertion can never match. Pass the flag as a kwarg instead: re.compile("summary", re.IGNORECASE). See the E2E rule in the Navigator role + the e2e-inline-regex-flag bad smell.`;
 function findInlineFlagRegexes(source, file) {
   const violations = [];
   let m;
@@ -7701,7 +7702,7 @@ function defaultRunVerify(cmd, cwd, env) {
     const e = err;
     const timedOut = e.killed === true || e.signal === "SIGTERM" || e.code === "ETIMEDOUT";
     const output = `${e.stdout?.toString() ?? ""}${e.stderr?.toString() ?? ""}`.trimEnd() + (timedOut ? `
-[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) , failing this pass rather than hanging.` : "");
+[deploy] VERIFY TIMED OUT after ${timeout}ms (SIGTERM) \u2013 failing this pass rather than hanging.` : "");
     const tail = output.split("\n").slice(-30).join("\n");
     process.stderr.write(`
 [deploy] feature-verify ${timedOut ? "TIMED OUT" : "failed"}; last output:
@@ -7714,6 +7715,15 @@ function defaultStart(cmd, cwd, env) {
   const child = (0, import_node_child_process2.spawn)("sh", ["-c", cmd], { cwd, detached: true, stdio: "ignore", env: env ?? process.env });
   child.unref();
   return child.pid ?? -1;
+}
+async function resolveServeBaseUrl(baseUrl, probe) {
+  const u = new URL(baseUrl);
+  const startPort = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+  for (let p = startPort, tries = 0; tries < 20; p++, tries++) {
+    u.port = String(p);
+    if (!await probe(`${u.origin}/`)) return { baseUrl: u.origin, port: p };
+  }
+  return { baseUrl: new URL(baseUrl).origin, port: startPort };
 }
 async function ensureDeployedAndVerify(args) {
   const targetName = args.targetName ?? "local";
@@ -7730,13 +7740,17 @@ async function ensureDeployedAndVerify(args) {
   const start = args.startProcess ?? defaultStart;
   const runVerify = args.runVerify ?? defaultRunVerify;
   const stop = args.stop ?? ((pd, tn) => void stopLocal(pd, tn));
-  const url = cfg.baseUrl + cfg.healthPath;
+  stop(args.projectDir, targetName);
+  const { baseUrl: serveUrl, port: servePort } = await resolveServeBaseUrl(cfg.baseUrl, reachable);
+  const url = serveUrl + cfg.healthPath;
   const env = {
     ...process.env,
-    BASE_URL: cfg.baseUrl,
-    ...args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}
+    BASE_URL: serveUrl,
+    PORT: String(servePort),
+    E2E_BACKEND_PORT: String(servePort),
+    ...args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {},
+    ...args.cycleLayer ? { CONSORT_CYCLE_LAYER: args.cycleLayer } : {}
   };
-  stop(args.projectDir, targetName);
   const pid = start(cfg.run, args.projectDir, env);
   const pf = pidFile(args.projectDir, targetName);
   (0, import_node_fs2.mkdirSync)((0, import_node_path3.dirname)(pf), { recursive: true });
@@ -7822,7 +7836,7 @@ async function ensureDeployedAndVerify(args) {
   }
   const regexLint = checkE2eRegexClean({ projectDir: args.projectDir });
   const base = migrationFailed ? "GREEN verify FAILED on the migration pass (the migration-marked reversibility test failed on its own isolated branch)" : clientFailed ? "GREEN verify FAILED on the client pass (the client Vitest suite failed; the backend suite passed)" : "GREEN verify FAILED against the running app";
-  const summary = regexLint.clean ? base : `${base}: e2e-inline-regex-flag , ${summarizeE2eRegexViolations(regexLint.violations)}. ${E2E_REGEX_REMEDIATION}`;
+  const summary = regexLint.clean ? base : `${base}: e2e-inline-regex-flag \u2013 ${summarizeE2eRegexViolations(regexLint.violations)}. ${E2E_REGEX_REMEDIATION}`;
   const failureOutput = failOut ? failOut.slice(-4e3) : void 0;
   return { passed, reachable: true, summary, ...failureOutput ? { failureOutput } : {} };
 }
@@ -7865,7 +7879,7 @@ function checkRouteReachability(input) {
 }
 var CLASSNAME_RE = /className\s*=\s*["'`]([^"'`]+)["'`]/g;
 var JSX_ELEMENT_RE = /<[A-Za-z][A-Za-z0-9]*[\s/>]/;
-var CONSUMPTION_REMEDIATION = "A feature page renders visible structure but consumes NONE of the design guide: no var(--token) and no class from the design vocabulary. It renders as bare browser-default HTML. Apply the guide , wrap in the layout/card/button/table classes (or var(--token) styles) the design guide defines , so the screen matches the design system. See the `ux-adherence` smell.";
+var CONSUMPTION_REMEDIATION = "A feature page renders visible structure but consumes NONE of the design guide: no var(--token) and no class from the design vocabulary. It renders as bare browser-default HTML. Apply the guide \u2013 wrap in the layout/card/button/table classes (or var(--token) styles) the design guide defines \u2013 so the screen matches the design system. See the `ux-adherence` smell.";
 function checkTokenConsumption(input) {
   const vocab = new Set(input.designClasses ?? []);
   const bare = [];
@@ -8041,7 +8055,8 @@ function composeAssessedGreenFailure(prior, regression) {
     summary: prior?.summary ?? "",
     ...prior?.fixAttempts !== void 0 ? { fixAttempts: prior.fixAttempts } : {},
     ...regression?.diagnosis ? { diagnosis: regression.diagnosis } : {},
-    ...regression?.fixDirective ? { fixDirective: regression.fixDirective } : {}
+    ...regression?.fixDirective ? { fixDirective: regression.fixDirective } : {},
+    ...regression?.specDefect ? { specDefect: regression.specDefect } : {}
   };
 }
 function rearmRegressionFix(tdd, feature, story, ac, fresh) {
@@ -8078,6 +8093,15 @@ function readRegressionAssessment(tdd, feature, story, ac) {
       const diagnosis = raw.diagnosis;
       if (typeof diagnosis !== "string" || diagnosis.length === 0) continue;
       const fixDirective = typeof raw.fixDirective === "string" && raw.fixDirective.length > 0 ? raw.fixDirective : typeof raw.fix === "string" && raw.fix.length > 0 ? raw.fix : void 0;
+      const sd = raw.specDefect;
+      const isSpecDefect = sd !== void 0 && sd !== null || raw.classification === "spec-defect";
+      let specDefect;
+      if (isSpecDefect) {
+        const fromRole = typeof sd?.fromRole === "string" && sd.fromRole || typeof raw.fromRole === "string" && raw.fromRole || typeof raw.from_role === "string" && raw.from_role || void 0;
+        const reason = typeof sd?.reason === "string" && sd.reason || typeof raw.reason === "string" && raw.reason || void 0;
+        specDefect = { ...fromRole ? { fromRole } : {}, ...reason ? { reason } : {} };
+      }
+      if (specDefect) return { diagnosis, specDefect };
       return { diagnosis, ...fixDirective ? { fixDirective } : {} };
     } catch {
     }
@@ -8217,7 +8241,7 @@ function checkContractClean(args) {
   if (violations.length === 0) return { clean: true, droppedSymbols: dropped, violations: [] };
   const list = violations.map((v) => `  ${v.file}:${v.line}  [${v.symbol}]  ${v.text}`).join("\n");
   const syms = [...new Set(violations.map((v) => v.symbol))].join(", ");
-  const remediation = `CONTRACT-INCOMPLETENESS (software-design-principles hard rule 9): a migration DROPPED ${syms}, but the running code still references it, so the app emits SQL for a column the database no longer has and crashes ("${syms} does not exist") even though the migration succeeded. Remove or replace EVERY reference below in the SAME change , the ORM model field, every query/repository, every serializer/DTO, and every template/view , so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the production code:
+  const remediation = `CONTRACT-INCOMPLETENESS (software-design-principles hard rule 9): a migration DROPPED ${syms}, but the running code still references it, so the app emits SQL for a column the database no longer has and crashes ("${syms} does not exist") even though the migration succeeded. Remove or replace EVERY reference below in the SAME change \u2013 the ORM model field, every query/repository, every serializer/DTO, and every template/view \u2013 so the code matches the migrated schema. Do NOT edit the migration or any test to hide this; fix the production code:
 ${list}`;
   return { clean: false, droppedSymbols: dropped, violations, remediation };
 }
@@ -8492,8 +8516,8 @@ function isAuthExpiredSummary(summary) {
     summary
   );
 }
-var defaultGreenVerifier = async ({ projectDir, branchId }) => {
-  const r = await ensureDeployedAndVerify({ projectDir, lakebaseBranch: branchId });
+var defaultGreenVerifier = async ({ projectDir, branchId, cycleLayer }) => {
+  const r = await ensureDeployedAndVerify({ projectDir, lakebaseBranch: branchId, cycleLayer });
   return { passed: r.passed, summary: r.summary, ...r.failureOutput ? { failureOutput: r.failureOutput } : {} };
 };
 function greenVerifierForEnv(_env = process.env) {
@@ -8517,7 +8541,7 @@ async function greenOpenCycle(args) {
     branch_id: open.branch_id
   };
   const verify = args.verify ?? defaultGreenVerifier;
-  let result = await verify({ projectDir: (0, import_path7.dirname)(consortDir), consortDir, featureId, story, branchId: open.branch_id });
+  let result = await verify({ projectDir: (0, import_path7.dirname)(consortDir), consortDir, featureId, story, branchId: open.branch_id, cycleLayer: open.layer });
   if (result.passed && !consortEnv("REPLAY_BUILD_DIR")) {
     try {
       const mig = checkMigrationAppClean({ projectDir: (0, import_path7.dirname)(consortDir) });
@@ -8525,6 +8549,19 @@ async function greenOpenCycle(args) {
     } catch {
     }
   }
+  logCycleEvent2(consortDir, {
+    role: "driver",
+    level: result.passed ? "info" : "warn",
+    event: "cycle.verified",
+    feature_id: featureId,
+    cycle_id: open.cycle_id,
+    slots: {
+      ac: open.ac_id ?? "unknown",
+      branch: open.branch_id ?? "?",
+      outcome: result.passed ? "passed" : "failed",
+      summary: (result.summary ?? (result.passed ? "all tests passed" : "verify failed")).slice(0, 500)
+    }
+  });
   if (open.layer && open.experiment_slug) {
     recordRunnerOutcome({ scope, cycleId: open.cycle_id, experimentSlug: open.experiment_slug, passed: result.passed });
   }
@@ -8553,7 +8590,7 @@ async function greenOpenCycle(args) {
       writeGreenFailure(consortDir, featureId, story, open.ac_id, {
         assessed: false,
         summary: result.summary,
-        // The verify's captured failure output (failing node-ids + top error) , the general
+        // The verify's captured failure output (failing node-ids + top error) – the general
         // pre-localization for failures the deterministic gates cannot localize (a missing
         // client component, a broken import), so the ASSESS turn starts from the real failure.
         ...result.failureOutput ? { failureOutput: result.failureOutput } : {},
@@ -8573,7 +8610,7 @@ async function greenOpenCycle(args) {
     const staleDiagnosis = !!gf.diagnosis && !diagnosisMatchesMode;
     const escalation = writeEscalation(consortDir, {
       source: "driver-green",
-      reason: `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)` + (diagnosisMatchesMode ? ` , ${gf.diagnosis}` : "") + (staleDiagnosis ? " , (the failure MODE changed since the last recorded diagnosis, which was for a different failure , re-diagnose from the CURRENT failure below; do not trust a prior root-cause)" : "") + `: ${result.summary}`,
+      reason: `GREEN verify failed for ${open.test_id} (${open.ac_id}) in ${featureId}/${story} after ${gf.fixAttempts ?? 0} self-heal round(s)` + (diagnosisMatchesMode ? ` \u2013 ${gf.diagnosis}` : "") + (staleDiagnosis ? " \u2013 (the failure MODE changed since the last recorded diagnosis, which was for a different failure \u2013 re-diagnose from the CURRENT failure below; do not trust a prior root-cause)" : "") + `: ${result.summary}`,
       feature_id: featureId,
       story_id: story,
       ac_id: open.ac_id
@@ -8928,6 +8965,12 @@ function parse(argv) {
       case "--fix":
         out.fixDirective = argv[++i];
         break;
+      case "--spec-defect":
+        out.specDefect = true;
+        break;
+      case "--from":
+        out.fromRole = argv[++i];
+        break;
       case "--repair":
         out.repair = true;
         break;
@@ -9035,6 +9078,17 @@ async function main() {
     case "assess-regression": {
       if (!a.ac) return usage("assess-regression: --ac is required.");
       if (!a.diagnosis) return usage("assess-regression: --diagnosis is required.");
+      if (a.specDefect) {
+        writeRegressionAssessment(consortDir, a.feature, a.story, a.ac, {
+          diagnosis: a.diagnosis,
+          specDefect: { ...a.fromRole ? { fromRole: a.fromRole } : {}, reason: a.diagnosis }
+        });
+        process.stdout.write(
+          `cycle: SPEC-DEFECT assessed for ${a.story}/${a.ac} (test/NFR is wrong, not the code); design-lane reopen recommended (--from ${a.fromRole ?? "test-strategist"})
+`
+        );
+        return 0;
+      }
       writeRegressionAssessment(consortDir, a.feature, a.story, a.ac, {
         diagnosis: a.diagnosis,
         ...a.fixDirective ? { fixDirective: a.fixDirective } : {}
@@ -9068,11 +9122,15 @@ async function main() {
       } else if (regression?.fixDirective) {
         process.stdout.write(`cycle: assessed ${a.story}/${ac} -> driver-fixable regression; routing Driver repair: ${regression.diagnosis}
 `);
+      } else if (regression?.specDefect) {
+        const scope = regression.specDefect.fromRole ?? "test-strategist";
+        process.stdout.write(`cycle: assessed ${a.story}/${ac} -> SPEC-DEFECT (test/NFR is wrong, not the code); design-lane reopen recommended (--from ${scope}): ${regression.diagnosis}
+`);
       } else {
         const why = regression?.diagnosis ?? gf?.summary ?? "";
         writeEscalation(consortDir, {
           source: "driver-green",
-          reason: `GREEN verify failed for ${ac} in ${a.feature}/${a.story}: Navigator assessed it as a genuine regression${regression ? " (not driver-fixable)" : " (no superseded tests flagged)"}${why ? ` , ${why}` : ""}`,
+          reason: `GREEN verify failed for ${ac} in ${a.feature}/${a.story}: Navigator assessed it as a genuine regression${regression ? " (not driver-fixable)" : " (no superseded tests flagged)"}${why ? ` \u2013 ${why}` : ""}`,
           feature_id: a.feature,
           story_id: a.story,
           ac_id: ac
@@ -9086,7 +9144,7 @@ async function main() {
       const scopeLabel = a.story ? `${a.feature}/${a.story}` : a.feature;
       const marker = readDeployVerifyAssessMarker(consortDir, a.feature, a.story);
       if (!marker) {
-        process.stdout.write(`cycle: assess-deploy-verify , no marker for ${scopeLabel} (nothing to assess)
+        process.stdout.write(`cycle: assess-deploy-verify \u2013 no marker for ${scopeLabel} (nothing to assess)
 `);
         return 0;
       }
@@ -9123,7 +9181,7 @@ async function main() {
       if (!a.story) return usage("assess-refactor-verify: --story is required.");
       const marker = readRefactorVerifyAssessMarker(consortDir, a.feature, a.story);
       if (!marker) {
-        process.stdout.write(`cycle: assess-refactor-verify , no marker for ${a.feature}/${a.story} (nothing to assess)
+        process.stdout.write(`cycle: assess-refactor-verify \u2013 no marker for ${a.feature}/${a.story} (nothing to assess)
 `);
         return 0;
       }

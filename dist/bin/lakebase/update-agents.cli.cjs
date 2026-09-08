@@ -115,7 +115,7 @@ var HELP = `lakebase-update-agents \u2013 refresh .claude/agents/ from the curre
 Refreshes a scaffolded project's role-agent definitions (dba.md,
 architect-reviewer.md, ...) against the kit's current defs. Use it after
 updating the kit (./scripts/lk --warm, or a plugin update) so an agent-prompt
-bugfix actually reaches the project , create-project only SEEDS agents, it does
+bugfix actually reaches the project \u2013 create-project only SEEDS agents, it does
 not refresh ones already on disk.
 
 Usage:

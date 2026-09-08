@@ -296,13 +296,13 @@ function lakebaseFile2(projectDir, name) {
 }
 function quiesceGate(q) {
   if (q.pidAlive === true) {
-    return { safe: false, reason: "a drive process is still RUNNING , wait for it to stop at a gate before upgrading (never swap the kit mid-turn)." };
+    return { safe: false, reason: "a drive process is still RUNNING \u2013 wait for it to stop at a gate before upgrading (never swap the kit mid-turn)." };
   }
   if (!q.atStop) {
-    return { safe: false, reason: "next.json does not show a clean stop (no awaiting_human / done) , the run may be mid-flight. Resolve to a gate first." };
+    return { safe: false, reason: "next.json does not show a clean stop (no awaiting_human / done) \u2013 the run may be mid-flight. Resolve to a gate first." };
   }
   if (q.pidAlive === null) {
-    return { safe: true, reason: "at a stop (awaiting_human/done); drive liveness UNVERIFIED (no --pid) , confirm no drive is running." };
+    return { safe: true, reason: "at a stop (awaiting_human/done); drive liveness UNVERIFIED (no --pid) \u2013 confirm no drive is running." };
   }
   return { safe: true, reason: "at a clean stop (drive pid not alive + awaiting_human/done)." };
 }
@@ -324,7 +324,7 @@ function pinBoth(projectDir, ref) {
 }
 function rollbackPins(projectDir) {
   const prevFile = lakebaseFile2(projectDir, KIT_REF_PREV_FILE);
-  if (!fs5.existsSync(prevFile)) return { restored: false, reason: "no kit-ref.prev , nothing to roll back to." };
+  if (!fs5.existsSync(prevFile)) return { restored: false, reason: "no kit-ref.prev \u2013 nothing to roll back to." };
   let prev;
   try {
     prev = JSON.parse(fs5.readFileSync(prevFile, "utf8"));
@@ -497,12 +497,12 @@ async function main() {
   if (args.rollback) {
     const r = rollbackPins(args.projectDir);
     if (!r.restored) {
-      process.stderr.write(`consort-upgrade: rollback , ${r.reason}
+      process.stderr.write(`consort-upgrade: rollback \u2013 ${r.reason}
 `);
       return 1;
     }
     process.stdout.write(
-      `consort-upgrade: ROLLED BACK , kit-ref.local=${r.local ?? "(unset)"} / kit-ref=${r.committed ?? "(unset)"}.
+      `consort-upgrade: ROLLED BACK \u2013 kit-ref.local=${r.local ?? "(unset)"} / kit-ref=${r.committed ?? "(unset)"}.
   Refresh the cache to the restored ref, then resume: \`./scripts/lk --refresh\` then re-run your drive command.
 `
     );
@@ -510,14 +510,14 @@ async function main() {
   }
   const target = kitVersion();
   if (!target || target === "unknown") {
-    process.stderr.write("consort-upgrade: cannot resolve the invoking kit's version , run this from a real kit (npx github:consort#<ver> or LAKEBASE_KIT_REF=<ver> ./scripts/lk).\n");
+    process.stderr.write("consort-upgrade: cannot resolve the invoking kit's version \u2013 run this from a real kit (npx github:consort#<ver> or LAKEBASE_KIT_REF=<ver> ./scripts/lk).\n");
     return 2;
   }
   const ref = target.startsWith("v") ? target : `v${target}`;
   const pidAlive = args.pid !== void 0 ? alive(args.pid) : null;
   const q = quiesceGate({ pidAlive, atStop: readAtStop(consortDir) });
   if (!q.safe) {
-    process.stderr.write(`consort-upgrade: NOT SAFE to upgrade , ${q.reason}
+    process.stderr.write(`consort-upgrade: NOT SAFE to upgrade \u2013 ${q.reason}
 `);
     return 2;
   }
@@ -535,7 +535,7 @@ async function main() {
         timeout: 3e5
       });
       if (r.status !== 0) {
-        process.stderr.write(`consort-upgrade: cache refresh exited ${r.status ?? "(signal)"} , continuing; re-run \`./scripts/lk --refresh\` if a resume cannot resolve ${ref}.
+        process.stderr.write(`consort-upgrade: cache refresh exited ${r.status ?? "(signal)"} \u2013 continuing; re-run \`./scripts/lk --refresh\` if a resume cannot resolve ${ref}.
 `);
       }
     }
@@ -547,8 +547,8 @@ async function main() {
     `consort-upgrade: UPGRADED to ${ref}.
   pins: .local ${pin.previousLocal ?? "(unset)"} -> ${ref}; committed ${pin.previousCommitted ?? "(unset)"} -> ${ref} (in lockstep, no drift).
   surface: ${surf.agents} agent(s) + ${surf.commands} command(s) + ${surf.scripts} script(s) + ${surf.workflows} CI workflow(s) refreshed from ${ref}${surf.e2e ? " + Playwright E2E block re-wired into run-tests.sh (deploy-verify runs the client E2E)" : ""} (the scm-utils scripts/lk shim + project config left as-is).
-  committed: ${committed.committed ? `${committed.sha} , kit surface committed, tree clean for the next fork` : `nothing committed (${committed.reason}) , if the tree is dirty with kit files, commit them before the next fork`}.
-  RESUME: run \`consort-next\` for the exact command, then re-run your drive , it runs ${ref}, re-derives state from disk, and continues from the gate.
+  committed: ${committed.committed ? `${committed.sha} \u2013 kit surface committed, tree clean for the next fork` : `nothing committed (${committed.reason}) \u2013 if the tree is dirty with kit files, commit them before the next fork`}.
+  RESUME: run \`consort-next\` for the exact command, then re-run your drive \u2013 it runs ${ref}, re-derives state from disk, and continues from the gate.
   ROLLBACK (instant undo): \`./scripts/lk consort-upgrade --rollback\` then \`./scripts/lk --refresh\` (re-commit the restored surface if the next fork reports a dirty tree).
 `
   );

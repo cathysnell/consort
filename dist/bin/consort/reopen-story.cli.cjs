@@ -6665,8 +6665,14 @@ function resolveConsortDir(projectDir = process.cwd()) {
 }
 var featuresDir = (tdd) => (0, import_node_path.join)(tdd, "features");
 var workflowStateJson = (tdd) => (0, import_node_path.join)(tdd, "workflow-state.json");
+var designDir = (tdd) => (0, import_node_path.join)(tdd, "design");
+var designGuideJson = (tdd) => (0, import_node_path.join)(designDir(tdd), "design-guide.json");
 var featureDir = (tdd, featureId) => (0, import_node_path.join)(featuresDir(tdd), featureId);
 var featureResolved = (tdd, f) => findFeatureDir(tdd, f) ?? featureDir(tdd, f);
+var architectureJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "architecture.json");
+var architectureMd = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "architecture.md");
+var dbDesignJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "db-design.json");
+var dbDesignMd = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "db-design.md");
 var pipelineJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "pipeline.json");
 var featureDeployEvidenceJson = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "deploy-evidence.json");
 var storiesDir = (tdd, f) => (0, import_node_path.join)(featureResolved(tdd, f), "stories");
@@ -6788,7 +6794,7 @@ var EVENT_TEMPLATES = {
   "phase.end": { template: "{{role}} END {{phase}} ({{outcome}})" },
   "escalation.raised": { template: "RAISED TO HIL [{{source}}]: {{reason}}" },
   // Gates (code surfaces; HIL / Human Proxy decides)
-  "gate.surfaced": { template: "GATE {{gate}} awaiting decision , {{subject}}" },
+  "gate.surfaced": { template: "GATE {{gate}} awaiting decision \u2013 {{subject}}" },
   "gate.approved": { template: "GATE {{gate}} APPROVED" },
   "gate.rejected": { template: "GATE {{gate}} REJECTED: {{reason}}" },
   "gate.modified": { template: "GATE {{gate}} MODIFIED: {{change}}" },
@@ -6796,12 +6802,13 @@ var EVENT_TEMPLATES = {
   "intake.supplied": { template: "INTAKE supplied {{artifact}}" },
   "intake.refused": { template: "INTAKE refused {{artifact}}: {{reason}}" },
   // Artifacts & design (agent-emitted)
-  "artifact.written": { template: "{{role}} wrote {{artifact}} , {{summary}}" },
+  "artifact.written": { template: "{{role}} wrote {{artifact}} \u2013 {{summary}}" },
   "open.question": { template: "OPEN Q [{{scope}}]: {{question}}" },
-  "concern.flagged": { template: "CONCERN {{concern}} , owner {{owner_layer}}" },
+  "concern.flagged": { template: "CONCERN {{concern}} \u2013 owner {{owner_layer}}" },
   // Build cycle (cycle.* family: RED -> GREEN -> REVIEW -> REFACTOR)
   "cycle.red": { template: "RED {{batch}} test(s) in {{cycle_id}} [{{layer}}], lead {{test_id}} ({{ac}}): {{asserts}}" },
   "cycle.green": { template: "GREEN {{test_id}} [{{ac}}]: {{change}}" },
+  "cycle.verified": { template: "VERIFY [{{ac}}] on {{branch}} {{outcome}}: {{summary}}" },
   "cycle.review": { template: "REVIEW [{{ac}}] refactor={{refactor}}: {{rationale}}" },
   "cycle.refactored": { template: "REFACTOR [{{ac}}]: {{change}}" },
   "smell.flagged": { template: "SMELL {{smell}} ({{severity}}): {{detail}}" },
@@ -6815,7 +6822,7 @@ var EVENT_TEMPLATES = {
   "deploy.start": { template: "DEPLOY start {{scope}} -> {{target}}" },
   "deploy.reachable": { template: "DEPLOY reachable {{url}} (pid {{pid}})" },
   "deploy.unreachable": { template: "DEPLOY unreachable {{url}}: {{reason}}" },
-  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} , verify {{verify_status}}" },
+  "deploy.verified": { template: "DEPLOY verified {{scope}} @ {{url}} \u2013 verify {{verify_status}}" },
   "deploy.failed": { template: "DEPLOY failed {{scope}}: {{reason}}" },
   "verify.passed": { template: "VERIFY passed {{scope}} ({{command}})" },
   "verify.failed": { template: "VERIFY failed {{scope}} ({{command}}): {{summary}}" },
@@ -6828,7 +6835,7 @@ var EVENT_TEMPLATES = {
   "turn.usage": { template: "{{role}} turn used {{input_tokens}} input + {{output_tokens}} output tokens" },
   // Generic (agent-emitted; debug / interim)
   "reasoning": { template: "{{note}}" },
-  "progress": { template: "{{note}} , {{step}}" }
+  "progress": { template: "{{note}} \u2013 {{step}}" }
 };
 var AGENT_LOG_EVENT_NAMES = Object.keys(EVENT_TEMPLATES);
 
@@ -6891,6 +6898,10 @@ function reopenStoryForRedesign(consortDir, feature, story, opts = {}) {
     } catch {
     }
   }
+  resetBuildStateForReopen(consortDir, feature, story, backupDir, cleared);
+  return { backupDir, cleared };
+}
+function resetBuildStateForReopen(consortDir, feature, story, backupDir, cleared) {
   const fde = featureDeployEvidenceJson(consortDir, feature);
   if (fs3.existsSync(fde)) {
     const dest = (0, import_node_path3.join)(backupDir, "feature-deploy-evidence.json");
@@ -6926,7 +6937,83 @@ function reopenStoryForRedesign(consortDir, feature, story, opts = {}) {
     }
   } catch {
   }
+}
+var DESIGN_LANE_ORDER = [
+  "spec-author",
+  "ux-designer",
+  "architect-reviewer",
+  "dba",
+  "test-strategist",
+  "navigator"
+];
+function reopenStoryFromRole(consortDir, feature, story, fromRole, opts = {}) {
+  if (fromRole === "spec-author") return reopenStoryForRedesign(consortDir, feature, story, opts);
+  const now = opts.now ?? (() => /* @__PURE__ */ new Date());
+  const storyRoot = storyResolved(consortDir, feature, story);
+  const stamp = now().toISOString().replace(/[:.]/g, "-");
+  const backupDir = (0, import_node_path3.join)(consortDir, `.backup-${(0, import_node_path3.basename)(storyRoot)}-reopen-${fromRole}-${stamp}`);
+  const cleared = [];
+  const backupTo = (p, name) => {
+    const dest = (0, import_node_path3.join)(backupDir, name);
+    fs3.mkdirSync((0, import_node_path3.dirname)(dest), { recursive: true });
+    fs3.cpSync(p, dest, { recursive: true });
+  };
+  const clearFile = (p, label, backupName) => {
+    if (!fs3.existsSync(p)) return;
+    backupTo(p, backupName);
+    fs3.rmSync(p, { recursive: true, force: true });
+    cleared.push(label);
+  };
+  const clearForRole = {
+    "ux-designer": () => {
+      clearFile(designGuideJson(consortDir), "design/design-guide.json (UX)", "design-guide.json");
+      clearFile((0, import_node_path3.join)(designDir(consortDir), "design-guide.md"), "design/design-guide.md (UX)", "design-guide.md");
+      clearFile((0, import_node_path3.join)(designDir(consortDir), "ia.md"), "design/ia.md (UX)", "ia.md");
+    },
+    "architect-reviewer": () => {
+      clearFile(architectureJson(consortDir, feature), "architecture.json (feature)", "architecture.json");
+      clearFile(architectureMd(consortDir, feature), "architecture.md (feature)", "architecture.md");
+      stripArchitecturalNotes(consortDir, feature, story, backupDir, cleared);
+    },
+    "dba": () => {
+      clearFile(dbDesignJson(consortDir, feature), "db-design.json (feature)", "db-design.json");
+      clearFile(dbDesignMd(consortDir, feature), "db-design.md (feature)", "db-design.md");
+    },
+    "test-strategist": () => {
+      clearFile(storyTestListJson(consortDir, feature, story), "test-list-per-story.json (test-strategist)", "test-list-per-story.json");
+    },
+    "navigator": () => {
+      clearFile(reflectVerdictJson(consortDir, feature, story), "reflect-verdict.json (reflect)", "reflect-verdict.json");
+    }
+  };
+  const startIdx = DESIGN_LANE_ORDER.indexOf(fromRole);
+  for (const role of DESIGN_LANE_ORDER.slice(startIdx)) {
+    if (role === "spec-author") continue;
+    clearForRole[role]();
+  }
+  clearFile(storyPlanJson(consortDir, feature, story), "plan.json (design-spec)", "plan.json");
+  resetBuildStateForReopen(consortDir, feature, story, backupDir, cleared);
   return { backupDir, cleared };
+}
+function stripArchitecturalNotes(consortDir, feature, story, backupDir, cleared) {
+  const dir = acsDir(consortDir, feature, story);
+  if (!fs3.existsSync(dir)) return;
+  let stripped = 0;
+  for (const name of fs3.readdirSync(dir)) {
+    if (!name.endsWith(".json")) continue;
+    const p = (0, import_node_path3.join)(dir, name);
+    try {
+      const ac = JSON.parse(fs3.readFileSync(p, "utf8"));
+      if (!("architectural_notes" in ac)) continue;
+      fs3.mkdirSync((0, import_node_path3.join)(backupDir, "acs"), { recursive: true });
+      fs3.cpSync(p, (0, import_node_path3.join)(backupDir, "acs", name));
+      delete ac.architectural_notes;
+      fs3.writeFileSync(p, JSON.stringify(ac, null, 2) + "\n");
+      stripped++;
+    } catch {
+    }
+  }
+  if (stripped > 0) cleared.push(`acs/*.json architectural_notes stripped (${stripped}) \u2014 architect re-annotates`);
 }
 
 // bin/consort/reopen-story.cli.ts
@@ -6941,6 +7028,9 @@ function parseArgs(argv) {
       case "--story":
         out.story = argv[++i];
         break;
+      case "--from":
+        out.from = argv[++i];
+        break;
       case "--reason":
         out.reason = argv[++i];
         break;
@@ -6954,7 +7044,14 @@ function parseArgs(argv) {
       case "-h":
       case "--help":
         process.stdout.write(
-          'consort-reopen-story , send a story back to the design lane for a genuine re-author (backed up).\n\n  consort-reopen-story --feature <F> --story <S> [--reason "<why>"]\n\nClears acs/, test-list-per-story.json, reflect-verdict.json, plan.json and empties story.json acs[]\n(so hasAcs=false and the Spec Author is re-dispatched), AND resets the pipeline entry to designing\n(dropping the spec gate, experiment record, and acceptance), clears the feature deploy-evidence, and\nclears the coarse phase , so a DONE + merged + ACCEPTED story reopens in one command. Backs everything\nup first. It CANNOT clear a live git/Lakebase experiment branch , it prints that as the one step left.\n'
+          `consort-reopen-story \u2013 send a story back to the design lane for a genuine re-author (backed up).
+
+  consort-reopen-story --feature <F> --story <S> [--from <role>] [--reason "<why>"]
+
+Default (full reopen): clears acs/, test-list, reflect-verdict, plan and empties story.json acs[]
+(hasAcs=false -> the Spec Author is re-dispatched). --from <role> is a PROPORTIONATE scoped reopen:
+it reverts only that role's output + everything downstream, keeps the upstream design, and the drive
+resumes AT that role. Roles: ` + DESIGN_LANE_ORDER.join(" -> ") + ".\n  e.g. --from test-strategist  (re-author the test-list only; keeps ACs/architecture/schema)\ntest-strategist/navigator are STORY-local; architect-reviewer/dba/ux-designer revert FEATURE-shared\nartifacts (a sibling story not yet gated re-derives too). Either way it resets the pipeline -> designing\n(drops the spec gate + experiment + acceptance so the gate is re-surfaced with fresh integrity), clears\nthe feature deploy-evidence + coarse phase, and backs everything up. It CANNOT clear a live git/Lakebase\nexperiment branch \u2013 it prints that as the one step left.\n"
         );
         process.exit(0);
     }
@@ -6967,21 +7064,36 @@ async function main() {
     process.stderr.write("consort-reopen-story: --feature and --story are required.\n");
     return 2;
   }
+  if (args.from !== void 0 && !DESIGN_LANE_ORDER.includes(args.from)) {
+    process.stderr.write(`consort-reopen-story: --from must be one of ${DESIGN_LANE_ORDER.join(", ")} (got "${args.from}").
+`);
+    return 2;
+  }
   const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
-  const res = reopenStoryForRedesign(consortDir, args.feature, args.story);
+  const from = args.from;
+  const res = from ? reopenStoryFromRole(consortDir, args.feature, args.story, from) : reopenStoryForRedesign(consortDir, args.feature, args.story);
   if (!res.cleared.length) {
-    process.stdout.write(`consort-reopen-story: ${args.story} had no design artifacts to clear (already needs design).
+    process.stdout.write(`consort-reopen-story: ${args.story} had no design artifacts to clear${from ? ` from ${from}` : ""} (nothing to revert).
 `);
     return 0;
   }
-  process.stdout.write(`consort-reopen-story: reopened ${args.feature}/${args.story} for redesign.
+  const scope = from ? `from ${from}` : "for redesign (full)";
+  process.stdout.write(`consort-reopen-story: reopened ${args.feature}/${args.story} ${scope}.
 `);
   process.stdout.write(`  cleared (backed up to ${res.backupDir}):
 `);
   for (const c of res.cleared) process.stdout.write(`    - ${c}
 `);
+  const resume = from ? from.replace("navigator", "navigator (reflect)") : "Spec Author";
   process.stderr.write(
-    "\nThis reset the artifacts AND the pipeline entry (spec gate + experiment record + acceptance -> designing),\nthe feature deploy-evidence, and the coarse phase. Two things remain:\n  1. Discard the story's actual git/Lakebase experiment BRANCH if one exists , this cannot clear a\n     live branch, only the pipeline record of it. Do NOT leave it orphaned.\n  2. Re-run the drive: hasAcs is now false and the entry is `designing`, so it re-dispatches the Spec\n     Author -> Architect -> DBA -> Test Strategist -> reflect -> the spec gate (a genuine re-author),\n     then cuts a FRESH experiment and re-runs the build + deploy gates.\n"
+    `
+This reset the design tail AND the pipeline entry (spec gate + experiment + acceptance -> designing),
+the feature deploy-evidence, and the coarse phase. Two things remain:
+  1. Discard the story's actual git/Lakebase experiment BRANCH if one exists \u2013 this cannot clear a
+     live branch, only the pipeline record of it. Do NOT leave it orphaned.
+  2. Re-run the drive: it re-derives the resume point at the ${resume} and re-runs the design tail ->
+     the spec gate (re-surfaced + re-approved, fresh integrity), then cuts a FRESH experiment and rebuilds.
+`
   );
   return 0;
 }
