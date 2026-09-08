@@ -444,9 +444,13 @@ function Pre({ children, fill }: { children: React.ReactNode; fill?: boolean }) 
 
 // `fill` makes the section grow to share the panel height (its label fixed, its body flexing) so a
 // `fill` Pre inside it scrolls within that bound — used for the transcript's Prompt / Reasoning.
-function Section({ label, children, fill }: { label: string; children: React.ReactNode; fill?: boolean }) {
+// `fill` grows the section to share the column height (and scroll its own body). A NUMBER sets the
+// flex-grow WEIGHT, so sections can take unequal shares — the prompt + tools carry the most, the
+// final reasoning a smaller slice.
+function Section({ label, children, fill }: { label: string; children: React.ReactNode; fill?: boolean | number }) {
+  const grow = typeof fill === "number" ? fill : fill ? 1 : 0;
   return (
-    <div style={fill ? { flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column" } : undefined}>
+    <div style={fill ? { flex: `${grow} 1 0`, minHeight: 0, display: "flex", flexDirection: "column" } : undefined}>
       <div style={{ flex: "none", fontSize: "0.62rem", fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
       {children}
     </div>
@@ -747,8 +751,8 @@ export function TranscriptView({ turn }: { turn: TurnPayload }) {
         <Pre fill>{prompt || "(empty)"}</Pre>
       </Section>
       {tools.length > 0 ? (
-        <Section label={`◂ Tools ${role} invoked (${tools.length})`}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 168, overflowY: "auto" }}>
+        <Section label={`◂ Tools ${role} invoked (${tools.length})`} fill>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: "1 1 0", minHeight: 0, overflowY: "auto" }}>
             {tools.map((t, i) => {
               // Tool lines arrive as "ToolName rest of the call…"; bold the tool name and mute the
               // arguments so a viewer scans WHICH tools ran without the args drowning them out
@@ -767,7 +771,9 @@ export function TranscriptView({ turn }: { turn: TurnPayload }) {
         </Section>
       ) : null}
       {reasoning ? (
-        <Section label={`◂ ${role}'s final reasoning`} fill>
+        // Final reasoning gets a SMALLER share (weight 0.4) — the prompt (▸) and the tools list are
+        // the primary content, so they take the bulk of the height; reasoning scrolls within its slice.
+        <Section label={`◂ ${role}'s final reasoning`} fill={0.4}>
           <Pre fill>{reasoning}</Pre>
         </Section>
       ) : null}
