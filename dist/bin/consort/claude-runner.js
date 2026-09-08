@@ -6647,7 +6647,7 @@ var require_ajv = __commonJS({
 
 // consort/orchestrator/drive/claude-runner.ts
 init_esm_shims();
-import { spawn } from "child_process";
+import { spawn, execFileSync } from "child_process";
 
 // consort/config/consort-env.ts
 init_esm_shims();
@@ -8895,6 +8895,20 @@ var UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
 function defaultMcpConfigForRole(role) {
   return role === "ux-designer" ? path8.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : void 0;
 }
+var UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] };
+var uxBrowserEnsured = false;
+function ensureUxBrowserChromium() {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)\u2026\n");
+    execFileSync(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium \u2014 the ux-designer will degrade to the brief if the browser can't launch\n"
+    );
+  }
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -8990,7 +9004,10 @@ function execRunner(cfg) {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -9253,12 +9270,14 @@ export {
   ClaudeTurnError,
   CliEffectError,
   ReplayCorpusMissError,
+  UX_BROWSER_INSTALL_CMD,
   UX_BROWSER_MCP_CONFIG,
   buildCfg,
   claudeBaseArgs,
   claudeToolArgs,
   defaultMcpConfigForRole,
   defaultTurnMonitor,
+  ensureUxBrowserChromium,
   execRunner,
   peekLastAgentTranscript,
   peekLastAgentUsage,

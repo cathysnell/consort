@@ -9,7 +9,7 @@
 // drive's main() and crashing with exit-3. This module has NO main() and NO
 // isCliEntry, so importing it NEVER drags a CLI entry point.
 
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { consortEnv } from "../../config/consort-env.js";
 import { resyncAgentsOnKitDrift } from "../../setup/project-consort-setup.js";
 import { resolveConsortDir, syncBacklog } from "../../config/consort-paths.js";
@@ -553,6 +553,33 @@ export function defaultMcpConfigForRole(role: string): string | undefined {
   return role === "ux-designer" ? path.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : undefined;
 }
 
+/** The command that installs the browser the ux-designer's MCP drives. `@playwright/mcp` does
+ *  NOT auto-install a browser — without Chromium present the MCP starts but every navigate fails
+ *  ("browser not installed"), so the ux-designer reports the browser unavailable and degrades to
+ *  the brief. `@latest` keeps the installed browser aligned with `@playwright/mcp@latest` in
+ *  ux-browser-mcp.json. Exported so the guard test pins it. */
+export const UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] } as const;
+
+let uxBrowserEnsured = false;
+/** Ensure Playwright's Chromium is installed BEFORE the ux-designer's browser MCP launches. Run
+ *  here (in the drive, ahead of the `claude -p` spawn) rather than inside the MCP command so the
+ *  potentially slow first-time download happens OUTSIDE the MCP's own startup timeout — otherwise
+ *  a cold Chromium fetch makes the server look like it failed to start. Idempotent (a no-op once
+ *  installed), memoized to once per drive process, and never fatal: on failure the ux-designer
+ *  still runs and degrades to the brief exactly as it does when the browser is unavailable. */
+export function ensureUxBrowserChromium(): void {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)…\n");
+    execFileSync(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium — the ux-designer will degrade to the brief if the browser can't launch\n",
+    );
+  }
+}
+
 /**
  * The base `claude -p` spawn args for a role turn. Pure + exported so the flag set
  * is guardable. Headless essentials: -p (print), --agent/--model, --strict-mcp-config,
@@ -742,7 +769,13 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         // --strict-mcp-config, ONLY this file's servers load, for this turn only. A
         // server that fails to start is non-fatal (the agent runs without those tools);
         // absent on every other role, so their spawn is byte-identical.
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          // The ux-designer's browser MCP (@playwright/mcp) needs Chromium present, and it does
+          // not install one itself — ensure it up front (outside the MCP's startup timeout) so the
+          // browser actually launches instead of the ux-designer degrading to the brief.
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         // Optional tool-scope restriction (optimize harness Family-2 lever). A
         // normal drive sets neither field, so this is a no-op there.
         baseArgs.push(...claudeToolArgs(cmd));

@@ -14,7 +14,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultMcpConfigForRole, UX_BROWSER_MCP_CONFIG } from "../../consort/orchestrator/drive/claude-runner.js";
+import { defaultMcpConfigForRole, UX_BROWSER_MCP_CONFIG, UX_BROWSER_INSTALL_CMD } from "../../consort/orchestrator/drive/claude-runner.js";
 
 const KIT_ROOT = path.resolve(__dirname, "..", "..");
 const CONFIG_PATH = path.join(KIT_ROOT, UX_BROWSER_MCP_CONFIG);
@@ -48,6 +48,25 @@ describe("ux-designer browser MCP: the shipped config file", () => {
     // Playwright manages its own Chromium and runs headless in the drive.
     expect(playwright!.args?.some((a) => a.includes("@playwright/mcp"))).toBe(true);
     expect(playwright!.args).toContain("--headless");
+    // --yes is LOAD-BEARING: the MCP launches non-interactively (no TTY). Without it, npx blocks
+    // on the first-use "Ok to proceed?" install prompt for @playwright/mcp, the server never comes
+    // up, and the ux-designer reports the browser unavailable. It must precede the package spec.
+    expect(playwright!.args, "npx must run non-interactively (--yes) or the first-use install prompt hangs the MCP").toContain("--yes");
+    expect(playwright!.args!.indexOf("--yes")).toBeLessThan(playwright!.args!.findIndex((a) => a.includes("@playwright/mcp")));
+  });
+});
+
+describe("ux-designer browser MCP: Chromium is ensured before the turn", () => {
+  it("the kit installs Chromium (npx --yes playwright install chromium) so the browser can launch", () => {
+    // @playwright/mcp does not auto-install a browser; without this the MCP starts but every
+    // navigate fails and the ux-designer silently degrades to the brief. The drive runs this
+    // BEFORE the spawn (outside the MCP startup timeout).
+    expect(UX_BROWSER_INSTALL_CMD.command).toBe("npx");
+    expect(UX_BROWSER_INSTALL_CMD.args).toContain("--yes");
+    expect(UX_BROWSER_INSTALL_CMD.args).toContain("install");
+    expect(UX_BROWSER_INSTALL_CMD.args).toContain("chromium");
+    // @latest keeps the installed browser aligned with @playwright/mcp@latest in the config.
+    expect(UX_BROWSER_INSTALL_CMD.args.some((a) => a.startsWith("playwright"))).toBe(true);
   });
 });
 

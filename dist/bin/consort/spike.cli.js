@@ -7294,7 +7294,7 @@ function buildResourceAttrs(deps = {}) {
 
 // consort/orchestrator/drive/claude-runner.ts
 init_esm_shims();
-import { spawn as spawn2 } from "child_process";
+import { spawn as spawn2, execFileSync } from "child_process";
 
 // consort/config/consort-env.ts
 init_esm_shims();

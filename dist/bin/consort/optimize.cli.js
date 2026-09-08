@@ -6921,7 +6921,7 @@ function median(xs) {
 
 // consort/orchestrator/drive/claude-runner.ts
 init_esm_shims();
-import { spawn } from "child_process";
+import { spawn, execFileSync } from "child_process";
 
 // consort/config/consort-env.ts
 init_esm_shims();
@@ -9376,6 +9376,20 @@ var UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
 function defaultMcpConfigForRole(role) {
   return role === "ux-designer" ? path8.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : void 0;
 }
+var UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] };
+var uxBrowserEnsured = false;
+function ensureUxBrowserChromium() {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)\u2026\n");
+    execFileSync(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium \u2014 the ux-designer will degrade to the brief if the browser can't launch\n"
+    );
+  }
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -9471,7 +9485,10 @@ function execRunner(cfg) {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -12339,7 +12356,7 @@ import { getConnection } from "@databricks-solutions/lakebase-scm-utils/lakebase
 init_esm_shims();
 import { existsSync as existsSync28, mkdirSync as mkdirSync18, readdirSync as readdirSync17, readFileSync as readFileSync22, statSync as statSync12, writeFileSync as writeFileSync13 } from "fs";
 import { join as join28 } from "path";
-import { execFileSync } from "child_process";
+import { execFileSync as execFileSync2 } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 var RUNTIME_ARTIFACT_PREFIXES = [
   ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
@@ -12353,7 +12370,7 @@ function branchIdOf(info) {
 }
 function gitIsAncestor(cwd, ancestor, descendant) {
   try {
-    execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+    execFileSync2("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
       cwd,
       stdio: ["ignore", "ignore", "pipe"]
     });
@@ -12366,7 +12383,7 @@ function gitIsAncestor(cwd, ancestor, descendant) {
 }
 function gitRevParse(cwd, ref) {
   try {
-    return execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], {
+    return execFileSync2("git", ["rev-parse", "--verify", "--quiet", ref], {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
@@ -12397,17 +12414,17 @@ async function cutExperiment(args, deps = {}) {
       architectureDir(consortDir)
     ].filter((p) => existsSync28(p));
     if (corpusPaths.length > 0) {
-      execFileSync("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
-      const staged = execFileSync("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      execFileSync2("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = execFileSync2("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
       if (staged) {
-        execFileSync("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+        execFileSync2("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
       }
     }
   } catch {
   }
   let dirtyTracked = "";
   try {
-    dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx))).join("\n").trim();
+    dirtyTracked = execFileSync2("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx))).join("\n").trim();
   } catch {
     dirtyTracked = "";
   }
@@ -15683,7 +15700,7 @@ function makeOpusJudge(opts) {
 // consort/optimize/optimize-live.ts
 init_esm_shims();
 import { existsSync as existsSync51, mkdirSync as mkdirSync32, readFileSync as readFileSync48, rmSync as rmSync15, writeFileSync as writeFileSync29 } from "fs";
-import { execFileSync as execFileSync2 } from "child_process";
+import { execFileSync as execFileSync3 } from "child_process";
 import { join as join48 } from "path";
 
 // consort/optimize/optimize-agent-overlay.ts
@@ -15963,10 +15980,10 @@ function makeLiveSpawnTurn(featureId, seams) {
 function realBuildGitOps(projectDir) {
   return {
     async sha() {
-      return execFileSync2("git", ["rev-parse", "HEAD"], { cwd: projectDir, encoding: "utf8" }).trim();
+      return execFileSync3("git", ["rev-parse", "HEAD"], { cwd: projectDir, encoding: "utf8" }).trim();
     },
     async resetHard(sha) {
-      execFileSync2("git", ["reset", "--hard", sha], { cwd: projectDir, stdio: "ignore" });
+      execFileSync3("git", ["reset", "--hard", sha], { cwd: projectDir, stdio: "ignore" });
     }
   };
 }

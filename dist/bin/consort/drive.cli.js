@@ -11650,7 +11650,7 @@ import { randomUUID as randomUUID2 } from "crypto";
 
 // consort/orchestrator/drive/claude-runner.ts
 init_esm_shims();
-import { spawn as spawn3 } from "child_process";
+import { spawn as spawn3, execFileSync as execFileSync3 } from "child_process";
 
 // consort/setup/project-consort-setup.ts
 init_esm_shims();
@@ -12614,6 +12614,20 @@ var UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
 function defaultMcpConfigForRole(role) {
   return role === "ux-designer" ? path11.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : void 0;
 }
+var UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] };
+var uxBrowserEnsured = false;
+function ensureUxBrowserChromium() {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)\u2026\n");
+    execFileSync3(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium \u2014 the ux-designer will degrade to the brief if the browser can't launch\n"
+    );
+  }
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -12709,7 +12723,10 @@ function execRunner(cfg) {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -15108,7 +15125,7 @@ import { isCliEntry } from "@databricks-solutions/lakebase-scm-utils/util";
 
 // consort/orchestrator/provisioning/credentials.ts
 init_esm_shims();
-import { execFileSync as execFileSync3 } from "child_process";
+import { execFileSync as execFileSync4 } from "child_process";
 import { checkDatabricksAuth, databricksAuthPrereqMessage } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 async function driveAuthPreflight(host, check = checkDatabricksAuth) {
   const res = await check(host);

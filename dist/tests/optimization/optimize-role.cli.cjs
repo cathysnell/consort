@@ -10125,6 +10125,20 @@ function claudeToolArgs(cmd) {
   if (cmd.disallowedTools && cmd.disallowedTools.length) out.push("--disallowed-tools", cmd.disallowedTools.join(","));
   return out;
 }
+var UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] };
+var uxBrowserEnsured = false;
+function ensureUxBrowserChromium() {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)\u2026\n");
+    (0, import_node_child_process4.execFileSync)(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium \u2014 the ux-designer will degrade to the brief if the browser can't launch\n"
+    );
+  }
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -10220,7 +10234,10 @@ function execRunner(cfg) {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];

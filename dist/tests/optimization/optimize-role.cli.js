@@ -8901,7 +8901,7 @@ import { randomUUID as randomUUID2 } from "crypto";
 
 // consort/orchestrator/drive/claude-runner.ts
 init_esm_shims();
-import { spawn } from "child_process";
+import { spawn, execFileSync } from "child_process";
 
 // consort/setup/project-consort-setup.ts
 init_esm_shims();
@@ -10101,6 +10101,20 @@ function claudeToolArgs(cmd) {
   if (cmd.disallowedTools && cmd.disallowedTools.length) out.push("--disallowed-tools", cmd.disallowedTools.join(","));
   return out;
 }
+var UX_BROWSER_INSTALL_CMD = { command: "npx", args: ["--yes", "playwright@latest", "install", "chromium"] };
+var uxBrowserEnsured = false;
+function ensureUxBrowserChromium() {
+  if (uxBrowserEnsured) return;
+  uxBrowserEnsured = true;
+  try {
+    process.stderr.write("[drive] ensuring Playwright Chromium for the ux-designer browser (one-time)\u2026\n");
+    execFileSync(UX_BROWSER_INSTALL_CMD.command, [...UX_BROWSER_INSTALL_CMD.args], { stdio: "ignore" });
+  } catch {
+    process.stderr.write(
+      "[drive] could not pre-install Chromium \u2014 the ux-designer will degrade to the brief if the browser can't launch\n"
+    );
+  }
+}
 function claudeBaseArgs(cmd) {
   return [
     "-p",
@@ -10196,7 +10210,10 @@ function execRunner(cfg) {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
-        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
+        if (cmd.mcpConfig) {
+          if (cmd.role === "ux-designer") ensureUxBrowserChromium();
+          baseArgs.push("--mcp-config", cmd.mcpConfig);
+        }
         baseArgs.push(...claudeToolArgs(cmd));
         const sessionArgsFor = (forceFresh) => {
           if (!cmd.resumeKey) return [];
@@ -10663,7 +10680,7 @@ import { getConnection } from "@databricks-solutions/lakebase-scm-utils/lakebase
 init_esm_shims();
 import { existsSync as existsSync24, mkdirSync as mkdirSync18, readdirSync as readdirSync14, readFileSync as readFileSync22, statSync as statSync9, writeFileSync as writeFileSync14 } from "fs";
 import { join as join25 } from "path";
-import { execFileSync } from "child_process";
+import { execFileSync as execFileSync2 } from "child_process";
 import { createPairedBranch, deletePairedBranch } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 var RUNTIME_ARTIFACT_PREFIXES = [
   ...ALL_ARTIFACT_ROOTS.map((r) => `${r}/`),
@@ -10677,7 +10694,7 @@ function branchIdOf(info) {
 }
 function gitIsAncestor(cwd, ancestor, descendant) {
   try {
-    execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+    execFileSync2("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
       cwd,
       stdio: ["ignore", "ignore", "pipe"]
     });
@@ -10690,7 +10707,7 @@ function gitIsAncestor(cwd, ancestor, descendant) {
 }
 function gitRevParse(cwd, ref) {
   try {
-    return execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], {
+    return execFileSync2("git", ["rev-parse", "--verify", "--quiet", ref], {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
@@ -10721,17 +10738,17 @@ async function cutExperiment(args, deps = {}) {
       architectureDir(consortDir)
     ].filter((p) => existsSync24(p));
     if (corpusPaths.length > 0) {
-      execFileSync("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
-      const staged = execFileSync("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
+      execFileSync2("git", ["add", "--", ...corpusPaths], { cwd: projectDir });
+      const staged = execFileSync2("git", ["diff", "--cached", "--name-only", "--", ...corpusPaths], { cwd: projectDir, encoding: "utf8" }).trim();
       if (staged) {
-        execFileSync("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
+        execFileSync2("git", ["commit", "--no-verify", "-m", `design corpus: ${featureId}/${storyId} (pre-experiment persist)`, "--", ...corpusPaths], { cwd: projectDir });
       }
     }
   } catch {
   }
   let dirtyTracked = "";
   try {
-    dirtyTracked = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx))).join("\n").trim();
+    dirtyTracked = execFileSync2("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: projectDir, encoding: "utf8" }).split("\n").filter((l) => l.trim().length > 0 && !RUNTIME_ARTIFACT_PREFIXES.some((pfx) => l.slice(3).startsWith(pfx))).join("\n").trim();
   } catch {
     dirtyTracked = "";
   }
@@ -15900,7 +15917,7 @@ function formatRoleSweepReport(r) {
 // tests/integration/live/driver-build-support.ts
 init_esm_shims();
 import { readFileSync as readFileSync53, writeFileSync as writeFileSync33, existsSync as existsSync58, statSync as statSync21, readdirSync as readdirSync34, mkdtempSync as mkdtempSync2, mkdirSync as mkdirSync37, chmodSync as chmodSync2, rmSync as rmSync18, cpSync as cpSync10 } from "fs";
-import { execFileSync as execFileSync5 } from "child_process";
+import { execFileSync as execFileSync6 } from "child_process";
 import { tmpdir as tmpdir2 } from "os";
 import { join as join60, relative as relative8 } from "path";
 
@@ -15982,11 +15999,11 @@ init_esm_shims();
 
 // consort/orchestrator/provisioning/credentials.ts
 init_esm_shims();
-import { execFileSync as execFileSync2 } from "child_process";
+import { execFileSync as execFileSync3 } from "child_process";
 import { checkDatabricksAuth, databricksAuthPrereqMessage } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 function resolveHostFromProfile(profile, timeoutMs = 15e3) {
   try {
-    const raw = execFileSync2("databricks", ["auth", "describe", "--profile", profile, "-o", "json"], {
+    const raw = execFileSync3("databricks", ["auth", "describe", "--profile", profile, "-o", "json"], {
       encoding: "utf-8",
       timeout: timeoutMs
     });
@@ -16071,7 +16088,7 @@ function clearKitSingleSource() {
 init_esm_shims();
 import { rmSync as rmSync12 } from "fs";
 import { join as join48 } from "path";
-import { execFileSync as execFileSync3 } from "child_process";
+import { execFileSync as execFileSync4 } from "child_process";
 
 // consort/lakebase/create-project.ts
 init_esm_shims();
@@ -16131,7 +16148,7 @@ async function realRemoveProjectEffects() {
     stopRunner: (name) => scm.stopRunner(name),
     removeRunner: (a) => scm.removeRunner(a),
     deleteGithubRepo: (repo) => {
-      execFileSync3("gh", ["repo", "delete", repo, "--yes"], { stdio: "ignore", timeout: 3e4 });
+      execFileSync4("gh", ["repo", "delete", repo, "--yes"], { stdio: "ignore", timeout: 3e4 });
     },
     deleteLakebaseProject: (a) => scm.deleteLakebaseProject({ projectId: a.projectId, host: a.host })
   };
@@ -16234,11 +16251,11 @@ var catalogueLifecycleDeps = {
 init_esm_shims();
 import { cpSync as cpSync7, existsSync as existsSync46, rmSync as rmSync13 } from "fs";
 import { join as join49 } from "path";
-import { execFileSync as execFileSync4 } from "child_process";
+import { execFileSync as execFileSync5 } from "child_process";
 import { createWorktree } from "@databricks-solutions/lakebase-scm-utils/git";
 function forceRemoveWorktree(projectDir, wtDir) {
   try {
-    execFileSync4("git", ["worktree", "remove", "--force", wtDir], { cwd: projectDir, stdio: "ignore", timeout: 3e4 });
+    execFileSync5("git", ["worktree", "remove", "--force", wtDir], { cwd: projectDir, stdio: "ignore", timeout: 3e4 });
     return;
   } catch {
   }
@@ -16247,7 +16264,7 @@ function forceRemoveWorktree(projectDir, wtDir) {
   } catch {
   }
   try {
-    execFileSync4("git", ["worktree", "prune"], { cwd: projectDir, stdio: "ignore", timeout: 3e4 });
+    execFileSync5("git", ["worktree", "prune"], { cwd: projectDir, stdio: "ignore", timeout: 3e4 });
   } catch {
   }
 }
@@ -18822,8 +18839,8 @@ async function runDriverGreenOnScaffold(project, opts = {}) {
   const projectDir = wtDir;
   try {
     layBundle(projectDir, consortDir, driverTurn, b);
-    execFileSync5("git", ["add", "-A"], { cwd: projectDir, stdio: "pipe" });
-    execFileSync5("git", ["commit", "-m", `seed: pre-turn F6/S3 snapshot for driver ${driverTurn} (live)`, "--no-verify"], { cwd: projectDir, stdio: "pipe" });
+    execFileSync6("git", ["add", "-A"], { cwd: projectDir, stdio: "pipe" });
+    execFileSync6("git", ["commit", "-m", `seed: pre-turn F6/S3 snapshot for driver ${driverTurn} (live)`, "--no-verify"], { cwd: projectDir, stdio: "pipe" });
     await cutExperiment({
       instance: lakebaseProjectId,
       consortDir,
