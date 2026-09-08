@@ -435,6 +435,14 @@ async function main(): Promise<number> {
         process.stdout.write(`[consort-watch] turn boundary – the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.\n`);
         return 0;
       }
+      if (baselineForAction === null && ns === null) {
+        // Plain detached-process watch (scaffolder / installer), not a drive: there is no
+        // next.json to record a stop, so a gone pid is normal completion, not a crash. Exit 0
+        // (the watch did its job); the caller reads the log for the process's own result. Without
+        // this the Monitor tool reports a SUCCESSFUL scaffold/install as "script failed (exit 3)".
+        process.stdout.write(`[consort-watch] process (pid ${args.pid}) finished — see the log for its result.\n`);
+        return 0;
+      }
       process.stderr.write(`consort-watch: drive pid ${args.pid} is no longer running with no progress + no stop recorded – run consort-next to check for a crash.\n`);
       return 3;
     }

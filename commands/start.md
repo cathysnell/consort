@@ -173,7 +173,12 @@ Then run the kit's creator YOURSELF, silently — build the command internally a
 
 **Do not confuse the two parts when you narrate.** Part 1 (scaffolding) does NOT download the toolkit – it runs from the plugin's ALREADY-installed binary, so the first thing you see is `[doctor] …`, not a download. The ONLY kit download is Part 2 (the refresh). Never label a kit download as "Part 1".
 
-**NEVER blame a slow or quiet setup on creating the Lakebase branch.** Cutting a Lakebase branch is instantaneous (copy-on-write) — never the slow step. If Part 1 looks quiet, the cause is the self-hosted CI runner, the Part 2 download, the network, or an environment/auth problem — surface THAT from the live log, never a fabricated branch wait. Report only what the log actually shows; do not narrate a step the log has not reached.
+**The genuinely slow Part-1 steps, and why:**
+- **Staging tier (tiers 2/3):** pushes the entire scaffolding to the staging tier and runs it through its own PR/merge.
+- **Self-hosted CI runner:** downloads, registers, and starts the runner.
+- **Part 2 toolkit install:** the kit download.
+
+Report only what the live log shows; don't narrate a step it hasn't reached.
 
 **Launch scaffolding from the plugin's OWN binary with `--detach`, and MONITOR it – NEVER foreground.** The plugin already ships the scaffolder (`dist/bin/lakebase/create-project.cli.js`), so run THAT directly. Do NOT `npx`-fetch the kit again just to run create – that re-downloads the whole kit (a silent extra download BEFORE Part 1 even starts) and is the redundant fetch that used to look hung. `--detach` re-launches scaffolding in its OWN session and returns at once, capturing every step (`[doctor]`, `[Creating GitHub repository...]`, `[Creating Lakebase database …]`, `[Scaffolding project files...]`, `[Setting up CI auth …]`, `[Setting up the self-hosted CI runner …]`, `[Cutting staging tier …]`, `[Creating initial commit...]`, `[Project created successfully!]`) to a log. This is the ONLY launch that both **(a) cannot hit the harness bash-timeout** (a foreground call is killed; a plain `&` is reaped at turn-end) **and (b) lets you see each step LIVE** – **MONITOR it** with the canonical watch command (in the block below); do NOT hand-roll a poll loop, and do NOT predict how long it takes. Narrate each step as it arrives, then relay the final `Next:` hint.
 
