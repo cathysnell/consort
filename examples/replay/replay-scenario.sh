@@ -71,7 +71,7 @@ if [[ -f "${SCEN}/intake/product-overview.md" ]]; then
 else
   export REPLAY_INTAKE_DIR="${SCEN}/recorded-artifacts"
 fi
-export LAKEBASE_SFTDD_REPLAY_BUILD_DIR="${SCEN}/recorded-build"
+export LAKEBASE_CONSORT_REPLAY_BUILD_DIR="${SCEN}/recorded-build"
 
 # One project for the whole scenario, so feature N+1 builds on feature N's merged
 # state (the recorded DB + git lineage). Default name is scenario-scoped.

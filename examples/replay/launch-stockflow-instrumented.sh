@@ -60,7 +60,7 @@ export LAKEBASE_CONSORT_AUTO_CONTINUE=1        # auto-confirm the navigator paus
 # is ON by default, but set it EXPLICITLY here so a stray USE_MANIFEST_STEPS=0 in the environment can
 # never silently drop the capture onto the retired legacy dispatch. (The flag is not retired , it does
 # not prevent capture , per the "flag on unless it blocks" rule; keep it pinned on for the capture.)
-export LAKEBASE_SFTDD_USE_MANIFEST_STEPS=1
+export LAKEBASE_CONSORT_USE_MANIFEST_STEPS=1
 
 echo "[launch] record dir : $REC"
 echo "[launch] project    : $PROJECT_NAME  ($PROJECT_DIR)"

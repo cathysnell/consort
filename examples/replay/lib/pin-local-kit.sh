@@ -97,9 +97,12 @@ resolve_kit_single_source() {
   export KIT_SINGLE_ROOT="$root"
   # Tell the generic scaffold `lk` which kit to resolve for PRE-project calls
   # (a scaffolded project reads .lakebase/kit-package, but the launchers invoke
-  # `lk --warm` / lakebase-create-project before any project exists). Respect an
-  # already-set value so a caller can override the package under test.
-  export LAKEBASE_KIT_PACKAGE="${LAKEBASE_KIT_PACKAGE:-$KIT_PACKAGE_DEFAULT}"
+  # `lk --warm` / lakebase-create-project before any project exists). This MUST match
+  # the package local_kit_cache_link pins the working-tree symlink under
+  # (KIT_PACKAGE_DEFAULT) , honoring an inbound override here while the cache slot
+  # stays under the default would point the shim at a package with no pinned slot.
+  # So the default is the single source for both; do not read an override.
+  export LAKEBASE_KIT_PACKAGE="$KIT_PACKAGE_DEFAULT"
   if [ -n "$published_ref" ]; then
     # Escape hatch: a real remote ref, resolved by lk from github , no local cache pin.
     export LAKEBASE_KIT_REF="$published_ref"

@@ -18,7 +18,7 @@
 #   run-to-release-engineer.sh --tiers 2 [--kit-ref <ref>] [--project-name <n>]
 #                              [--project-dir <dir>] [--feature <id>] [--corpus <dir>]
 # Env: DATABRICKS_HOST, GITHUB_OWNER, a CLI profile. Override the build corpus
-#      with LAKEBASE_SFTDD_REPLAY_BUILD_DIR.
+#      with LAKEBASE_CONSORT_REPLAY_BUILD_DIR.
 # Exit: 0 ok (resumed past the gate to completion); 1 scaffold failed; 2 a step failed.
 
 SMOKE_NAME="run-to-release-engineer"

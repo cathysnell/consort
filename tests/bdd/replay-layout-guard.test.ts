@@ -62,7 +62,12 @@ describe("replay launchers resolve the scaffold lk via the shared helper (anti-d
     // Rather than silently returning a dead path and letting a later `bash \"$KIT_LK\"`
     // die with an opaque \"No such file or directory\", the helper must error + return 1.
     const lib = fs.readFileSync(LIB, "utf8");
-    expect(lib, "kit_lk_path returns 1 when neither lk path exists").toMatch(/return 1/);
+    // Scope to the kit_lk_path body (up to its column-0 closing brace), so removing
+    // the loud-fail from THIS helper trips the guard even if a `return 1` survives
+    // elsewhere in the file.
+    const body = lib.match(/kit_lk_path\(\)\s*\{([\s\S]*?)\n\}/);
+    expect(body, "kit_lk_path() helper present").not.toBeNull();
+    expect(body?.[1] ?? "", "kit_lk_path returns 1 when neither lk path exists").toMatch(/return 1/);
   });
 
   for (const f of LAUNCHERS) {

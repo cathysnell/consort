@@ -210,6 +210,13 @@ if [[ -n "$CREATE" ]]; then
   [[ -f "$SC_CLI" ]] || echo "capture-scenario: WARNING , conditions reader missing (${SC_CLI}); scenario conditions will DEFAULT (run 'npm run build' in the kit). Scaffolding may use the wrong language/UI/tiers." >&2
   sc() { node "$SC_CLI" --manifest "$SCENARIO_MANIFEST" --field "$1" 2>/dev/null || true; }
   SC_UI="$(sc uiTrack)"; SC_LANG="$(sc language)"; SC_RUNNER="$(sc runner)"; SC_TIERS="$(sc tiers)"
+  # A present-but-STALE/BROKEN dist passes the -f check above yet throws at runtime,
+  # and `|| true` swallows it , so ALSO warn when the reader yielded NOTHING despite a
+  # real manifest (every field empty = conditions silently defaulted, the same
+  # wrong-stack failure). Non-fatal; still degrades to the --ui flag.
+  if [[ -f "$SC_CLI" && -f "$SCENARIO_MANIFEST" && -z "${SC_UI}${SC_LANG}${SC_RUNNER}${SC_TIERS}" ]]; then
+    echo "capture-scenario: WARNING , conditions reader (${SC_CLI}) returned NO fields from ${SCENARIO_MANIFEST} (stale/broken dist?); scenario conditions will DEFAULT (run 'npm run build' in the kit). Scaffolding may use the wrong language/UI/tiers." >&2
+  fi
   create_flags=(--tiers "${SC_TIERS:-$TIERS}")
   [[ "$SC_UI" == "true" || -n "$UI" ]] && create_flags+=(--ui-track)
   [[ -n "$SC_LANG" ]] && create_flags+=(--language "$SC_LANG")
