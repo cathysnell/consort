@@ -162,32 +162,20 @@ Step keys (`<step>`): build turns `red` / `green` / `review` / `refactor` / `ass
 
 Realize it: on the **Default** path pass no model flags. On the **Customize** path, pass any simple per-role model picks to `lakebase-create-project` via `--agent-model <role>=<model>`, then write per-role effort and any per-step model/effort maps into `.lakebase/consort-config.json` under `roles.<role>` after creation (the file is editable and resolver-honored). The selection persists there.
 
-Then run the kit's creator (surface the exact command first; report its output, which prints a `Next:` hint).
+Then run the kit's creator YOURSELF, silently — build the command internally and run it via your Bash tool; do NOT print or paste the command to the human. Narrate only the human-facing progress (the itemized steps below) and, at the end, the `Next:` hint. **The command blocks in this section are FOR YOU — never echo them to the user.**
 
-**BEFORE you run it, give the human the full timeline so they can step away and come back at the right time.** This is a one-time provision of a few minutes; it must not look hung, and they shouldn't have to babysit it. Present the itemized steps with their usual durations and a total ETA – something like:
+**Tell the human what's happening, but do NOT predict durations or an ETA.** This is a one-time setup in two parts; narrate each step AS it happens from the live log, and never quote a per-step time, a total, or a "come back in N minutes" — provisioning is usually much faster than any estimate, and a prediction just makes a fast finish look broken (and leaves you setting up a monitor for a window that has already elapsed). Something like:
 
-> "Setting up your project now – a **one-time setup, usually ~4-6 minutes total**, in two parts. You can step away and come back in about **6 minutes**.
+> "Setting up your project now — a one-time setup in two parts. I'll narrate each step as it happens and tell you the moment it's done (or if anything needs you).
 >
-> **Part 1 – provisioning (~2-4 min):**
-> 1. **GitHub repo** – create + clone (~5-15s)
-> 2. **Lakebase database** – provision Postgres + resolve the endpoint (~30-90s)
-> 3. **Project files** – scaffold the app + `.consort/` + wire E2E (~5-10s)
-> 4. **CI service principal** – the workflow identity (~5-15s)
-> 5. **Self-hosted CI runner** – download + register + start it (**~1-2 min – the slow one; looks quietest, that's normal**)
-> 6. **Staging tier** – push the git side, then cut the paired branch (~5-15s) *(only for `--tiers 2`/`3`; the Lakebase branch itself is instant — any brief wait is the git push)*
-> 7. **Initial commit + push** (~5-15s)
->
-> **Part 2 – Consort toolkit download (~1-2 min):** right after create I run `./scripts/lk --refresh`, which downloads the kit + its dependencies **once** for this version (instant on every command after). I'll stream each package as it installs. This is deliberately separate from create – it's a heavy download, so we do it once at a reliable point rather than risk it mid-provision.
->
-> I'll narrate each step as it happens and ping you the moment it's done (or if anything needs you)."
+> **Part 1 – provisioning:** GitHub repo → Lakebase database → project files (app + `.consort/` + E2E) → CI service principal → self-hosted CI runner → (tiers 2/3 only) staging tier → initial commit + push.
+> **Part 2 – Consort toolkit install:** right after create I run the kit refresh once for this version (instant on every command afterward)."
 
-**Do not confuse the two parts when you narrate.** **Part 1 (scaffolding) does NOT download the toolkit** – it runs from the plugin's ALREADY-installed binary, so the very first thing you see is `[doctor] …`, not a download. The **only** kit download is **Part 2** (`./scripts/lk --refresh`). Never label a kit download as "Part 1", and never tell the human "Part 1 is downloading the toolkit" – if you see download/`npm http fetch`/`lk: … downloading` lines, that is Part 2. (The old flow re-fetched the kit via `npx` at the start of create, which is exactly the mislabeling this removes.)
+**Do not confuse the two parts when you narrate.** Part 1 (scaffolding) does NOT download the toolkit – it runs from the plugin's ALREADY-installed binary, so the first thing you see is `[doctor] …`, not a download. The ONLY kit download is Part 2 (the refresh). Never label a kit download as "Part 1".
 
-Tune to the options (drop step 6 on `--no-github`/`--tiers 1`; a cold toolkit download over a slow network can push Part 2 to ~2-3 min).
+**NEVER blame a slow or quiet setup on creating the Lakebase branch.** Cutting a Lakebase branch is instantaneous (copy-on-write) — never the slow step. If Part 1 looks quiet, the cause is the self-hosted CI runner, the Part 2 download, the network, or an environment/auth problem — surface THAT from the live log, never a fabricated branch wait. Report only what the log actually shows; do not narrate a step the log has not reached.
 
-**NEVER blame a slow or quiet setup on creating the Lakebase branch.** Cutting a Lakebase branch is effectively instantaneous (copy-on-write) — it is NEVER the slow step, and you must not tell the human "it's still creating the Lakebase branch" or invent a branch-creation delay. The only genuinely slow steps are the **self-hosted CI runner** (step 5, ~1-2 min) and the **Part 2 toolkit download**. If Part 1 runs long or looks hung, the cause is the runner, the download, the network, or an environment/auth problem — surface THAT (read the live log), never a fabricated branch wait. Report only what the log actually shows; do not narrate a step the log has not reached.
-
-**Launch scaffolding from the plugin's OWN binary with `--detach`, and relay it poll-once – NEVER foreground.** The plugin already ships the scaffolder (`dist/bin/lakebase/create-project.cli.js`), so run THAT directly. Do NOT `npx`-fetch the kit again just to run create – that re-downloads the whole kit (a silent multi-minute window BEFORE Part 1 even starts) and is the redundant fetch that used to look hung. `--detach` re-launches scaffolding in its OWN session and returns at once, capturing every step (`[doctor]`, `[Creating GitHub repository...]`, `[Creating Lakebase database …]`, `[Scaffolding project files...]`, `[Setting up CI auth …]`, `[Setting up the self-hosted CI runner …]`, `[Cutting staging tier …]`, `[Creating initial commit...]`, `[Project created successfully!]`) to a log. This is the ONLY launch that both **(a) cannot hit the harness ~2min bash timeout** on a ~3-4 min provision (a foreground call is killed; a plain `&` is reaped at turn-end) **and (b) lets you see each step LIVE** – relay the log with **poll-once `consort-watch --since`** (a foreground tail loop buffers until it returns – "nothing until all done"). Relay each batch, re-poll with the printed cursor until `status=done`, then relay the final `Next:` hint.
+**Launch scaffolding from the plugin's OWN binary with `--detach`, and MONITOR it – NEVER foreground.** The plugin already ships the scaffolder (`dist/bin/lakebase/create-project.cli.js`), so run THAT directly. Do NOT `npx`-fetch the kit again just to run create – that re-downloads the whole kit (a silent extra download BEFORE Part 1 even starts) and is the redundant fetch that used to look hung. `--detach` re-launches scaffolding in its OWN session and returns at once, capturing every step (`[doctor]`, `[Creating GitHub repository...]`, `[Creating Lakebase database …]`, `[Scaffolding project files...]`, `[Setting up CI auth …]`, `[Setting up the self-hosted CI runner …]`, `[Cutting staging tier …]`, `[Creating initial commit...]`, `[Project created successfully!]`) to a log. This is the ONLY launch that both **(a) cannot hit the harness bash-timeout** (a foreground call is killed; a plain `&` is reaped at turn-end) **and (b) lets you see each step LIVE** – **MONITOR it** with the canonical watch command (in the block below); do NOT hand-roll a poll loop, and do NOT predict how long it takes. Narrate each step as it arrives, then relay the final `Next:` hint.
 
 ```bash
 # Resolve the plugin's shipped binaries (create-project + consort-watch), robust to
@@ -222,12 +210,11 @@ node "$CONSORT_ROOT/dist/bin/lakebase/create-project.cli.js" --detach \
   [--agent-model <role>=<model> ...]
 #   -> prints: "... scaffolding detached ... as pid <PID>" + "live log: <LOG>" + the relay cmd.
 
-# Relay it POLL-ONCE (one call per turn), narrating each batch, until status=done:
-#   node "$CONSORT_ROOT/dist/bin/consort/watch.cli.js" --since 0 --log "<LOG>" --pid "<PID>"
-#     -> relays new lines, ends with: [consort-watch] cursor=<N> status=<running|done|...>;
-#        re-poll with the printed <N> until status=done.
-#   next call: --since <N> (the printed cursor); repeat until status=done.
-# On done, relay the final `Next:` hint from the tail of the log.
+# MONITOR it — set up ONE Monitor-tool task with the canonical watch command (do NOT
+# hand-roll a poll loop). The SAME command monitors the scaffolder here and the installer below:
+#   node "$CONSORT_ROOT/dist/bin/consort/watch.cli.js" --monitor --log "<LOG>" --pid "<PID>"
+#     -> streams each step live AND alerts the instant the process exits, then stops itself.
+# Narrate each step as it arrives; on exit, relay the final `Next:` hint from the log tail.
 ```
 
 **Environment gate.** Before provisioning anything, `lakebase-create-project`
@@ -238,22 +225,22 @@ the environment, then re-run; do not pass `--skip-doctor` to force past a real
 failure (it only exists for the rare case the human has already verified the
 environment another way).
 
-On success, tell the user to enter the new project, refresh its runtime kit, and resume:
+On success, `cd` into the new project and run the kit refresh YOURSELF (Part 2 below — silently, monitored); do NOT tell the user to run it. Then hand the human only the project path and how to resume:
 
 ```
 cd <parent-dir>/<name>
-./scripts/lk --refresh --detach   # Part 2 kit download – detached + relayed poll-once (see below), NOT foreground
+./scripts/lk --refresh --detach   # Part 2 kit install – detached + monitored (see below), NOT foreground
 ```
 
-**Part 2 – the kit download (`./scripts/lk --refresh --detach`): relay it live the same way, NEVER foreground.** This is the other multi-minute step, so it uses the SAME detach + poll-once pattern as create – a foreground run buffers behind a spinner and a ~1-2 min install risks the ~2min bash timeout. Pass **`--detach`**: `lk` re-launches the install in its OWN session and returns at once, printing the child pid + a live-log path. The install streams **what is being installed** to that log (each package: `lk: npm http fetch GET 200 …/<pkg>…`), not just a clock. Relay it poll-once with the plugin's `consort-watch` (the project's own `./scripts/lk consort-watch` may not be installed YET – that is what this step installs):
+**Part 2 – the kit install (`./scripts/lk --refresh --detach`): detach + MONITOR it the same way, NEVER foreground.** A foreground run buffers behind a spinner and can hit the harness bash-timeout. Pass **`--detach`**: `lk` re-launches the install in its OWN session and returns at once, printing the child pid + a live-log path. The install streams **what is being installed** to that log (each package: `lk: npm http fetch GET 200 …/<pkg>…`). Monitor it with the SAME canonical watch command as the scaffolder, using the PLUGIN's `consort-watch` (the project's own `./scripts/lk consort-watch` may not be installed YET – that is what this step installs):
 ```bash
 # from inside the freshly created project dir:
 ./scripts/lk --refresh --detach
 #   -> prints: "toolkit install detached ... as pid <PID>" + "live log: <LOG>".
-# Relay poll-once with the PLUGIN's consort-watch (always present), until status=done:
-#   node "$CONSORT_ROOT/dist/bin/consort/watch.cli.js" --since 0 --log "<LOG>" --pid "<PID>"
+# MONITOR it (Monitor tool, PLUGIN's consort-watch — always present), SAME command as the scaffolder:
+#   node "$CONSORT_ROOT/dist/bin/consort/watch.cli.js" --monitor --log "<LOG>" --pid "<PID>"
 ```
-If you hand the command to the user to run themselves instead, tell them it's a one-time ~1-2 min download that prints each package as it installs.
+Run this refresh YOURSELF (the detached + monitor flow above), silently — do NOT print or paste the command, and do NOT hand it to the user to run. Tell them only that it's a one-time install (no ETA) and relay each package as it streams.
 
 then re-run **`/consort:start`** there (it will find `.consort/` and resume at `/plan`), or `./scripts/consort.sh plan` to open the orchestrator session directly. Do not start the workflow from the current directory, the project is elsewhere.
 
