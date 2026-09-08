@@ -75,7 +75,7 @@ const INTAKE_STEP_IDS = new Set(["p-intake", "p-intake-gate"]);
 
 type StepState = "done" | "current" | "pending" | "gate-current" | "escalation-current";
 
-export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpenRole?: (role: string) => void }) {
+export function LaneGraph({ state, onOpenRole }: { state: DashboardState; onOpenRole?: (role: string, stepId: string) => void }) {
   // The run's active step, from the ONE focus observation. Step ids are unique across lanes, so a
   // single value passed to every lane only matches (lights) in its owning lane. Gate/escalation/idle
   // focus means no step is running (currentStep null); a parked gate is read from state.focus.
@@ -112,7 +112,7 @@ function LanePanel({
   done: Set<string>;
   currentStep: string | null;
   state: DashboardState;
-  onOpenRole?: (role: string) => void;
+  onOpenRole?: (role: string, stepId: string) => void;
 }) {
   // Each lane card collapses to just its header (name · status · dot strip) on a header click.
   const [collapsed, setCollapsed] = useState(false);
@@ -339,7 +339,7 @@ function LaneSvg({
   done: Set<string>;
   currentStep: string | null;
   state: DashboardState;
-  onOpenRole?: (role: string) => void;
+  onOpenRole?: (role: string, stepId: string) => void;
 }) {
   // The BUILD lane is a fixed 3-row grid (col = grid slot, so steps ALIGN across rows): row 0 is
   // the happy path, row 1 is ASSESS placed directly under VERIFY (col 2), row 2 is the fan-out
@@ -761,7 +761,7 @@ function StepBox({
   state: StepState;
   meta?: LaneStepMeta | null;
   elapsed?: string | null; // current step only: formatted time since the turn started
-  onOpenRole?: (role: string) => void;
+  onOpenRole?: (role: string, stepId: string) => void;
 }) {
   const isGate = step.gate === true;
 
@@ -806,7 +806,7 @@ function StepBox({
   // terminals (b-hil / p-hil / d-hil) carry no role and stay inert. Not gate-controlled: opening a
   // role panel is a safe fallback even with no recorded turn, exactly like the bubble.
   const clickable = step.role != null && !!onOpenRole;
-  const open = clickable ? () => onOpenRole!(step.role!) : undefined;
+  const open = clickable ? () => onOpenRole!(step.role!, step.id) : undefined;
   const title = `${step.label} — ${step.sub}${isGate ? " (human gate)" : ""}${
     step.branch ? " (branch: only on failure)" : ""
   } · ${state.replace("gate-", "gate ")}${clickable ? ` · open ${step.role}'s turn` : ""}`;

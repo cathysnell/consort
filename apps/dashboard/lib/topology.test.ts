@@ -8,6 +8,7 @@ import {
   matchesStep,
   laneStepForEvent,
   laneProgress,
+  latestTurnOrdinalForStep,
   passedNodes,
   nodeForPhase,
   nodeById,
@@ -92,6 +93,25 @@ describe("topology — graph integrity", () => {
     for (const [phase, node] of Object.entries(PHASE_TO_NODE)) {
       expect(ids, `${phase} -> ${node}`).toContain(node);
     }
+  });
+
+  it("latestTurnOrdinalForStep resolves the STEP's latest turn, distinct from the role's other steps", () => {
+    // The navigator spans several build steps; clicking one must open THAT step's turn, not the
+    // role's latest. Each phase.start begins its step's turn (aligned recentTurns ordinal).
+    const ev = (event: string, metadata: Record<string, unknown>): AgentLogEvent => ({
+      timestamp: "t", level: "info", role: "navigator", event, message: "", metadata,
+    });
+    const events: AgentLogEvent[] = [
+      ev("phase.start", { phase: "red", buildMode: "red" }), // begins the RED turn
+      ev("turn.usage", { phase: "red" }),
+      ev("phase.start", { phase: "review", buildMode: "review" }), // begins the REVIEW turn
+      ev("turn.usage", { phase: "review" }),
+    ];
+    const recentTurns = [10, null, 11, null];
+    expect(latestTurnOrdinalForStep(events, recentTurns, "b-red")).toBe(10);
+    expect(latestTurnOrdinalForStep(events, recentTurns, "b-review")).toBe(11); // NOT 10 — step-specific
+    // a step with no turn in the window → null (caller falls back to the role shell, not a wrong turn)
+    expect(latestTurnOrdinalForStep(events, recentTurns, "b-refactor")).toBeNull();
   });
 
   it("every lifecycle node + gate has a STEP_OUTPUTS entry, so all are clickable to show outputs", () => {

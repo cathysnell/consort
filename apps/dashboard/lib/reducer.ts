@@ -49,16 +49,17 @@ export const SESSION_ACTIVE_MS = 15_000;
 /**
  * How many trailing events the board ships as `recentEvents` — a rolling window of the last N
  * events up to the playhead (scrubbing the transport re-folds up to the new playhead, so the window
- * slides). Capped at 20: the log pane shows the 20 most-recent events, not the whole run, to keep
- * the shipped payload small and the pane scannable. (Set to `Number.POSITIVE_INFINITY` to ship the
- * full stream instead.)
+ * slides). Capped at 40: the log pane shows the 40 most-recent events, not the whole run, to keep
+ * the shipped payload small and the pane scannable. 40 (not 20) so a clicked lane step's most-recent
+ * turn is resolvable from this window (latestTurnOrdinalForStep) without a server-side per-step map.
+ * (Set to `Number.POSITIVE_INFINITY` to ship the full stream instead.)
  *
  * Exported because a source aligning per-event data to this window (replay's/live's `recentTurns`)
  * derives its start index from the SAME constant — `start = max(0, at - RECENT_EVENT_TAIL)` — so
  * events and their turn ordinals stay index-aligned. A mismatch would shift every row's turn ordinal
  * and silently show the wrong transcript, so they MUST move together.
  */
-export const RECENT_EVENT_TAIL = 20;
+export const RECENT_EVENT_TAIL = 40;
 
 // Transcript-based permission detection proved too flaky to ship; the gate and escalation
 // banners stay on and reliable. Flip to re-enable.

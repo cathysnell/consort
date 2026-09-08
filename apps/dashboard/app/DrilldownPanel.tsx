@@ -757,7 +757,7 @@ export function TranscriptView({ turn }: { turn: TurnPayload }) {
               const name = sp > 0 ? t.slice(0, sp) : t;
               const rest = sp > 0 ? t.slice(sp) : "";
               return (
-                <div key={i} title={t} style={{ fontSize: "0.68rem", fontFamily: font.mono, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div key={i} title={t} style={{ fontSize: "0.68rem", lineHeight: 1.6, flexShrink: 0, fontFamily: font.mono, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{name}</span>
                   <span style={{ color: "var(--text-muted)" }}>{rest}</span>
                 </div>

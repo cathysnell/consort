@@ -896,6 +896,42 @@ export function laneStepMeta(events: AgentLogEvent[]): Record<string, LaneStepMe
   return meta;
 }
 
+/**
+ * The turn ordinal of the LATEST turn credited to a given lane step within the folded window —
+ * so clicking a step card opens THAT step's most recent activity (at/before the playhead), not the
+ * role's latest turn overall (a role spans several steps: navigator does red/review/assess/reflect).
+ *
+ * `recentTurns[i]` is the turn ordinal event i begins (aligned to `recentEvents`, null where none),
+ * the same array `latestTurnOrdinalForRole` reads. Attribution mirrors `laneStepMeta`: a role's
+ * most-recent `phase.start` fixes its current step, and the turn it begins is credited there. Forward
+ * scan, last match wins (= latest in the window). Returns null when the step owns no turn in the
+ * window, so the caller falls back to the role shell rather than opening the wrong step's turn. Bounded
+ * by RECENT_EVENT_TAIL (the window the client holds); an older step's turn is not resolvable here.
+ */
+export function latestTurnOrdinalForStep(
+  recentEvents: AgentLogEvent[],
+  recentTurns: (number | null)[],
+  stepId: string,
+): number | null {
+  const stepForRole: Record<string, string> = {};
+  let latest: number | null = null;
+  for (let i = 0; i < recentEvents.length; i++) {
+    const e = recentEvents[i];
+    if (e.event === "phase.start") {
+      const hit = laneStepForEvent(e);
+      if (hit) stepForRole[e.role] = hit.step;
+    }
+    const ord = recentTurns[i];
+    if (ord != null) {
+      // Credit this turn-begin event to the role's current step (or the event's own match, if it
+      // carries enough to map on its own — e.g. a phase.start that IS the turn-begin).
+      const step = stepForRole[e.role] ?? laneStepForEvent(e)?.step ?? null;
+      if (step === stepId) latest = ord;
+    }
+  }
+  return latest;
+}
+
 // --------------------------------------------------------------------------- progress
 
 /**

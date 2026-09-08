@@ -13,7 +13,7 @@ import { DriftBanner, LogPane, SidePane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
 import type { DashboardState } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
-import { latestTurnOrdinalForRole } from "@/lib/derive";
+import { latestTurnOrdinalForStep } from "@/lib/topology";
 
 // The usage UNIT shown for the run's compute: token counts (default) or dollar cost. Toggled by
 // the header "usage:" control; drives both the run-vitals metric and the per-agent contribution bar.
@@ -95,21 +95,14 @@ export default function Home() {
   // Step-output drill-down on the WorkflowGraph. Capability-gated like the others, so a source
   // without recorded deliverables simply renders non-clickable nodes.
   const canShowStepOutputs = state?.source?.capabilities.includes("stepOutputs") ?? false;
-  // Opening an agent's turn drill-down BY ROLE — the shared behavior behind both a Current-State
-  // bubble and a role-bearing lane step. Falls back to a role target when the tail carries no turn
-  // ordinal for the role, mirroring the bubble's own fallback.
-  const onOpenRole = (role: string) => {
+  // Opening a lane STEP's drill-down: the LATEST turn credited to THAT step within the scrubber
+  // window (a role spans several steps — navigator does red/review/assess/reflect — so this opens
+  // the step you clicked, not the role's latest turn overall). Resolvable within RECENT_EVENT_TAIL;
+  // when the step owns no turn in the window it falls to the ROLE shell (its lifecycle-step
+  // deliverables), never the wrong step's turn.
+  const onOpenRole = (role: string, stepId: string) => {
     if (!state) return;
-    // Resolve the role's LATEST reached turn. Prefer the full-corpus map (finds the turn even when
-    // it scrolled out of the recentTurns window) and fall back to the tail scan; this is what makes EVERY
-    // clicked card – a Current-State bubble or a lane step – open that role's full turn drill-down
-    // (step number + Correspondence / tools / reasoning + Artifacts + Code) rather than a bare shell.
-    const ord =
-      state.source?.correlation?.latestTurnByRole?.[role] ??
-      latestTurnOrdinalForRole(state.recentEvents, state.source?.correlation?.recentTurns ?? [], role);
-    // Open the turn whenever the source can serve transcripts (it is, per the capability); only a
-    // role that genuinely never took a recorded turn falls to the ROLE panel (same "#— <role>" title
-    // + tab layout, its Artifacts/Code filled from the role's lifecycle-step deliverables at HEAD).
+    const ord = latestTurnOrdinalForStep(state.recentEvents, state.source?.correlation?.recentTurns ?? [], stepId);
     const target: DrilldownTarget = ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role };
     // TOGGLE, mirroring the workflow-graph nodes: clicking the SAME card whose panel is already open
     // slides it back out. Same target = the same turn ordinal, or the same role's shell.
