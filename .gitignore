@@ -43,6 +43,13 @@ examples/sftdd-scenarios/stockflow-s3-selfheal-verify/
 # Per-role live-run telemetry output (survives the workspace; not source)
 .role-telemetry/
 
+# Locally-generated agent defs. skills/consort/agents/*.md is the single source of
+# truth; .claude/agents/ is a per-checkout copy the kit regenerates (lakebase-update-agents,
+# from skills). Tracking it would create a second copy that silently drifts (this is how
+# the stale .sftdd leftovers happened). Regenerate locally; never commit. Force-add only
+# if you deliberately want a tracked copy plus a sync guard.
+.claude/agents/
+
 # Heavy recorded corpora live in kevin-hartman/consort-examples (fetch via scripts/fetch-examples.sh)
 examples/replay/corpora/
 examples/replay/optimize-results/
