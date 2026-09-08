@@ -71,5 +71,8 @@ describe("Part B — wizard-style intake canon", () => {
     expect(start).toMatch(/one question at a time/i);
     expect(start).toContain("run-dashboard.sh");
     expect(start).toMatch(/VS Code|code "\$PWD"/);
+    // The reference-sites ask must be EXPLICIT in start.md (the followed path), not only in
+    // the referenced canon — it's what feeds the ux-designer's browser modelling.
+    expect(start).toMatch(/which real websites or apps should this look like/i);
   });
 });
