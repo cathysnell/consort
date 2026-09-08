@@ -12,13 +12,12 @@
  *
  * page.tsx is a client component whose board never renders server-side (the SSR output is
  * just a loading shell), so this bypasses the polling hook and renders the exported pieces
- * directly against fixed data. Date.now() is pinned because AgentBubble shows elapsed time.
+ * directly against fixed data. Date.now() is pinned because the lane step cards show elapsed time.
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AgentBubble } from "./AgentBubble";
 import { WorkflowGraph } from "./WorkflowGraph";
 import { Transport } from "./Transport";
 import { LaneGraph } from "./LaneGraph";
@@ -43,7 +42,7 @@ const state = fixture("render-state.json");
 // The same run pinned at event 40 — atLive false, so snapshot-fenced panels must differ.
 const scrubbed = fixture("render-state-scrubbed.json");
 
-// AgentBubble renders "working 4m" from Date.now() - turnStartTs; pin it so the markup is
+// The active lane step card renders elapsed from Date.now() - turnStartTs; pin it so the markup is
 // deterministic. Chosen well after the fixture's timestamps so elapsed values are stable.
 const FIXED_NOW = Date.parse("2026-08-05T00:00:00.000Z");
 
@@ -53,49 +52,6 @@ beforeAll(() => {
 });
 afterAll(() => {
   vi.useRealTimers();
-});
-
-describe("render — appearance is unchanged by the token refactor", () => {
-  it("renders every agent bubble identically", () => {
-    // All ten roles, and with real data that means several distinct statuses.
-    const markup = state.agents
-      .map((a) => renderToStaticMarkup(<AgentBubble agent={a} showCost />))
-      .join("\n");
-    expect(markup).toMatchSnapshot();
-  });
-
-  it("renders bubbles the same with cost hidden", () => {
-    const markup = state.agents
-      .map((a) => renderToStaticMarkup(<AgentBubble agent={a} showCost={false} />))
-      .join("\n");
-    expect(markup).toMatchSnapshot();
-  });
-
-  it("covers every AgentStatus, not just the ones this run happened to produce", () => {
-    // The fixture is one moment of one run, so it won't contain all five statuses. Synthesize
-    // the rest from a real agent so the tinted/pulsing variants are snapshotted too.
-    const base = state.agents[0];
-    const statuses = ["working", "on-deck", "issue", "waiting", "idle"] as const;
-    const markup = statuses
-      .map((status) =>
-        renderToStaticMarkup(
-          <AgentBubble
-            agent={{ ...base, status, work: `synthetic ${status}`, turnStartTs: "2026-08-04T23:56:00.000Z" }}
-            showCost
-          />,
-        ),
-      )
-      .join("\n");
-    expect(markup).toMatchSnapshot();
-  });
-
-  it("renders a working bubble in both liveness states", () => {
-    const base = { ...state.agents[0], status: "working" as const, turnStartTs: "2026-08-04T23:56:00.000Z" };
-    const markup = [true, false, null]
-      .map((sessionActive) => renderToStaticMarkup(<AgentBubble agent={{ ...base, sessionActive }} showCost />))
-      .join("\n");
-    expect(markup).toMatchSnapshot();
-  });
 });
 
 // ---------------------------------------------------------------------------

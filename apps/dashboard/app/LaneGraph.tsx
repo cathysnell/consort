@@ -12,8 +12,16 @@ import {
 import { GATE_KEY_BY_STEP, GATE_STEP_BY_KEY } from "@/lib/gates";
 import { colorForRole, font, radius } from "@/lib/theme";
 import { activeColorForFocus } from "./active-color";
-import { fmtElapsed } from "./AgentBubble";
 import type { DashboardState, LaneStepMeta } from "@/lib/types";
+
+// "3m", "45s" — how long the current open turn has been running. (Was in AgentBubble, now removed;
+// this is its only consumer — the active step card's bottom-row duration.)
+function fmtElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  return s % 60 >= 30 && m < 10 ? `${m}m${s % 60}s` : `${m}m`;
+}
 
 // The per-lane inter-agent sub-workflows (Kevin's Figure 2) — what happens *inside* each
 // lifecycle node the top-level WorkflowGraph shows as one box.
