@@ -16,6 +16,7 @@ import {
   logReleaseEngineerDeployOutcome,
   defaultRunVerify,
   probeServingOk,
+  resolveServeBaseUrl,
   type DeployResult,
 } from "../../consort/deploy/deploy";
 import { readEscalations } from "../../consort/gates/escalation";
@@ -86,6 +87,32 @@ describe("resolveDeployTarget", () => {
     const empty = mkdtempSync(join(tmpdir(), "deploy-empty-"));
     expect(resolveDeployTarget(empty, "local").kind).toBe("missing");
     rmSync(empty, { recursive: true, force: true });
+  });
+});
+
+describe("resolveServeBaseUrl: relocate off a busy port instead of halting", () => {
+  it("keeps the configured port when it is free", async () => {
+    const probe = async () => false; // nothing answers → free
+    expect(await resolveServeBaseUrl("http://localhost:8000", probe)).toEqual({
+      baseUrl: "http://localhost:8000",
+      port: 8000,
+    });
+  });
+
+  it("bumps to the first free port when the configured one is foreign-held", async () => {
+    const probe = async (url: string) => url.includes(":8000"); // :8000 answers, :8001 free
+    expect(await resolveServeBaseUrl("http://localhost:8000", probe)).toEqual({
+      baseUrl: "http://localhost:8001",
+      port: 8001,
+    });
+  });
+
+  it("falls back to the configured port when nothing nearby is free (caller then refuses)", async () => {
+    const probe = async () => true; // everything busy
+    expect(await resolveServeBaseUrl("http://localhost:8000", probe)).toEqual({
+      baseUrl: "http://localhost:8000",
+      port: 8000,
+    });
   });
 });
 
@@ -362,12 +389,14 @@ describe("deployToTarget (local)", () => {
     expect(seenEnv?.LAKEBASE_BRANCH_ID).toBe("exp/F1/S1-submit");
   });
 
-  it("leaves the ambient env (no LAKEBASE_BRANCH_ID override) for a feature deploy", async () => {
-    let envPassed: NodeJS.ProcessEnv | undefined | "unset" = "unset";
+  it("threads the serve port (BASE_URL/PORT) with no LAKEBASE_BRANCH_ID override for a feature deploy", async () => {
+    let called = false;
+    let envPassed: NodeJS.ProcessEnv | undefined;
     await deployToTarget({
       projectDir: dir,
       targetName: "local",
       startProcess: (_cmd, _cwd, env) => {
+        called = true;
         envPassed = env;
         return 4242;
       },
@@ -375,7 +404,14 @@ describe("deployToTarget (local)", () => {
       sleep: async () => {},
       now: fastClock(),
     });
-    expect(envPassed).toBeUndefined(); // ambient env: defaultStart falls back to process.env
+    expect(called).toBe(true);
+    // A feature (per-sprint) deploy sets no branch override…
+    expect(envPassed?.LAKEBASE_BRANCH_ID).toBeUndefined();
+    // …but DOES thread the serve port, so the app, the health poll, and the verify's
+    // Playwright (E2E + UX-adherence) all agree on one (possibly relocated) port.
+    expect(envPassed?.BASE_URL).toBeTruthy();
+    expect(envPassed?.PORT).toBeTruthy();
+    expect(envPassed?.E2E_BACKEND_PORT).toBe(envPassed?.PORT);
   });
 
   it("fails when the app never becomes reachable (timeout)", async () => {

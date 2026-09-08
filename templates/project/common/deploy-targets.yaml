@@ -12,9 +12,13 @@
 targets:
   local:
     type: local
-    # Command that starts the app in the foreground (backgrounded by the
-    # deploy primitive). The Python scaffold serves uvicorn on :8000.
+    # Command that starts the app in the foreground (backgrounded by the deploy
+    # primitive). It MUST bind $PORT: the deploy injects PORT + E2E_BACKEND_PORT and
+    # relocates off a busy port, so a stale server on :8000 moves the deploy instead of
+    # halting it. Fall back to :8000 when unset — e.g. `uvicorn --port ${PORT:-8000}`.
     run: make run
+    # Preferred port. The deploy probes upward for a free one if this is busy, then
+    # threads the chosen port via PORT / E2E_BACKEND_PORT / BASE_URL to the app + verify.
     base_url: http://localhost:8000
     # Any HTTP response on this path means the server is up (200 not required).
     health_path: /

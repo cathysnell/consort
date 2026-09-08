@@ -450,6 +450,34 @@ function defaultStart(cmd: string, cwd: string, env?: NodeJS.ProcessEnv): number
   return child.pid ?? -1;
 }
 
+/**
+ * The base_url the deploy should actually serve on: the configured port when free, else
+ * the first free port above it (probing up to 20). A busy port must NOT halt the deploy —
+ * this mirrors run-dev.sh and CI (pr.yml's E2E_BACKEND_PORT allocation): MOVE off a busy
+ * port, never kill it (multi-tenant safe). Call this AFTER stopping our OWN prior instance,
+ * so we only bump for a truly FOREIGN listener, not a port we just freed.
+ *
+ * Returns the (possibly bumped) base_url + its port so ONE port flows to every consumer:
+ * the served app (PORT + E2E_BACKEND_PORT env, whichever the run command honors), the health
+ * poll (base_url), and the verify — the E2E AND the UX-adherence Playwright both read BASE_URL.
+ * `probe(origin)` reports whether something already answers there (probeReachable); a free
+ * port refuses the connection, so we take it.
+ */
+export async function resolveServeBaseUrl(
+  baseUrl: string,
+  probe: (url: string) => Promise<boolean>,
+): Promise<{ baseUrl: string; port: number }> {
+  const u = new URL(baseUrl);
+  const startPort = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+  for (let p = startPort, tries = 0; tries < 20; p++, tries++) {
+    u.port = String(p);
+    if (!(await probe(`${u.origin}/`))) return { baseUrl: u.origin, port: p };
+  }
+  // Every probed port answered — fall back to the configured one (the caller then behaves
+  // exactly as before: it will contend, but we never silently pick an unusable port).
+  return { baseUrl: new URL(baseUrl).origin, port: startPort };
+}
+
 export interface DeployArgs {
   projectDir: string;
   targetName: string;
@@ -535,7 +563,16 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
 
   const start = args.startProcess ?? defaultStart;
   const reachable = args.reachable ?? probeReachable;
-  const url = cfg.baseUrl + cfg.healthPath;
+  // The base_url/port we will serve on: the configured one, unless a FOREIGN listener holds it
+  // (relocated to a free port by the guard below, so a busy :8000 moves the deploy instead of
+  // blocking it). Mutable because the guard may relocate it.
+  const portOf = (b: string): number => {
+    const u = new URL(b);
+    return Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+  };
+  let serveBaseUrl = cfg.baseUrl;
+  let servePort = portOf(cfg.baseUrl);
+  let url = serveBaseUrl + cfg.healthPath;
 
   // Foreign-port guard (gate deploys): if something is ALREADY serving the port
   // before we deploy, our app cannot bind there and verifying against the
@@ -561,40 +598,57 @@ export async function deployToTarget(args: DeployArgs): Promise<DeployResult> {
       // Our own stale instance is gone and the port is free – fall through to a
       // clean deploy of this turn's code.
     } else {
-    const reason = `target port still serving a foreign process at ${url} after stopping our own instance; refusing to verify against it. Stop it first (consort-deploy --target ${args.targetName} --stop, or free the port).`;
-    const verify: VerifyResult = { passed: false, summary: reason };
-    let evidencePath: string | undefined;
-    if (args.featureId) {
-      const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
-      const at = (args.now ?? (() => new Date()))().toISOString();
-      evidencePath = writeDeployEvidence(consortDir, {
-        schema_version: DEPLOY_EVIDENCE_SCHEMA_VERSION,
-        feature_id: args.featureId,
-        ...(args.storyId ? { story_id: args.storyId } : {}),
-        target: args.targetName,
-        url,
-        reachable: false,
-        verify,
-        ...(args.lakebaseBranch ? { lakebase_branch: args.lakebaseBranch } : {}),
-        deployed_at: at,
-      });
-      writeEscalation(consortDir, {
-        source: "deploy-verify",
-        reason: `deploy of ${args.featureId}${args.storyId ? `/${args.storyId}` : ""} blocked: ${reason}`,
-        feature_id: args.featureId,
-        ...(args.storyId ? { story_id: args.storyId } : {}),
-      });
-    }
-    return { ok: false, reason, verify, evidencePath };
+      // Still held by a FOREIGN process after stopping our own. Do NOT halt the deploy:
+      // relocate to a free port (run-dev.sh / CI's move-off-a-busy-port, never kill). Only
+      // refuse when NO free port exists in the probe window — genuinely nowhere to serve.
+      const bumped = await resolveServeBaseUrl(cfg.baseUrl, reachable);
+      if (bumped.baseUrl === serveBaseUrl) {
+        const reason = `target port ${url} is held by a foreign process and no free port was found nearby; stop it (consort-deploy --target ${args.targetName} --stop) or free a port.`;
+        const verify: VerifyResult = { passed: false, summary: reason };
+        let evidencePath: string | undefined;
+        if (args.featureId) {
+          const consortDir = args.consortDir ?? resolveConsortDir(args.projectDir);
+          const at = (args.now ?? (() => new Date()))().toISOString();
+          evidencePath = writeDeployEvidence(consortDir, {
+            schema_version: DEPLOY_EVIDENCE_SCHEMA_VERSION,
+            feature_id: args.featureId,
+            ...(args.storyId ? { story_id: args.storyId } : {}),
+            target: args.targetName,
+            url,
+            reachable: false,
+            verify,
+            ...(args.lakebaseBranch ? { lakebase_branch: args.lakebaseBranch } : {}),
+            deployed_at: at,
+          });
+          writeEscalation(consortDir, {
+            source: "deploy-verify",
+            reason: `deploy of ${args.featureId}${args.storyId ? `/${args.storyId}` : ""} blocked: ${reason}`,
+            feature_id: args.featureId,
+            ...(args.storyId ? { story_id: args.storyId } : {}),
+          });
+        }
+        return { ok: false, reason, verify, evidencePath };
+      }
+      // Relocated onto a free port; the health poll + verify (BASE_URL) below all follow it.
+      serveBaseUrl = bumped.baseUrl;
+      servePort = bumped.port;
+      url = serveBaseUrl + cfg.healthPath;
     }
   }
 
-  // Per-story deploy: bind the run command to the experiment
-  // branch's Lakebase DB so the PO reviews the story on its own branch. Unset
-  // = the ambient env (the feature branch's per-sprint deploy).
-  const env = args.lakebaseBranch
-    ? { ...process.env, LAKEBASE_BRANCH_ID: args.lakebaseBranch }
-    : undefined;
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    // Serve + verify on ONE port (bumped off a foreign :8000 above). The run command binds
+    // PORT / E2E_BACKEND_PORT (whichever it honors); the verify's Playwright — the E2E AND
+    // the UX-adherence check — reads BASE_URL. This keeps the health poll, the served app,
+    // and the verify all agreeing on the same (possibly relocated) port.
+    BASE_URL: serveBaseUrl,
+    PORT: String(servePort),
+    E2E_BACKEND_PORT: String(servePort),
+    // Per-story deploy: bind the run command to the experiment branch's Lakebase DB so the PO
+    // reviews the story on its own branch. Unset = the ambient env (the per-sprint deploy).
+    ...(args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}),
+  };
 
   // Migrate the DEPLOYED branch to head BEFORE serving it. Honest-GREEN verify
   // migrates only a DISPOSABLE child branch (to isolate reversibility up/down
@@ -878,13 +932,6 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
   const start = args.startProcess ?? defaultStart;
   const runVerify = args.runVerify ?? defaultRunVerify;
   const stop = args.stop ?? ((pd, tn) => void stopLocal(pd, tn));
-  const url = cfg.baseUrl + cfg.healthPath;
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    BASE_URL: cfg.baseUrl,
-    ...(args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}),
-    ...(args.cycleLayer ? { CONSORT_CYCLE_LAYER: args.cycleLayer } : {}),
-  };
   // Deploy-during-build serves a FRESH app on THIS turn's code. Every build turn
   // overlays new code, so we do NOT reuse a running app (it would serve stale
   // code). Stop any prior instance first – that also frees the port, so a
@@ -892,6 +939,21 @@ export async function ensureDeployedAndVerify(args: CycleVerifyArgs): Promise<Cy
   // start fresh, poll until reachable, run verify, and ALWAYS stop after, so
   // nothing lingers on the port between turns or after the run.
   stop(args.projectDir, targetName);
+  // Then pick a FREE port: bump off any FOREIGN listener still holding the configured one
+  // (a stale uvicorn/vite, another project) so a busy :8000 RELOCATES the build's verify
+  // instead of halting it — the run-dev.sh / CI (E2E_BACKEND_PORT) rule, move-not-kill. One
+  // port flows to the served app (PORT/E2E_BACKEND_PORT), the health poll, and the verify's
+  // Playwright — the E2E AND the UX-adherence check both read BASE_URL.
+  const { baseUrl: serveUrl, port: servePort } = await resolveServeBaseUrl(cfg.baseUrl, reachable);
+  const url = serveUrl + cfg.healthPath;
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    BASE_URL: serveUrl,
+    PORT: String(servePort),
+    E2E_BACKEND_PORT: String(servePort),
+    ...(args.lakebaseBranch ? { LAKEBASE_BRANCH_ID: args.lakebaseBranch } : {}),
+    ...(args.cycleLayer ? { CONSORT_CYCLE_LAYER: args.cycleLayer } : {}),
+  };
   const pid = start(cfg.run, args.projectDir, env);
   const pf = pidFile(args.projectDir, targetName);
   mkdirSync(dirname(pf), { recursive: true });
