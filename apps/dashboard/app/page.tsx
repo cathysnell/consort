@@ -13,6 +13,7 @@ import { DriftBanner, LogPane, SidePane, modeFromUrl } from "./board-parts";
 import { useTheme } from "./useTheme";
 import type { DashboardState } from "@/lib/types";
 import { colorForRole, font, radius } from "@/lib/theme";
+import { latestTurnOrdinalForRole } from "@/lib/derive";
 import { latestTurnOrdinalForStep } from "@/lib/topology";
 
 // The usage UNIT shown for the run's compute: token counts (default) or dollar cost. Toggled by
@@ -97,12 +98,20 @@ export default function Home() {
   const canShowStepOutputs = state?.source?.capabilities.includes("stepOutputs") ?? false;
   // Opening a lane STEP's drill-down: the LATEST turn credited to THAT step within the scrubber
   // window (a role spans several steps — navigator does red/review/assess/reflect — so this opens
-  // the step you clicked, not the role's latest turn overall). Resolvable within RECENT_EVENT_TAIL;
-  // when the step owns no turn in the window it falls to the ROLE shell (its lifecycle-step
-  // deliverables), never the wrong step's turn.
+  // the step you clicked, not the role's latest turn overall). Resolvable within RECENT_EVENT_TAIL.
+  // When the step owns no turn in the window — an EARLY step viewed from a late playhead, e.g. the
+  // product-owner's intake/author-requests turns (ordinals 0/3/13) seen from the live edge, well
+  // outside the tail — fall back to the role's latest turn (latestTurnByRole is whole-corpus, so it
+  // still finds it). For a single-purpose role like the product-owner that IS the step's turn; only
+  // a multi-step role clicked far out of window can land on a sibling step, which still beats a
+  // blank shell. Last resort is the ROLE shell (its lifecycle-step deliverables).
   const onOpenRole = (role: string, stepId: string) => {
     if (!state) return;
-    const ord = latestTurnOrdinalForStep(state.recentEvents, state.source?.correlation?.recentTurns ?? [], stepId);
+    const recentTurns = state.source?.correlation?.recentTurns ?? [];
+    const ord =
+      latestTurnOrdinalForStep(state.recentEvents, recentTurns, stepId) ??
+      state.source?.correlation?.latestTurnByRole?.[role] ??
+      latestTurnOrdinalForRole(state.recentEvents, recentTurns, role);
     const target: DrilldownTarget = ord != null && canDrillDown ? { kind: "turn", ord } : { kind: "role", role };
     // TOGGLE, mirroring the workflow-graph nodes: clicking the SAME card whose panel is already open
     // slides it back out. Same target = the same turn ordinal, or the same role's shell.
