@@ -25,11 +25,13 @@ import { ROLES, type Role } from "./types";
 
 // --- surfaces ---------------------------------------------------------------
 export const surface = {
-  page: "#F3F4F6", // app background
+  // Warm off-white neutrals (a subtle bias toward the orange accent) rather than a cool grey, so the
+  // board sits on a softer ground. Cards stay pure white to lift off the page.
+  page: "#F6F4F0", // app background — the ground everything sits on
   card: "#fff", // cards, chips, buttons
-  panel: "#F8F9FB", // pane BODY — a subtle tint, between page and card (not flush with the board)
-  muted: "#FAFAFA", // idle agent bubble
-  inset: "#F3F4F6", // progress-bar troughs, not-started steps
+  panel: "#FBFAF7", // pane BODY — a subtle tint, between page and card (not flush with the board)
+  muted: "#F8F6F2", // idle agent bubble
+  inset: "#EDEBE5", // progress-bar troughs, not-started steps — a touch deeper than the page
   terminal: "#111827", // event ticker — reads as a terminal, intentionally dark
   code: "#1F2937", // inline command block
 } as const;

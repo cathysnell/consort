@@ -27,10 +27,10 @@ import { ROLES } from "./types";
 
 describe("theme — values are unchanged from the pre-refactor literals", () => {
   it("surfaces", () => {
-    expect(surface.page).toBe("#F3F4F6");
+    expect(surface.page).toBe("#F6F4F0");
     expect(surface.card).toBe("#fff");
-    expect(surface.muted).toBe("#FAFAFA");
-    expect(surface.inset).toBe("#F3F4F6");
+    expect(surface.muted).toBe("#F8F6F2");
+    expect(surface.inset).toBe("#EDEBE5");
     expect(surface.terminal).toBe("#111827");
     expect(surface.code).toBe("#1F2937");
   });
@@ -232,7 +232,7 @@ describe("theme — cssVariables", () => {
   it("kebab-cases camelCase token names", () => {
     expect(css).toContain("--text-on-dark-accent: #60A5FA;");
     expect(css).toContain("--status-accent-tint-soft: rgba(255, 112, 51, 0.08);");
-    expect(css).toContain("--surface-page: #F3F4F6;");
+    expect(css).toContain("--surface-page: #F6F4F0;");
   });
 
   it("exposes every role in both blocks with the block's own values", () => {
