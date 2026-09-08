@@ -9,7 +9,7 @@
 import { createProject, CreateProjectArgs } from "../../consort/lakebase/create-project.js";
 import { ALL_AGENT_ROLES, type SpawnableAgentRole } from "../../consort/config/agent-models.js";
 import { runCreateDoctorGate, formatGateBlockers } from "../../consort/lakebase/create-doctor-gate.js";
-import { kitRefPin, consortVersionFromModule, declaredSubstrateVersionFromModule } from "../../consort/lakebase/kit-ref-pin.js";
+import { kitRefPin, recordDevKitLocalDirs, consortVersionFromModule, declaredSubstrateVersionFromModule } from "../../consort/lakebase/kit-ref-pin.js";
 import { exportConsortVersionEnv } from "../../consort/config/kit-bin.js";
 import { substrateMismatchMessage } from "../../consort/lakebase/substrate-check.js";
 import { createRequire } from "node:module";
@@ -350,6 +350,15 @@ async function main(): Promise<number> {
       try { appendFileSync(args.progressLog, line); } catch { /* best-effort log */ }
     }
   });
+  // Dev scaffold self-heal: when scaffolding from a LOCAL kit (LAKEBASE_KIT_DIR — a dev/unreleased
+  // plugin whose version tag isn't published upstream), record it as the project's kit-local-dir so
+  // lk resolves that local kit for the pinned ref instead of failing to fetch an unpublished tag.
+  const recorded = recordDevKitLocalDirs(result.projectDir, process.env);
+  if (recorded.length) {
+    process.stderr.write(
+      `[kit-ref] dev kit in use — recorded .lakebase/${recorded.join(", ")} so lk resolves your local kit for the pinned ref\n`,
+    );
+  }
   process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   return 0;
 }

@@ -19,8 +19,8 @@
 // to `main`.
 
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 
 const CONSORT_PKG = "@databricks-solutions/consort";
 
@@ -33,6 +33,38 @@ export function kitRefPin(env: NodeJS.ProcessEnv, version: string | undefined): 
   if (env.LAKEBASE_KIT_REF && env.LAKEBASE_KIT_REF.trim()) return undefined;
   const v = (version ?? "").trim();
   return v ? `v${v}` : undefined;
+}
+
+/**
+ * Dev-scaffold self-heal. The kit-ref pin above is a version tag (`v${version}`); if that version
+ * was never published upstream (a dev/unreleased plugin, e.g. `v0.3.73`), `lk` cannot fetch it and
+ * the scaffold strands. So when scaffolding from a LOCAL kit (`LAKEBASE_KIT_DIR`), record that dir
+ * as the project's `.lakebase/kit-local-dir` — `lk`'s cold-cache self-heal then symlinks the local
+ * kit for the pinned ref, no fetch needed. Point `LAKEBASE_KIT_DIR` at your kit REPO with a current
+ * `dist/`, NOT a stale plugin cache (which may predate a bin like consort-dashboard). The substrate
+ * gets the same via `LAKEBASE_SCM_UTILS_DIR` → `scm-utils-local-dir`. Returns the files written.
+ * Best-effort; never throws.
+ */
+export function recordDevKitLocalDirs(projectDir: string, env: NodeJS.ProcessEnv): string[] {
+  const lakebaseDir = join(projectDir, ".lakebase");
+  const written: string[] = [];
+  for (const [envVar, file] of [
+    ["LAKEBASE_KIT_DIR", "kit-local-dir"],
+    ["LAKEBASE_SCM_UTILS_DIR", "scm-utils-local-dir"],
+  ] as const) {
+    const dir = env[envVar]?.trim();
+    if (!dir) continue;
+    const abs = resolve(dir);
+    if (!existsSync(join(abs, "dist"))) continue; // only a BUILT kit dir is resolvable by lk
+    try {
+      mkdirSync(lakebaseDir, { recursive: true });
+      writeFileSync(join(lakebaseDir, file), abs + "\n");
+      written.push(file);
+    } catch {
+      /* best-effort: recording the dev dir must never fail a scaffold */
+    }
+  }
+  return written;
 }
 
 /**

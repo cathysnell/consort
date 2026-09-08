@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { kitRefPin, readConsortVersion, declaredSubstrateVersion } from "../../consort/lakebase/kit-ref-pin.js";
+import { kitRefPin, recordDevKitLocalDirs, readConsortVersion, declaredSubstrateVersion } from "../../consort/lakebase/kit-ref-pin.js";
 
 describe("kitRefPin", () => {
   it("pins to v<version> when LAKEBASE_KIT_REF is unset", () => {
@@ -99,5 +99,41 @@ describe("declaredSubstrateVersion", () => {
   it("returns undefined when the substrate dep is absent", () => {
     writeConsort(undefined);
     expect(declaredSubstrateVersion(root)).toBeUndefined();
+  });
+});
+
+describe("recordDevKitLocalDirs", () => {
+  let project: string;
+  let kit: string;
+  beforeEach(() => {
+    project = fs.mkdtempSync(path.join(os.tmpdir(), "consort-proj-"));
+    kit = fs.mkdtempSync(path.join(os.tmpdir(), "consort-kit-"));
+    fs.mkdirSync(path.join(kit, "dist"), { recursive: true }); // a "built" kit dir
+  });
+  afterEach(() => {
+    fs.rmSync(project, { recursive: true, force: true });
+    fs.rmSync(kit, { recursive: true, force: true });
+  });
+
+  it("records kit-local-dir = LAKEBASE_KIT_DIR (absolute) when it points at a built kit", () => {
+    const written = recordDevKitLocalDirs(project, { LAKEBASE_KIT_DIR: kit });
+    expect(written).toContain("kit-local-dir");
+    expect(fs.readFileSync(path.join(project, ".lakebase", "kit-local-dir"), "utf8").trim()).toBe(path.resolve(kit));
+  });
+
+  it("records scm-utils-local-dir from LAKEBASE_SCM_UTILS_DIR too", () => {
+    expect(recordDevKitLocalDirs(project, { LAKEBASE_SCM_UTILS_DIR: kit })).toContain("scm-utils-local-dir");
+    expect(fs.existsSync(path.join(project, ".lakebase", "scm-utils-local-dir"))).toBe(true);
+  });
+
+  it("does nothing for a released plugin (neither dev-dir env var set)", () => {
+    expect(recordDevKitLocalDirs(project, {})).toEqual([]);
+    expect(fs.existsSync(path.join(project, ".lakebase", "kit-local-dir"))).toBe(false);
+  });
+
+  it("skips a dir that is not a built kit (no dist/)", () => {
+    const nodist = fs.mkdtempSync(path.join(os.tmpdir(), "consort-nodist-"));
+    expect(recordDevKitLocalDirs(project, { LAKEBASE_KIT_DIR: nodist })).toEqual([]);
+    fs.rmSync(nodist, { recursive: true, force: true });
   });
 });
