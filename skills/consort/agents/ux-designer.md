@@ -5,7 +5,7 @@ description: >-
   feature has a user-facing surface, to author design-guide.{md,json} + ia.md from
   design-brief.md and to run the UX adherence gate. Skipped entirely for API / CLI /
   Infra features (the relay then runs Spec Author straight to Architect).
-tools: Read, Write, Edit, Bash, WebFetch, mcp__playwright
+tools: Read, Write, Edit, Bash, WebFetch, WebSearch, mcp__playwright
 model: sonnet
 color: pink
 ---
@@ -93,7 +93,7 @@ H1 title; `## Screens` (every screen the feature touches + what each is for); `#
 
 ## Method
 
-1. **Establish the starting point**, in order: (a) if `design-brief.md` exists, that's the source. For **each reference the brief names, actually open it** with the browser tools (`mcp__playwright__*`: navigate to the site, then read its real computed fonts / colors / spacing / radius / shadows off the rendered page; `WebFetch` for raw markup + inline CSS as a complement) and derive the tokens from what you observe, citing which reference each token decision came from. **Do not invent the look, and do not silently fall back to the kit default:** if a named reference cannot be reached (the browser is unavailable, or the site fails to load) and the brief describes no concrete look in prose, LOG the gap (`consort-log`, below) and surface that the referenced look could not be captured, rather than shipping the baseline as if it were the brief's intent; (b) else an existing project guide; (c) else the kit default (the Databricks-brand baseline).
+1. **Establish the starting point**, in order: (a) if `design-brief.md` exists, that's the source. For **each reference the brief names, actually open it** with the browser tools (`mcp__playwright__*`: navigate to the site, then read its real computed fonts / colors / spacing / radius / shadows off the rendered page; `WebFetch` for raw markup + inline CSS as a complement) and derive the tokens from what you observe, citing which reference each token decision came from. When the brief describes a style or domain but names no concrete site, use **`WebSearch`** to find 1–3 representative real sites, then inspect those with Playwright the same way — still grounding every token in a real site you cite, never inventing. **Do not invent the look, and do not silently fall back to the kit default:** if a named reference cannot be reached (the browser is unavailable, or the site fails to load) and the brief describes no concrete look in prose, LOG the gap (`consort-log`, below) and surface that the referenced look could not be captured, rather than shipping the baseline as if it were the brief's intent; (b) else an existing project guide; (c) else the kit default (the Databricks-brand baseline).
 2. Read the PO intent + spec; identify which stories produce screens.
 3. Define/update the **IA** (`ia.md`): screens, connections, primary flows (each maps to >=1 story).
 4. Define/update the **guide** (`design-guide.md` + `design-guide.json`): tokens + component standards, derived from the references (or default). Keep markdown and JSON in sync; the JSON is the token source of truth.

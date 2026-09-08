@@ -60,6 +60,8 @@ describe("ux-designer agent: frontmatter grants the browser tools", () => {
     expect(toolsLine, "frontmatter must have a tools: line").toContain("tools:");
     expect(toolsLine).toContain("mcp__playwright");
     expect(toolsLine).toContain("WebFetch");
+    // WebSearch: find representative reference sites when the brief names none.
+    expect(toolsLine).toContain("WebSearch");
     // The pre-existing text-only tools stay granted.
     for (const t of ["Read", "Write", "Edit", "Bash"]) expect(toolsLine).toContain(t);
   });
