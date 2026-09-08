@@ -69,7 +69,10 @@ describe("Part B — wizard-style intake canon", () => {
     const start = read("commands/start.md");
     expect(start).toContain("hil-interview.md");
     expect(start).toMatch(/one question at a time/i);
-    expect(start).toContain("run-dashboard.sh");
+    // The dashboard is launched via the consort-dashboard bin (run-dashboard.sh is the human wrapper),
+    // detached in a macOS-safe way (tmux new-window / nohup — setsid does not exist on macOS).
+    expect(start).toContain("consort-dashboard");
+    expect(start).toMatch(/tmux new-window|nohup/);
     expect(start).toMatch(/VS Code|code "\$PWD"/);
     // The reference-sites ask must be EXPLICIT in start.md (the followed path), not only in
     // the referenced canon — it's what feeds the ux-designer's browser modelling.

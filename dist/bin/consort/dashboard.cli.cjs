@@ -129,8 +129,28 @@ async function main() {
     process.exit(1);
     return;
   }
-  if (args.open) openBrowser(url);
+  if (args.open) void waitListening(args.host, port).then((ready) => {
+    if (ready) openBrowser(url);
+  });
   child.on("exit", (code) => process.exit(code ?? 0));
+}
+function waitListening(host, port, tries = 60) {
+  return new Promise((resolve3) => {
+    let n = 0;
+    const attempt = () => {
+      const s = (0, import_node_net.connect)(port, host);
+      s.once("connect", () => {
+        s.destroy();
+        resolve3(true);
+      });
+      s.once("error", () => {
+        s.destroy();
+        if (++n >= tries) resolve3(false);
+        else setTimeout(attempt, 250);
+      });
+    };
+    attempt();
+  });
 }
 function openBrowser(url) {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";

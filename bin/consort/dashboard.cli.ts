@@ -15,7 +15,7 @@
 // runs in the foreground (Ctrl-C stops it).
 
 import { spawn } from "node:child_process";
-import { createServer } from "node:net";
+import { createServer, connect } from "node:net";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -115,11 +115,33 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (args.open) openBrowser(url);
+  // Open the browser only once the server actually accepts connections — an immediate open
+  // races the not-yet-ready server and lands on a connection-refused page.
+  if (args.open) void waitListening(args.host, port).then((ready) => { if (ready) openBrowser(url); });
   child.on("exit", (code) => process.exit(code ?? 0));
 }
 
 /** Best-effort browser open; never fatal (headless boxes just use the printed URL). */
+/** Resolve once the server accepts a TCP connection on host:port (or after ~15s of retries). */
+function waitListening(host: string, port: number, tries = 60): Promise<boolean> {
+  return new Promise((resolve) => {
+    let n = 0;
+    const attempt = (): void => {
+      const s = connect(port, host);
+      s.once("connect", () => {
+        s.destroy();
+        resolve(true);
+      });
+      s.once("error", () => {
+        s.destroy();
+        if (++n >= tries) resolve(false);
+        else setTimeout(attempt, 250);
+      });
+    };
+    attempt();
+  });
+}
+
 function openBrowser(url: string): void {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
   try {
