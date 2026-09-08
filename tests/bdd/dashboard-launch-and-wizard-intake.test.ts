@@ -31,6 +31,22 @@ describe("Part A — run-dashboard is shipped + registered", () => {
     expect(existsSync(path.join(KIT, "scripts/build-dashboard.mjs"))).toBe(true);
   });
 
+  it("the release build includes the dashboard bundle (build:release chains build + build:dashboard)", () => {
+    // v0.3.73 shipped bins but NO dashboard bundle because the release ran only `npm run build`
+    // (tsup) and skipped build:dashboard, so consort-dashboard had nothing to launch on a clean
+    // install. build:release makes the release build atomic — it MUST invoke both, so the bundle
+    // can never be silently left out of a release again.
+    const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
+    const rel = pkg.scripts["build:release"];
+    expect(rel, "a build:release script must exist as the one-command release build").toBeTruthy();
+    expect(rel).toMatch(/build:dashboard/);
+    expect(rel, "must also build the bins (tsup)").toMatch(/\bbuild\b/);
+    // The bin looks for the prebuilt server at dist/dashboard/server.js; the build script must
+    // assemble it to exactly that path (a path drift would silently disable the prebuilt launch).
+    expect(read("bin/consort/dashboard.cli.ts")).toContain('"dist", "dashboard"');
+    expect(read("scripts/build-dashboard.mjs")).toContain('"dist", "dashboard"');
+  });
+
   it("scaffolds an executable run-dashboard.sh that reads the LOCAL project via lk (no git)", () => {
     const rel = "templates/project/common/scripts/run-dashboard.sh";
     expect(existsSync(path.join(KIT, rel))).toBe(true);
