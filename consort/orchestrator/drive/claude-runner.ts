@@ -36,7 +36,7 @@ import { parseTurnUsage, assistantTextFromLine, assistantEventSummary, type Turn
 import { resumeFitsBudget, turnContextTokens, CONTEXT_FREE_FRACTION_REQUIRED, isPromptTooLongSignal, isTransientApiErrorSignal, startsFreshEachTurn } from "../../session/context-budget.js";
 import type { AgentRole } from "../../logging/agent-log.js";
 import { makeOnAction, describeAction } from "../../logging/orchestrator-logging.js";
-import { resolveKitBinJs } from "../../config/kit-bin.js";
+import { resolveKitBinJs, kitRoot } from "../../config/kit-bin.js";
 import { readWorkflowState } from "@databricks-solutions/lakebase-scm-utils/lakebase";
 import { relocateStrayDesignArtifacts, malformedSiblingRoot } from "../../setup/stray-artifact-recovery.js";
 import type { WorkflowAction } from "./orchestrator-drive.js";
@@ -539,6 +539,20 @@ export function claudeToolArgs(cmd: Extract<DriveCommand, { kind: "claude" }>): 
   return out;
 }
 
+/** Kit-shipped MCP config the ux-designer role uses by default: a headless browser
+ *  server so the design turn can navigate the reference sites the brief names and read
+ *  their real computed styles. Absolute (via kitRoot) so it resolves in a dev clone AND
+ *  an installed package, independent of workspace provisioning. */
+export const UX_BROWSER_MCP_CONFIG = "skills/consort/config/ux-browser-mcp.json";
+
+/** The default `--mcp-config` path for a role when consort-config.json sets no explicit
+ *  override: the kit-shipped browser MCP for ux-designer, undefined for every other role
+ *  (so no other spawn changes). ONE source of truth for the default, shared by the drive
+ *  config wiring and its guard test. */
+export function defaultMcpConfigForRole(role: string): string | undefined {
+  return role === "ux-designer" ? path.join(kitRoot(), UX_BROWSER_MCP_CONFIG) : undefined;
+}
+
 /**
  * The base `claude -p` spawn args for a role turn. Pure + exported so the flag set
  * is guardable. Headless essentials: -p (print), --agent/--model, --strict-mcp-config,
@@ -724,6 +738,11 @@ export function execRunner(cfg: DriveEffectsConfig): CommandRunner {
         if (cmd.effort) baseArgs.push("--effort", cmd.effort);
         if (cmd.fallbackModel) baseArgs.push("--fallback-model", cmd.fallbackModel);
         if (typeof cmd.maxBudgetUsd === "number") baseArgs.push("--max-budget-usd", String(cmd.maxBudgetUsd));
+        // Per-role MCP server (ux-designer's headless browser). Under the base
+        // --strict-mcp-config, ONLY this file's servers load, for this turn only. A
+        // server that fails to start is non-fatal (the agent runs without those tools);
+        // absent on every other role, so their spawn is byte-identical.
+        if (cmd.mcpConfig) baseArgs.push("--mcp-config", cmd.mcpConfig);
         // Optional tool-scope restriction (optimize harness Family-2 lever). A
         // normal drive sets neither field, so this is a no-op there.
         baseArgs.push(...claudeToolArgs(cmd));
@@ -1019,6 +1038,13 @@ export function buildCfg(args: ParsedArgs, featureId: string): DriveEffectsConfi
     },
     fallbackModelForRole: (role) => settings.fallbackModels[role],
     maxBudgetUsdForRole: (role) => settings.budgets[role],
+    // Per-role MCP config: an explicit consort-config.json override wins; otherwise
+    // ux-designer defaults ON to the kit-shipped headless-browser MCP so "make it look
+    // like <these sites>" is honored out of the box (the agent navigates each named
+    // reference and reads its real fonts/colors/spacing) with zero operator setup. The
+    // path is absolute via kitRoot() so it resolves in dev-clone AND installed layouts,
+    // independent of workspace provisioning. Every other role resolves undefined.
+    mcpConfigForRole: (role) => settings.mcpConfigs[role] ?? defaultMcpConfigForRole(role),
     modelForRole: (role) => settings.models[role] ?? resolveModelForRole(role as AgentRole, projectDir),
     // Model tiering: per-turn model (driver GREEN/REFACTOR on a cheaper model than
     // its RED). Falls through to the role's base model when no per-turn map applies.

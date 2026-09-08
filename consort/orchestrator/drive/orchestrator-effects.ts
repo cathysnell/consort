@@ -64,7 +64,12 @@ export type DriveCommand =
   // restrict the agent's tool scope for THIS turn (--allowed-tools /
   // --disallowed-tools). Absent on every normal-drive command, so the spawn is
   // unchanged; the harness sets them per candidate to cap on-disk scanning.
-  | { kind: "claude"; role: string; model: string; task: string; resumeKey?: string; effort?: string; fallbackModel?: string; maxBudgetUsd?: number; allowedTools?: string[]; disallowedTools?: string[]; replay?: { mode?: string; buildMode?: string; story?: string } }
+  // `mcpConfig`: a `--mcp-config <file>` path loading an MCP server for THIS turn
+  // (under the base `--strict-mcp-config`, ONLY that file's servers load). Set only
+  // for the ux-designer role (a headless browser MCP so it can read named reference
+  // sites' real fonts/colors/spacing); absent on every other command, so their spawn
+  // is unchanged.
+  | { kind: "claude"; role: string; model: string; task: string; resumeKey?: string; effort?: string; fallbackModel?: string; maxBudgetUsd?: number; allowedTools?: string[]; disallowedTools?: string[]; mcpConfig?: string; replay?: { mode?: string; buildMode?: string; story?: string } }
   | { kind: "cli"; bin: string; args: string[] }
   | { kind: "set-phase"; phase: string }
   // Deterministic sprint-backlog projection (the ONE writer): after the PO
@@ -161,6 +166,11 @@ export interface DriveEffectsConfig {
   fallbackModelForRole?(role: string): string | undefined;
   /** Unified config: a role's `--max-budget-usd` per-invocation cap, or undefined. */
   maxBudgetUsdForRole?(role: string): number | undefined;
+  /** Unified config: a role's `--mcp-config` path (an MCP server that loads for that
+   *  role's turn under the base --strict-mcp-config), or undefined. Set for ux-designer
+   *  (a headless browser MCP to read named reference sites); undefined for every other
+   *  role, so their spawn is unchanged. */
+  mcpConfigForRole?(role: string): string | undefined;
   /** Build loop granularity. "story" (the DEFAULT) gives the Navigator + Driver
    *  story-scoped turns: one RED turn writes the WHOLE story's tests, one GREEN
    *  greens them, one REVIEW + one REFACTOR per story. "ac" writes + greens one
@@ -1260,6 +1270,7 @@ export function buildClaudeCommandWithBody(
       : "";
   const fallbackModel = cfg.fallbackModelForRole?.(action.role);
   const maxBudgetUsd = cfg.maxBudgetUsdForRole?.(action.role);
+  const mcpConfig = cfg.mcpConfigForRole?.(action.role);
   return {
     kind: "claude",
     role: action.role,
@@ -1268,6 +1279,7 @@ export function buildClaudeCommandWithBody(
     ...(effort && effort !== "default" ? { effort } : {}),
     ...(fallbackModel ? { fallbackModel } : {}),
     ...(typeof maxBudgetUsd === "number" ? { maxBudgetUsd } : {}),
+    ...(mcpConfig ? { mcpConfig } : {}),
     // Optimize harness content/scope levers (all default-off): extra context
     // is injected BEFORE the terse suffix (reads as context), the task suffix
     // AFTER it (reads as a trailing directive), and the tool scope is carried

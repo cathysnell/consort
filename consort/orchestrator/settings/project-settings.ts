@@ -61,6 +61,10 @@ export interface ResolvedSettings {
   models: Record<string, string>;
   fallbackModels: Record<string, string | undefined>;
   budgets: Record<string, number | undefined>;
+  /** A role's explicit `--mcp-config` path from consort-config.json, or undefined.
+   *  Only the operator OVERRIDE lives here; the ux-designer default-on browser MCP is
+   *  applied above this (in the drive config wiring, which can resolve the kit dir). */
+  mcpConfigs: Record<string, string | undefined>;
   /** Resolve the model to spawn a role's turn/step with: a per-key `model` map entry
    *  (e.g. driver GREEN on haiku, or spec-author BREAKDOWN on haiku) when present,
    *  else the role's base model. The model-tiering lever, applied per invocation
@@ -99,6 +103,7 @@ export function resolveConsortSettings(inputs: ResolveInputs): ResolvedSettings 
   const models: Record<string, string> = {};
   const fallbackModels: Record<string, string | undefined> = {};
   const budgets: Record<string, number | undefined> = {};
+  const mcpConfigs: Record<string, string | undefined> = {};
   for (const role of ALL_AGENT_ROLES) {
     const rc = file?.roles?.[role];
     const legacyEntry = legacy?.roles?.[role];
@@ -109,6 +114,7 @@ export function resolveConsortSettings(inputs: ResolveInputs): ResolvedSettings 
       scalarModel ?? legacyEntry?.override ?? legacyEntry?.recommended ?? RECOMMENDED_MODELS[role] ?? "inherit";
     fallbackModels[role] = rc?.fallbackModel;
     budgets[role] = typeof rc?.maxBudgetUsd === "number" ? rc.maxBudgetUsd : undefined;
+    mcpConfigs[role] = rc?.mcpConfig;
   }
 
   // The per-step config home: the levers DECLARED for (role, turn) across the shipped step-manifests
@@ -150,5 +156,5 @@ export function resolveConsortSettings(inputs: ResolveInputs): ResolvedSettings 
   // The build/plan/project half resolves in the config-file primitive (file -> default).
   const { build, plan, project } = resolveProjectSettings(inputs.projectDir);
 
-  return { models, modelFor, fallbackModels, budgets, effortFor, build, plan, project };
+  return { models, modelFor, fallbackModels, budgets, mcpConfigs, effortFor, build, plan, project };
 }

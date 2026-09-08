@@ -45,6 +45,10 @@ export interface RoleSettingsFile {
   fallbackModel?: string;
   maxBudgetUsd?: number;
   effort?: EffortLevel | Partial<Record<TurnKey, EffortLevel>>;
+  /** A `--mcp-config` file path (an MCP server the role's turn loads under the base
+   *  --strict-mcp-config). The ux-designer role defaults ON to the kit-shipped browser
+   *  MCP; set this to override that path, or to wire an MCP for another role. */
+  mcpConfig?: string;
 }
 
 export interface ConsortConfigFile {
