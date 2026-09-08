@@ -108,6 +108,7 @@
     "consort-diagnose": "./dist/bin/consort/diagnose.cli.js",
     "consort-resolve-escalation": "./dist/bin/consort/resolve-escalation.cli.js",
     "consort-open": "./dist/bin/consort/open.cli.js",
+    "consort-dashboard": "./dist/bin/consort/dashboard.cli.js",
     "consort-pipeline": "./dist/bin/consort/story-pipeline.cli.js",
     "consort-response-formatter": "./dist/bin/consort/response-formatter.cli.js",
     "consort-scenario-conditions": "./dist/bin/consort/scenario-conditions.cli.js",
@@ -183,6 +184,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:dashboard": "node scripts/build-dashboard.mjs",
     "prepare": "node scripts/prepare.mjs",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "sync:devhub": "tsx scripts/sync-devhub-skills.ts",

@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+
+// node_modules/tsup/assets/esm_shims.js
+import path from "path";
+import { fileURLToPath } from "url";
+var getFilename = () => fileURLToPath(import.meta.url);
+var getDirname = () => path.dirname(getFilename());
+var __dirname = /* @__PURE__ */ getDirname();
+
+// bin/consort/dashboard.cli.ts
+import { spawn } from "child_process";
+import { createServer } from "net";
+import * as fs2 from "fs";
+import * as path3 from "path";
+
+// consort/config/kit-bin.ts
+import { spawnSync } from "child_process";
+import * as fs from "fs";
+import * as path2 from "path";
+var kitRootCache;
+function resolveKitRoot() {
+  if (kitRootCache !== void 0) return kitRootCache;
+  const env = process.env.LAKEBASE_KIT_DIR?.trim();
+  kitRootCache = env && fs.existsSync(path2.join(env, "package.json")) ? env : path2.resolve(__dirname, "..", "..", "..");
+  return kitRootCache;
+}
+function kitRoot() {
+  return resolveKitRoot();
+}
+
+// bin/consort/dashboard.cli.ts
+function parseArgs(argv) {
+  const out = { projectDir: process.cwd(), host: "localhost", open: true };
+  for (let i = 0; i < argv.length; i++) {
+    switch (argv[i]) {
+      case "--project-dir":
+        out.projectDir = argv[++i];
+        break;
+      case "--port":
+        out.port = Number(argv[++i]);
+        break;
+      case "--record-dir":
+        out.recordDir = argv[++i];
+        break;
+      case "--host":
+        out.host = argv[++i];
+        break;
+      case "--no-open":
+        out.open = false;
+        break;
+      case "-h":
+      case "--help":
+        console.log(
+          "consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open]\nLaunch the dashboard on a local project's .consort/ (prebuilt bundle, or next dev in a dev clone)."
+        );
+        process.exit(0);
+        break;
+      default:
+        break;
+    }
+  }
+  return out;
+}
+function freePort(host) {
+  return new Promise((resolve3, reject) => {
+    const srv = createServer();
+    srv.on("error", reject);
+    srv.listen(0, host, () => {
+      const addr = srv.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      srv.close(() => resolve3(port));
+    });
+  });
+}
+function prebuiltServer(kit) {
+  const root = path3.join(kit, "dist", "dashboard");
+  const candidates = [path3.join(root, "server.js"), path3.join(root, "apps", "dashboard", "server.js")];
+  return candidates.find((p) => fs2.existsSync(p)) ?? null;
+}
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const projectDir = path3.resolve(args.projectDir);
+  const kit = kitRoot();
+  const port = args.port && Number.isFinite(args.port) ? args.port : await freePort(args.host);
+  const env = {
+    ...process.env,
+    PORT: String(port),
+    HOSTNAME: args.host,
+    CONSORT_PROJECT_DIR: projectDir,
+    ...args.recordDir ? { CONSORT_RECORD_DIR: args.recordDir } : {}
+  };
+  const url = `http://${args.host}:${port}/`;
+  const server = prebuiltServer(kit);
+  const runSh = path3.join(kit, "apps", "dashboard", "run.sh");
+  let child;
+  if (server) {
+    console.log(`Consort dashboard (prebuilt) \u2192 ${url}
+  project: ${projectDir}${args.recordDir ? `
+  record:  ${args.recordDir}` : ""}
+  Ctrl-C to stop.`);
+    child = spawn("node", [server], { cwd: path3.dirname(server), env, stdio: "inherit" });
+  } else if (fs2.existsSync(runSh)) {
+    console.log(`Consort dashboard (dev) \u2192 ${url}
+  project: ${projectDir}
+  Ctrl-C to stop.`);
+    child = spawn("bash", [runSh, projectDir], { cwd: path3.join(kit, "apps", "dashboard"), env, stdio: "inherit" });
+  } else {
+    console.error(
+      `consort-dashboard: no dashboard found in the deployed kit (${kit}).
+  Expected a prebuilt bundle at dist/dashboard/server.js (installed kit) or apps/dashboard/ (dev clone).
+  An installed kit older than the prebuilt-dashboard release won't have it; upgrade the kit, or point LAKEBASE_KIT_DIR at a dev clone.`
+    );
+    process.exit(1);
+    return;
+  }
+  if (args.open) openBrowser(url);
+  child.on("exit", (code) => process.exit(code ?? 0));
+}
+function openBrowser(url) {
+  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+  try {
+    spawn(cmd, [url], { stdio: "ignore", detached: true }).unref();
+  } catch {
+  }
+}
+main().catch((err) => {
+  console.error(`consort-dashboard: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+});
