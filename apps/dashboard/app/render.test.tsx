@@ -390,12 +390,20 @@ describe("render — LaneGraph", () => {
     expect(backingRectFor(approved)).not.toContain("glowpulse"); // cleared → quiet, no pulse
   });
 
-  it("renders per-step agent-card metrics (model·effort and turns·cost) on the step it credits", () => {
+  it("renders the per-step 'model · effort · turns' metric on the step it credits (no cost)", () => {
     const markup = renderToStaticMarkup(
       <LaneGraph state={{ ...state, laneStepMeta: { "p-propose": { model: "opus", effort: "low", cost: 1.5, turns: 2 } } }} />,
     );
-    expect(markup).toContain("opus · low"); // model · effort, from the step's phase.start
-    expect(markup).toContain("2 turns · $1.50"); // turns · cost, from the turns credited to it
+    expect(markup).toContain("opus · low · 2 turns"); // model · effort · turns, one line
+    expect(markup).not.toContain("$1.50"); // cost is summarized in the run-vitals card, not per step
+  });
+
+  it("drops effort from the step metric when absent: 'model · turns'", () => {
+    const markup = renderToStaticMarkup(
+      <LaneGraph state={{ ...state, laneStepMeta: { "p-propose": { model: "opus", effort: null, cost: 0, turns: 3 } } }} />,
+    );
+    expect(markup).toContain("opus · 3 turns");
+    expect(markup).not.toContain("opus · null");
   });
 
   it("draws back-edges as labelled branches, not happy path", () => {

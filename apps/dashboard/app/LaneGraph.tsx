@@ -33,7 +33,7 @@ import type { DashboardState, LaneStepMeta } from "@/lib/types";
 //      the lane still shows its reached steps, just with no pulsing one.
 
 const STEP_W = 104;
-const STEP_H = 68; // tall enough for the agent card: label + sub + model·effort + turns·cost
+const STEP_H = 68; // tall enough for the agent card: label + sub + model·effort·turns + duration
 const GAP = 30;
 const PAD = 14;
 const BACK_LANE_H = 34; // vertical room under the row for back-edges
@@ -803,12 +803,13 @@ function StepBox({
     step.branch ? " (branch: only on failure)" : ""
   } · ${state.replace("gate-", "gate ")}${clickable ? ` · open ${step.role}'s turn` : ""}`;
 
-  // Per-step agent-card metrics. model·effort comes from the step's phase.start; turns·cost from the
-  // turns credited to it (0 on a replay corpus, so turns·cost is hidden there). Shown only for a step
-  // a turn has actually reached — a deterministic/not-yet-run step carries none.
-  const modelEffort = meta && (meta.model || meta.effort) ? [meta.model, meta.effort].filter(Boolean).join(" · ") : null;
-  const turnsCost =
-    meta && meta.turns > 0 ? `${meta.turns} turn${meta.turns === 1 ? "" : "s"} · $${meta.cost.toFixed(2)}` : null;
+  // Per-step agent-card metric: "model · effort · turns" (or "model · turns" when there's no effort),
+  // from the step's phase.start + the turns credited to it. Turns are 0 on a replay corpus, so they
+  // drop out there. Cost is summarized in the run-vitals card, not per step. filter(Boolean) keeps the
+  // separators tight — no buffered gap where a missing part would be.
+  const turnsStr = meta && meta.turns > 0 ? `${meta.turns} turn${meta.turns === 1 ? "" : "s"}` : null;
+  const modelLine =
+    meta && (meta.model || meta.effort || turnsStr) ? [meta.model, meta.effort, turnsStr].filter(Boolean).join(" · ") : null;
 
   return (
     <g
@@ -904,36 +905,26 @@ function StepBox({
       >
         {truncate(step.sub, 22)}
       </text>
-      {/* Agent card metrics: model·effort (from the step's phase.start) and turns·cost (from the
-          turns credited to it). Only for steps a turn has reached; a deterministic step or one not
-          yet run shows none. A divider rule sets the card's data half apart from its label. */}
-      {modelEffort || turnsCost ? (
+      {/* Agent card metric: "model · effort · turns" centered (from the step's phase.start + credited
+          turns). Only for steps a turn has reached; a deterministic/not-yet-run step shows none. A
+          divider rule sets the data half apart from the label. */}
+      {modelLine || (active && elapsed) ? (
         <line x1={x + 8} y1={y + 36} x2={x + STEP_W - 8} y2={y + 36} style={{ stroke: "var(--border-default)" }} strokeWidth={0.5} />
       ) : null}
-      {modelEffort ? (
-        <text
-          x={x + 8}
-          y={y + 49}
-          textAnchor="start"
-          style={{ fontSize: 7.5, fill: highlighted ? stroke : "var(--text-muted)", fontFamily: font.mono }}
-        >
-          {modelEffort}
-        </text>
-      ) : null}
-      {turnsCost ? (
+      {modelLine ? (
         <text
           x={x + STEP_W / 2}
-          y={y + 60}
+          y={y + 49}
           textAnchor="middle"
-          style={{ fontSize: 7.5, fontWeight: 600, fill: highlighted ? stroke : "var(--text-body)", fontFamily: font.mono }}
+          style={{ fontSize: 7.5, fill: highlighted ? stroke : "var(--text-muted)", fontFamily: font.mono }}
         >
-          {turnsCost}
+          {truncate(modelLine, 28)}
         </text>
       ) : null}
-      {/* Elapsed working time on the active step — on the model·effort row, right-aligned (the
-          model·effort label is left-aligned to make room), not the top-right corner. */}
+      {/* Elapsed working DURATION on the active step — moved to the BOTTOM row (turns took its old
+          spot on the metric line above), centered, in the active colour. */}
       {active && elapsed ? (
-        <text x={x + STEP_W - 8} y={y + 49} textAnchor="end" style={{ fontSize: 7.5, fill: stroke, fontFamily: font.mono }}>
+        <text x={x + STEP_W / 2} y={y + 60} textAnchor="middle" style={{ fontSize: 7.5, fill: stroke, fontFamily: font.mono }}>
           {elapsed}
         </text>
       ) : null}
