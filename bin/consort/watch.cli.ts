@@ -236,6 +236,17 @@ export function classifyPidGone(
   return "crash";
 }
 
+/** True when a monitored log is a DRIVE's log — it carries `[drive]` step markers. A plain
+ *  detached process (installer / scaffolder) writes no such markers (npm fetch, `[Creating…]`),
+ *  so a gone pid there is normal completion, not a crash. Missing/empty log => not a drive log. */
+export function logIsFromDrive(logPath: string): boolean {
+  try {
+    return fs.readFileSync(logPath, "utf8").includes("[drive]");
+  } catch {
+    return false;
+  }
+}
+
 /** Emit the stop from next.json (the authoritative surface) and return the exit code.
  *  Used by the persistent monitor so a drive-stop is surfaced the moment next.json changes,
  *  never contingent on a log marker. Escalation => 3; gate/done => 0. */
@@ -435,11 +446,13 @@ async function main(): Promise<number> {
         process.stdout.write(`[consort-watch] turn boundary – the drive advanced (${ns?.summary || ns?.enact || "next action ready"}) and exited; re-run the drive to continue.\n`);
         return 0;
       }
-      if (baselineForAction === null && ns === null) {
-        // Plain detached-process watch (scaffolder / installer), not a drive: there is no
-        // next.json to record a stop, so a gone pid is normal completion, not a crash. Exit 0
-        // (the watch did its job); the caller reads the log for the process's own result. Without
-        // this the Monitor tool reports a SUCCESSFUL scaffold/install as "script failed (exit 3)".
+      if (!logIsFromDrive(logPath)) {
+        // Plain detached-process watch (installer / scaffolder), not a drive: a DRIVE's log carries
+        // `[drive]` step markers; an installer/scaffolder log (npm fetch, `[Creating…]`) does not.
+        // No `[drive]` marker => a gone pid is normal completion, not a crash — exit 0 so the
+        // Monitor tool doesn't report a SUCCESSFUL scaffold/install as "script failed (exit 3)".
+        // (next.json is irrelevant: the session may have written it via consort-next unrelatedly —
+        // the narrow "no next.json" check that preceded this missed exactly that case.)
         process.stdout.write(`[consort-watch] process (pid ${args.pid}) finished — see the log for its result.\n`);
         return 0;
       }

@@ -78,4 +78,29 @@ describe("Part B — wizard-style intake canon", () => {
     // the referenced canon — it's what feeds the ux-designer's browser modelling.
     expect(start).toMatch(/which real websites or apps should this look like/i);
   });
+
+  it("does not re-offer already-satisfied tooling: gates the dashboard offer on --status, and checks the extension isn't already installed", () => {
+    const start = read("commands/start.md");
+    // Dashboard: check `--status` BEFORE offering, so a resume with one already running doesn't re-ask.
+    expect(start, "must query consort-dashboard --status before offering").toContain("consort-dashboard --status");
+    // Extension: check it isn't already installed (they're likely running from it in Cursor) before offering.
+    expect(start).toMatch(/--list-extensions/);
+    // The id appears inside a grep pattern, so its dot may be backslash-escaped (kevin-hartman\.lakebase…).
+    expect(start).toMatch(/kevin-hartman\\?\.lakebase-scm-extension/);
+  });
+
+  it("keeps the extension and the dashboard as DISTINCT views (no false 'same live view' equivalence)", () => {
+    const start = read("commands/start.md");
+    // The extension is the SCM view (code + paired DB branch); the dashboard is the run (phase/gate,
+    // per-role progress). start.md must state they are complementary, not the same view — the bug the
+    // session hit was claiming the extension covered the dashboard's run view.
+    expect(start).toMatch(/source-control view|SCM view/i);
+    expect(start).toMatch(/complementary|not the same view/i);
+    // The old copy attributed the dashboard's "phase/gate state, per-role progress" to the EXTENSION.
+    // Guard that the extension is no longer described as showing per-role/phase-gate progress.
+    expect(
+      /extension[^.]*\b(phase\/gate state, per-role progress|each role's progress)\b/i.test(start),
+      "the extension must not be described as showing the run's per-role/phase-gate progress",
+    ).toBe(false);
+  });
 });

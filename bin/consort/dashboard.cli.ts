@@ -8,15 +8,19 @@
 // deployed kit is a dev clone with source but no build. The scaffolded run-dashboard.sh is a
 // thin wrapper that calls this via `lk` (so lk's kit resolution is reused, not duplicated).
 //
-//   consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open]
+//   consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open] [--status]
 //
 // --project-dir defaults to cwd; --record-dir is optional (the dashboard auto-detects the
 // project's own record lane otherwise); --port auto-picks a free port when omitted. The server
-// runs in the foreground (Ctrl-C stops it).
+// runs in the foreground (Ctrl-C stops it). Launching when one is already up for this project is
+// idempotent (re-opens the browser, no second server); --status reports running/stopped without
+// launching, so a caller can decide whether to OFFER the dashboard rather than re-asking.
 
 import { spawn } from "node:child_process";
 import { createServer, connect } from "node:net";
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 
 import { kitRoot } from "../../consort/config/kit-bin.js";
@@ -27,10 +31,14 @@ interface Args {
   recordDir?: string;
   host: string;
   open: boolean;
+  /** --status: report whether a dashboard is already serving this project, then exit
+   *  (`running <url>` + exit 0, or `stopped` + exit 3). No launch. Lets a caller decide
+   *  whether to OFFER the dashboard rather than re-asking when one is already up. */
+  status: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { projectDir: process.cwd(), host: "localhost", open: true };
+  const out: Args = { projectDir: process.cwd(), host: "localhost", open: true, status: false };
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
       case "--project-dir": out.projectDir = argv[++i]; break;
@@ -38,10 +46,12 @@ function parseArgs(argv: string[]): Args {
       case "--record-dir": out.recordDir = argv[++i]; break;
       case "--host": out.host = argv[++i]; break;
       case "--no-open": out.open = false; break;
+      case "--status": out.status = true; break;
       case "-h": case "--help":
         console.log(
-          "consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open]\n" +
-            "Launch the dashboard on a local project's .consort/ (prebuilt bundle, or next dev in a dev clone).",
+          "consort-dashboard [--project-dir <p>] [--port <n>] [--record-dir <p>] [--host <h>] [--no-open] [--status]\n" +
+            "Launch the dashboard on a local project's .consort/ (prebuilt bundle, or next dev in a dev clone).\n" +
+            "--status reports whether one is already running (running <url> / stopped) without launching.",
         );
         process.exit(0);
         break;
@@ -49,6 +59,67 @@ function parseArgs(argv: string[]): Args {
     }
   }
   return out;
+}
+
+/** Per-project run record so a second invocation (or --status) knows a dashboard is already
+ *  serving this project instead of spawning a duplicate or re-offering it. Kept OUT of the repo
+ *  (tmp, keyed by the resolved project dir) so it is never committed and never needs a gitignore
+ *  rule; the bin owns both ends, so the path is an internal detail, not a cross-tool contract. */
+interface DashboardRecord {
+  pid: number;
+  port: number;
+  host: string;
+  url: string;
+  startedAt: string;
+}
+
+function recordPath(projectDir: string): string {
+  const h = crypto.createHash("sha1").update(path.resolve(projectDir)).digest("hex").slice(0, 16);
+  return path.join(os.tmpdir(), "consort-dashboard", `${h}.json`);
+}
+
+function readRecord(projectDir: string): DashboardRecord | null {
+  try {
+    return JSON.parse(fs.readFileSync(recordPath(projectDir), "utf8")) as DashboardRecord;
+  } catch {
+    return null;
+  }
+}
+
+function writeRecord(projectDir: string, rec: DashboardRecord): void {
+  try {
+    fs.mkdirSync(path.dirname(recordPath(projectDir)), { recursive: true });
+    fs.writeFileSync(recordPath(projectDir), JSON.stringify(rec));
+  } catch {
+    /* best-effort: a missing record only costs a re-offer, never correctness */
+  }
+}
+
+function clearRecord(projectDir: string): void {
+  try {
+    fs.rmSync(recordPath(projectDir), { force: true });
+  } catch {
+    /* best-effort */
+  }
+}
+
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The live dashboard record for this project, or null. Verifies BOTH that the recorded pid is
+ *  alive AND that its port still answers — so a stale record (crashed server) or a reused pid
+ *  never false-positives into "already running". */
+async function runningRecord(projectDir: string): Promise<DashboardRecord | null> {
+  const rec = readRecord(projectDir);
+  if (!rec || !pidAlive(rec.pid)) return null;
+  const up = await waitListening(rec.host, rec.port, 3); // quick probe, not the full startup wait
+  return up ? rec : null;
 }
 
 /** A free TCP port (OS-assigned when we bind :0), so the launcher never collides with a
@@ -78,6 +149,29 @@ function prebuiltServer(kit: string): string | null {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const projectDir = path.resolve(args.projectDir);
+
+  // --status: answer "is a dashboard already serving this project?" and exit — no launch. A
+  // caller (e.g. /consort:start) checks this to decide whether to OFFER the dashboard, instead
+  // of re-asking on every resume when one is already up.
+  if (args.status) {
+    const rec = await runningRecord(projectDir);
+    if (rec) {
+      console.log(`running ${rec.url}`);
+      process.exit(0);
+    }
+    console.log("stopped");
+    process.exit(3);
+  }
+
+  // Already running for this project? Don't spawn a duplicate server — just re-open the browser
+  // on the existing one and exit. Makes the bin idempotent, so a re-launch is harmless.
+  const existing = await runningRecord(projectDir);
+  if (existing) {
+    console.log(`Consort dashboard already running → ${existing.url}\n  project: ${projectDir}`);
+    if (args.open) openBrowser(existing.url);
+    process.exit(0);
+  }
+
   const kit = kitRoot();
   const port = args.port && Number.isFinite(args.port) ? args.port : await freePort(args.host);
 
@@ -115,10 +209,27 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Open the browser only once the server actually accepts connections — an immediate open
-  // races the not-yet-ready server and lands on a connection-refused page.
-  if (args.open) void waitListening(args.host, port).then((ready) => { if (ready) openBrowser(url); });
-  child.on("exit", (code) => process.exit(code ?? 0));
+  // Wait for the server to actually accept connections, THEN record it + open the browser. An
+  // immediate open races the not-yet-ready server (connection-refused page); recording only once
+  // it's up means --status never reports a server that then failed to bind. If it never comes up
+  // (a startup crash), say so loudly and point at where the output went — a silent dead process
+  // (e.g. a tmux window that just closes) is the "clunky, had to relaunch with logs" failure.
+  const childPid = child.pid;
+  void waitListening(args.host, port).then((ready) => {
+    if (ready) {
+      if (childPid) writeRecord(projectDir, { pid: childPid, port, host: args.host, url, startedAt: new Date().toISOString() });
+      if (args.open) openBrowser(url);
+    } else {
+      console.error(
+        `consort-dashboard: the server did not come up on ${url} — it likely crashed on startup.\n` +
+          `  Check this window's output (or the log the launcher redirected to) for the error.`,
+      );
+    }
+  });
+  child.on("exit", (code) => {
+    clearRecord(projectDir); // the server is gone; don't leave a record that says "running"
+    process.exit(code ?? 0);
+  });
 }
 
 /** Best-effort browser open; never fatal (headless boxes just use the printed URL). */
