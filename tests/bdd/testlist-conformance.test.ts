@@ -63,6 +63,27 @@ describe("testlistConformanceReason", () => {
     expect(testlistConformanceReason(dir, F, S)).not.toBeNull();
   });
 
+  it("flags an absolute whole-table aggregate in the description (the F6/S1 T12 class)", () => {
+    const dir = seed(
+      [{ id: "AC4-nulls", layer: "Infra" }],
+      [{ id: "T12", kind: "fitness", ac_id: "AC4-nulls", description: "the integrity probe returns exactly the count of rows with NULL batch_number or serial_number" }],
+    );
+    const reason = testlistConformanceReason(dir, F, S);
+    expect(reason).not.toBeNull();
+    expect(reason).toMatch(/whole-table aggregate|aggregate-isolation/i);
+  });
+
+  it("does NOT flag a delta-scoped or own-row-scoped count (the aggregate-isolation escape)", () => {
+    const dir = seed(
+      [{ id: "AC4-nulls", layer: "Infra" }],
+      [
+        { id: "T12d", kind: "fitness", ac_id: "AC4-nulls", description: "capture count_before, seed 2 rows scoped to the test's own SKUs, assert count_after - count_before == 2 (delta)" },
+        { id: "T12e", kind: "behavior", ac_id: "AC4-nulls", description: "the empty-state renders when the table has zero rows for this location" },
+      ],
+    );
+    expect(testlistConformanceReason(dir, F, S)).toBeNull();
+  });
+
   it("is vacuously null when no test-list exists yet (never pre-empts before testListReady)", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "testlist-conf-"));
     tmpDirs.push(dir);

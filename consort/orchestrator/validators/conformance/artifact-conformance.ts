@@ -678,6 +678,51 @@ export function checkJsdomBrowserAssertion(testListJson: string): ConformanceRes
 }
 
 /**
+ * DESCRIPTION-level whole-table-aggregate (the F6/S1 T12 class). The code-level
+ * `whole-table-aggregate` detector (test-smell-clean.ts) catches `COUNT(*)` in a
+ * scenario file at GREEN; this catches the SAME aggregate-isolation defect one step
+ * earlier, in the test-list DESCRIPTION at design time, so it never costs an LLM
+ * reflect lap. A test-list item whose description asserts an ABSOLUTE whole-table
+ * count/total of rows (e.g. "returns exactly the count of rows with NULL
+ * batch_number") with NO own-row scoping (seed/marker/unique key) and NO delta
+ * (before/after subtraction) passes on the isolated experiment branch and fails once
+ * other stories' rows share the DB. The fix (same as the code rule): scope BOTH the
+ * seed and the assertion to the test's own rows, or assert a delta — never an
+ * absolute whole-table total. A generic column filter (WHERE …NULL) does NOT exempt:
+ * it is still whole-table, not scoped to the rows THIS test seeded.
+ */
+export function checkTestlistWholeTableAggregate(testListJson: string): ConformanceResult {
+  let tl: { items?: Array<{ id?: string; description?: string }> };
+  try {
+    tl = JSON.parse(testListJson);
+  } catch (err) {
+    return { ok: false, violations: [`test-list.json is not valid JSON: ${err instanceof Error ? err.message : String(err)}`] };
+  }
+  // An absolute whole-table count/total assertion (kept tight: an explicit
+  // "count/number/total of rows" or "COUNT(*)" — NOT a bare "N rows" render/empty-state).
+  const wholeTableCount =
+    /\bcount\s*\(\s*\*\s*\)|\b(?:count|number|total|tally)\s+of\s+(?:all\s+)?(?:the\s+)?rows\b|\brow\s+count\b|\btotal\s+(?:number\s+of\s+)?rows\b|\breturns?\s+(?:exactly\s+)?the\s+count\b/i;
+  // Own-row scoping or a delta assertion exempts it (the aggregate-isolation escape).
+  // NOTE: deliberately NOT exempting on a bare WHERE/filter — a column predicate is
+  // still whole-table, not scoped to the rows THIS test seeded.
+  const scopedOrDelta =
+    /\bseed(?:s|ed|ing)?\b|\bdelta\b|\bbefore\b.*\bafter\b|\bafter\b.*\bbefore\b|count_before|count_after|probe_before|\bsubtract|\bminus\b|\bits own rows\b|\bthe (?:test'?s?|rows? it) (?:own|seed)|\bscoped to\b|\bmarker\b|\buuid\b|\bunique (?:sku|key)\b|\bper-test\b/i;
+  const violations: string[] = [];
+  for (const it of tl.items ?? []) {
+    const desc = it.description ?? "";
+    if (wholeTableCount.test(desc) && !scopedOrDelta.test(desc)) {
+      violations.push(
+        `test item ${it.id ?? "?"} asserts an ABSOLUTE whole-table aggregate ("${desc.slice(0, 90)}…") with no own-row ` +
+          `scoping and no delta — it passes on the isolated experiment branch but FAILS once other stories' rows share the DB ` +
+          `(the aggregate-isolation rule: own the state). Scope BOTH the seed AND the assertion to the test's own rows ` +
+          `(filter by the test's SKUs / a marker column), or assert a DELTA (count_after - count_before == seeded), never an absolute whole-table total`,
+      );
+    }
+  }
+  return violations.length === 0 ? { ok: true } : { ok: false, violations };
+}
+
+/**
  * Persistence coverage (robust DB testing, not an ORM re-test): a service-backed
  * feature's architecture MUST declare its `persistence_invariants[]` (the DB-level
  * guarantees the SCHEMA enforces – a unique key, an FK/cascade, a NOT NULL/CHECK, a

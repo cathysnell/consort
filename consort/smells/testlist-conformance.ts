@@ -5,18 +5,26 @@
 // Playwright spec, a real-browser assertion in the jsdom harness) costs an LLM
 // reflect lap the deterministic checks were built to save.
 //
-// This module runs the two AUTHORING-SMELL checks (checkClientKindLayerCoherence /
-// checkJsdomBrowserAssertion) over the per-story test-list EARLIER:
+// This module runs the deterministic AUTHORING-SMELL checks (checkClientKindLayerCoherence /
+// checkJsdomBrowserAssertion / checkTestlistWholeTableAggregate) over the per-story
+// test-list EARLIER:
 // `testlistConformanceReason` is the pure predicate the probe reads
 // (testListConforms), and `recordTestListGate` is the deterministic gate CLI step
 // that flags the SAME `reflect-testlist-defect` smell the reflect gate uses — so
 // the existing revise-route/escalation machinery bounds + routes it, with NO LLM
 // turn. Mirrors reflection.ts (verdict → smell), sourced from the checks instead.
 //
-// Scope note: these are the two structural authoring smells that are unambiguous
-// from the test-list at REFLECT time and that cost the diagnosed live reflect laps
-// (a client test tagged to a backend-layer AC; a real-browser assertion in the
-// jsdom harness). E2E-coverage completeness (every E2E AC has a Playwright
+// Scope note: these are the structural authoring smells that are unambiguous from
+// the test-list at REFLECT time and that cost the diagnosed live reflect laps (a
+// client test tagged to a backend-layer AC; a real-browser assertion in the jsdom
+// harness; an absolute whole-table aggregate with no own-row scope). The
+// whole-table-aggregate check mirrors the code-level detector in test-smell-clean.ts
+// (which fires on the scenario CODE at GREEN) at the DESCRIPTION layer, one step
+// earlier — same rule, two artifact layers. Migration-marker isolation is NOT checked
+// here: @pytest.mark.migration is a code-level detail that descriptions don't reliably
+// name (a description-level check false-positived a legitimate reversibility round-trip
+// in the recorded corpus), so it stays a code-level GREEN-time detector.
+// E2E-coverage completeness (every E2E AC has a Playwright
 // scenario_file) is a FINALIZED-test-list property — scenario_files are still being
 // assigned at reflect time — so it stays at the downstream test_list gate
 // (gate-conformance-guard `e2eCoverageReason`), NOT here, where demanding it early
@@ -27,6 +35,7 @@ import { storyTestListJson, acsDir } from "../../consort/config/consort-paths.js
 import {
   checkClientKindLayerCoherence,
   checkJsdomBrowserAssertion,
+  checkTestlistWholeTableAggregate,
 } from "../orchestrator/validators/conformance/artifact-conformance.js";
 import { writeSmellsLog, hasOpenSmell, resolveOpenSmells, type SmellHit } from "./smells.js";
 
@@ -71,6 +80,7 @@ export function testlistConformanceReason(consortDir: string, featureId: string,
   for (const r of [
     checkClientKindLayerCoherence(testListJson, acLayerById),
     checkJsdomBrowserAssertion(testListJson),
+    checkTestlistWholeTableAggregate(testListJson),
   ]) {
     if (!r.ok) violations.push(...r.violations);
   }
