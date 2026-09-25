@@ -50,6 +50,7 @@ export type TestSmellName =
   | "schema-unsatisfiable-ref"
   | "whole-table-aggregate"
   | "migration-marker-presence"
+  | "relative-migration-revision"
   | "reversible-invariant-round-trip"
   | "pytest-bdd-parse-conversion"
   | "dropped-column-dangling-reference";
@@ -146,6 +147,8 @@ const SMELL_FIX: Record<TestSmellName, string> = {
     "an ABSOLUTE whole-table COUNT/SUM with no seed-scope and no delta passes on the isolated branch but FAILS once other stories' rows share the DB (the aggregate-isolation rule: own the state). Scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA (count_after - count_before == seeded), never an absolute whole-table total",
   "migration-marker-presence":
     "a downgrade/upgrade test without @pytest.mark.migration runs on the SHARED verify DB and drops/alters its live schema for every other test. Add @pytest.mark.migration so the verify harness routes it to its OWN ephemeral branch (single-step downgrade -1 + upgrade head, never downgrade base)",
+  "relative-migration-revision":
+    "a reversibility test asserts a NAMED column is absent after a RELATIVE `downgrade -1` (and/or restores with `upgrade head`) – this assumes THAT column's migration is the current head, so the moment a later feature stacks a migration on top, `-1` reverses the WRONG migration and the column-absence assertion can never pass again (the F6/S1-broke-F1/S3 par_level class). Pin the migration's OWN revision instead: downgrade to its down_revision and upgrade to its revision, so the round-trip validates THIS migration independent of any later head",
   "reversible-invariant-round-trip":
     "a migration_reversible persistence invariant is covered by a FORWARD-ONLY test (no downgrade), which does not exercise reversibility – and on an already-migrated shared branch a forward-only seed-then-migrate is unsatisfiable. Re-author as an explicit round-trip (downgrade → seed/migrate → upgrade → assert), or retag the reversible invariant's coverage to the round-trip test that performs it",
   "pytest-bdd-parse-conversion":
@@ -473,6 +476,26 @@ export function checkTestSmells(args: TestSmellArgs): TestSmellCleanResult {
       // routes it to its own ephemeral branch.
       if (isPy && /command\.downgrade|alembic\s+downgrade|\.downgrade\(|downgrade\s+-1|run_downgrade/i.test(body) && !/pytest\.mark\.migration|mark\.migration/.test(body)) {
         push("migration-marker-presence", rel, 1, "(file)", "a downgrade test without @pytest.mark.migration (drops schema on the shared verify DB)");
+      }
+
+      // relative-migration-revision (file level, Python): a reversibility test that
+      // asserts a NAMED column is absent after a RELATIVE downgrade (`downgrade -N`)
+      // assumes THAT column's migration is the current head. A later feature stacking
+      // a migration on top shifts what `-N` reverses, so `<col> not in cols` can never
+      // pass again (the F6/S1 additive migration broke F1/S3's par_level `-1` round-trip).
+      // Pin the migration's OWN revision instead of relative -N/head. Requires BOTH
+      // signals so a legitimately-pinned round-trip (downgrade "<rev>") is never flagged.
+      const relativeDowngrade = /(?:["']downgrade["']\s*,\s*|alembic\s+downgrade\s+|downgrade\s+)["']?-\d+["']?/i.test(body);
+      const namedColumnAbsent = /["'`]\w+["'`]\s+not\s+in\s+\w*col/i.test(body);
+      if (isPy && relativeDowngrade && namedColumnAbsent) {
+        const col = body.match(/["'`](\w+)["'`]\s+not\s+in\s+\w*col/i);
+        push(
+          "relative-migration-revision",
+          rel,
+          1,
+          "(file)",
+          `asserts ${col ? `'${col[1]}'` : "a named column"} absent after a relative 'downgrade -N' – pin the migration's own revision (down_revision + revision), not -N/head`,
+        );
       }
     }
   }

@@ -242,6 +242,30 @@ describe("checkTestSmells: the three migration/aggregate detectors", () => {
     expect(checkTestSmells({ projectDir: dir3 }).clean).toBe(true);
   });
 
+  it("relative-migration-revision: flags a named-column-absent assertion after `downgrade -1`, not a revision-pinned round-trip", () => {
+    // The F6/S1-broke-F1/S3 par_level class: `downgrade -1` + `"par_level" not in cols`
+    // assumes par_level is head; a later stacked migration reverses the wrong step.
+    const dir = mkProject();
+    write(dir, "tests/test_par_level_migration.py",
+      `import pytest\n\n@pytest.mark.migration\ndef test_round_trip():\n    _run_alembic("downgrade", "-1")\n    cols = _column_names(conn, "stock_records")\n    assert "par_level" not in cols\n    _run_alembic("upgrade", "head")\n`);
+    const bad = checkTestSmells({ projectDir: dir });
+    expect(bad.clean).toBe(false);
+    expect(bad.violations[0].smell).toBe("relative-migration-revision");
+    expect(bad.violations[0].detail).toMatch(/par_level/);
+
+    // A revision-PINNED round-trip (downgrade "<rev>" / upgrade "<rev>") is the fix – NOT flagged.
+    const dir2 = mkProject();
+    write(dir2, "tests/test_par_level_migration.py",
+      `import pytest\n\n@pytest.mark.migration\ndef test_round_trip():\n    _run_alembic("downgrade", "20260925044239")\n    cols = _column_names(conn, "stock_records")\n    assert "par_level" not in cols\n    _run_alembic("upgrade", "20260925071253")\n`);
+    expect(checkTestSmells({ projectDir: dir2 }).violations.some(v => v.smell === "relative-migration-revision")).toBe(false);
+
+    // A `downgrade -1` with NO named-column-absence assertion (pure schema recreation) is not this smell.
+    const dir3 = mkProject();
+    write(dir3, "tests/test_reverse.py",
+      `import pytest\n\n@pytest.mark.migration\ndef test_reversible():\n    _run_alembic("downgrade", "-1")\n    _run_alembic("upgrade", "head")\n    assert schema_recreated()\n`);
+    expect(checkTestSmells({ projectDir: dir3 }).violations.some(v => v.smell === "relative-migration-revision")).toBe(false);
+  });
+
   it("pytest-bdd-parse-conversion: flags a parse() step pattern using !r/!s/!a, not a spec-only or quoted pattern", () => {
     // !r conversion — the parse lib can't match it → StepDefinitionNotFoundError.
     const dir = mkProject();
