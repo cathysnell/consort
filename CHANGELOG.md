@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.102] - 2026-09-26
+
+- **Pre-reflect whole-table-aggregate check (design lane).** The LLM navigator reflect kept catching an absolute whole-table aggregate authored in the test-list (e.g. "returns exactly the count of rows with NULL batch_number") — a defect the code-level `whole-table-aggregate` detector already owns, but only on the scenario CODE at GREEN. `checkTestlistWholeTableAggregate` mirrors that rule at the test-list DESCRIPTION layer so the deterministic pre-reflect gate flags it before an LLM reflect lap (an absolute count/total of rows with no own-row scope and no delta; a bare column filter does not exempt). Migration-marker isolation was evaluated as a sibling and REJECTED — it false-positived a legitimate reversibility round-trip in the recorded corpus (the marker is a code detail descriptions don't reliably name).
+- **`relative-migration-revision` test smell.** A reversibility test asserting a NAMED column absent after a RELATIVE `downgrade -1` assumes that column's migration is the current head; when a later feature stacks a migration, `-1` reverses the wrong step and the assertion can never pass again (the live F6/S1 additive migration broke F1/S3's par_level round-trip and halted the run). Requires both signals (relative downgrade + named-column-absence) so a revision-pinned round-trip is never flagged; the fix is to pin the migration's own revision.
+- Repoints bundled scm-utils 0.2.44 → 0.2.45 (promote workflow self-heal).
+
 ## [0.3.101] - 2026-09-25
 
 Design-lane gate/detector fixes that move defect-catching earlier (deterministic, before the LLM reflect) and remove two false-positive HILs — cutting the reflect/revise/experiment-recut churn observed on the live stockflow runs.

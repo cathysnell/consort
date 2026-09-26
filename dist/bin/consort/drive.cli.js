@@ -10001,6 +10001,26 @@ function checkJsdomBrowserAssertion(testListJson) {
   }
   return violations.length === 0 ? { ok: true } : { ok: false, violations };
 }
+function checkTestlistWholeTableAggregate(testListJson) {
+  let tl;
+  try {
+    tl = JSON.parse(testListJson);
+  } catch (err) {
+    return { ok: false, violations: [`test-list.json is not valid JSON: ${err instanceof Error ? err.message : String(err)}`] };
+  }
+  const wholeTableCount = /\bcount\s*\(\s*\*\s*\)|\b(?:count|number|total|tally)\s+of\s+(?:all\s+)?(?:the\s+)?rows\b|\brow\s+count\b|\btotal\s+(?:number\s+of\s+)?rows\b|\breturns?\s+(?:exactly\s+)?the\s+count\b/i;
+  const scopedOrDelta = /\bseed(?:s|ed|ing)?\b|\bdelta\b|\bbefore\b.*\bafter\b|\bafter\b.*\bbefore\b|count_before|count_after|probe_before|\bsubtract|\bminus\b|\bits own rows\b|\bthe (?:test'?s?|rows? it) (?:own|seed)|\bscoped to\b|\bmarker\b|\buuid\b|\bunique (?:sku|key)\b|\bper-test\b/i;
+  const violations = [];
+  for (const it of tl.items ?? []) {
+    const desc = it.description ?? "";
+    if (wholeTableCount.test(desc) && !scopedOrDelta.test(desc)) {
+      violations.push(
+        `test item ${it.id ?? "?"} asserts an ABSOLUTE whole-table aggregate ("${desc.slice(0, 90)}\u2026") with no own-row scoping and no delta \u2014 it passes on the isolated experiment branch but FAILS once other stories' rows share the DB (the aggregate-isolation rule: own the state). Scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA (count_after - count_before == seeded), never an absolute whole-table total`
+      );
+    }
+  }
+  return violations.length === 0 ? { ok: true } : { ok: false, violations };
+}
 function checkDbDesign(dbDesignJson2, architectureJson2) {
   let arch;
   try {
@@ -10094,7 +10114,8 @@ function testlistConformanceReason(consortDir, featureId, story) {
   const violations = [];
   for (const r of [
     checkClientKindLayerCoherence(testListJson, acLayerById),
-    checkJsdomBrowserAssertion(testListJson)
+    checkJsdomBrowserAssertion(testListJson),
+    checkTestlistWholeTableAggregate(testListJson)
   ]) {
     if (!r.ok) violations.push(...r.violations);
   }

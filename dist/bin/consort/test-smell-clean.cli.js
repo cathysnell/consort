@@ -112,6 +112,7 @@ var SMELL_FIX = {
   "schema-unsatisfiable-ref": "the test references a table NO migration creates, so it is unsatisfiable (UndefinedTable on every run) \u2013 fix the table name (see the known tables below) or add the migration; never paper it over with a broad except",
   "whole-table-aggregate": "an ABSOLUTE whole-table COUNT/SUM with no seed-scope and no delta passes on the isolated branch but FAILS once other stories' rows share the DB (the aggregate-isolation rule: own the state). Scope BOTH the seed AND the assertion to the test's own rows (filter by the test's SKUs / a marker column), or assert a DELTA (count_after - count_before == seeded), never an absolute whole-table total",
   "migration-marker-presence": "a downgrade/upgrade test without @pytest.mark.migration runs on the SHARED verify DB and drops/alters its live schema for every other test. Add @pytest.mark.migration so the verify harness routes it to its OWN ephemeral branch (single-step downgrade -1 + upgrade head, never downgrade base)",
+  "relative-migration-revision": "a reversibility test asserts a NAMED column is absent after a RELATIVE `downgrade -1` (and/or restores with `upgrade head`) \u2013 this assumes THAT column's migration is the current head, so the moment a later feature stacks a migration on top, `-1` reverses the WRONG migration and the column-absence assertion can never pass again (the F6/S1-broke-F1/S3 par_level class). Pin the migration's OWN revision instead: downgrade to its down_revision and upgrade to its revision, so the round-trip validates THIS migration independent of any later head",
   "reversible-invariant-round-trip": "a migration_reversible persistence invariant is covered by a FORWARD-ONLY test (no downgrade), which does not exercise reversibility \u2013 and on an already-migrated shared branch a forward-only seed-then-migrate is unsatisfiable. Re-author as an explicit round-trip (downgrade \u2192 seed/migrate \u2192 upgrade \u2192 assert), or retag the reversible invariant's coverage to the round-trip test that performs it",
   "pytest-bdd-parse-conversion": "a parse()/parsers.parse() step pattern uses a Python str.format conversion flag (!r / !s / !a); the `parse` library backing pytest-bdd supports the format SPEC ({name:type}) but NOT conversions, so the step text never matches the feature and the step raises StepDefinitionNotFoundError \u2013 the app can never green it. Drop the conversion and quote the value in the pattern instead (e.g. parse('\u2026 \"{name}\"') to match a quoted feature value, or parse('\u2026 {name}') for a bare token), matching how the .feature file writes it",
   "dropped-column-dangling-reference": "a contract migration DROPPED this column, but app/seed code still references it \u2013 the migration succeeds yet the app then emits SQL for a column the DB no longer has and crashes at runtime ('column does not exist'), a path a green test suite can miss (the F6/S2 seed_dev.py class, hard rule 9: contract-incompleteness). Remove or re-point the reference to the surviving columns; NEVER re-add the column to the model or edit the migration/tests to hide it"
@@ -346,6 +347,18 @@ function checkTestSmells(args) {
       });
       if (isPy && /command\.downgrade|alembic\s+downgrade|\.downgrade\(|downgrade\s+-1|run_downgrade/i.test(body) && !/pytest\.mark\.migration|mark\.migration/.test(body)) {
         push("migration-marker-presence", rel, 1, "(file)", "a downgrade test without @pytest.mark.migration (drops schema on the shared verify DB)");
+      }
+      const relativeDowngrade = /(?:["']downgrade["']\s*,\s*|alembic\s+downgrade\s+|downgrade\s+)["']?-\d+["']?/i.test(body);
+      const namedColumnAbsent = /["'`]\w+["'`]\s+not\s+in\s+\w*col/i.test(body);
+      if (isPy && relativeDowngrade && namedColumnAbsent) {
+        const col = body.match(/["'`](\w+)["'`]\s+not\s+in\s+\w*col/i);
+        push(
+          "relative-migration-revision",
+          rel,
+          1,
+          "(file)",
+          `asserts ${col ? `'${col[1]}'` : "a named column"} absent after a relative 'downgrade -N' \u2013 pin the migration's own revision (down_revision + revision), not -N/head`
+        );
       }
     }
   }
