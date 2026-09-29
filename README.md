@@ -11,6 +11,15 @@ Consort takes its name from the field of music. A *consort* is an ensemble that 
 
 **What Consort builds.** Consort, an open-source framework from Databricks (`databricks-solutions/consort`), builds **transactional applications**: an application backend (and an optional web UI) whose system of record is a **Lakebase** database. [Lakebase](https://www.databricks.com/product/lakebase) is Databricks' serverless, Postgres-compatible **transactional (OLTP)** database, branchable in about a second. Each git branch is paired with its own Lakebase Postgres branch, so every branch has a real, isolated database and the schema evolves in lockstep with the code. It is not the Delta Lakehouse, and Consort is not an ETL, analytics, BI, or data-pipeline tool; it is a way to build and evolve application backends on Postgres. For what Consort is and is not, and how it compares to other spec-first tools, see [`docs/positioning.md`](docs/positioning.md).
 
+## Quick start
+
+```bash
+# Install: doctor + Claude Code plugin + toolkit (needs a Lakebase-enabled Databricks workspace)
+bash <(curl -sL https://raw.githubusercontent.com/databricks-solutions/consort/main/bootstrap.sh)
+```
+
+Then, in any session, run `/consort:start` — a fresh folder scaffolds a new Lakebase-paired project, an existing `.consort/` one resumes. It drives `/plan → /design → /build → /deploy`, stopping at every human gate. Details and a full walkthrough in [Getting started](#getting-started).
+
 ## Why Consort
 
 AI agents write code fast, but you can't trust that the code is correct or maintainable over the long haul. On their own they mark a task "done" with no test behind it, drift off the request, weaken a test to reach green, tangle the layers, and lose the plan across a context reset. The database is the hardest part to get right: it's the one dependency you can't cheaply branch, so it gets faked with mocks that fall out of sync with production, or shared across a staging box the tests quietly diverge from.
