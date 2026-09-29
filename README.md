@@ -48,7 +48,7 @@ The domain is the other half of the distinction. Consort is for building and evo
 
 **Runs in your editor.** Consort is terminal-first but detects and launches into any VS Code-compatible IDE (VS Code, Cursor, and others). On start it offers to open your project and its **Consort extension** there, or to keep driving from the terminal. The extension is a live viewer that keeps you in lockstep with what Consort is building: the paired branches, the current phase and gates, and each role's progress, turn by turn, with each artifact surfaced as it lands.
 
-For the full positioning, comparison, and FAQ, see [`docs/positioning.md`](docs/positioning.md). Two papers describing Consort and the methodology behind it are forthcoming.
+For the full positioning, comparison, and FAQ, see [`docs/positioning.md`](docs/positioning.md). New to Consort? Start with the [launch blog post](https://www.databricks.com/blog/introducing-consort-test-driven-development-branching-database); the methodology is written up in the paper [*Introducing Consort*](https://arxiv.org/abs/2609.09671) (arXiv), with a further paper forthcoming.
 
 ## The ensemble
 
