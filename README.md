@@ -20,7 +20,7 @@ Setting up Consort is easy. Copy the command below and enter it into any termina
 bash <(curl -sL https://raw.githubusercontent.com/databricks-solutions/consort/main/bootstrap.sh)
 ```
 
-Then, in any session, run `/consort:start` — a fresh folder scaffolds a new Lakebase-paired project, an existing `.consort/` one resumes. It drives `/plan → /design → /build → /deploy`, stopping at every human gate. Details and a full walkthrough in [Getting started](#getting-started).
+Then, run `/consort:start` in your agent session. [Getting started](#getting-started) has the prerequisites and a full walkthrough.
 
 ## Why Consort
 
