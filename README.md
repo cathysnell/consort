@@ -22,6 +22,12 @@ bash <(curl -sL https://raw.githubusercontent.com/databricks-solutions/consort/m
 
 Then, run `/consort:start` in your agent session. [Getting started](#getting-started) has the prerequisites and a full walkthrough.
 
+### What it installs, runs, and sends
+
+- **Install-time:** the bootstrap downloads the Consort toolkit from this repository, and the plugin's SessionStart hook runs `npm ci` in the plugin directory to finish installing its dependencies (packages from the npm registry).
+- **Runtime:** Consort spawns role agents as `claude --agent <role>` processes inside your project, and applies schema migrations and runs tests against your Lakebase database over your Databricks workspace connection. It runs only inside the project you point it at.
+- **Telemetry:** pseudonymous usage telemetry (Level 1 by default: one trace per run, drawn from a closed allowlist), plus a one-time install beacon carrying only a random install id, the kit version, and a timestamp. No free-form data, code, prompts, or project content is ever sent. Level 2 is a separate opt-in. The full contract, including how to turn it off (`CONSORT_TELEMETRY=0`), is in [TELEMETRY.md](TELEMETRY.md).
+
 ## Why Consort
 
 AI agents write code fast, but you can't trust that the code is correct or maintainable over the long haul. On their own they mark a task "done" with no test behind it, drift off the request, weaken a test to reach green, tangle the layers, and lose the plan across a context reset. The database is the hardest part to get right: it's the one dependency you can't cheaply branch, so it gets faked with mocks that fall out of sync with production, or shared across a staging box the tests quietly diverge from.
