@@ -13,6 +13,8 @@ Consort takes its name from the field of music. A *consort* is an ensemble that 
 
 ## Quick start
 
+Setting up Consort is easy. Copy the command below and enter it into any terminal window.
+
 ```bash
 # Install: doctor + Claude Code plugin + toolkit (needs a Lakebase-enabled Databricks workspace)
 bash <(curl -sL https://raw.githubusercontent.com/databricks-solutions/consort/main/bootstrap.sh)
